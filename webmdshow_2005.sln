@@ -1,0 +1,100 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmux_2005", "webmmux\webmmux_2005.vcproj", "{C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vp8decoder_2005", "vp8decoder\vp8decoder_2005.vcproj", "{6F6E72A5-570B-4281-B9A6-D09DD80A826F}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vp8encoder_2005", "vp8encoder\vp8encoder_2005.vcproj", "{8AD7BB4A-3923-405B-B70A-3778252248C5}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libmkvparser_2005", "libmkvparser\libmkvparser_2005.vcproj", "{71A257DD-0721-406F-9E32-283C46592285}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmsource_2005", "webmsource\webmsource_2005.vcproj", "{3CB0ED2C-5AC7-4F3B-B7EA-1E5BD2EF77C3}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+	ProjectSection(ProjectDependencies) = postProject
+		{71A257DD-0721-406F-9E32-283C46592285} = {71A257DD-0721-406F-9E32-283C46592285}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "playwebm_2005", "playwebm\playwebm_2005.vcproj", "{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmsplit_2005", "webmsplit\webmsplit_2005.vcproj", "{915A925A-8B03-43EC-A370-B604381E7D95}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+	ProjectSection(ProjectDependencies) = postProject
+		{71A257DD-0721-406F-9E32-283C46592285} = {71A257DD-0721-406F-9E32-283C46592285}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "makewebm_2005", "makewebm\makewebm_2005.vcproj", "{31E90A36-4E50-4955-BC0A-DB6AE6DB0DDA}"
+	ProjectSection(WebsiteProperties) = preProject
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.Debug = "False"
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C}.Debug|Win32.Build.0 = Debug|Win32
+		{C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C}.Release|Win32.ActiveCfg = Release|Win32
+		{C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C}.Release|Win32.Build.0 = Release|Win32
+		{6F6E72A5-570B-4281-B9A6-D09DD80A826F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6F6E72A5-570B-4281-B9A6-D09DD80A826F}.Debug|Win32.Build.0 = Debug|Win32
+		{6F6E72A5-570B-4281-B9A6-D09DD80A826F}.Release|Win32.ActiveCfg = Release|Win32
+		{6F6E72A5-570B-4281-B9A6-D09DD80A826F}.Release|Win32.Build.0 = Release|Win32
+		{8AD7BB4A-3923-405B-B70A-3778252248C5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8AD7BB4A-3923-405B-B70A-3778252248C5}.Debug|Win32.Build.0 = Debug|Win32
+		{8AD7BB4A-3923-405B-B70A-3778252248C5}.Release|Win32.ActiveCfg = Release|Win32
+		{8AD7BB4A-3923-405B-B70A-3778252248C5}.Release|Win32.Build.0 = Release|Win32
+		{71A257DD-0721-406F-9E32-283C46592285}.Debug|Win32.ActiveCfg = Debug|Win32
+		{71A257DD-0721-406F-9E32-283C46592285}.Debug|Win32.Build.0 = Debug|Win32
+		{71A257DD-0721-406F-9E32-283C46592285}.Release|Win32.ActiveCfg = Release|Win32
+		{71A257DD-0721-406F-9E32-283C46592285}.Release|Win32.Build.0 = Release|Win32
+		{3CB0ED2C-5AC7-4F3B-B7EA-1E5BD2EF77C3}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3CB0ED2C-5AC7-4F3B-B7EA-1E5BD2EF77C3}.Debug|Win32.Build.0 = Debug|Win32
+		{3CB0ED2C-5AC7-4F3B-B7EA-1E5BD2EF77C3}.Release|Win32.ActiveCfg = Release|Win32
+		{3CB0ED2C-5AC7-4F3B-B7EA-1E5BD2EF77C3}.Release|Win32.Build.0 = Release|Win32
+		{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}.Debug|Win32.Build.0 = Debug|Win32
+		{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}.Release|Win32.ActiveCfg = Release|Win32
+		{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}.Release|Win32.Build.0 = Release|Win32
+		{915A925A-8B03-43EC-A370-B604381E7D95}.Debug|Win32.ActiveCfg = Debug|Win32
+		{915A925A-8B03-43EC-A370-B604381E7D95}.Debug|Win32.Build.0 = Debug|Win32
+		{915A925A-8B03-43EC-A370-B604381E7D95}.Release|Win32.ActiveCfg = Release|Win32
+		{915A925A-8B03-43EC-A370-B604381E7D95}.Release|Win32.Build.0 = Release|Win32
+		{31E90A36-4E50-4955-BC0A-DB6AE6DB0DDA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{31E90A36-4E50-4955-BC0A-DB6AE6DB0DDA}.Debug|Win32.Build.0 = Debug|Win32
+		{31E90A36-4E50-4955-BC0A-DB6AE6DB0DDA}.Release|Win32.ActiveCfg = Release|Win32
+		{31E90A36-4E50-4955-BC0A-DB6AE6DB0DDA}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

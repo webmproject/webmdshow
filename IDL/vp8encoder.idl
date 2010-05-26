@@ -1,0 +1,226 @@
+// Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style license and patent
+// grant that can be found in the LICENSE file in the root of the source
+// tree. All contributing project authors may be found in the AUTHORS
+// file in the root of the source tree.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+    uuid(ED3110F4-5211-11DF-94AF-0026B977EEAA),
+    helpstring("VP8 Encoder Filter Type Library"),
+    version(1.0)
+]
+library VP8EncoderLib
+{
+
+enum VP8Deadline
+{
+    kDeadlineBestQuality = 0,
+    kDeadlineRealtime = 1,
+    kDeadlineGoodQuality = 1000000
+};
+
+
+
+//Keyframe placement mode
+//
+//Specifies whether keyframes are placed automatically 
+//by the encoder, or whether this behavior is disabled.
+
+enum VP8KeyframeMode
+{
+    kKeyframeModeDefault = -1,  //use encoder default
+    kKeyframeModeDisabled = 0, //encoder does not place keyframes
+    kKeyframeModeAuto = 1     //encoder determines optimal placement
+};
+
+
+
+enum VP8EndUsage { kEndUsageVBR, kEndUsageCBR };
+
+[
+   object,
+   //uuid(ED3110F6-5211-11DF-94AF-0026B977EEAA),
+   uuid(ED3110FB-5211-11DF-94AF-0026B977EEAA),
+   helpstring("VP8 Encoder Filter Interface")
+]
+interface IVP8Encoder : IUnknown
+{
+    //Deadline
+    //
+    //Time to spend encoding, in microseconds. (0=infinite)
+    
+    HRESULT SetDeadline([in] int Deadline);
+    HRESULT GetDeadline([out] int* pDeadline);
+    
+    //ThreadCount
+    //
+    //For multi-threaded implementations, use no more than this number of
+    //threads. The codec may use fewer threads than allowed. The value
+    //0 is equivalent to the value 1.
+
+    HRESULT SetThreadCount([in] int Threads);
+    HRESULT GetThreadCount([out] int* pThreads);
+
+    //ErrorResilient
+    //
+    //Error resilient mode indicates to the encoder that it should take
+    //measures appropriate for streaming over lossy or noisy links, if
+    //possible.  The value 0 means feature is disabled (the default), 
+    //and any non-zero value means the feature is enabled.
+
+    HRESULT SetErrorResilient([in] boolean ErrorResilient);
+    HRESULT GetErrorResilient([out] boolean* pErrorResilient);
+
+    //EndUsage
+    //
+    //Indicates whether the end usage of this stream is to be streamed over
+    //a bandwidth constrained link (kEndUsageCBR), or whether it will be
+    //played back on a high bandwidth link, as from a local disk, where 
+    //higher variations in bitrate are acceptable (kEndUsageVBR, the default).
+
+    HRESULT SetEndUsage([in] enum VP8EndUsage EndUsage);
+    HRESULT GetEndUsage([out] enum VP8EndUsage* pEndUsage);
+    
+    //LagInFrames
+    //    
+    //If set, this value allows the encoder to consume a number of input
+    //frames before producing output frames. This allows the encoder to
+    //base decisions for the current frame on future frames. This does
+    //increase the latency of the encoding pipeline, so it is not appropriate
+    //in all situations (ex: realtime encoding).
+    //
+    //Note that this is a maximum value -- the encoder may produce frames
+    //sooner than the given limit. Set this value to 0 to disable this
+    //feature.
+    
+    HRESULT SetLagInFrames([in] int LagInFrames);
+    HRESULT GetLagInFrames([out] int* pLagInFrames);
+    
+    //VP8 token partition mode
+    //
+    //This defines VP8 partitioning mode for compressed data, i.e., the number of
+    //sub-streams in the bitstream. Used for parallelized decoding.
+    //
+    //Value 0 = one token partition
+    //Value 1 = two token partitions
+    //Value 2 = four token partitions
+    //Value 3 = eight token partitions
+    
+    HRESULT SetTokenPartitions([in] int TokenPartition);
+    HRESULT GetTokenPartitions([out] int* pTokenPartition);
+
+    //Target data rate
+    //
+    //Target bandwidth to use for this stream, in kilobits per second.
+    //The value 0 means "use the codec default".
+
+    HRESULT SetTargetBitrate([in] int Bitrate);
+    HRESULT GetTargetBitrate([out] int* pBitrate);
+
+    //Minimum (Best Quality) Quantizer
+    //
+    //The quantizer is the most direct control over the quality of the
+    //encoded image.  The quantizer range is [0, 63].
+
+    HRESULT SetMinQuantizer([in] int MinQuantizer);
+    HRESULT GetMinQuantizer([out] int* pMinQuantizer);
+
+    //Maximum (Worst Quality) Quantizer
+    //
+    //The quantizer is the most direct control over the quality of the
+    //encoded image.  The quantizer range is [0, 63].
+
+    HRESULT SetMaxQuantizer([in] int MaxQuantizer);
+    HRESULT GetMaxQuantizer([out] int* pMaxQuantizer);
+
+    //Rate control undershoot tolerance
+    //
+    //This value, expressed as a percentage of the target bitrate, describes
+    //the target bitrate for easier frames, allowing bits to be saved for
+    //harder frames. Set to zero to use the codec default.
+    
+    HRESULT SetUndershootPct([in] int UndershootPct);
+    HRESULT GetUndershootPct([out] int* pUndershootPct);
+
+    //Rate control overshoot tolerance
+    //
+    //This value, expressed as a percentage of the target bitrate, describes
+    //the maximum allowed bitrate for a given frame.  Set to zero to use the
+    //codec default.
+    
+    HRESULT SetOvershootPct([in] int OvershootPct);
+    HRESULT GetOvershootPct([out] int* pOvershootPct);
+
+    //Decoder Buffer Size
+    //
+    //This value indicates the amount of data that may be buffered by the
+    //decoding application. Note that this value is expressed in units of
+    //time (milliseconds). For example, a value of 5000 indicates that the
+    //client will buffer (at least) 5000ms worth of encoded data.
+    
+    HRESULT SetDecoderBufferSize([in] int TimeInMilliseconds);
+    HRESULT GetDecoderBufferSize([out] int* pTimeInMilliseconds);
+
+    //Decoder Buffer Initial Size
+    //
+    //This value indicates the amount of data that will be buffered by the
+    //decoding application prior to beginning playback. This value is
+    //expressed in units of time (milliseconds).
+
+    HRESULT SetDecoderBufferInitialSize([in] int TimeInMilliseconds);
+    HRESULT GetDecoderBufferInitialSize([out] int* pTimeInMilliseconds);
+
+    //Decoder Buffer Optimal Size
+    //
+    //This value indicates the amount of data that the encoder should try
+    //to maintain in the decoder's buffer. This value is expressed in units
+    //of time (milliseconds).
+
+    HRESULT SetDecoderBufferOptimalSize([in] int TimeInMilliseconds);
+    HRESULT GetDecoderBufferOptimalSize([out] int* pTimeInMilliseconds);
+
+    //Keyframe placement mode
+    //
+    //This value indicates whether the encoder should place keyframes at a
+    //fixed interval, or determine the optimal placement automatically
+    //(as governed by the KeyframeMinInterval and KeyframeMaxInterval).
+
+    HRESULT SetKeyframeMode([in] enum VP8KeyframeMode Mode);
+    HRESULT GetKeyframeMode([out] enum VP8KeyframeMode* pMode);
+    
+    //Keyframe minimum interval
+    //
+    //This value, expressed as a number of frames, prevents the encoder from
+    //placing a keyframe nearer than MinInterval to the previous keyframe. At
+    //least MinInterval frames non-keyframes will be coded before the next
+    //keyframe. Set MinInterval equal to MaxInterval for a fixed interval.
+
+    HRESULT SetKeyframeMinInterval([in] int MinInterval);
+    HRESULT GetKeyframeMinInterval([out] int* pMinInterval);
+
+    //Keyframe maximum interval
+    //
+    //This value, expressed as a number of frames, forces the encoder to code
+    //a keyframe if one has not been coded in the last MaxInterval frames.
+    //A value of 0 implies all frames will be keyframes. Set MinInterval
+    //equal to MaxInterval for a fixed interval.
+
+    HRESULT SetKeyframeMaxInterval([in] int MaxInterval);
+    HRESULT GetKeyframeMaxInterval([out] int* pMaxInterval);
+}
+
+
+[
+   uuid(ED3110F5-5211-11DF-94AF-0026B977EEAA),
+   helpstring("VP8 Encoder Filter Class")
+]
+coclass VP8Encoder
+{
+   [default] interface IVP8Encoder;
+}
+
+}  //end library VP8EncoderLib
