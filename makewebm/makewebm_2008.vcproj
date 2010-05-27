@@ -56,6 +56,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="$(SolutionDir)"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -133,6 +134,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="$(SolutionDir)"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
