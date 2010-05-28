@@ -48,7 +48,8 @@ CmdLine::CmdLine() :
     m_error_resilient(-1),
     m_end_usage(-1),
     m_lag_in_frames(-1),
-    m_token_partitions(-1)
+    m_token_partitions(-1),
+    m_two_pass(-1)
 {
 }
 
@@ -1037,6 +1038,11 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
         
+    status = ParseOpt(i, arg, len, L"two-pass", m_two_pass, 0, 1, 1);
+    
+    if (status)
+        return status;
+        
     status = ParseOpt(i, arg, len, L"undershoot-pct", m_undershoot_pct, 0, 100);
     
     if (status)
@@ -1193,6 +1199,12 @@ int CmdLine::GetTokenPartitions() const
 }
 
 
+int CmdLine::GetTwoPass() const
+{
+    return m_two_pass;
+}
+
+
 void CmdLine::PrintVersion() const
 {
     wcout << "makewebm ";
@@ -1233,6 +1245,7 @@ void CmdLine::PrintUsage() const
           << L"  --target-bitrate                target bandwidth (in kilobits/second)\n"
           << L"  --thread-count                  number of threads to use for VP8 encoding\n"
           << L"  --token-partitions              number of sub-streams\n"
+          << L"  --two-pass                      two-pass encoding\n"
           << L"  --undershoot-pct                percent of target bitrate for easier frames\n"
           << L"  --overshoot-pct                 percent of target bitrate for harder frames\n"
           << L"  -l, --list                      print switch values, but do not run app\n"
@@ -1432,6 +1445,9 @@ void CmdLine::ListArgs() const
     if (m_token_partitions >= 0)
         wcout << L"token-partitions: " << m_token_partitions << L'\n';
         
+    if (m_two_pass >= 0)
+        wcout << L"two-pass: " << m_two_pass << L'\n';
+        
     if (m_undershoot_pct >= 0)
         wcout << L"undershoot-pct: " << m_undershoot_pct << L'\n';
         
@@ -1539,12 +1555,14 @@ int CmdLine::ParseOpt(
     const wchar_t* name,
     int& value,
     int min,
-    int max) const
+    int max,
+    int optional) const
 {
     if (_wcsnicmp(arg, name, len) != 0)  //not a match
         return 0;  //keep parsing
         
     const bool has_value = (arg[len] != L'\0');  //L':' or L'="
+    const bool is_required = (optional == kValueIsRequired);
 
     int n;
     const wchar_t* str_value;
@@ -1557,8 +1575,13 @@ int CmdLine::ParseOpt(
         
         if (str_value_length == 0)
         {
-            wcout << "Empty value specified for " << name << " switch." << endl;
-            return -1;  //error
+            if (is_required)
+            {
+                wcout << "Empty value specified for " << name << " switch." << endl;
+                return -1;  //error
+            }
+            
+            str_value = 0;  //means "use optional value"
         }
         
         n = 1;
@@ -1567,15 +1590,26 @@ int CmdLine::ParseOpt(
     {
         str_value = *++i;
     
-        if (str_value == 0)
+        if (str_value)
+        {
+            str_value_length = wcslen(str_value);
+            n = 2;
+        }
+        else if (is_required)
         {
             wcout << "No value specified for " << name << " switch." << endl;
             return -1;  //error
         }
-        
-        str_value_length = wcslen(str_value);
-        
-        n = 2;
+        else
+            n = 1;
+    }
+    
+    if (str_value == 0)
+    {
+        assert(!is_required);
+        value = optional;
+
+        return n;
     }
     
     std::wistringstream is(str_value);

@@ -7,6 +7,8 @@
 
 #pragma once
 #include <string>
+//#include <limits>
+#include <climits>
 
 class CmdLine
 {
@@ -42,6 +44,7 @@ public:
     int GetEndUsage() const;
     int GetLagInFrames() const;
     int GetTokenPartitions() const;    
+    int GetTwoPass() const;
 
 private:
     
@@ -73,6 +76,7 @@ private:
     int m_end_usage;
     int m_lag_in_frames;
     int m_token_partitions;
+    int m_two_pass;
     
     int Parse(wchar_t**);
     int ParseShort(wchar_t**);
@@ -84,6 +88,11 @@ private:
     void ListArgs() const;
     static std::wstring GetPath(const wchar_t*);
     void SynthesizeOutput();
+
+//doesn't compile for some reason    
+//    enum { kValueIsRequired = std::numeric_limits<int>::min() };
+
+    enum { kValueIsRequired = INT_MAX };
     
     int ParseOpt(
         wchar_t** i,
@@ -92,6 +101,7 @@ private:
         const wchar_t* name,
         int& value,
         int min,
-        int max) const;
+        int max,
+        int optional = kValueIsRequired) const;
     
 };
