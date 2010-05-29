@@ -421,7 +421,9 @@ HRESULT Inpin::Receive(IMediaSample* pSample)
         return S_FALSE;
       
     hr = m_pStream->Receive(pSample);
-    assert(hr == S_OK);  //TODO
+    
+    if (hr != S_OK)
+        return hr;
     
     const BOOL b = SetEvent(m_hSample);  //notify other pin
     assert(b);
@@ -610,7 +612,14 @@ HRESULT Inpin::ReceiveMultiple(   //TODO: handle wait here, instead of in Receiv
 #endif
 
         const HRESULT hr = m_pStream->Receive(pSample);
-        assert(hr == S_OK);
+        
+        if (hr != S_OK)
+        {
+            if (m > 0)
+                break;
+                
+            return hr;
+        }
         
         ++m;
     }
@@ -644,7 +653,7 @@ HRESULT Inpin::OnEndOfStream()
 
     const int result = m_pStream->EndOfStream();
     
-#if 0        
+#if 0
     os << L"inpin[" << m_id << L"]::EndOfStream (after calling stream); result="
        << result
        << endl;

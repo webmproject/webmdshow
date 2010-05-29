@@ -745,14 +745,9 @@ void Context::NotifyAudioFrame(
     pAudio;
     assert(pAudio);
     assert(pAudio == m_pAudio);
-    assert(pFrame);
+    assert(pFrame);      
+    assert(m_file.GetStream());
     
-    if (m_file.GetStream() == 0)
-    {
-        pFrame->Release();               
-        return; 
-    }
-        
     StreamAudio::frames_t& aframes = pAudio->GetFrames();    
     aframes.push_back(pFrame);
     

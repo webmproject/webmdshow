@@ -480,6 +480,15 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
         return S_OK;
     }
 
+    EbmlIO::File& file = m_context.m_file;
+    
+    if (file.GetStream() == 0)
+        return S_OK;
+        
+    //In order to construct a frame, we need to have 
+    //both the start and stop times, so we check it
+    //here before calling the ctor.
+
     __int64 st, sp;
 
     hr = pSample->GetTime(&st, &sp);
@@ -491,7 +500,7 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
         return E_INVALIDARG;
     
     if (st >= sp)
-        return S_OK;
+        return S_OK;  //throw away this sample
 
     VorbisFrame* const pFrame = new (std::nothrow) VorbisFrame(pSample, this);
     assert(SUCCEEDED(hr));  //TODO

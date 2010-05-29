@@ -384,9 +384,10 @@ HRESULT StreamAudioVorbis::Receive(IMediaSample* pSample)
 {
     assert(pSample);
     
-    //TODO: verify this
-    if (m_context.m_file.GetStream() == 0)
-        return S_OK;  //TODO: send EOS immediately (and return S_FALSE)
+    EbmlIO::File& file = m_context.m_file;
+    
+    if (file.GetStream() == 0)
+        return S_OK;
 
     VorbisFrame* const pFrame = new (std::nothrow) VorbisFrame(pSample, this);
     assert(pFrame);  //TODO

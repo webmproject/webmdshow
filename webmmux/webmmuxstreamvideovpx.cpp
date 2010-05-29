@@ -14,6 +14,8 @@
 #include "odbgstream.hpp"
 using std::endl;
 using std::boolalpha;
+using std::hex;
+using std::dec;
 #endif
 
 namespace WebmMux
@@ -176,6 +178,40 @@ void StreamVideoVPx::WriteTrackSettings()
 HRESULT StreamVideoVPx::Receive(IMediaSample* pSample)
 {
     assert(pSample);
+    
+#if 0
+    __int64 st, sp;
+    const HRESULT hrTime = pSample->GetTime(&st, &sp);
+
+    odbgstream os;    
+    
+    os << "webmmux::vpx::receive: hrTime="
+       << hex << hrTime << dec;
+       
+    if (SUCCEEDED(hrTime))
+    {
+        os << " st=" << st
+           << " st.ms=" << double(st) / 10000;
+           
+        if (hrTime == S_OK)
+            os << " sp="
+               << sp
+               << " sp.ms="
+               << double(sp) / 10000
+               << " dt.ms="
+               << (double(sp-st) / 10000);
+    }
+    
+    //os << " frame.GetTimecode="
+    //   << pFrame->GetTimecode();
+        
+    os << endl;
+#endif
+
+    EbmlIO::File& file = m_context.m_file;
+    
+    if (file.GetStream() == 0)
+        return S_OK;
 
     VPxFrame* const pFrame = new (std::nothrow) VPxFrame(pSample, this);
     assert(pFrame);  //TODO
@@ -184,15 +220,6 @@ HRESULT StreamVideoVPx::Receive(IMediaSample* pSample)
            
     m_vframes.push_back(pFrame);
     
-#if 0
-    odbgstream os;
-    os << "webmmux::vpx::receive: time[ms]=" << pFrame->curr_timecode_ms()
-       << " key=" << boolalpha << pFrame->IsKey()
-       << " vframes.size=" << m_vframes.size()
-       << " rframes.size=" << m_rframes.size()
-       << endl;
-#endif
-   
     m_context.NotifyVideoFrame(this, pFrame);
 
     return S_OK;
