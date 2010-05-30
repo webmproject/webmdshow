@@ -126,7 +126,7 @@ HRESULT Inpin::QueryInternalConnections(
     if (FAILED(hr))
         return hr;
         
-    const ULONG m = 1;  //number of output pins
+    const ULONG m = 2;  //number of output pins
         
     ULONG& n = *pn;
     
@@ -153,10 +153,11 @@ HRESULT Inpin::QueryInternalConnections(
         return E_POINTER;
     }
     
-    IPin*& pin = pa[0];
-
-    pin = &m_pFilter->m_outpin_video;    
-    pin->AddRef();
+    pa[0] = &m_pFilter->m_outpin_video;    
+    pa[0]->AddRef();
+    
+    pa[1] = &m_pFilter->m_outpin_preview;
+    pa[1]->AddRef();
 
     n = m;    
     return S_OK;        
@@ -202,9 +203,8 @@ HRESULT Inpin::ReceiveConnection(
         
     m_pPinConnection = pin;
     
-    //TODO: init decompressor here?
-    
     m_pFilter->m_outpin_video.OnInpinConnect(mt);
+    m_pFilter->m_outpin_preview.OnInpinConnect(mt);
 
     return S_OK;
 }
@@ -294,12 +294,22 @@ HRESULT Inpin::EndOfStream()
         
     //We hold the lock.
 
+    if (IPin* pPin = m_pFilter->m_outpin_preview.m_pPinConnection)
+    {
+        lock.Release();
+
+        hr = pPin->EndOfStream();
+        
+        hr = lock.Seize(m_pFilter);
+        assert(SUCCEEDED(hr));  //TODO
+    }   
+
+    //We hold the lock.
+
     if (IPin* pPin = outpin.m_pPinConnection)
     {
         lock.Release();
-        
-        const HRESULT hr = pPin->EndOfStream();
-        return hr;
+        hr = pPin->EndOfStream();
     }
    
     return S_OK;
@@ -324,12 +334,24 @@ HRESULT Inpin::BeginFlush()
         
     m_bFlush = true;
     
+    //We hold the lock
+    
+    if (IPin* pPin = m_pFilter->m_outpin_preview.m_pPinConnection)
+    {
+        lock.Release();
+
+        hr = pPin->BeginFlush();
+        
+        hr = lock.Seize(m_pFilter);
+        assert(SUCCEEDED(hr));  //TODO
+    }   
+
+    //We hold the lock
+
     if (IPin* pPin = m_pFilter->m_outpin_video.m_pPinConnection)
     {
         lock.Release();
-        
-        const HRESULT hr = pPin->BeginFlush();
-        return hr;
+        hr = pPin->BeginFlush();
     }
     
     return S_OK;
@@ -350,12 +372,24 @@ HRESULT Inpin::EndFlush()
 
     m_bFlush = false;
     
+    //We hold the lock
+    
+    if (IPin* pPin = m_pFilter->m_outpin_preview.m_pPinConnection)
+    {
+        lock.Release();
+
+        hr = pPin->EndFlush();
+        
+        hr = lock.Seize(m_pFilter);
+        assert(SUCCEEDED(hr));  //TODO
+    }   
+
+    //We hold the lock
+
     if (IPin* pPin = m_pFilter->m_outpin_video.m_pPinConnection)
     {
         lock.Release();
-        
-        const HRESULT hr = pPin->EndFlush();
-        return hr;
+        hr = pPin->EndFlush();
     }
     
     return S_OK;
@@ -377,12 +411,24 @@ HRESULT Inpin::NewSegment(
     if (!bool(m_pPinConnection))
         return VFW_E_NOT_CONNECTED;
 
+    //We hold the lock
+    
+    if (IPin* pPin = m_pFilter->m_outpin_preview.m_pPinConnection)
+    {
+        lock.Release();
+
+        hr = pPin->NewSegment(st, sp, r);
+        
+        hr = lock.Seize(m_pFilter);
+        assert(SUCCEEDED(hr));  //TODO
+    }   
+
+    //We hold the lock
+
     if (IPin* pPin = m_pFilter->m_outpin_video.m_pPinConnection)
     {
         lock.Release();
-        
-        const HRESULT hr = pPin->NewSegment(st, sp, r);
-        return hr;
+        hr = pPin->NewSegment(st, sp, r);
     }
     
     return S_OK;
@@ -527,17 +573,6 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (m_bFlush)
         return S_FALSE;
         
-    Outpin& outpin = m_pFilter->m_outpin_video;
-    
-    if (!bool(outpin.m_pPinConnection))
-        return S_FALSE;
-        
-    if (!bool(outpin.m_pInputPin))
-        return S_FALSE;
-        
-    if (!bool(outpin.m_pAllocator))
-        return VFW_E_NO_ALLOCATOR;
-        
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
     assert(mt.formattype == FORMAT_VideoInfo);
     assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
@@ -612,7 +647,22 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
             assert(false);
             return E_FAIL;
     }
+    
+    m_pFilter->m_outpin_preview.Render(lock, imgbuf, w, h);
 
+    Outpin& outpin = m_pFilter->m_outpin_video;
+    
+    //TODO: should we bother checking these here?
+    
+    if (!bool(outpin.m_pPinConnection))
+        return S_FALSE;
+        
+    if (!bool(outpin.m_pInputPin))
+        return S_FALSE;
+        
+    if (!bool(outpin.m_pAllocator))
+        return VFW_E_NO_ALLOCATOR;
+        
     vpx_image_t img_;
     vpx_image_t* const img = vpx_img_wrap(&img_, fmt, w, h, 1, imgbuf);
     assert(img);

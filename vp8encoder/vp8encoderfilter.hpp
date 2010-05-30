@@ -11,6 +11,7 @@
 #include "clockable.hpp"
 #include "vp8encoderinpin.hpp"
 #include "vp8encoderoutpinvideo.hpp"
+#include "vp8encoderoutpinpreview.hpp"
 #include "vp8encoderidl.h"
 
 namespace VP8EncoderLib
@@ -140,6 +141,7 @@ public:
     FILTER_STATE m_state;
     Inpin m_inpin;
     OutpinVideo m_outpin_video;
+    OutpinPreview m_outpin_preview;
     
     struct Config
     {

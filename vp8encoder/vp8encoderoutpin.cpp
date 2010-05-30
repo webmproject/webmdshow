@@ -161,13 +161,7 @@ HRESULT Outpin::Connect(
 HRESULT Outpin::OnDisconnect()
 {
     m_pInputPin = 0;
-    
-    if (IMemAllocator* pAllocator = m_pAllocator.Detach())
-    {
-        const ULONG n = pAllocator->Release();
-        n;
-        assert(n == 0);
-    }    
+    m_pAllocator = 0;
     
     return S_OK;
 }

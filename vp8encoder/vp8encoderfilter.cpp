@@ -75,7 +75,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_state(State_Stopped),
       m_clock(0),
       m_inpin(this),
-      m_outpin_video(this)
+      m_outpin_video(this),
+      m_outpin_preview(this)
 {
     m_pClassFactory->LockServer(TRUE);
             
@@ -402,12 +403,14 @@ HRESULT Filter::EnumPins(IEnumPins** pp)
     if (FAILED(hr))
         return hr;
         
-    IPin* pins[2];
-        
-    pins[0] = &m_inpin;
-    pins[1] = &m_outpin_video;
+    IPin* pins[3] =
+    {
+        &m_inpin,
+        &m_outpin_video,
+        &m_outpin_preview
+    };        
     
-    return CEnumPins::CreateInstance(pins, 2, pp);        
+    return CEnumPins::CreateInstance(pins, 3, pp);        
 }
 
 
@@ -425,36 +428,31 @@ HRESULT Filter::FindPin(
     if (id1 == 0)
         return E_INVALIDARG;
         
+    Pin* pins[3] =
     {
-        Pin* const pPin = &m_inpin;
-        
-        const wstring& id2_ = pPin->m_id;
-        const wchar_t* const id2 = id2_.c_str();
-        
-        if (wcscmp(id1, id2) == 0)  //case-sensitive
-        {
-            p = pPin;
-            p->AddRef();
-            
-            return S_OK;
-        }
-    }    
-        
-    {
-        Pin* const pPin = &m_outpin_video;
-
-        const wstring& id2_ = pPin->m_id;
-        const wchar_t* const id2 = id2_.c_str();
-        
-        if (wcscmp(id1, id2) == 0)  //case-sensitive
-        {
-            p = pPin;
-            p->AddRef();
-            
-            return S_OK;
-        }
-    }    
+        &m_inpin,
+        &m_outpin_video,
+        &m_outpin_preview
+    };
     
+    Pin** iter = pins;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        Pin* const pin = *iter++;
+        
+        const wstring& id2_ = pin->m_id;
+        const wchar_t* const id2 = id2_.c_str();
+        
+        if (wcscmp(id1, id2) == 0)  //case-sensitive
+        {
+            p = pin;
+            p->AddRef();
+            
+            return S_OK;
+        }
+    }    
+            
     return VFW_E_NOT_FOUND;
 }
 
@@ -1148,12 +1146,23 @@ HRESULT Filter::OnStart()
         return hr;
     }
     
+    hr = m_outpin_preview.Start();
+    
+    if (FAILED(hr))
+    {
+        m_outpin_video.Stop();
+        m_inpin.Stop();
+        
+        return hr;
+    }
+    
     return S_OK;
 }
 
 
 void Filter::OnStop()
 {
+    m_outpin_preview.Stop();
     m_outpin_video.Stop();
     m_inpin.Stop();
 }
