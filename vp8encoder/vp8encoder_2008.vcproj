@@ -322,6 +322,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\vp8encoderoutpinvideo.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\vp8encoderoutpinvideo.hpp"
+			>
+		</File>
+		<File
 			RelativePath=".\vp8encoderpin.cpp"
 			>
 		</File>

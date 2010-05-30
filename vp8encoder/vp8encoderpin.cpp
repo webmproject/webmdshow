@@ -144,8 +144,20 @@ HRESULT Pin::QueryPinInfo(PIN_INFO* p)
     
     i.dir = m_dir;
 
-    hr = GetName(i);
-    assert(SUCCEEDED(hr));
+    //hr = GetName(i);
+    //assert(SUCCEEDED(hr));
+
+    const std::wstring name_ = GetName();
+    const wchar_t* const name = name_.c_str();
+
+#if _MSC_VER >= 1400
+    enum { namelen = sizeof(i.achName) / sizeof(WCHAR) };
+    const errno_t e = wcscpy_s(i.achName, namelen, name);
+    e;
+    assert(e == 0);
+#else
+    wcscpy(i.achName, name);
+#endif
 
     return S_OK;
 }

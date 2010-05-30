@@ -75,7 +75,7 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_state(State_Stopped),
       m_clock(0),
       m_inpin(this),
-      m_outpin(this)
+      m_outpin_video(this)
 {
     m_pClassFactory->LockServer(TRUE);
             
@@ -405,7 +405,7 @@ HRESULT Filter::EnumPins(IEnumPins** pp)
     IPin* pins[2];
         
     pins[0] = &m_inpin;
-    pins[1] = &m_outpin;
+    pins[1] = &m_outpin_video;
     
     return CEnumPins::CreateInstance(pins, 2, pp);        
 }
@@ -441,7 +441,7 @@ HRESULT Filter::FindPin(
     }    
         
     {
-        Pin* const pPin = &m_outpin;
+        Pin* const pPin = &m_outpin_video;
 
         const wstring& id2_ = pPin->m_id;
         const wchar_t* const id2 = id2_.c_str();
@@ -1140,7 +1140,7 @@ HRESULT Filter::OnStart()
     if (FAILED(hr))
         return hr;
     
-    hr = m_outpin.Start();
+    hr = m_outpin_video.Start();
 
     if (FAILED(hr))
     {
@@ -1154,7 +1154,7 @@ HRESULT Filter::OnStart()
 
 void Filter::OnStop()
 {
-    m_outpin.Stop();
+    m_outpin_video.Stop();
     m_inpin.Stop();
 }
 

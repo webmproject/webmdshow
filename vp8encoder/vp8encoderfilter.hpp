@@ -10,7 +10,7 @@
 #include <string>
 #include "clockable.hpp"
 #include "vp8encoderinpin.hpp"
-#include "vp8encoderoutpin.hpp"
+#include "vp8encoderoutpinvideo.hpp"
 #include "vp8encoderidl.h"
 
 namespace VP8EncoderLib
@@ -139,7 +139,7 @@ public:
     FILTER_INFO m_info;
     FILTER_STATE m_state;
     Inpin m_inpin;
-    Outpin m_outpin;
+    OutpinVideo m_outpin_video;
     
     struct Config
     {

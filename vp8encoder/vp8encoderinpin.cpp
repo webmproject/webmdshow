@@ -19,6 +19,8 @@
 #include "odbgstream.hpp"
 #include <iomanip>
 using std::endl;
+using std::hex;
+using std::dec;
 #endif
 
 namespace VP8EncoderLib
@@ -153,7 +155,7 @@ HRESULT Inpin::QueryInternalConnections(
     
     IPin*& pin = pa[0];
 
-    pin = &m_pFilter->m_outpin;    
+    pin = &m_pFilter->m_outpin_video;    
     pin->AddRef();
 
     n = m;    
@@ -202,7 +204,7 @@ HRESULT Inpin::ReceiveConnection(
     
     //TODO: init decompressor here?
     
-    m_pFilter->m_outpin.OnInpinConnect(mt);
+    m_pFilter->m_outpin_video.OnInpinConnect(mt);
 
     return S_OK;
 }
@@ -249,7 +251,7 @@ HRESULT Inpin::EndOfStream()
         AppendFrame(pkt);
     }
         
-    Outpin& outpin = m_pFilter->m_outpin;
+    OutpinVideo& outpin = m_pFilter->m_outpin_video;
 
     while (!m_pending.empty())
     {
@@ -322,7 +324,7 @@ HRESULT Inpin::BeginFlush()
         
     m_bFlush = true;
     
-    if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
+    if (IPin* pPin = m_pFilter->m_outpin_video.m_pPinConnection)
     {
         lock.Release();
         
@@ -348,7 +350,7 @@ HRESULT Inpin::EndFlush()
 
     m_bFlush = false;
     
-    if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
+    if (IPin* pPin = m_pFilter->m_outpin_video.m_pPinConnection)
     {
         lock.Release();
         
@@ -375,7 +377,7 @@ HRESULT Inpin::NewSegment(
     if (!bool(m_pPinConnection))
         return VFW_E_NOT_CONNECTED;
 
-    if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
+    if (IPin* pPin = m_pFilter->m_outpin_video.m_pPinConnection)
     {
         lock.Release();
         
@@ -525,7 +527,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (m_bFlush)
         return S_FALSE;
         
-    Outpin& outpin = m_pFilter->m_outpin;
+    Outpin& outpin = m_pFilter->m_outpin_video;
     
     if (!bool(outpin.m_pPinConnection))
         return S_FALSE;
@@ -821,7 +823,7 @@ void Inpin::AppendFrame(const vpx_codec_cx_pkt_t* pkt)
     
     IVP8Sample::Frame f;
     
-    const HRESULT hr = m_pFilter->m_outpin.GetFrame(f);
+    const HRESULT hr = m_pFilter->m_outpin_video.GetFrame(f);
     assert(SUCCEEDED(hr));
     assert(f.buf);
     
@@ -900,7 +902,7 @@ HRESULT Inpin::ReceiveCanBlock()
     if (FAILED(hr))
         return S_OK;  //?
         
-    if (IMemInputPin* pPin = m_pFilter->m_outpin.m_pInputPin)
+    if (IMemInputPin* pPin = m_pFilter->m_outpin_video.m_pInputPin)
     {
         lock.Release();
         return pPin->ReceiveCanBlock();
@@ -912,24 +914,13 @@ HRESULT Inpin::ReceiveCanBlock()
 
 HRESULT Inpin::OnDisconnect()
 {    
-    return m_pFilter->m_outpin.OnInpinDisconnect();
+    return m_pFilter->m_outpin_video.OnInpinDisconnect();
 }
 
 
-HRESULT Inpin::GetName(PIN_INFO& info) const
+std::wstring Inpin::GetName() const
 {
-    const wchar_t name[] = L"YUV";
-    
-#if _MSC_VER >= 1400
-    enum { namelen = sizeof(info.achName) / sizeof(WCHAR) };
-    const errno_t e = wcscpy_s(info.achName, namelen, name);
-    e;
-    assert(e == 0);
-#else
-    wcscpy(info.achName, name);
-#endif
-
-    return S_OK;
+    return L"YUV";
 }
 
 

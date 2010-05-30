@@ -83,7 +83,8 @@ public:
     void Stop();      //from running/paused to stopped
 
 protected:
-    HRESULT GetName(PIN_INFO&) const;
+    //HRESULT GetName(PIN_INFO&) const;
+    std::wstring GetName() const;
     HRESULT OnDisconnect();
     void PurgePending();
 

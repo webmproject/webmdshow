@@ -82,7 +82,8 @@ public:
     //    double dRate);
     
 protected:
-    virtual HRESULT GetName(PIN_INFO&) const = 0;
+    //virtual HRESULT GetName(PIN_INFO&) const = 0;
+    virtual std::wstring GetName() const = 0;
     virtual HRESULT OnDisconnect();
     
 };
