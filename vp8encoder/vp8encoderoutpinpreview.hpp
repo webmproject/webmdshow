@@ -39,7 +39,7 @@ public:
     //local functions
     
     void OnInpinConnect(const AM_MEDIA_TYPE&);
-    void Render(CLockable::Lock&, const BYTE*, ULONG, ULONG);
+    void Render(CLockable::Lock&, const vpx_image_t*);
 
 protected:
     void SetDefaultMediaTypes();

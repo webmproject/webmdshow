@@ -648,7 +648,17 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
             return E_FAIL;
     }
     
-    m_pFilter->m_outpin_preview.Render(lock, imgbuf, w, h);
+    vpx_image_t img_;
+    vpx_image_t* const img = vpx_img_wrap(&img_, fmt, w, h, 1, imgbuf);
+    assert(img);
+    assert(img == &img_);
+    
+    //TODO: set this based on vih.rcSource
+    const int status = vpx_img_set_rect(img, 0, 0, w, h);
+    status;
+    assert(status == 0);
+    
+    m_pFilter->m_outpin_preview.Render(lock, img);
 
     Outpin& outpin = m_pFilter->m_outpin_video;
     
@@ -663,16 +673,6 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (!bool(outpin.m_pAllocator))
         return VFW_E_NO_ALLOCATOR;
         
-    vpx_image_t img_;
-    vpx_image_t* const img = vpx_img_wrap(&img_, fmt, w, h, 1, imgbuf);
-    assert(img);
-    assert(img == &img_);
-    
-    //TODO: set this based on vih.rcSource
-    const int status = vpx_img_set_rect(img, 0, 0, w, h);
-    status;
-    assert(status == 0);
-    
     __int64 st, sp;
 
     const HRESULT hrTime = pInSample->GetTime(&st, &sp);

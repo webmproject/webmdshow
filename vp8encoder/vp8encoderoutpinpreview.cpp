@@ -282,14 +282,9 @@ HRESULT OutpinPreview::GetAllocator(IMemInputPin* pInputPin)
 
 void OutpinPreview::Render(
     CLockable::Lock& lock,
-    const BYTE* img,  //YV12
-    ULONG wIn,
-    ULONG hIn)  
+    const vpx_image_t* img)
 {
-    assert(wIn > 0);
-    assert((wIn % 2) == 0);  //TODO
-    assert(hIn > 0);
-    assert((hIn % 2) == 0);  //TODO
+    assert(img);
     
     if (!bool(m_pPinConnection))
         return;
@@ -342,9 +337,12 @@ void OutpinPreview::Render(
     const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
     const BITMAPINFOHEADER& bmih = vih.bmiHeader;    
     
+    unsigned int wIn = img->d_w;
+    unsigned int hIn = img->d_h;
+
     //Y
     
-    const BYTE* pInY = img;
+    const BYTE* pInY = img->planes[PLANE_Y];
     assert(pInY);
     
     BYTE* pOutBuf;
@@ -355,13 +353,13 @@ void OutpinPreview::Render(
     
     BYTE* pOut = pOutBuf;
     
-    const int strideInY = wIn;
+    const int strideInY = img->stride[PLANE_Y];
     
     LONG strideOut = bmih.biWidth;
     assert(strideOut);
     assert((strideOut % 2) == 0);
     
-    for (ULONG y = 0; y < hIn; ++y)
+    for (unsigned int y = 0; y < hIn; ++y)
     {
         memcpy(pOut, pInY, wIn);
         pInY += strideInY;
@@ -373,28 +371,28 @@ void OutpinPreview::Render(
     wIn = (wIn + 1) / 2;    
     hIn = (hIn + 1) / 2;
     
-    const BYTE* pInV = pInY;
+    const BYTE* pInV = img->planes[PLANE_V];
     assert(pInV);
     
-    const int strideInV = wIn;
+    const int strideInV = img->stride[PLANE_V];
+    
+    const BYTE* pInU = img->planes[PLANE_U];
+    assert(pInU);
+    
+    const int strideInU = img->stride[PLANE_U];
     
     //V
     
-    for (ULONG y = 0; y < hIn; ++y)
+    for (unsigned int y = 0; y < hIn; ++y)
     {
         memcpy(pOut, pInV, wIn);
         pInV += strideInV;
         pOut += strideOut;
     }
     
-    const BYTE* pInU = pInV;
-    assert(pInU);
-    
-    const int strideInU = wIn;
-    
     //U
     
-    for (ULONG y = 0; y < hIn; ++y)
+    for (unsigned int y = 0; y < hIn; ++y)
     {
         memcpy(pOut, pInU, wIn);
         pInU += strideInU;
