@@ -490,6 +490,9 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (bmih.biCompression != mt.subtype.Data1)
         return S_FALSE;
         
+    if (vih.AvgTimePerFrame <= 0)
+        return S_FALSE;
+        
     return S_OK;
 }
 
@@ -678,86 +681,13 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     const HRESULT hrTime = pInSample->GetTime(&st, &sp);
     
     if (FAILED(hrTime))
-    {
-        if (m_reftime < 0)
-            return S_OK;  //throw this sample away
-        
-        st = m_reftime;
+        return hrTime;
 
-        if (vih.AvgTimePerFrame > 0)
-            sp = st + vih.AvgTimePerFrame;
-        else
-            sp = st + 20 * 10000;  //add 20ms  //TODO: make a better estimate
-    }    
-    else if (hrTime == S_OK)  //have both start and stop times
-    {
-        if (st > sp)
-            return VFW_E_START_TIME_AFTER_END;
-            
-        if (sp <= 0)
-            return S_OK;  //throw sample away
-            
-        if (st < 0)
-            st = 0;
-            
-        if (m_reftime < 0)
-        {
-            if (st > 0)
-                st = 0;
-                
-            m_reftime = st;
-        }
-        else if (st < m_reftime)
-            st = m_reftime;
-
-        if (sp <= st)
-        {
-            if (vih.AvgTimePerFrame > 0)
-                sp = st + vih.AvgTimePerFrame;
-            else
-                sp = st + 20 * 10000;  //20ms
-        }
-    }
-    else if (st < 0)
-        return S_OK;  //throw sample away
-        
-    else
-    {
-        if (m_reftime < 0)
-        {
-            if (st > 0)
-                st = 0;
-                
-            m_reftime = st;
-        }
-        else if (st < m_reftime)
-            st = m_reftime;
-            
-        if (vih.AvgTimePerFrame > 0)
-            sp = st + vih.AvgTimePerFrame;
-        else
-            sp = st + 20 * 10000;  //add 20ms
-    }
-    
-    assert(m_reftime >= 0);
-    assert(st >= m_reftime);
-    assert(sp > st);
-    
-    m_reftime = sp;
-
-    const __int64 duration_ = sp - st;
+    const __int64 duration_ = vih.AvgTimePerFrame;
     assert(duration_ > 0);
     
     const unsigned long d = static_cast<unsigned long>(duration_);
         
-    //odbgstream os;
-    //os << std::fixed << std::setprecision(1);
-    //os << "vp8enc::inpin::receive:"
-    //   << " st[ms]=" << st / 10000
-    //   << " sp[ms]=" << sp / 10000
-    //   << " dt[ms]=" << duration_ / 10000
-    //   << endl;
-    
     hr = pInSample->IsDiscontinuity();
     const bool bDiscontinuity = (hr == S_OK);
 
@@ -993,7 +923,6 @@ HRESULT Inpin::Start()
     m_bDiscontinuity = true;
     m_bEndOfStream = false;
     m_bFlush = false;
-    m_reftime = _I64_MIN;  //nonce
     
     PurgePending();
     

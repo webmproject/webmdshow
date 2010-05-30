@@ -96,7 +96,7 @@ private:
     bool m_bDiscontinuity;
     bool m_bEndOfStream;
     bool m_bFlush;
-    __int64 m_reftime;
+    //__int64 m_reftime;
     vpx_codec_ctx_t m_ctx;
         
     typedef std::list<IVP8Sample::Frame> frames_t;    
