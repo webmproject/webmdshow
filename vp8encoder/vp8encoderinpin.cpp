@@ -888,7 +888,13 @@ HRESULT Inpin::ReceiveCanBlock()
 
 HRESULT Inpin::OnDisconnect()
 {    
-    return m_pFilter->m_outpin_video.OnInpinDisconnect();
+    HRESULT hr = m_pFilter->m_outpin_preview.OnInpinDisconnect();
+    assert(SUCCEEDED(hr));
+    
+    hr = m_pFilter->m_outpin_video.OnInpinDisconnect();
+    assert(SUCCEEDED(hr));
+    
+    return S_OK;
 }
 
 
