@@ -670,10 +670,12 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         
     __int64 st, sp;
 
-    const HRESULT hrTime = pInSample->GetTime(&st, &sp);
+    hr = pInSample->GetTime(&st, &sp);
     
-    if (FAILED(hrTime))
-        return hrTime;
+    if (FAILED(hr))
+        return hr;
+        
+    assert(st >= 0);
 
     const __int64 duration_ = vih.AvgTimePerFrame;
     assert(duration_ > 0);
