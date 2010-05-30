@@ -665,16 +665,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     Outpin& outpin = m_pFilter->m_outpin_video;
     
-    //TODO: should we bother checking these here?
-    
     if (!bool(outpin.m_pPinConnection))
-        return S_FALSE;
-        
-    if (!bool(outpin.m_pInputPin))
-        return S_FALSE;
-        
-    if (!bool(outpin.m_pAllocator))
-        return VFW_E_NO_ALLOCATOR;
+        return S_OK;
         
     __int64 st, sp;
 
