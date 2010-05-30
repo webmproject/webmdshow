@@ -403,10 +403,6 @@ HRESULT VideoStream::OnPopulateSample(
         __int64 stop_reftime;
         __int64* pstop_reftime;
 
-#if 0
-        hr = pSample->SetTime(&start_reftime, 0);
-        assert(SUCCEEDED(hr));
-#else                
         if ((pNextEntry == 0) || pNextEntry->EOS())
             pstop_reftime = 0;  //TODO: use duration of curr block
         else
@@ -426,10 +422,9 @@ HRESULT VideoStream::OnPopulateSample(
 
             pstop_reftime = &stop_reftime;
         }
-        
+
         hr = pSample->SetTime(&start_reftime, pstop_reftime);
         assert(SUCCEEDED(hr));
-#endif
     }
     
     //m_pCurr = pNextBlock;    
