@@ -271,7 +271,10 @@ int App::CreateGraph()
             hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
             assert(SUCCEEDED(hr));
             
-            const IPinPtr pVP8Inpin = FindInpinVideo(pCompressor);
+            IPinPtr pVP8Inpin;
+            
+            hr = pCompressor->FindPin(L"input", &pVP8Inpin);
+            assert(SUCCEEDED(hr));
             assert(bool(pVP8Inpin));
             
             hr = pBuilder->Connect(pDemuxOutpinVideo, pVP8Inpin);
@@ -286,7 +289,10 @@ int App::CreateGraph()
                 return 1;
             }
                 
-            const IPinPtr pVP8Outpin = FindOutpinVideo(pCompressor);
+            IPinPtr pVP8Outpin;
+            
+            hr = pCompressor->FindPin(L"output", &pVP8Outpin);
+            assert(SUCCEEDED(hr));
             assert(bool(pVP8Outpin));
             
             hr = m_pGraph->ConnectDirect(pVP8Outpin, pMuxInpinVideo, 0);

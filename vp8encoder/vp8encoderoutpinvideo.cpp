@@ -30,7 +30,7 @@ namespace VP8EncoderLib
 {
 
 OutpinVideo::OutpinVideo(Filter* pFilter) :
-    Outpin(pFilter, L"video")
+    Outpin(pFilter, L"output")
 {
     SetDefaultMediaTypes();
 }
