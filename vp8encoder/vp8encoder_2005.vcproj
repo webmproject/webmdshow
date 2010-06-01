@@ -248,6 +248,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\common\cmediasample.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\cmediasample.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\common\cmediatypes.cpp"
 				>
 			</File>
@@ -330,6 +338,22 @@
 		</File>
 		<File
 			RelativePath=".\vp8encoderoutpin.hpp"
+			>
+		</File>
+		<File
+			RelativePath=".\vp8encoderoutpinpreview.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\vp8encoderoutpinpreview.hpp"
+			>
+		</File>
+		<File
+			RelativePath=".\vp8encoderoutpinvideo.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\vp8encoderoutpinvideo.hpp"
 			>
 		</File>
 		<File
