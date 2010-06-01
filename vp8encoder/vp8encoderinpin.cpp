@@ -817,8 +817,12 @@ void Inpin::AppendFrame(const vpx_codec_cx_pkt_t* pkt)
     f.start = pkt->data.frame.pts;
     assert(f.start >= 0);
     
+#if 0
     f.stop = f.start + pkt->data.frame.duration;
     assert(f.stop > f.start);
+#else
+    f.stop = -1;  //don't send stop time
+#endif
     
     const uint32_t bKey = pkt->data.frame.flags & VPX_FRAME_IS_KEY;
     

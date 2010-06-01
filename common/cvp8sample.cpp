@@ -369,14 +369,22 @@ HRESULT CVP8Sample::GetTime(
     const Frame& f = m_frame;
     assert(f.buf);
     assert(f.start >= 0);
-    assert(f.stop > f.start);
     
-    if (pstart)
-        *pstart = f.start;
+    if (pstart == 0)
+        return E_POINTER;
         
-    if (pstop)
-        *pstop = f.stop;
+    *pstart = f.start;
         
+    if (pstop == 0)
+        return S_OK;
+        
+    if (f.stop < f.start)  //no stop time
+    {
+        *pstop = f.start + 1;
+        return VFW_S_NO_STOP_TIME;
+    }
+    
+    *pstop = f.stop;        
     return S_OK;
 }
 
