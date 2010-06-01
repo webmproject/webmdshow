@@ -14,6 +14,7 @@
 #include "mediatypeutil.hpp"
 #include <vfwmsgs.h>
 #include <amvideo.h>
+#include <dvdmedia.h>
 #include <cassert>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
@@ -90,17 +91,36 @@ HRESULT OutpinPreview::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (mt.subtype != MEDIASUBTYPE_YV12)
         return S_FALSE;
         
-    if (mt.formattype != FORMAT_VideoInfo)  //TODO: liberalize
-        return S_FALSE;
-        
     if (mt.pbFormat == 0)
         return S_FALSE;
 
-    if (mt.cbFormat < sizeof(VIDEOINFOHEADER))
+    const BITMAPINFOHEADER* pbmih;
+    
+    if (mt.formattype == FORMAT_VideoInfo)
+    {
+        if (mt.cbFormat < sizeof(VIDEOINFOHEADER))
+            return S_FALSE;
+        
+        const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+        const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+        
+        pbmih = &bmih;
+    }
+    else if (mt.formattype == FORMAT_VideoInfo2)
+    {
+        if (mt.cbFormat < sizeof(VIDEOINFOHEADER2))
+            return S_FALSE;
+        
+        const VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+        const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+        
+        pbmih = &bmih;
+    }
+    else
         return S_FALSE;
         
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+    assert(pbmih);
+    const BITMAPINFOHEADER& bmih = *pbmih;
     
     if (bmih.biSize != sizeof(BITMAPINFOHEADER))  //TODO: liberalize
         return S_FALSE;
@@ -127,65 +147,6 @@ std::wstring OutpinPreview::GetName() const
 }
 
 
-void OutpinPreview::OnInpinConnect(const AM_MEDIA_TYPE& mtIn)
-{
-    assert(mtIn.cbFormat >= sizeof(VIDEOINFOHEADER));
-    assert(mtIn.pbFormat);
-    
-    const VIDEOINFOHEADER& vihIn = (VIDEOINFOHEADER&)(*mtIn.pbFormat);
-    const BITMAPINFOHEADER& bmihIn = vihIn.bmiHeader;
-    
-    m_preferred_mtv.Clear();
-    
-    AM_MEDIA_TYPE mt;
-    
-    VIDEOINFOHEADER vih;
-    BITMAPINFOHEADER& bmih = vih.bmiHeader;
-    
-    mt.majortype = MEDIATYPE_Video;
-    mt.subtype = MEDIASUBTYPE_YV12;
-    mt.bFixedSizeSamples = FALSE;
-    mt.bTemporalCompression = FALSE;
-    mt.lSampleSize = 0;  //TODO
-    mt.formattype = FORMAT_VideoInfo;
-    mt.pUnk = 0;
-    mt.cbFormat = sizeof vih;
-    mt.pbFormat = (BYTE*)&vih;
-    
-    SetRectEmpty(&vih.rcSource);  //TODO
-    SetRectEmpty(&vih.rcTarget);  //TODO
-    vih.dwBitRate = 0;
-    vih.dwBitErrorRate = 0;
-    vih.AvgTimePerFrame = vihIn.AvgTimePerFrame;
-    
-    const LONG ww = bmihIn.biWidth;
-    assert(ww > 0);
-    
-    const LONG hh = bmihIn.biHeight;
-    assert(hh > 0);
-    
-    bmih.biSize = sizeof bmih;
-    bmih.biWidth = ww;
-    bmih.biHeight = hh;
-    bmih.biPlanes = 1;  //because Microsoft says so
-    bmih.biBitCount = 12;  //?
-    bmih.biCompression = mt.subtype.Data1;
-
-    //TODO: does this really need to be a conditional expr?
-    const LONG w = (ww % 16) ? 16 * ((ww + 15) / 16) : ww;
-    const LONG h = (hh % 16) ? 16 * ((hh + 15) / 16) : hh;        
-    const LONG cbBuffer = w*h + 2*(w/2)*(h/2);
-
-    bmih.biSizeImage = cbBuffer;
-    bmih.biXPelsPerMeter = 0;
-    bmih.biYPelsPerMeter = 0;
-    bmih.biClrUsed = 0;
-    bmih.biClrImportant = 0;
-    
-    m_preferred_mtv.Add(mt);
-}
-
-
 void OutpinPreview::SetDefaultMediaTypes()
 {
     m_preferred_mtv.Clear();
@@ -206,77 +167,14 @@ void OutpinPreview::SetDefaultMediaTypes()
 }
 
 
-HRESULT OutpinPreview::GetAllocator(IMemInputPin* pInputPin)
+HRESULT OutpinPreview::GetAllocator(IMemInputPin* pInputPin, IMemAllocator** pp) const
 {
-    GraphUtil::IMemAllocatorPtr pAllocator;
-    
-    HRESULT hr = pInputPin->GetAllocator(&pAllocator);
+    HRESULT hr = pInputPin->GetAllocator(pp);
     
     if (FAILED(hr))
-    {        
-        hr = CMediaSample::CreateAllocator(&pAllocator);
+        hr = CMediaSample::CreateAllocator(pp);
         
-        if (FAILED(hr))
-            return VFW_E_NO_ALLOCATOR;
-    }
-
-    assert(bool(pAllocator));
-
-    ALLOCATOR_PROPERTIES props, actual;
-
-    props.cBuffers = -1;    //number of buffers
-    props.cbBuffer = -1;    //size of each buffer, excluding prefix
-    props.cbAlign = -1;     //applies to prefix, too
-    props.cbPrefix = -1;    //imediasample::getbuffer does NOT include prefix
-
-    hr = pInputPin->GetAllocatorRequirements(&props);
-
-    if (props.cBuffers <= 0)
-        props.cBuffers = 1;
-        
-    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_VideoInfo);  //TODO
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
-    assert(mt.pbFormat);
-
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
-    
-    LONG w = bmih.biWidth;
-    assert(w > 0);
-    
-    LONG h = labs(bmih.biHeight);
-    assert(h > 0);
-
-    if (w % 16)
-        w = 16 * ((w + 15) / 16);
-        
-    if (h % 16)
-        h = 16 * ((h + 15) / 16);
-        
-    const long cbBuffer = w*h + 2*(w/2)*(h/2);
-
-    if (props.cbBuffer < cbBuffer)
-        props.cbBuffer = cbBuffer;
-    
-    if (props.cbAlign <= 0)
-        props.cbAlign = 1;
-        
-    if (props.cbPrefix < 0)
-        props.cbPrefix = 0;
-    
-    hr = pAllocator->SetProperties(&props, &actual);
-    
-    if (FAILED(hr))
-        return hr;
-        
-    hr = pInputPin->NotifyAllocator(pAllocator, 0);  //allow writes
-    
-    if (FAILED(hr) && (hr != E_NOTIMPL))
-        return hr;
-        
-    m_pAllocator = pAllocator;
-    return S_OK;  //success
+    return hr;
 }
 
 
@@ -427,5 +325,10 @@ void OutpinPreview::Render(
     assert(SUCCEEDED(hr));  //TODO
 }
 
+
+void OutpinPreview::GetSubtype(GUID& subtype) const
+{
+    subtype = MEDIASUBTYPE_YV12;
+}
 
 }  //end namespace VP8EncoderLib

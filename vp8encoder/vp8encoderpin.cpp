@@ -10,6 +10,9 @@
 #include "vp8encoderfilter.hpp"
 #include <vfwmsgs.h>
 #include <cassert>
+#include <amvideo.h>
+#include <dvdmedia.h>
+#include <uuids.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -195,5 +198,56 @@ HRESULT Pin::QueryId(LPWSTR* p)
 
     return S_OK;
 }
+
+
+const BITMAPINFOHEADER& Pin::GetBMIH() const
+{
+    assert(m_connection_mtv.Size() == 1);
+    
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+    assert(mt.pbFormat);
+
+    if (mt.formattype == FORMAT_VideoInfo)
+    {    
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));    
+
+        const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+        const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+
+        return bmih;
+    }
+        
+    assert(mt.formattype == FORMAT_VideoInfo2);
+    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));    
+
+    const VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+
+    return bmih;
+}
+    
+
+__int64 Pin::GetAvgTimePerFrame() const
+{
+    assert(m_connection_mtv.Size() == 1);
+    
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+    assert(mt.pbFormat);
+
+    if (mt.formattype == FORMAT_VideoInfo)
+    {    
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));    
+
+        const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);        
+        return vih.AvgTimePerFrame;
+    }
+        
+    assert(mt.formattype == FORMAT_VideoInfo2);
+    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));    
+
+    const VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+    return vih.AvgTimePerFrame;
+}
+    
 
 }  //end namespace VP8EncoderLib

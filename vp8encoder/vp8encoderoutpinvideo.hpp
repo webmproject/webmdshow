@@ -76,12 +76,12 @@ public:
     
     //local functions
     
-    void OnInpinConnect(const AM_MEDIA_TYPE&);
     HRESULT GetFrame(IVP8Sample::Frame&);
     
 protected:
     void SetDefaultMediaTypes();
-    HRESULT GetAllocator(IMemInputPin*);
+    HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const;
+    void GetSubtype(GUID&) const;
     
 };
 

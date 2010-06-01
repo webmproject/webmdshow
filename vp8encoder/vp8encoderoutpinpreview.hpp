@@ -38,12 +38,12 @@ public:
     
     //local functions
     
-    void OnInpinConnect(const AM_MEDIA_TYPE&);
     void Render(CLockable::Lock&, const vpx_image_t*);
 
 protected:
     void SetDefaultMediaTypes();
-    HRESULT GetAllocator(IMemInputPin*);
+    HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const;
+    void GetSubtype(GUID&) const;
     
 };
 

@@ -14,7 +14,8 @@
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <cassert>
-#include <amvideo.h>
+#include <amvideo.h>   //VideoInfoHeader
+#include <dvdmedia.h>  //VideoInfoHeader2
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include <iomanip>
@@ -203,8 +204,8 @@ HRESULT Inpin::ReceiveConnection(
         
     m_pPinConnection = pin;
     
-    m_pFilter->m_outpin_video.OnInpinConnect(mt);
-    m_pFilter->m_outpin_preview.OnInpinConnect(mt);
+    m_pFilter->m_outpin_video.OnInpinConnect();
+    m_pFilter->m_outpin_preview.OnInpinConnect();
 
     return S_OK;
 }
@@ -460,17 +461,40 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
     else
         return S_FALSE;
         
-    if (mt.formattype != FORMAT_VideoInfo)  //TODO: liberalize
-        return S_FALSE;
-        
     if (mt.pbFormat == 0)
         return S_FALSE;
+        
+    const BITMAPINFOHEADER* pbmih;
 
-    if (mt.cbFormat < sizeof(VIDEOINFOHEADER))
+    if (mt.formattype == FORMAT_VideoInfo)
+    {            
+        if (mt.cbFormat < sizeof(VIDEOINFOHEADER))
+            return S_FALSE;
+        
+        const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+
+        if (vih.AvgTimePerFrame <= 0)
+            return S_FALSE;
+            
+        pbmih = &vih.bmiHeader;
+    }
+    else if (mt.formattype == FORMAT_VideoInfo2)
+    {
+        if (mt.cbFormat < sizeof(VIDEOINFOHEADER2))
+            return S_FALSE;
+        
+        const VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+
+        if (vih.AvgTimePerFrame <= 0)
+            return S_FALSE;
+
+        pbmih = &vih.bmiHeader;
+    }
+    else
         return S_FALSE;
         
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+    assert(pbmih);
+    const BITMAPINFOHEADER& bmih = *pbmih;
     
     if (bmih.biSize != sizeof(BITMAPINFOHEADER))  //TODO: liberalize
         return S_FALSE;
@@ -488,9 +512,6 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
         return S_FALSE;
         
     if (bmih.biCompression != mt.subtype.Data1)
-        return S_FALSE;
-        
-    if (vih.AvgTimePerFrame <= 0)
         return S_FALSE;
         
     return S_OK;
@@ -576,14 +597,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (m_bFlush)
         return S_FALSE;
         
-    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_VideoInfo);
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
-    assert(mt.pbFormat);
-    
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
-    
+    const BITMAPINFOHEADER& bmih = GetBMIH();
+        
     const LONG w = bmih.biWidth;
     assert(w > 0);
     assert((w % 2) == 0);  //TODO
@@ -597,6 +612,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     assert(len >= 0);
     
     img_fmt_t fmt;
+    
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
         
     if (mt.subtype == MEDIASUBTYPE_YV12)
         fmt = IMG_FMT_YV12;
@@ -677,7 +694,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         
     assert(st >= 0);
 
-    const __int64 duration_ = vih.AvgTimePerFrame;
+    const __int64 duration_ = GetAvgTimePerFrame();
     assert(duration_ > 0);
     
     const unsigned long d = static_cast<unsigned long>(duration_);
@@ -929,14 +946,8 @@ HRESULT Inpin::Start()
     m_bFlush = false;
     
     PurgePending();
-    
-    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_VideoInfo);
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
-    assert(mt.pbFormat);
-    
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+
+    const BITMAPINFOHEADER& bmih = GetBMIH();    
     
     const LONG w = bmih.biWidth;
     assert(w > 0);

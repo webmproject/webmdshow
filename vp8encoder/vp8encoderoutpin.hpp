@@ -63,11 +63,14 @@ public:
     GraphUtil::IMemInputPinPtr m_pInputPin;
     GraphUtil::IMemAllocatorPtr m_pAllocator;
         
+    void OnInpinConnect();
     HRESULT OnInpinDisconnect();
     
 protected:
     virtual void SetDefaultMediaTypes() = 0;
-    virtual HRESULT GetAllocator(IMemInputPin*) = 0;
+    HRESULT GetAllocator(IMemInputPin*);
+    virtual HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const = 0;
+    virtual void GetSubtype(GUID&) const = 0;
 
 };
 

@@ -81,6 +81,9 @@ public:
     //    REFERENCE_TIME tStop,
     //    double dRate);
     
+    const BITMAPINFOHEADER& GetBMIH() const;
+    __int64 GetAvgTimePerFrame() const;
+    
 protected:
     //virtual HRESULT GetName(PIN_INFO&) const = 0;
     virtual std::wstring GetName() const = 0;

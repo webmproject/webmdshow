@@ -12,6 +12,7 @@
 #include "vp8encoderoutpin.hpp"
 #include <vfwmsgs.h>
 #include <amvideo.h>
+#include <dvdmedia.h>
 #include <cassert>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
@@ -249,6 +250,101 @@ HRESULT Outpin::EndFlush()
 }
 
 
+void Outpin::OnInpinConnect()
+{
+    const Inpin& inpin = m_pFilter->m_inpin;
+    const BITMAPINFOHEADER& bmihIn = inpin.GetBMIH();
+    
+    const LONG ww = bmihIn.biWidth;
+    assert(ww > 0);
+    
+    const LONG hh = bmihIn.biHeight;
+    assert(hh > 0);
+    
+    //TODO: does this really need to be a conditional expr?
+    const LONG w = (ww % 16) ? 16 * ((ww + 15) / 16) : ww;
+    const LONG h = (hh % 16) ? 16 * ((hh + 15) / 16) : hh;        
+    const LONG cbBuffer = w*h + 2*(w/2)*(h/2);
+
+    m_preferred_mtv.Clear();
+    
+    AM_MEDIA_TYPE mt;
+
+    mt.majortype = MEDIATYPE_Video;
+    GetSubtype(mt.subtype);  //dispatch to subclass
+    mt.bFixedSizeSamples = FALSE;
+    mt.bTemporalCompression = TRUE;
+    mt.lSampleSize = 0;
+    mt.pUnk = 0;
+
+    {    
+        VIDEOINFOHEADER vih;
+        BITMAPINFOHEADER& bmih = vih.bmiHeader;
+        
+        mt.formattype = FORMAT_VideoInfo;
+        mt.cbFormat = sizeof vih;
+        mt.pbFormat = (BYTE*)&vih;
+        
+        SetRectEmpty(&vih.rcSource);  //TODO
+        SetRectEmpty(&vih.rcTarget);  //TODO
+        vih.dwBitRate = 0;
+        vih.dwBitErrorRate = 0;
+        vih.AvgTimePerFrame = inpin.GetAvgTimePerFrame();
+        
+        bmih.biSize = sizeof bmih;
+        bmih.biWidth = ww;
+        bmih.biHeight = hh;
+        bmih.biPlanes = 1;  //because Microsoft says so
+        bmih.biBitCount = 12;  //?
+        bmih.biCompression = mt.subtype.Data1;
+
+        bmih.biSizeImage = cbBuffer;
+        bmih.biXPelsPerMeter = 0;
+        bmih.biYPelsPerMeter = 0;
+        bmih.biClrUsed = 0;
+        bmih.biClrImportant = 0;
+        
+        m_preferred_mtv.Add(mt);
+    }
+
+    {    
+        VIDEOINFOHEADER2 vih;
+        BITMAPINFOHEADER& bmih = vih.bmiHeader;
+        
+        mt.formattype = FORMAT_VideoInfo2;
+        mt.cbFormat = sizeof vih;
+        mt.pbFormat = (BYTE*)&vih;
+        
+        SetRectEmpty(&vih.rcSource);  //TODO
+        SetRectEmpty(&vih.rcTarget);  //TODO
+        vih.dwBitRate = 0;
+        vih.dwBitErrorRate = 0;
+        vih.AvgTimePerFrame = inpin.GetAvgTimePerFrame();
+        vih.dwInterlaceFlags = 0;
+        vih.dwCopyProtectFlags = 0;
+        vih.dwPictAspectRatioX = w;  //TODO
+        vih.dwPictAspectRatioY = h;  //TODO
+        vih.dwReserved1 = 0;         //TODO
+        vih.dwReserved2 = 0;         //TODO
+        
+        bmih.biSize = sizeof bmih;
+        bmih.biWidth = ww;
+        bmih.biHeight = hh;
+        bmih.biPlanes = 1;  //because Microsoft says so
+        bmih.biBitCount = 12;  //?
+        bmih.biCompression = mt.subtype.Data1;
+
+        bmih.biSizeImage = cbBuffer;
+        bmih.biXPelsPerMeter = 0;
+        bmih.biYPelsPerMeter = 0;
+        bmih.biClrUsed = 0;
+        bmih.biClrImportant = 0;
+        
+        m_preferred_mtv.Add(mt);
+    }
+}
+
+
 HRESULT Outpin::OnInpinDisconnect()
 {
     if (bool(m_pPinConnection))
@@ -268,6 +364,69 @@ HRESULT Outpin::OnInpinDisconnect()
     SetDefaultMediaTypes();
 
     return S_OK;
+}
+
+
+HRESULT Outpin::GetAllocator(IMemInputPin* pInputPin)
+{
+    GraphUtil::IMemAllocatorPtr pAllocator;
+    
+    HRESULT hr = GetAllocator(pInputPin, &pAllocator);
+    
+    if (FAILED(hr))
+        return VFW_E_NO_ALLOCATOR;
+
+    assert(bool(pAllocator));    
+
+    ALLOCATOR_PROPERTIES props, actual;
+
+    props.cBuffers = -1;    //number of buffers
+    props.cbBuffer = -1;    //size of each buffer, excluding prefix
+    props.cbAlign = -1;     //applies to prefix, too
+    props.cbPrefix = -1;    //imediasample::getbuffer does NOT include prefix
+
+    hr = pInputPin->GetAllocatorRequirements(&props);
+
+    if (props.cBuffers <= 0)
+        props.cBuffers = 1;
+        
+    const BITMAPINFOHEADER& bmih = GetBMIH();
+        
+    LONG w = bmih.biWidth;
+    assert(w > 0);
+    
+    LONG h = labs(bmih.biHeight);
+    assert(h > 0);
+
+    if (w % 16)
+        w = 16 * ((w + 15) / 16);
+        
+    if (h % 16)
+        h = 16 * ((h + 15) / 16);
+        
+    const long cbBuffer = w*h + 2*(w/2)*(h/2);
+
+    if (props.cbBuffer < cbBuffer)
+        props.cbBuffer = cbBuffer;
+    
+    if (props.cbAlign <= 0)
+        props.cbAlign = 1;
+        
+    if (props.cbPrefix < 0)
+        props.cbPrefix = 0;
+    
+    hr = pAllocator->SetProperties(&props, &actual);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    hr = pInputPin->NotifyAllocator(pAllocator, 0);  //allow writes
+    
+    if (FAILED(hr) && (hr != E_NOTIMPL))
+        return hr;
+        
+    m_pAllocator = pAllocator;
+    return S_OK;  //success
 }
 
 
