@@ -78,6 +78,7 @@ private:
     int m_token_partitions;
     int m_two_pass;
     
+    static bool IsSwitch(const wchar_t*);
     int Parse(wchar_t**);
     int ParseShort(wchar_t**);
     int ParseWindows(wchar_t**);

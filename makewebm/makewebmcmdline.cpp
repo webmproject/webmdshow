@@ -197,6 +197,22 @@ int CmdLine::Parse(int argc, wchar_t* argv[])
 }
 
 
+bool CmdLine::IsSwitch(const wchar_t* arg)
+{
+    assert(arg);
+
+    switch (*arg)
+    {
+        case L'/':  //windows-style switch
+        case L'-':  //unix-style switch
+            return true;
+            
+        default:
+            return false;  //this is an arg, not a switch
+    }
+}
+
+
 int CmdLine::Parse(wchar_t** i)
 {
     assert(i);
@@ -1591,9 +1607,23 @@ int CmdLine::ParseOpt(
         str_value = *++i;
     
         if (str_value)
-        {
-            str_value_length = wcslen(str_value);
-            n = 2;
+        {            
+            if (IsSwitch(str_value))  //potential optional found
+            {
+                if (is_required)
+                {
+                    wcout << "No value specified for " << name << " switch." << endl;
+                    return -1;  //error
+                }
+                
+                str_value = 0;  //yes, optional was found
+                n = 1;                                
+            }
+            else
+            {
+                str_value_length = wcslen(str_value);
+                n = 2;
+            }
         }
         else if (is_required)
         {
@@ -1601,7 +1631,7 @@ int CmdLine::ParseOpt(
             return -1;  //error
         }
         else
-            n = 1;
+            n = 1;  //optional value will be used
     }
     
     if (str_value == 0)
