@@ -17,6 +17,7 @@
 #include "vorbistypes.hpp"
 #include "registry.hpp"
 #include "vp8encoderidl.h"
+//#include <vector>
 #include <sstream>
 #include <iomanip>
 using std::hex;
@@ -278,6 +279,7 @@ int App::CreateGraph()
             assert(bool(pVP8Inpin));
             
             hr = pBuilder->Connect(pDemuxOutpinVideo, pVP8Inpin);
+            //hr = ConnectVideo(pDemuxOutpinVideo, pVP8Inpin);
             
             if (FAILED(hr))
             {
@@ -1176,6 +1178,205 @@ GUID App::GetSubtype(IPin* pPin)
 }
 
 
+#if 0
+bool App::ConnectVideo(IPin* pDemuxOutpin, IPin* pVP8Inpin) const
+{
+    const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
+    assert(bool(pBuilder));
+    
+    HRESULT hr = pBuilder->Connect(pDemuxOutpin, pVP8Inpin);
+    
+    if (SUCCEEDED(hr))
+        return true;  //connected
+        
+    hr = ConnectVideoConverter(pDemuxOutpin, pVP8Inpin);
+    
+    if (SUCCEEDED(hr))
+        return true;
+        
+    return false;
+}
+
+
+HRESULT App::ConnectVideoConverter(IPin* pDemuxOutpin, IPin* pVP8Inpin) const
+{
+    typedef std::vector<GUID> guids_t;
+    guids_t input_guids;
+    
+    {
+        GraphUtil::IEnumMediaTypesPtr e;
+        
+        HRESULT hr = pDemuxOutpin->EnumMediaTypes(&e);
+        
+        if (FAILED(hr))
+            return hr;
+            
+        for (;;)
+        {
+            AM_MEDIA_TYPE* pmt;
+            
+            hr = e->Next(1, &pmt, 0);
+            
+            if (hr != S_OK)
+                break;
+                
+            assert(pmt);
+            assert(pmt->majortype == MEDIATYPE_Video);
+            assert(pmt->subtype != MEDIASUBTYPE_NULL);  //?
+            
+            input_guids.push_back(pmt->majortype);
+            input_guids.push_back(pmt->subtype);
+            
+            MediaTypeUtil::Free(pmt);
+            pmt = 0;
+        }
+    
+        if (input_guids.empty())  //weird
+            return E_FAIL;
+    }    
+
+    const guids_t::size_type cInputTypes_ = input_guids.size() / 2;        
+    const DWORD cInputTypes = static_cast<DWORD>(cInputTypes_);
+    
+    const GUID* const inputTypes = &input_guids[0];
+    
+    const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
+    assert(bool(pMapper));
+    
+    //TODO: for now, hard-code the VP8 input pin media types.
+    //At some point we should query for that filter's 
+    //preferred input pin media types.
+    
+    enum { cOutputTypes = 4 };
+    const GUID outputTypes[2 * cOutputTypes] =
+    {
+        MEDIATYPE_Video, MEDIASUBTYPE_YV12,
+        MEDIATYPE_Video, WebmTypes::MEDIASUBTYPE_I420,
+        MEDIATYPE_Video, MEDIASUBTYPE_YUY2,
+        MEDIATYPE_Video, MEDIASUBTYPE_YUYV
+    };
+    
+    IEnumMonikerPtr e;
+        
+    HRESULT hr = pMapper->EnumMatchingFilters(
+                    &e, 
+                    0,  //flags (reserved -- must be 0)
+                    FALSE, //TRUE,  //yes, require exact match  //?
+                    MERIT_DO_NOT_USE,
+                    TRUE,   //input needed
+                    cInputTypes,
+                    inputTypes,
+                    0,  //input medium
+                    0,  //input category
+                    FALSE,  //bRender
+                    TRUE,  //yes, output needed
+                    cOutputTypes,
+                    outputTypes,
+                    0,  //output medium
+                    0); //output category
+                    
+    if (FAILED(hr))
+        return hr;
+        
+    const GraphUtil::IGraphConfigPtr pConfig(m_pGraph);
+    assert(bool(pConfig));
+    
+    const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
+    assert(bool(pBuilder));
+        
+    for (;;)
+    {
+        IMonikerPtr m;
+        
+        hr = e->Next(1, &m, 0);
+        
+        if (hr != S_OK)
+            return VFW_E_NOT_CONNECTED;
+            
+        assert(bool(m));
+        
+        IBaseFilterPtr f;  //video converter filter
+        
+        hr = m->BindToObject(0, 0, __uuidof(IBaseFilter), (void**)&f);
+        
+        if (FAILED(hr))
+            continue;
+            
+        assert(bool(f));
+        
+#if 0
+        hr = pConfig->AddFilterToCache(f);
+        assert(SUCCEEDED(hr));
+        
+        const HRESULT hrConnect = pBuilder->Connect(pDemuxOutpin, pMuxInpin);
+        
+        hr = pConfig->RemoveFilterFromCache(f);
+        assert(SUCCEEDED(hr));
+        
+        if (SUCCEEDED(hrConnect))
+            return S_OK;
+#else
+        hr = m_pGraph->AddFilter(f, L"video converter");
+        assert(SUCCEEDED(hr));
+        
+        const IPinPtr pConverterInpin = GraphUtil::FindInpin(f);
+        assert(bool(pConverterInpin));
+        
+        hr = m_pGraph->ConnectDirect(pDemuxOutpin, pConverterInpin, 0);
+        
+        if (FAILED(hr))       
+            hr = pBuilder->Connect(pDemuxOutpin, pConverterInpin);
+        
+        if (FAILED(hr))
+        {
+            hr = m_pGraph->RemoveFilter(f);
+            assert(SUCCEEDED(hr));
+            
+            continue;
+        }
+        
+        const IPinPtr pConverterOutpin = GraphUtil::FindOutpin(f);
+        assert(bool(pConverterOutpin));
+        
+        hr = m_pGraph->ConnectDirect(pConverterOutpin, pVP8Inpin, 0);
+        
+        if (SUCCEEDED(hr))
+            return S_OK;
+            
+        hr = m_pGraph->RemoveFilter(f);
+        assert(SUCCEEDED(hr));
+#endif
+    }  //end for
+}
+#endif
+
+
+
+bool App::ConnectAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
+{
+    HRESULT hr = m_pGraph->ConnectDirect(pDemuxOutpin, pMuxInpin, 0);
+    
+    if (SUCCEEDED(hr))
+        return true;  //connected
+        
+    const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
+    assert(bool(pBuilder));
+    
+    hr = pBuilder->Connect(pDemuxOutpin, pMuxInpin);
+    
+    if (SUCCEEDED(hr))
+        return true;
+
+    hr = ConnectVorbisEncoder(pDemuxOutpin, pMuxInpin);
+    
+    if (SUCCEEDED(hr))
+        return true;  //connected
+        
+    wcout << "Unable to connect audio stream to muxer." << endl;
+    return false;
+}
+
+
 HRESULT App::ConnectVorbisEncoder(IPin* pDemuxOutpin, IPin* pMuxInpin) const
 {
     const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
@@ -1284,30 +1485,6 @@ HRESULT App::ConnectVorbisEncoder(IPin* pDemuxOutpin, IPin* pMuxInpin) const
     }
 }
 
-
-bool App::ConnectAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
-{
-    HRESULT hr = m_pGraph->ConnectDirect(pDemuxOutpin, pMuxInpin, 0);
-    
-    if (SUCCEEDED(hr))
-        return true;  //connected
-        
-    const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
-    assert(bool(pBuilder));
-    
-    hr = pBuilder->Connect(pDemuxOutpin, pMuxInpin);
-    
-    if (SUCCEEDED(hr))
-        return true;
-
-    hr = ConnectVorbisEncoder(pDemuxOutpin, pMuxInpin);
-    
-    if (SUCCEEDED(hr))
-        return true;  //connected
-        
-    wcout << "Unable to connect audio stream to muxer." << endl;
-    return false;
-}
 
 
 void App::DumpPreferredMediaTypes(

@@ -46,17 +46,13 @@ private:
     GraphUtil::IBaseFilterPtr FindDemuxFilter(IBaseFilter*) const;
     GraphUtil::IBaseFilterPtr EnumDemuxFilters(IPin*) const;
 
-    //typedef std::list<CLSID> clsid_list_t;
+#if 0    
+    bool ConnectVideo(IPin*, IPin*) const;
+    HRESULT ConnectVideoConverter(IPin*, IPin*) const;
+#endif
 
-    bool ConnectAudio(IPin*, IPin*) const;    
-    //bool ConvertAudio(IPin*, IPin*) const;
-    //bool ConvertAudio(IPin*, IPin*, const clsid_list_t&) const;
-    
-    //HRESULT AddVorbisEncodersToCache() const;
+    bool ConnectAudio(IPin*, IPin*) const;        
     HRESULT ConnectVorbisEncoder(IPin*, IPin*) const;
-    //static clsid_list_t GetVorbisEncoders();
-    //static clsid_list_t GetAudioDecoders(const GUID& subtype);
-    //bool GetAudioCompressor(IPin*, IPin*) const;
 
     static void DumpPreferredMediaTypes(IPin*, const wchar_t*, void (*)(const AM_MEDIA_TYPE&));
     static void DumpConnectionMediaType(IPin*, const wchar_t*, void (*)(const AM_MEDIA_TYPE&));
