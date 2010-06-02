@@ -225,19 +225,16 @@ void OutpinPreview::Render(
         MediaTypeUtil::Free(pmt);
         pmt = 0;
     }
-
-    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_VideoInfo);
-    assert(mt.subtype == MEDIASUBTYPE_YV12);
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
-    assert(mt.pbFormat);
-    
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;    
     
     unsigned int wIn = img->d_w;
     unsigned int hIn = img->d_h;
 
+    const BITMAPINFOHEADER& bmih = GetBMIH();
+    
+    LONG strideOut = bmih.biWidth;
+    assert(strideOut);
+    assert((strideOut % 2) == 0);
+    
     //Y
     
     const BYTE* pInY = img->planes[PLANE_Y];
@@ -252,10 +249,6 @@ void OutpinPreview::Render(
     BYTE* pOut = pOutBuf;
     
     const int strideInY = img->stride[PLANE_Y];
-    
-    LONG strideOut = bmih.biWidth;
-    assert(strideOut);
-    assert((strideOut % 2) == 0);
     
     for (unsigned int y = 0; y < hIn; ++y)
     {
