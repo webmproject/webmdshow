@@ -298,3 +298,16 @@ Authoring WebM Files On Windows Using DirectShow
    in the IDL file for the VP8 encoder.  See the file "vp8encoder.idl"
    among the delivery artifacts (it's in the IDL folder of the source
    tree) for a full description of each configuration parameter.
+
+Miscellaneous
+
+   The VP8 encoder filter (as with the VP8 encoder library) only accepts
+   YUV formats as input.  If you have a file or capture device with
+   RGB as output, you'll need a separate filter to convert from RGB to YUV.
+   The ffdshow filter will do such a conversion, but it might be disabled
+   by default.  To enable it, open the Properties page for the ffdshow
+   Video Decoder filter, and under the Codecs menu, find the Raw video item.
+   Change the Decoder option so that it's not "disabled" (the values
+   "all RGB" or "all supported" both seem to work), and then an instance
+   of that filter will be created automatically when RGB-to-YUV conversion
+   is required.
