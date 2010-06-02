@@ -59,14 +59,17 @@ public:
 
     //IVP8Encoder
     
+    HRESULT STDMETHODCALLTYPE ApplySettings();    
+    HRESULT STDMETHODCALLTYPE ResetSettings();
+
     HRESULT STDMETHODCALLTYPE SetDeadline(int);
     HRESULT STDMETHODCALLTYPE GetDeadline(int*);
     
     HRESULT STDMETHODCALLTYPE SetThreadCount(int); 
     HRESULT STDMETHODCALLTYPE GetThreadCount(int*);
     
-    HRESULT STDMETHODCALLTYPE SetErrorResilient(boolean);
-    HRESULT STDMETHODCALLTYPE GetErrorResilient(boolean*);
+    HRESULT STDMETHODCALLTYPE SetErrorResilient(int);
+    HRESULT STDMETHODCALLTYPE GetErrorResilient(int*);
     
     HRESULT STDMETHODCALLTYPE SetEndUsage(VP8EndUsage);    
     HRESULT STDMETHODCALLTYPE GetEndUsage(VP8EndUsage*);
@@ -182,6 +185,8 @@ public:
         int32_t keyframe_max_interval;
         
         int32_t token_partitions;  
+        
+        void Init();
     }; 
     
     Config m_cfg;          

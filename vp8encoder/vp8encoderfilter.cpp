@@ -86,23 +86,7 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
     m_info.pGraph = 0;
     m_info.achName[0] = L'\0';
     
-    m_cfg.deadline = kDeadlineGoodQuality;
-    m_cfg.threads = 0;
-    m_cfg.error_resilient = 0;
-    m_cfg.lag_in_frames = 0;
-    m_cfg.target_bitrate = 0;
-    m_cfg.min_quantizer = -1;
-    m_cfg.max_quantizer = -1;
-    m_cfg.undershoot_pct = 0;
-    m_cfg.overshoot_pct = 0;
-    m_cfg.decoder_buffer_size = 0;
-    m_cfg.decoder_buffer_initial_size = 0;
-    m_cfg.decoder_buffer_optimal_size = 0;
-    m_cfg.keyframe_mode = kKeyframeModeDefault;
-    m_cfg.keyframe_min_interval = -1;
-    m_cfg.keyframe_max_interval = -1;
-    m_cfg.end_usage = kEndUsageVBR;
-    m_cfg.token_partitions = 0;
+    m_cfg.Init();
     
 #ifdef _DEBUG        
     odbgstream os;
@@ -121,6 +105,29 @@ Filter::~Filter()
 
     m_pClassFactory->LockServer(FALSE);
 }      
+
+
+void Filter::Config::Init()
+{
+    deadline = -1;
+    threads = -1;
+    error_resilient = -1;
+    lag_in_frames = -1;
+    target_bitrate = -1;
+    min_quantizer = -1;
+    max_quantizer = -1;
+    undershoot_pct = -1;
+    overshoot_pct = -1;
+    decoder_buffer_size = -1;
+    decoder_buffer_initial_size = -1;
+    decoder_buffer_optimal_size = -1;
+    keyframe_mode = -1;
+    keyframe_min_interval = -1;
+    keyframe_max_interval = -1;
+    end_usage = -1;
+    token_partitions = -1;
+}    
+
 
 
 Filter::CNondelegating::CNondelegating(Filter* p)
@@ -527,6 +534,36 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 }
 
 
+HRESULT Filter::ApplySettings()
+{
+    Lock lock;
+    
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    if (m_state == State_Stopped)
+        return S_FALSE;
+        
+    return m_inpin.OnApplySettings();
+}
+
+
+HRESULT Filter::ResetSettings()
+{
+    Lock lock;
+    
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+
+    m_cfg.Init();
+    return S_OK;
+}
+
+
 HRESULT Filter::SetDeadline(int deadline)
 {
     if (deadline < 0)
@@ -600,7 +637,7 @@ HRESULT Filter::GetThreadCount(int* pCount)
 }
 
 
-HRESULT Filter::SetErrorResilient(boolean b)
+HRESULT Filter::SetErrorResilient(int val)
 {
     Lock lock;
     
@@ -609,13 +646,13 @@ HRESULT Filter::SetErrorResilient(boolean b)
     if (FAILED(hr))
         return hr;
 
-    m_cfg.error_resilient = b ? 1 : 0;
+    m_cfg.error_resilient = val;
     
     return S_OK;
 }
 
 
-HRESULT Filter::GetErrorResilient(boolean* p)
+HRESULT Filter::GetErrorResilient(int* p)
 {
     if (p == 0)
         return E_POINTER;
@@ -627,7 +664,7 @@ HRESULT Filter::GetErrorResilient(boolean* p)
     if (FAILED(hr))
         return hr;
     
-    *p = m_cfg.error_resilient ? 1 : 0;
+    *p = m_cfg.error_resilient;
     
     return S_OK;
 }
@@ -641,6 +678,7 @@ HRESULT Filter::SetEndUsage(VP8EndUsage val_)
     {
         case kEndUsageVBR:
         case kEndUsageCBR:
+        case kEndUsageDefault:
             break;
             
         default:
@@ -671,9 +709,6 @@ HRESULT Filter::GetEndUsage(VP8EndUsage* p)
     
     if (FAILED(hr))
         return hr;
-        
-    assert(m_cfg.end_usage >= kEndUsageVBR);
-    assert(m_cfg.end_usage <= kEndUsageCBR);
         
     *p = static_cast<VP8EndUsage>(m_cfg.end_usage);
     
@@ -719,7 +754,7 @@ HRESULT Filter::GetLagInFrames(int* p)
 
 HRESULT Filter::SetTokenPartitions(int val)
 {
-    if ((val < 0) || (val > 3))
+    if (val > 3)
         return E_INVALIDARG;
         
     Lock lock;
@@ -791,6 +826,9 @@ HRESULT Filter::GetTargetBitrate(int* p)
 
 HRESULT Filter::SetMinQuantizer(int val)
 {
+    if (val > 63)
+        return E_INVALIDARG;
+    
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -798,9 +836,6 @@ HRESULT Filter::SetMinQuantizer(int val)
     if (FAILED(hr))
         return hr;
         
-    if (val > 63)
-        return E_INVALIDARG;
-    
     m_cfg.min_quantizer = val;
     return S_OK;
 }
@@ -825,6 +860,9 @@ HRESULT Filter::GetMinQuantizer(int* p)
 
 HRESULT Filter::SetMaxQuantizer(int val)
 {
+    if (val > 63)
+        return E_INVALIDARG;
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -832,9 +870,6 @@ HRESULT Filter::SetMaxQuantizer(int val)
     if (FAILED(hr))
         return hr;
     
-    if (val > 63)
-        return E_INVALIDARG;
-
     m_cfg.max_quantizer = val;
     return S_OK;
 }
@@ -859,9 +894,6 @@ HRESULT Filter::GetMaxQuantizer(int* p)
 
 HRESULT Filter::SetUndershootPct(int val)
 {
-    if (val < 0)
-        return E_INVALIDARG;
-        
     if (val > 100)
         return E_INVALIDARG;
         
@@ -896,9 +928,6 @@ HRESULT Filter::GetUndershootPct(int* pval)
 
 HRESULT Filter::SetOvershootPct(int val)
 {
-    if (val < 0)
-        return E_INVALIDARG;
-        
     if (val > 100)
         return E_INVALIDARG;
         
@@ -933,9 +962,6 @@ HRESULT Filter::GetOvershootPct(int* pval)
 
 HRESULT Filter::SetDecoderBufferSize(int val)
 {
-    if (val < 0)
-        return E_INVALIDARG;
-        
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -967,9 +993,6 @@ HRESULT Filter::GetDecoderBufferSize(int* pval)
     
 HRESULT Filter::SetDecoderBufferInitialSize(int val)
 {
-    if (val < 0)
-        return E_INVALIDARG;
-        
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1001,9 +1024,6 @@ HRESULT Filter::GetDecoderBufferInitialSize(int* pval)
     
 HRESULT Filter::SetDecoderBufferOptimalSize(int val)
 {
-    if (val < 0)
-        return E_INVALIDARG;
-        
     Lock lock;
 
     HRESULT hr = lock.Seize(this);

@@ -707,9 +707,10 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (bDiscontinuity || (st <= 0))
         f |= VPX_EFLAG_FORCE_KF;
     
-    const ULONG deadline = m_pFilter->m_cfg.deadline;
+    const Filter::Config::int32_t deadline_ = m_pFilter->m_cfg.deadline;
+    const ULONG dl = (deadline_ >= 0) ? deadline_ : kDeadlineGoodQuality;
     
-    const vpx_codec_err_t err = vpx_codec_encode(&m_ctx, img, st, d, f, deadline);
+    const vpx_codec_err_t err = vpx_codec_encode(&m_ctx, img, st, d, f, dl);
     err;
     assert(err == VPX_CODEC_OK);  //TODO
     
@@ -966,23 +967,91 @@ HRESULT Inpin::Start()
     if (err != VPX_CODEC_OK)
         return E_FAIL;
         
-    const Filter::Config& src = m_pFilter->m_cfg;
-        
-    if (src.threads > 0)
-        tgt.g_threads = src.threads;
-        
     tgt.g_w = w;
     tgt.g_h = h;
     tgt.g_timebase.num = 1;          
     tgt.g_timebase.den = 10000000;  //100-ns ticks
-    tgt.g_error_resilient = src.error_resilient ? 1 : 0;
+    
+    SetConfig();
+    
+    err = vpx_codec_enc_init(&m_ctx, &vp8, &tgt, 0);
+    
+    if (err != VPX_CODEC_OK)
+    {
+#ifdef _DEBUG
+        const char* str = vpx_codec_error_detail(&m_ctx);
+        str;
+#endif
+    
+        return E_FAIL;
+    }
+
+    err = SetTokenPartitions();
+    
+    if (err != VPX_CODEC_OK)
+    {
+        const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
+        err;
+        assert(err == VPX_CODEC_OK);
+        
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+void Inpin::Stop()
+{
+    const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
+    err;
+    assert(err == VPX_CODEC_OK);
+    
+    memset(&m_ctx, 0, sizeof m_ctx);
+}
+
+
+HRESULT Inpin::OnApplySettings()
+{
+    SetConfig();
+    
+    const vpx_codec_err_t err = vpx_codec_enc_config_set(&m_ctx, &m_cfg);
+    
+    if (err != VPX_CODEC_OK)
+    {
+#ifdef _DEBUG
+        const char* str = vpx_codec_error_detail(&m_ctx);
+        str;
+#endif
+    
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+
+void Inpin::SetConfig()
+{
+    const Filter::Config& src = m_pFilter->m_cfg;
+    vpx_codec_enc_cfg_t& tgt = m_cfg;
+
+    if (src.threads >= 0)
+        tgt.g_threads = src.threads;
+        
+    if (src.error_resilient >= 0)
+        tgt.g_error_resilient = src.error_resilient;
+        
     tgt.g_pass = VPX_RC_ONE_PASS;  //TODO
-    tgt.g_lag_in_frames = src.lag_in_frames;
+    
+    if (src.lag_in_frames >= 0)
+        tgt.g_lag_in_frames = src.lag_in_frames;
 
     switch (src.end_usage)
     {
-        case kEndUsageVBR:
         default:
+            break;
+
+        case kEndUsageVBR:
             tgt.rc_end_usage = VPX_VBR;
             break;
             
@@ -991,7 +1060,7 @@ HRESULT Inpin::Start()
             break;
     }
     
-    if (src.target_bitrate > 0)
+    if (src.target_bitrate >= 0)
         tgt.rc_target_bitrate = src.target_bitrate;
         
     if (src.min_quantizer >= 0)
@@ -999,22 +1068,24 @@ HRESULT Inpin::Start()
         
     if (src.max_quantizer >= 0)
         tgt.rc_max_quantizer = src.max_quantizer;
+
+    if (src.undershoot_pct >= 0)        
+        tgt.rc_undershoot_pct = src.undershoot_pct;
         
-    tgt.rc_undershoot_pct = src.undershoot_pct;
-    tgt.rc_overshoot_pct = src.overshoot_pct;
+    if (src.overshoot_pct >= 0)
+        tgt.rc_overshoot_pct = src.overshoot_pct;
     
-    if (src.decoder_buffer_size > 0)
+    if (src.decoder_buffer_size >= 0)
         tgt.rc_buf_sz = src.decoder_buffer_size;
         
-    if (src.decoder_buffer_initial_size > 0)
+    if (src.decoder_buffer_initial_size >= 0)
         tgt.rc_buf_initial_sz = src.decoder_buffer_initial_size;
         
-    if (src.decoder_buffer_optimal_size > 0)
+    if (src.decoder_buffer_optimal_size >= 0)
         tgt.rc_buf_optimal_sz = src.decoder_buffer_optimal_size;
         
     switch (src.keyframe_mode)
     {
-        case kKeyframeModeDefault:
         default:
             break;
             
@@ -1034,55 +1105,22 @@ HRESULT Inpin::Start()
         tgt.kf_max_dist = src.keyframe_max_interval;
         
     //TODO: more params here
-
-    err = vpx_codec_enc_init(&m_ctx, &vp8, &tgt, 0);
-    
-    if (err != VPX_CODEC_OK)
-    {
-        const char* str = vpx_codec_error_detail(&m_ctx);
-        str;
-    
-        return E_FAIL;
-    }
-
-    vp8e_token_partitions token_partitions;
-    
-    switch (src.token_partitions)
-    {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            token_partitions = static_cast<vp8e_token_partitions>(src.token_partitions);
-            break;
-            
-        default:                
-            token_partitions = VP8_ONE_TOKENPARTITION;
-            break;            
-    }
-    
-    err = vpx_codec_control(&m_ctx, VP8E_SET_TOKEN_PARTITIONS, token_partitions);
-
-    if (err != VPX_CODEC_OK)
-    {
-        const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
-        err;
-        assert(err == VPX_CODEC_OK);
-        
-        return E_FAIL;
-    }
-        
-    return S_OK;
 }
 
-void Inpin::Stop()
+
+vpx_codec_err_t Inpin::SetTokenPartitions()
 {
-    const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
-    err;
-    assert(err == VPX_CODEC_OK);
-    
-    memset(&m_ctx, 0, sizeof m_ctx);
+    const Filter::Config& src = m_pFilter->m_cfg;
+        
+    if (src.token_partitions < 0)
+        return VPX_CODEC_OK;
+        
+    const vp8e_token_partitions token_partitions =
+        static_cast<vp8e_token_partitions>(src.token_partitions);
+
+    return vpx_codec_control(&m_ctx, VP8E_SET_TOKEN_PARTITIONS, token_partitions);
 }
+    
 
 
 BYTE* Inpin::ConvertYUY2ToYV12(

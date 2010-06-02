@@ -81,6 +81,8 @@ public:
         
     HRESULT Start();  //from stopped to running/paused
     void Stop();      //from running/paused to stopped
+    
+    HRESULT OnApplySettings();
 
 protected:
     //HRESULT GetName(PIN_INFO&) const;
@@ -104,6 +106,8 @@ private:
     
     void AppendFrame(const vpx_codec_cx_pkt_t*);
     void PopulateSample(IMediaSample*);
+    void SetConfig();
+    vpx_codec_err_t SetTokenPartitions();
     
     BYTE* m_buf;
     size_t m_buflen;

@@ -39,16 +39,50 @@ enum VP8KeyframeMode
 
 
 
-enum VP8EndUsage { kEndUsageVBR, kEndUsageCBR };
+enum VP8EndUsage
+{
+    kEndUsageDefault = -1,
+    kEndUsageVBR = 0, 
+    kEndUsageCBR = 1
+};
+
 
 [
    object,
    //uuid(ED3110F6-5211-11DF-94AF-0026B977EEAA),
-   uuid(ED3110FB-5211-11DF-94AF-0026B977EEAA),
+   //uuid(ED3110FB-5211-11DF-94AF-0026B977EEAA),
+   uuid(ED3110FC-5211-11DF-94AF-0026B977EEAA),
    helpstring("VP8 Encoder Filter Interface")
 ]
 interface IVP8Encoder : IUnknown
 {
+    //ApplySettings
+    //
+    //The filter maintains a set of encoder configuration values, held
+    //in cache.  Any parameters set (using the methods below) are always
+    //applied to the cached value, irrespective of the state of the graph.
+    //    
+    //When the graph is started, the filter initializes the VP8 encoder 
+    //using the cached configuration values.  This is done automatically,
+    //as part of the activities associated with transitioning the filter
+    //from the stopped state.
+    //
+    //If the graph has been started, then any parameters set by the user
+    //are still applied to the cache (as before).  However, to apply the
+    //configuration values in cache to the VP8 encoder, the user must also
+    //call ApplySettings.
+    //
+    //It is harmless to call ApplySettings while the graph is stopped.
+        
+    HRESULT ApplySettings();
+    
+    //ResetSettings
+    //
+    //Sets the configuration values in cache to their defaults, the same
+    //as they had when the filter instance was originally created.
+    
+    HRESULT ResetSettings();
+    
     //Deadline
     //
     //Time to spend encoding, in microseconds. (0=infinite)
@@ -70,10 +104,10 @@ interface IVP8Encoder : IUnknown
     //Error resilient mode indicates to the encoder that it should take
     //measures appropriate for streaming over lossy or noisy links, if
     //possible.  The value 0 means feature is disabled (the default), 
-    //and any non-zero value means the feature is enabled.
+    //and any positive value means the feature is enabled.
 
-    HRESULT SetErrorResilient([in] boolean ErrorResilient);
-    HRESULT GetErrorResilient([out] boolean* pErrorResilient);
+    HRESULT SetErrorResilient([in] int ErrorResilient);
+    HRESULT GetErrorResilient([out] int* pErrorResilient);
 
     //EndUsage
     //
