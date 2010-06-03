@@ -125,6 +125,11 @@ void Filter::Config::Init()
     keyframe_min_interval = -1;
     keyframe_max_interval = -1;
     end_usage = -1;
+    
+    pass_mode = -1;
+    two_pass_stats_buf = 0;
+    two_pass_stats_buflen = -1;
+    
     token_partitions = -1;
 }    
 
@@ -1149,6 +1154,97 @@ HRESULT Filter::GetKeyframeMaxInterval(int* pval)
     *pval = m_cfg.keyframe_max_interval;
     return S_OK;
 }
+
+
+
+HRESULT Filter::SetPassMode(VP8PassMode m)
+{
+    switch (m)
+    {
+        case kPassModeOnePass:
+	    case kPassModeFirstPass:
+	    case kPassModeLastPass:
+	        break;
+	        
+	    default:
+	        return E_INVALIDARG;
+	}
+	
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+	
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+        
+    //Instead of a buffer ptr we could use either
+    //IAsyncReader
+    //ISequentialStream
+    //IStream
+    
+    //IAsyncReader
+    //ISequentialStream
+    
+    //ISequentialStream would have less overhead than IAsyncReader
+    //
+    //We have to decide whether we push stat frames downstream
+    //to a pin, or whether we simply write data.
+
+    //if (m_config.pass_mode == m)
+    //    return S_FALSE;
+    
+    //if onepass then
+    //  output pin needed = video vp80
+    //  if inpin connected then
+    //    
+    //  if outpin = stream stat then
+    //    if outpin connected
+    //    
+    //
+    //else if twopass.first then
+    //  outpin pin = stream stat
+    //
+    //else if twopass.last then
+    //  reading from stat buf
+    //  outpin pin = video vp880
+    //
+    //endif
+    
+    return E_NOTIMPL;  //TODO
+}
+
+
+HRESULT Filter::GetPassMode(VP8PassMode* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+
+    *p = kPassModeOnePass;  //TODO
+    return E_NOTIMPL;  //TODO
+}
+
+
+HRESULT Filter::SetTwoPassStatsBuf(const BYTE* buf, LONGLONG len)
+{
+    return E_NOTIMPL;  //TODO
+}
+
+
+HRESULT Filter::GetTwoPassStatsBuf(const BYTE**, LONGLONG*)
+{
+    return E_NOTIMPL;  //TODO
+}
+
 
 
 HRESULT Filter::OnStart()

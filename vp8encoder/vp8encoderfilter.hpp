@@ -113,6 +113,12 @@ public:
     HRESULT STDMETHODCALLTYPE SetKeyframeMaxInterval(int);    
     HRESULT STDMETHODCALLTYPE GetKeyframeMaxInterval(int*); 
             
+    HRESULT STDMETHODCALLTYPE SetPassMode(VP8PassMode);
+    HRESULT STDMETHODCALLTYPE GetPassMode(VP8PassMode*);
+    
+    HRESULT STDMETHODCALLTYPE SetTwoPassStatsBuf(const BYTE*, LONGLONG);    
+    HRESULT STDMETHODCALLTYPE GetTwoPassStatsBuf(const BYTE**, LONGLONG*);
+
 private:
     class CNondelegating : public IUnknown
     {
@@ -185,6 +191,10 @@ public:
         int32_t keyframe_max_interval;
         
         int32_t token_partitions;  
+        
+        int32_t pass_mode;
+        const BYTE* two_pass_stats_buf;
+        LONGLONG two_pass_stats_buflen;
         
         void Init();
     }; 

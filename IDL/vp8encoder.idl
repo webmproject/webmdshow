@@ -24,7 +24,6 @@ enum VP8Deadline
 };
 
 
-
 //Keyframe placement mode
 //
 //Specifies whether keyframes are placed automatically 
@@ -38,12 +37,19 @@ enum VP8KeyframeMode
 };
 
 
-
 enum VP8EndUsage
 {
     kEndUsageDefault = -1,
     kEndUsageVBR = 0, 
     kEndUsageCBR = 1
+};
+
+
+enum VP8PassMode
+{
+    kPassModeOnePass,
+    kPassModeFirstPass,
+    kPassModeLastPass
 };
 
 
@@ -245,6 +251,17 @@ interface IVP8Encoder : IUnknown
 
     HRESULT SetKeyframeMaxInterval([in] int MaxInterval);
     HRESULT GetKeyframeMaxInterval([out] int* pMaxInterval);
+    
+    //Multi-pass Encoding Mode
+    //
+    //This value should be set to the current phase for multi-pass encoding.
+    
+    HRESULT SetPassMode([in] enum VP8PassMode PassMode);
+    HRESULT GetPassMode([out] enum VP8PassMode* pPassMode);
+    
+    HRESULT SetTwoPassStatsBuf(const BYTE* Buffer, LONGLONG Length);
+    HRESULT GetTwoPassStatsBuf(const BYTE** pBuffer, LONGLONG* pLength);
+
 }
 
 
