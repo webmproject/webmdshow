@@ -31,11 +31,16 @@ private:
 
     const HANDLE m_hQuit;
     CmdLine m_cmdline;    
+
     GraphUtil::IFilterGraphPtr m_pGraph;
+    GraphUtil::IBaseFilterPtr m_pDemux;
+    GraphUtil::IPinPtr m_pDemuxOutpinVideo;
+    GraphUtil::IPinPtr m_pDemuxOutpinAudio; 
     GraphUtil::IMediaSeekingPtr m_pSeek;
+
     int m_progress;
     
-    int CreateGraph();
+    int CreateMuxer();
     void DestroyGraph();
     int RunGraph();
 

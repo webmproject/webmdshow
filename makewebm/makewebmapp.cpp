@@ -50,51 +50,7 @@ int App::operator()(int argc, wchar_t* argv[])
     if (status)
         return status;
         
-    status = CreateGraph();
-    
-    if (status)
-        return status;
-        
-    IRunningObjectTablePtr rot;
-    
-    HRESULT hr = GetRunningObjectTable(0, &rot);
-    assert(SUCCEEDED(hr));
-    assert(bool(rot));
-    
-    IFilterGraph* const pGraph = m_pGraph;
-    
-    std::wostringstream os;
-    os << "FilterGraph " 
-       << std::hex
-       << static_cast<const void*>(pGraph)
-       << " pid "
-       << GetCurrentProcessId();
-       
-    IMonikerPtr mon;
-       
-    hr = CreateItemMoniker(L"!", os.str().c_str(), &mon);
-    assert(SUCCEEDED(hr));
-    assert(bool(mon));
-    
-    DWORD dw;
-    hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
-    assert(SUCCEEDED(hr));
-
-    status = RunGraph();
-    
-    hr = rot->Revoke(dw);
-    assert(SUCCEEDED(hr));
-
-    DestroyGraph();
-    
-    return status;
-}
-
-
-int App::CreateGraph()
-{
     assert(!bool(m_pGraph));
-    assert(!bool(m_pSeek));
     
     HRESULT hr = m_pGraph.CreateInstance(CLSID_FilterGraphNoThread);
     
@@ -115,12 +71,6 @@ int App::CreateGraph()
     
     const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
     assert(bool(pBuilder));
-    
-    //IMediaFilter::SetSyncSource
-    //ms-help://MS.VSCC.2003/MS.MSDNQTR.2003FEB.1033/directshow_sp1/htm/imediafiltersetsyncsource.htm
-    //
-    //Reference Clocks
-    //ms-help://MS.VSCC.2003/MS.MSDNQTR.2003FEB.1033/directshow_sp1/htm/referenceclocks.htm
     
     hr = pGraphFilter->SetSyncSource(0);  //process as quickly as possible
     //TODO: are we setting this too early?
@@ -160,12 +110,12 @@ int App::CreateGraph()
     //TODO: this could be a reader filter (MEDIATYPE_Stream), which would need to
     //connect to a splitter, or it could be a source filter.
     
-    const IBaseFilterPtr pDemux(AddDemuxFilter(pReader));
+    m_pDemux = AddDemuxFilter(pReader);
     
-    if (!bool(pDemux))
+    if (!bool(m_pDemux))
         return 1;        
     
-    const IPinPtr pDemuxOutpinVideo(FindOutpinVideo(pDemux));
+    m_pDemuxOutpinVideo = FindOutpinVideo(m_pDemux);
     //TODO: we need to do better here: we check for the 0 case,
     //but we must also check for the 1+ case.
     
@@ -175,7 +125,7 @@ int App::CreateGraph()
     //    return 1;
     //}
     
-    const IPinPtr pDemuxOutpinAudio(FindOutpinAudio(pDemux));
+    m_pDemuxOutpinAudio = FindOutpinAudio(m_pDemux);
     //TODO: we need to do better here: we check for the 0 case,
     //but we must also check for the 1+ case.
     
@@ -185,12 +135,79 @@ int App::CreateGraph()
     //    return 1;
     //}
 
-    //const bool bList = m_cmdline.GetList();
+    IRunningObjectTablePtr rot;
+    
+    hr = GetRunningObjectTable(0, &rot);
+    assert(SUCCEEDED(hr));
+    assert(bool(rot));
+    
+    IFilterGraph* const pGraph = m_pGraph;
+    
+    std::wostringstream os;
+    os << "FilterGraph " 
+       << std::hex
+       << static_cast<const void*>(pGraph)
+       << " pid "
+       << GetCurrentProcessId();
+       
+    IMonikerPtr mon;
+       
+    hr = CreateItemMoniker(L"!", os.str().c_str(), &mon);
+    assert(SUCCEEDED(hr));
+    assert(bool(mon));
+    
+    DWORD dw;
+    
+    //TODO: fix this 
+    hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
+    assert(SUCCEEDED(hr));
+
+    //one-pass:    
+    //source -> video -> vp8enc -->  webmmux -> writer
+    //       \-> audio -> vorbisenc /
+
+    //two-pass first
+    //source -> video -> vp8enc -->  webmmux
+    //                          \-> stat pkts
+
+
+    if (m_cmdline.GetTwoPass())
+    {
+        __noop;  //TODO: implement two-pass
+    }
+    else
+    {
+        status = CreateMuxer();
+        
+        if (status)
+            return status;
+            
+        status = RunGraph();
+    }
+        
+    hr = rot->Revoke(dw);
+    assert(SUCCEEDED(hr));
+
+    DestroyGraph();
+    
+    return status;
+}
+
+
+int App::CreateMuxer()
+{
+    assert(bool(m_pGraph));
+    assert(bool(m_pDemux));
+    assert(!bool(m_pSeek));
+
+    const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
+    assert(bool(pBuilder));
+
     const bool bVerbose = m_cmdline.GetVerbose();
 
     IBaseFilterPtr pMux;
     
-    hr = pMux.CreateInstance(WebmTypes::CLSID_WebmMux);
+    HRESULT hr = pMux.CreateInstance(WebmTypes::CLSID_WebmMux);
     
     if (FAILED(hr))
     {
@@ -210,7 +227,7 @@ int App::CreateGraph()
     
     int nConnections = 0;
     
-    if (!bool(pDemuxOutpinVideo))
+    if (!bool(m_pDemuxOutpinVideo))
     {
         if (bVerbose)
             wcout << "Demuxer does not expose video output pin." << endl;
@@ -219,16 +236,16 @@ int App::CreateGraph()
     {
         if (bVerbose)
             DumpPreferredMediaTypes(
-                pDemuxOutpinVideo,
+                m_pDemuxOutpinVideo,
                 L"demuxer video outpin",
                 &App::DumpVideoMediaType);
 
         const IPinPtr pMuxInpinVideo(FindInpinVideo(pMux));
         assert(bool(pMuxInpinVideo));
         
-        if (IsVP8(pDemuxOutpinVideo))
+        if (IsVP8(m_pDemuxOutpinVideo))
         {    
-            hr = m_pGraph->ConnectDirect(pDemuxOutpinVideo, pMuxInpinVideo, 0);
+            hr = m_pGraph->ConnectDirect(m_pDemuxOutpinVideo, pMuxInpinVideo, 0);
             
             if (FAILED(hr))
             {
@@ -278,7 +295,7 @@ int App::CreateGraph()
             assert(SUCCEEDED(hr));
             assert(bool(pVP8Inpin));
             
-            hr = pBuilder->Connect(pDemuxOutpinVideo, pVP8Inpin);
+            hr = pBuilder->Connect(m_pDemuxOutpinVideo, pVP8Inpin);
             //hr = ConnectVideo(pDemuxOutpinVideo, pVP8Inpin);
             
             if (FAILED(hr))
@@ -319,7 +336,7 @@ int App::CreateGraph()
                 &App::DumpVideoMediaType);
     }
     
-    if (!bool(pDemuxOutpinAudio))
+    if (!bool(m_pDemuxOutpinAudio))
     {
         if (bVerbose)
             wcout << "Demuxer does not expose audio output pin." << endl;
@@ -328,14 +345,14 @@ int App::CreateGraph()
     {
         if (bVerbose)
             DumpPreferredMediaTypes(
-                pDemuxOutpinAudio,
+                m_pDemuxOutpinAudio,
                 L"demuxer audio outpin",
                 &App::DumpAudioMediaType);
 
         const IPinPtr pMuxInpinAudio(FindInpinAudio(pMux));
         assert(bool(pMuxInpinAudio));
         
-        if (!ConnectAudio(pDemuxOutpinAudio, pMuxInpinAudio))
+        if (!ConnectAudio(m_pDemuxOutpinAudio, pMuxInpinAudio))
         {
             if (m_cmdline.GetRequireAudio())
             {
@@ -423,6 +440,9 @@ int App::CreateGraph()
 void App::DestroyGraph()
 {
     m_pSeek = 0;
+    m_pDemuxOutpinVideo = 0;
+    m_pDemuxOutpinAudio = 0;
+    m_pDemux = 0;
     
     if (IFilterGraph* pGraph = m_pGraph.Detach())
     {
