@@ -1045,6 +1045,20 @@ void Inpin::SetConfig()
     
     if (src.lag_in_frames >= 0)
         tgt.g_lag_in_frames = src.lag_in_frames;
+        
+    if (src.dropframe_thresh < 0)
+        tgt.rc_dropframe_thresh = 0;  //disable by default
+    else
+        tgt.rc_dropframe_thresh = src.dropframe_thresh;
+        
+    if (src.resize_allowed >= 0)
+        tgt.rc_resize_allowed = src.resize_allowed;
+        
+    if (src.resize_up_thresh >= 0)
+        tgt.rc_resize_up_thresh = src.resize_up_thresh;
+        
+    if (src.resize_down_thresh >= 0)
+        tgt.rc_resize_down_thresh = src.resize_down_thresh;
 
     switch (src.end_usage)
     {

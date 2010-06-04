@@ -41,6 +41,10 @@ public:
     int GetKeyframeMaxInterval() const;
     int GetThreadCount() const;
     int GetErrorResilient() const;
+    int GetDropframeThreshold() const;
+    int GetResizeAllowed() const;
+    int GetResizeUpThreshold() const;
+    int GetResizeDownThreshold() const;
     int GetEndUsage() const;
     int GetLagInFrames() const;
     int GetTokenPartitions() const;    
@@ -72,6 +76,10 @@ private:
     int m_keyframe_min_interval;
     int m_keyframe_max_interval;
     int m_thread_count;
+    int m_dropframe_thresh;
+    int m_resize_allowed;
+    int m_resize_up_thresh;
+    int m_resize_down_thresh;
     int m_error_resilient;
     int m_end_usage;
     int m_lag_in_frames;

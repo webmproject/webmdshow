@@ -45,6 +45,8 @@ App::App(HANDLE hQuit) :
 
 int App::operator()(int argc, wchar_t* argv[])
 {
+    const bool bVerbose = m_cmdline.GetVerbose();
+
     int status = m_cmdline.Parse(argc, argv);
     
     if (status)
@@ -107,34 +109,53 @@ int App::operator()(int argc, wchar_t* argv[])
         return 1;
     }
     
-    //TODO: this could be a reader filter (MEDIATYPE_Stream), which would need to
-    //connect to a splitter, or it could be a source filter.
+    const GraphUtil::IBaseFilterPtr pDemux = AddDemuxFilter(pReader);
     
-    m_pDemux = AddDemuxFilter(pReader);
-    
-    if (!bool(m_pDemux))
+    if (!bool(pDemux))
         return 1;        
     
-    m_pDemuxOutpinVideo = FindOutpinVideo(m_pDemux);
+    const GraphUtil::IPinPtr pDemuxOutpinVideo = FindOutpinVideo(pDemux);
     //TODO: we need to do better here: we check for the 0 case,
     //but we must also check for the 1+ case.
     
-    //if (!bool(pDemuxOutpinVideo))
-    //{
-    //    wcout << "Splitter has no video outpin." << endl;
-    //    return 1;
-    //}
-    
-    m_pDemuxOutpinAudio = FindOutpinAudio(m_pDemux);
-    //TODO: we need to do better here: we check for the 0 case,
-    //but we must also check for the 1+ case.
-    
-    //if (!bool(pDemuxOutpinAudio))
-    //{
-    //    wcout << "Splitter has no audio outpin." << endl;
-    //    return 1;
-    //}
+    if (pDemuxOutpinVideo == 0)
+    {
+        if (bVerbose)
+            wcout << "Demuxer does not expose video output pin." << endl;
+            
+        //TODO: we need to provide a command-line option that says to
+        //quit immediately if no video stream.
+    }
+    else
+    {
+        if (bVerbose)
+            DumpPreferredMediaTypes(
+                pDemuxOutpinVideo,
+                L"demuxer video outpin",
+                &App::DumpVideoMediaType);
+    }
 
+    const GraphUtil::IPinPtr pDemuxOutpinAudio = FindOutpinAudio(pDemux);
+    //TODO: we need to do better here: we check for the 0 case,
+    //but we must also check for the 1+ case.
+    
+    if (pDemuxOutpinAudio == 0)
+    {
+        if (bVerbose)
+            wcout << "Demuxer does not expose audio output pin." << endl;
+
+        //TODO: we need to provide a command-line option that says to
+        //quit immediately if no audio stream.
+    }
+    else
+    {
+        if (bVerbose)
+            DumpPreferredMediaTypes(
+                pDemuxOutpinAudio,
+                L"demuxer audio outpin",
+                &App::DumpAudioMediaType);
+    }
+    
     IRunningObjectTablePtr rot;
     
     hr = GetRunningObjectTable(0, &rot);
@@ -170,14 +191,14 @@ int App::operator()(int argc, wchar_t* argv[])
     //source -> video -> vp8enc -->  webmmux
     //                          \-> stat pkts
 
-
     if (m_cmdline.GetTwoPass())
     {
-        __noop;  //TODO: implement two-pass
+        wcout << "Two-pass VP8 encoding mode not yet implemented." << endl;
+        status = 1;
     }
     else
     {
-        status = CreateMuxer();
+        status = CreateMuxer(pDemuxOutpinVideo, pDemuxOutpinAudio);
         
         if (status)
             return status;
@@ -194,10 +215,11 @@ int App::operator()(int argc, wchar_t* argv[])
 }
 
 
-int App::CreateMuxer()
+int App::CreateMuxer(
+    IPin* pDemuxOutpinVideo,
+    IPin* pDemuxOutpinAudio)
 {
     assert(bool(m_pGraph));
-    assert(bool(m_pDemux));
     assert(!bool(m_pSeek));
 
     const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
@@ -227,25 +249,14 @@ int App::CreateMuxer()
     
     int nConnections = 0;
     
-    if (!bool(m_pDemuxOutpinVideo))
+    if (pDemuxOutpinVideo)
     {
-        if (bVerbose)
-            wcout << "Demuxer does not expose video output pin." << endl;
-    }
-    else
-    {
-        if (bVerbose)
-            DumpPreferredMediaTypes(
-                m_pDemuxOutpinVideo,
-                L"demuxer video outpin",
-                &App::DumpVideoMediaType);
-
         const IPinPtr pMuxInpinVideo(FindInpinVideo(pMux));
         assert(bool(pMuxInpinVideo));
         
-        if (IsVP8(m_pDemuxOutpinVideo))
+        if (IsVP8(pDemuxOutpinVideo))
         {    
-            hr = m_pGraph->ConnectDirect(m_pDemuxOutpinVideo, pMuxInpinVideo, 0);
+            hr = m_pGraph->ConnectDirect(pDemuxOutpinVideo, pMuxInpinVideo, 0);
             
             if (FAILED(hr))
             {
@@ -295,7 +306,7 @@ int App::CreateMuxer()
             assert(SUCCEEDED(hr));
             assert(bool(pVP8Inpin));
             
-            hr = pBuilder->Connect(m_pDemuxOutpinVideo, pVP8Inpin);
+            hr = pBuilder->Connect(pDemuxOutpinVideo, pVP8Inpin);
             //hr = ConnectVideo(pDemuxOutpinVideo, pVP8Inpin);
             
             if (FAILED(hr))
@@ -336,23 +347,12 @@ int App::CreateMuxer()
                 &App::DumpVideoMediaType);
     }
     
-    if (!bool(m_pDemuxOutpinAudio))
+    if (pDemuxOutpinAudio)
     {
-        if (bVerbose)
-            wcout << "Demuxer does not expose audio output pin." << endl;
-    }
-    else
-    {
-        if (bVerbose)
-            DumpPreferredMediaTypes(
-                m_pDemuxOutpinAudio,
-                L"demuxer audio outpin",
-                &App::DumpAudioMediaType);
-
         const IPinPtr pMuxInpinAudio(FindInpinAudio(pMux));
         assert(bool(pMuxInpinAudio));
         
-        if (!ConnectAudio(m_pDemuxOutpinAudio, pMuxInpinAudio))
+        if (!ConnectAudio(pDemuxOutpinAudio, pMuxInpinAudio))
         {
             if (m_cmdline.GetRequireAudio())
             {
@@ -440,9 +440,6 @@ int App::CreateMuxer()
 void App::DestroyGraph()
 {
     m_pSeek = 0;
-    m_pDemuxOutpinVideo = 0;
-    m_pDemuxOutpinAudio = 0;
-    m_pDemux = 0;
     
     if (IFilterGraph* pGraph = m_pGraph.Detach())
     {
@@ -1852,6 +1849,74 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
         if (FAILED(hr))
         {
             wcout << "Unable to set VP8 encoder token partitions.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+                  
+            return hr;
+        }
+    }
+    
+    const int dropframe_thresh = m_cmdline.GetDropframeThreshold();
+    
+    if (dropframe_thresh >= 0)
+    {
+        const HRESULT hr = pVP8->SetDropframeThreshold(dropframe_thresh);
+        
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder dropframe threshold.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+                  
+            return hr;
+        }
+    }
+
+    const int resize_allowed = m_cmdline.GetResizeAllowed();
+    
+    if (resize_allowed >= 0)
+    {
+        const HRESULT hr = pVP8->SetResizeAllowed(resize_allowed);
+        
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder resize allowed.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+                  
+            return hr;
+        }
+    }
+
+    const int resize_up_thresh = m_cmdline.GetResizeUpThreshold();
+    
+    if (resize_up_thresh >= 0)
+    {
+        const HRESULT hr = pVP8->SetResizeUpThreshold(resize_up_thresh);
+        
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder resize up threshold.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+                  
+            return hr;
+        }
+    }
+
+    const int resize_down_thresh = m_cmdline.GetResizeDownThreshold();
+    
+    if (resize_down_thresh >= 0)
+    {
+        const HRESULT hr = pVP8->SetResizeDownThreshold(resize_down_thresh);
+        
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder resize down threshold.\n"
                   << hrtext(hr)
                   << L" (0x" << hex << hr << dec << L")"
                   << endl;

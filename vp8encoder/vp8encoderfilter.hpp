@@ -71,6 +71,18 @@ public:
     HRESULT STDMETHODCALLTYPE SetErrorResilient(int);
     HRESULT STDMETHODCALLTYPE GetErrorResilient(int*);
     
+    HRESULT STDMETHODCALLTYPE SetDropframeThreshold(int);    
+    HRESULT STDMETHODCALLTYPE GetDropframeThreshold(int*);
+    
+    HRESULT STDMETHODCALLTYPE SetResizeAllowed(int); 
+    HRESULT STDMETHODCALLTYPE GetResizeAllowed(int*); 
+    
+    HRESULT STDMETHODCALLTYPE SetResizeUpThreshold(int); 
+    HRESULT STDMETHODCALLTYPE GetResizeUpThreshold(int*);
+    
+    HRESULT STDMETHODCALLTYPE SetResizeDownThreshold(int); 
+    HRESULT STDMETHODCALLTYPE GetResizeDownThreshold(int*);        
+
     HRESULT STDMETHODCALLTYPE SetEndUsage(VP8EndUsage);    
     HRESULT STDMETHODCALLTYPE GetEndUsage(VP8EndUsage*);
     
@@ -113,11 +125,13 @@ public:
     HRESULT STDMETHODCALLTYPE SetKeyframeMaxInterval(int);    
     HRESULT STDMETHODCALLTYPE GetKeyframeMaxInterval(int*); 
             
+#if 0
     HRESULT STDMETHODCALLTYPE SetPassMode(VP8PassMode);
     HRESULT STDMETHODCALLTYPE GetPassMode(VP8PassMode*);
     
     HRESULT STDMETHODCALLTYPE SetTwoPassStatsBuf(const BYTE*, LONGLONG);    
     HRESULT STDMETHODCALLTYPE GetTwoPassStatsBuf(const BYTE**, LONGLONG*);
+#endif
 
 private:
     class CNondelegating : public IUnknown
@@ -159,22 +173,18 @@ public:
         int32_t deadline;
         
         //g_usage
-        int32_t threads;  //g_threads
+        int32_t threads;
         //g_profile
         //g_w
         //g_h
         //g_timebase
-        int32_t error_resilient;  //g_error_resilient
-        //g_pass  //1 vs. 2-pass //TODO
-        int32_t lag_in_frames;      //g_lag_in_frames
-        
-        //% units?  [0-100]???
-        //int32_t dropframe_thresh;   //rc_dropframe_thresh;
-        //rc_resize_allowed;  //IS THIS A BOOLEAN?
-        //rc_resize_up_thresh;  //% units?  [0-100]???
-        //rc_resize_down_thresh
-        
-        int32_t end_usage;  //rc_end_usage
+        int32_t error_resilient;
+        int32_t lag_in_frames; 
+        int32_t dropframe_thresh;
+        int32_t resize_allowed;
+        int32_t resize_up_thresh;
+        int32_t resize_down_thresh;        
+        int32_t end_usage;
 
         //rc_twopass_stats_in        
 
@@ -191,10 +201,12 @@ public:
         int32_t keyframe_max_interval;
         
         int32_t token_partitions;  
-        
+
+#if 0        
         int32_t pass_mode;
         const BYTE* two_pass_stats_buf;
         LONGLONG two_pass_stats_buflen;
+#endif
         
         void Init();
     }; 

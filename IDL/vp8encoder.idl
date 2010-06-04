@@ -45,12 +45,12 @@ enum VP8EndUsage
 };
 
 
-enum VP8PassMode
-{
-    kPassModeOnePass,
-    kPassModeFirstPass,
-    kPassModeLastPass
-};
+//enum VP8PassMode
+//{
+//    kPassModeOnePass,
+//    kPassModeFirstPass,
+//    kPassModeLastPass
+//};
 
 
 [
@@ -114,6 +114,50 @@ interface IVP8Encoder : IUnknown
 
     HRESULT SetErrorResilient([in] int ErrorResilient);
     HRESULT GetErrorResilient([out] int* pErrorResilient);
+
+    //Temporal resampling configuration
+    //
+    //Temporal resampling allows the codec to "drop" frames as a strategy to
+    //meet its target data rate. This can cause temporal discontinuities in
+    //the encoded video, which may appear as stuttering during playback. This
+    //trade-off is often acceptable, but for many applications is not. It can
+    //be disabled in these cases.
+    //
+    //This threshold is described as a percentage of the target data buffer.
+    //When the data buffer falls below this percentage of fullness, a
+    //dropped frame is indicated. Set the threshold to zero (0) to disable
+    //this feature.
+    
+    HRESULT SetDropframeThreshold([in] int DropframeThreshold);
+    HRESULT GetDropframeThreshold([out] int* pDropframeThreshold);
+    
+    //Enable/disable spatial resampling
+    //
+    //Spatial resampling allows the codec to compress a lower resolution
+    //version of the frame, which is then upscaled by the encoder to the
+    //correct presentation resolution. This increases visual quality at
+    //low data rates, at the expense of CPU time on the encoder/decoder.
+
+    HRESULT SetResizeAllowed([in] int ResizeAllowed);
+    HRESULT GetResizeAllowed([out] int* pResizeAllowed);
+
+    //Spatial resampling up watermark.
+    //
+    //This threshold is described as a percentage of the target data buffer.
+    //When the data buffer rises above this percentage of fullness, the
+    //encoder will step up to a higher resolution version of the frame.
+
+    HRESULT SetResizeUpThreshold([in] int ResizeUpThreshold);
+    HRESULT GetResizeUpThreshold([out] int* pResizeUpThreshold);
+
+    //Spatial resampling down watermark.
+    //
+    //This threshold is described as a percentage of the target data buffer.
+    //When the data buffer falls below this percentage of fullness, the
+    //encoder will step down to a lower resolution version of the frame.
+
+    HRESULT SetResizeDownThreshold([in] int ResizeDownThreshold);
+    HRESULT GetResizeDownThreshold([out] int* pResizeDownThreshold);
 
     //EndUsage
     //
@@ -252,6 +296,7 @@ interface IVP8Encoder : IUnknown
     HRESULT SetKeyframeMaxInterval([in] int MaxInterval);
     HRESULT GetKeyframeMaxInterval([out] int* pMaxInterval);
     
+#if 0  //TODO
     //Multi-pass Encoding Mode
     //
     //This value should be set to the current phase for multi-pass encoding.
@@ -261,6 +306,7 @@ interface IVP8Encoder : IUnknown
     
     HRESULT SetTwoPassStatsBuf(const BYTE* Buffer, LONGLONG Length);
     HRESULT GetTwoPassStatsBuf(const BYTE** pBuffer, LONGLONG* pLength);
+#endif
 
 }
 

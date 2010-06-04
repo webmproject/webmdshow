@@ -124,11 +124,17 @@ void Filter::Config::Init()
     keyframe_mode = -1;
     keyframe_min_interval = -1;
     keyframe_max_interval = -1;
+    dropframe_thresh = -1;
+    resize_allowed = -1;
+    resize_up_thresh = -1;
+    resize_down_thresh = -1;
     end_usage = -1;
-    
+
+#if 0    
     pass_mode = -1;
     two_pass_stats_buf = 0;
     two_pass_stats_buflen = -1;
+#endif
     
     token_partitions = -1;
 }    
@@ -675,6 +681,130 @@ HRESULT Filter::GetErrorResilient(int* p)
 }
 
 
+HRESULT Filter::SetDropframeThreshold(int val)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    m_cfg.dropframe_thresh = val;
+    return S_OK;
+}
+
+
+HRESULT Filter::GetDropframeThreshold(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+        
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    *p = m_cfg.dropframe_thresh;
+    return S_OK;
+}
+
+
+HRESULT Filter::SetResizeAllowed(int val)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    m_cfg.resize_allowed = val;
+    return S_OK;
+}
+
+
+HRESULT Filter::GetResizeAllowed(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+        
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    *p = m_cfg.resize_allowed;
+    return S_OK;
+}
+
+
+HRESULT Filter::SetResizeUpThreshold(int val)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    m_cfg.resize_up_thresh = val;
+    return S_OK;
+}
+
+
+HRESULT Filter::GetResizeUpThreshold(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+        
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    *p = m_cfg.resize_up_thresh;
+    return S_OK;
+}
+
+
+HRESULT Filter::SetResizeDownThreshold(int val)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    m_cfg.resize_down_thresh = val;
+    return S_OK;
+}
+
+
+HRESULT Filter::GetResizeDownThreshold(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+        
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    *p = m_cfg.resize_down_thresh;
+    return S_OK;
+}
+
+
 HRESULT Filter::SetEndUsage(VP8EndUsage val_)
 {
     const int val = val_;
@@ -1156,7 +1286,7 @@ HRESULT Filter::GetKeyframeMaxInterval(int* pval)
 }
 
 
-
+#if 0
 HRESULT Filter::SetPassMode(VP8PassMode m)
 {
     switch (m)
@@ -1244,6 +1374,7 @@ HRESULT Filter::GetTwoPassStatsBuf(const BYTE**, LONGLONG*)
 {
     return E_NOTIMPL;  //TODO
 }
+#endif
 
 
 

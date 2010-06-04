@@ -807,6 +807,11 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
         
+    status = ParseOpt(i, arg, len, L"dropframe-threshold", m_dropframe_thresh, 0, 100);
+    
+    if (status)
+        return status;
+        
     if (_wcsnicmp(arg, L"end-usage", len) == 0)
     {
         int n;
@@ -1039,6 +1044,21 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
         
+    status = ParseOpt(i, arg, len, L"resize-allowed", m_resize_allowed, 0, 1, 1);
+    
+    if (status)
+        return status;
+        
+    status = ParseOpt(i, arg, len, L"resize-up-threshold", m_resize_up_thresh, 0, 100);
+    
+    if (status)
+        return status;
+        
+    status = ParseOpt(i, arg, len, L"resize-down-threshold", m_resize_down_thresh, 0, 100);
+    
+    if (status)
+        return status;
+        
     status = ParseOpt(i, arg, len, L"target-bitrate", m_target_bitrate, 0, -1);
     
     if (status)
@@ -1197,6 +1217,30 @@ int CmdLine::GetErrorResilient() const
 }
 
 
+int CmdLine::GetDropframeThreshold() const
+{
+    return m_dropframe_thresh;
+}
+
+
+int CmdLine::GetResizeAllowed() const
+{
+    return m_resize_allowed;
+}
+
+
+int CmdLine::GetResizeUpThreshold() const
+{
+    return m_resize_up_thresh;
+}
+
+
+int CmdLine::GetResizeDownThreshold() const
+{
+    return m_resize_down_thresh;
+}
+
+
 int CmdLine::GetEndUsage() const
 {
     return m_end_usage;
@@ -1248,6 +1292,7 @@ void CmdLine::PrintUsage() const
           << L"  --decoder-buffer-size           buffer size (in milliseconds)\n"
           << L"  --decoder-buffer-initial-size   before playback (in milliseconds)\n"
           << L"  --decoder-buffer-optimal-size   desired size (in milliseconds)\n"
+          << L"  --dropframe-threshold           temporal resampling\n"
           << L"  --end-usage                     {\"VBR\"|\"CBR\"}\n"
           << L"  --error-resilient               defend against lossy or noisy links\n"
           << L"  --keyframe-mode                 {\"disabled\"|\"auto\"}\n"
@@ -1257,6 +1302,9 @@ void CmdLine::PrintUsage() const
           << L"  --min-quantizer                 min (best quality) quantizer\n"
           << L"  --max-quantizer                 max (worst quality) quantizer\n"
           << L"  --require-audio                 quit if no audio encoder available\n"
+          << L"  --resize-allowed                spatial resampling\n"
+          << L"  --resize-up-threshold           spatial resampling up threshold\n"
+          << L"  --resize-down-threshold         spatial resampling down threshold\n"
           << L"  --script-mode                   print progress in script-friendly way\n"
           << L"  --target-bitrate                target bandwidth (in kilobits/second)\n"
           << L"  --thread-count                  number of threads to use for VP8 encoding\n"
