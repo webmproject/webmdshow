@@ -257,8 +257,12 @@ void Context::FinalSegment()
     m_cues_pos = m_file.GetPosition();  //end of clusters    
     WriteCues();    
 
+#if 0
     m_second_seekhead_pos = m_file.GetPosition();  //end of cues
     WriteSecondSeekHead();
+#else
+    m_clusters.clear();
+#endif
     
     const __int64 maxpos = m_file.GetPosition();    
     m_file.SetSize(maxpos);
@@ -306,7 +310,7 @@ void Context::InitFirstSeekHead()
     //Cues (3/4)
     //2nd SeekHead (4/4)
     
-    const BYTE size = 4 * 21;
+    const BYTE size = /* 4 */ 3 * 21;
     
     m_file.WriteID4(0x114D9B74);  //Seek Head
     m_file.Write1UInt(size);
@@ -323,16 +327,17 @@ void Context::FinalFirstSeekHead()
     WriteSeekEntry(0x1549A966, m_info_pos);   //SegmentInfo  (1/4)
     WriteSeekEntry(0x1654AE6B, m_track_pos);  //Track  (2/4) 
     WriteSeekEntry(0x1C53BB6B, m_cues_pos);   //Cues (3/4)
-    WriteSeekEntry(0x114D9B74, m_second_seekhead_pos);   //2nd SeekHead (4/4)
+    //WriteSeekEntry(0x114D9B74, m_second_seekhead_pos);   //2nd SeekHead (4/4)
     
     const __int64 stop_pos = m_file.GetPosition();
     
     const __int64 size = stop_pos - start_pos;
     size;
-    assert(size == (4 * 21));
+    assert(size == ( /* 4 */ 3 * 21));
 }
 
 
+#if 0
 void Context::WriteSecondSeekHead()
 {
     m_file.WriteID4(0x114D9B74);  //Seek Head
@@ -372,6 +377,7 @@ void Context::WriteSecondSeekHead()
 
     m_file.SetPosition(stop_pos);
 }
+#endif
 
 
 void Context::WriteSeekEntry(ULONG id, __int64 pos_)

@@ -70,7 +70,7 @@ private:
 
    __int64 m_segment_pos;
    __int64 m_first_seekhead_pos;    
-   __int64 m_second_seekhead_pos;
+   //__int64 m_second_seekhead_pos;
    __int64 m_info_pos;
    __int64 m_track_pos;
    __int64 m_cues_pos;
@@ -99,7 +99,7 @@ private:
    typedef std::list<Cluster> clusters_t; 
    clusters_t m_clusters;
    
-   void WriteSecondSeekHead();
+   //void WriteSecondSeekHead();
    void WriteCues();
    //void FinalClusters(__int64 pos);
    
