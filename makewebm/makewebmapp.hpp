@@ -33,16 +33,12 @@ private:
     CmdLine m_cmdline;    
 
     GraphUtil::IFilterGraphPtr m_pGraph;
-    GraphUtil::IMediaSeekingPtr m_pSeek;
-    //GraphUtil::IBaseFilterPtr m_pDemux;
-    //GraphUtil::IPinPtr m_pDemuxOutpinVideo;
-    //GraphUtil::IPinPtr m_pDemuxOutpinAudio; 
 
     int m_progress;
     
-    int CreateMuxer(IPin* pDemuxVideo, IPin* pDemuxAudio);
+    int CreateMuxerGraph(IPin* pDemuxVideo, IPin* pDemuxAudio, IBaseFilter* pMux);
+    int RunMuxerGraph(IBaseFilter* pMux);
     void DestroyGraph();
-    int RunGraph();
 
     static bool IsVP8(IPin*);
     static GUID GetSubtype(IPin*);
@@ -61,7 +57,7 @@ private:
 
     static void DumpPreferredMediaTypes(IPin*, const wchar_t*, void (*)(const AM_MEDIA_TYPE&));
     static void DumpConnectionMediaType(IPin*, const wchar_t*, void (*)(const AM_MEDIA_TYPE&));
-    void DisplayProgress(bool);
+    void DisplayProgress(IMediaSeeking*, bool);
 
     static void DumpVideoMediaType(const AM_MEDIA_TYPE&);
     static void DumpVideoInfoHeader(const VIDEOINFOHEADER&);

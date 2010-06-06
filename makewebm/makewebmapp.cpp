@@ -118,7 +118,7 @@ int App::operator()(int argc, wchar_t* argv[])
     //TODO: we need to do better here: we check for the 0 case,
     //but we must also check for the 1+ case.
     
-    if (pDemuxOutpinVideo == 0)
+    if (!bool(pDemuxOutpinVideo))
     {
         if (bVerbose)
             wcout << "Demuxer does not expose video output pin." << endl;
@@ -139,7 +139,7 @@ int App::operator()(int argc, wchar_t* argv[])
     //TODO: we need to do better here: we check for the 0 case,
     //but we must also check for the 1+ case.
     
-    if (pDemuxOutpinAudio == 0)
+    if (!bool(pDemuxOutpinAudio))
     {
         if (bVerbose)
             wcout << "Demuxer does not expose audio output pin." << endl;
@@ -198,12 +198,32 @@ int App::operator()(int argc, wchar_t* argv[])
     }
     else
     {
-        status = CreateMuxer(pDemuxOutpinVideo, pDemuxOutpinAudio);
+        IBaseFilterPtr pMux;
+        
+        HRESULT hr = pMux.CreateInstance(WebmTypes::CLSID_WebmMux);
+        
+        if (FAILED(hr))
+        {
+            wcout << "Unable to create WebmMux filter instance.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+                  
+            return 1;
+        }
+        
+        assert(GraphUtil::InpinCount(pMux) == 2);  //TODO: liberalize
+        assert(GraphUtil::OutpinCount(pMux) == 1);
+        
+        hr = m_pGraph->AddFilter(pMux, L"webmmux");
+        assert(SUCCEEDED(hr));
+    
+        status = CreateMuxerGraph(pDemuxOutpinVideo, pDemuxOutpinAudio, pMux);
         
         if (status)
             return status;
             
-        status = RunGraph();
+        status = RunMuxerGraph(pMux);
     }
         
     hr = rot->Revoke(dw);
@@ -215,39 +235,20 @@ int App::operator()(int argc, wchar_t* argv[])
 }
 
 
-int App::CreateMuxer(
+int App::CreateMuxerGraph(
     IPin* pDemuxOutpinVideo,
-    IPin* pDemuxOutpinAudio)
+    IPin* pDemuxOutpinAudio,
+    IBaseFilter* pMux)
 {
     assert(bool(m_pGraph));
-    assert(!bool(m_pSeek));
 
     const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
     assert(bool(pBuilder));
 
     const bool bVerbose = m_cmdline.GetVerbose();
 
-    IBaseFilterPtr pMux;
-    
-    HRESULT hr = pMux.CreateInstance(WebmTypes::CLSID_WebmMux);
-    
-    if (FAILED(hr))
-    {
-        wcout << "Unable to create WebmMux filter instance.\n"
-              << hrtext(hr)
-              << L" (0x" << hex << hr << dec << L")"
-              << endl;
-              
-        return 1;
-    }
-    
-    assert(GraphUtil::InpinCount(pMux) == 2);  //TODO: liberalize
-    assert(GraphUtil::OutpinCount(pMux) == 1);
-    
-    hr = m_pGraph->AddFilter(pMux, L"webmmux");
-    assert(SUCCEEDED(hr));
-    
     int nConnections = 0;
+    HRESULT hr;
     
     if (pDemuxOutpinVideo)
     {
@@ -429,9 +430,6 @@ int App::CreateMuxer(
     //if (bList)
     //    return 1;  //soft error
     
-    m_pSeek = pMux;
-    assert(bool(m_pSeek));
-    
     return 0;  //success   
 }
 
@@ -439,8 +437,6 @@ int App::CreateMuxer(
 
 void App::DestroyGraph()
 {
-    m_pSeek = 0;
-    
     if (IFilterGraph* pGraph = m_pGraph.Detach())
     {
         const ULONG n = pGraph->Release();
@@ -450,9 +446,13 @@ void App::DestroyGraph()
 }
 
 
-int App::RunGraph()
+int App::RunMuxerGraph(IBaseFilter* pMux)
 {
     assert(bool(m_pGraph));
+    assert(pMux);
+    
+    const GraphUtil::IMediaSeekingPtr pSeek(pMux);
+    assert(bool(pSeek));
     
     const GraphUtil::IMediaEventPtr pEvent(m_pGraph);
     assert(bool(pEvent));
@@ -507,7 +507,7 @@ int App::RunGraph()
                     
         if (dw == WAIT_TIMEOUT)
         {
-            DisplayProgress(false);
+            DisplayProgress(pSeek, false);
             continue;
         }
 
@@ -549,7 +549,7 @@ int App::RunGraph()
         //    break;
     }
     
-    DisplayProgress(true);
+    DisplayProgress(pSeek, true);
 
     if (!m_cmdline.ScriptMode())
         wcout << endl;
@@ -561,17 +561,16 @@ int App::RunGraph()
 }
 
 
-void App::DisplayProgress(bool last)
+void App::DisplayProgress(IMediaSeeking* pSeek, bool last)
 {
+    assert(pSeek);
+    
     //TODO: display this (or give option to) in HH:MM:SS.sss
     //TODO: attempt to query upstream filter for duration.
     
-    if (!bool(m_pSeek))
-        return;
-
     __int64 curr;
 
-    HRESULT hr = m_pSeek->GetCurrentPosition(&curr);
+    HRESULT hr = pSeek->GetCurrentPosition(&curr);
 
     if (FAILED(hr))
     {
@@ -602,7 +601,7 @@ void App::DisplayProgress(bool last)
     //filter, or whether we must call the graph object.
 
 #if 1
-    hr = m_pSeek->GetDuration(&d);
+    hr = pSeek->GetDuration(&d);
 #else
     const GraphUtil::IMediaSeekingPtr pSeek(m_pGraph);
     assert(bool(pSeek));
