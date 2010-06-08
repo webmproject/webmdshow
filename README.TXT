@@ -1,5 +1,5 @@
 WebM Project DirectShow Filters
-v0.9.7.0 - 2010/05/26
+v0.9.8.0 - 2010/06/08
 http://www.webmproject.org/
 mailto:matthewjheaney@google.com
 
@@ -46,6 +46,11 @@ Preliminaries
    You can create a new issue here:
 
       http://code.google.com/p/webm/issues/entry
+
+   If you are a developer and would like to build from sources, then
+   you can use Git to clone the origin, like this:
+
+     git clone git://review.webmproject.org/webmdshow.git
 
 
 Installation
