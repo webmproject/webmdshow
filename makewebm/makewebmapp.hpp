@@ -39,7 +39,6 @@ private:
     
     int CreateMuxerGraph(IPin* pDemuxVideo, IPin* pDemuxAudio, IBaseFilter* pMux);
     int RunMuxerGraph(IBaseFilter* pMux);
-    void DestroyGraph();
 
     static bool IsVP8(IPin*);
     static GUID GetSubtype(IPin*);

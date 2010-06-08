@@ -69,11 +69,11 @@ int App::operator()(int argc, wchar_t* argv[])
     
     assert(bool(m_pGraph));
     
-    const GraphUtil::IMediaFilterPtr pGraphFilter(m_pGraph);
-    assert(bool(pGraphFilter));
-    
     const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
     assert(bool(pBuilder));
+        
+    const GraphUtil::IMediaFilterPtr pGraphFilter(m_pGraph);
+    assert(bool(pGraphFilter));
     
     hr = pGraphFilter->SetSyncSource(0);  //process as quickly as possible
     //TODO: are we setting this too early?
@@ -89,7 +89,7 @@ int App::operator()(int argc, wchar_t* argv[])
 #endif
 
     IBaseFilterPtr pReader;
-    
+
     hr = pBuilder->AddSourceFilter(m_cmdline.GetInputFileName(), L"source", &pReader);
 
     if (FAILED(hr))
@@ -101,7 +101,7 @@ int App::operator()(int argc, wchar_t* argv[])
               
         return 1;
     }
-    
+        
     assert(bool(pReader));
     
     if (GraphUtil::PinCount(pReader) == 0)
@@ -192,7 +192,7 @@ int App::operator()(int argc, wchar_t* argv[])
     //source -> video -> vp8enc -->  webmmux
     //                          \-> stat pkts
 
-    if (m_cmdline.GetTwoPass())
+    if (m_cmdline.GetTwoPass() >= 0)
     {
         wcout << "Two-pass VP8 encoding mode not yet implemented." << endl;
         status = 1;
@@ -229,9 +229,12 @@ int App::operator()(int argc, wchar_t* argv[])
         
     hr = rot->Revoke(dw);
     assert(SUCCEEDED(hr));
-
-    DestroyGraph();
     
+    m_pGraph.Detach();
+
+    const ULONG n = pGraph->Release();
+    n;
+
     return status;
 }
 
@@ -434,17 +437,6 @@ int App::CreateMuxerGraph(
     return 0;  //success   
 }
 
-
-
-void App::DestroyGraph()
-{
-    if (IFilterGraph* pGraph = m_pGraph.Detach())
-    {
-        const ULONG n = pGraph->Release();
-        n;
-        assert(n == 0);
-    }
-}
 
 
 int App::RunMuxerGraph(IBaseFilter* pMux)
