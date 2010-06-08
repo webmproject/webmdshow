@@ -1075,10 +1075,11 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
         
-    status = ParseOpt(i, arg, len, L"two-pass", m_two_pass, 0, 1, 1);
-    
-    if (status)
-        return status;
+    //TODO:
+    //status = ParseOpt(i, arg, len, L"two-pass", m_two_pass, 0, 1, 1);
+    //
+    //if (status)
+    //    return status;
         
     status = ParseOpt(i, arg, len, L"undershoot-pct", m_undershoot_pct, 0, 100);
     
@@ -1310,7 +1311,9 @@ void CmdLine::PrintUsage() const
           << L"  --target-bitrate                target bandwidth (in kilobits/second)\n"
           << L"  --thread-count                  number of threads to use for VP8 encoding\n"
           << L"  --token-partitions              number of sub-streams\n"
-          << L"  --two-pass                      two-pass encoding\n"
+
+          //TODO: << L"  --two-pass                      two-pass encoding\n"
+
           << L"  --undershoot-pct                percent of target bitrate for easier frames\n"
           << L"  --overshoot-pct                 percent of target bitrate for harder frames\n"
           << L"  -l, --list                      print switch values, but do not run app\n"
