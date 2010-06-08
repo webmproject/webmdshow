@@ -7,8 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
-
+#include "afxres.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -51,8 +50,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,9,7,0
- PRODUCTVERSION 0,9,7,0
+ FILEVERSION 0,9,8,0
+ PRODUCTVERSION 0,9,8,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -69,12 +68,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Google"
             VALUE "FileDescription", "playwebm"
-            VALUE "FileVersion", "0, 9, 7, 0"
+            VALUE "FileVersion", "0, 9, 8, 0"
             VALUE "InternalName", "playwebm"
             VALUE "LegalCopyright", "Copyright (C) 2010"
             VALUE "OriginalFilename", "playwebm.exe"
             VALUE "ProductName", "playwebm"
-            VALUE "ProductVersion", "0, 9, 7, 0"
+            VALUE "ProductVersion", "0, 9, 8, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -93,8 +92,7 @@ END
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
-1 ICON "webm.ico"
-
+1 ICON "webm.ico"
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
