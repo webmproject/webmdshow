@@ -663,6 +663,18 @@ HRESULT OutpinVideo::GetPreroll(LONGLONG* p)
 
 std::wstring OutpinVideo::GetName() const
 {
+    const AM_MEDIA_TYPE* pmt;
+    
+    if (bool(m_pPinConnection))
+        pmt = &m_connection_mtv[0];
+    else
+        pmt = &m_preferred_mtv[0];
+        
+    assert(pmt);
+        
+    if (pmt->subtype == WebmTypes::MEDIASUBTYPE_VP8_STATS)
+        return L"STATS";
+        
     return L"VP80";
 }
 
@@ -677,6 +689,26 @@ void OutpinVideo::SetDefaultMediaTypes()
     mt.subtype = WebmTypes::MEDIASUBTYPE_VP80;
     mt.bFixedSizeSamples = FALSE;
     mt.bTemporalCompression = TRUE;
+    mt.lSampleSize = 0;
+    mt.formattype = GUID_NULL;
+    mt.pUnk = 0;
+    mt.cbFormat = 0;
+    mt.pbFormat = 0;
+    
+    m_preferred_mtv.Add(mt);
+}
+
+
+void OutpinVideo::SetFirstPassMediaTypes()
+{
+    m_preferred_mtv.Clear();
+    
+    AM_MEDIA_TYPE mt;
+    
+    mt.majortype = MEDIATYPE_Stream;
+    mt.subtype = WebmTypes::MEDIASUBTYPE_VP8_STATS;
+    mt.bFixedSizeSamples = TRUE;
+    mt.bTemporalCompression = FALSE;
     mt.lSampleSize = 0;
     mt.formattype = GUID_NULL;
     mt.pUnk = 0;
@@ -707,6 +739,91 @@ HRESULT OutpinVideo::GetAllocator(IMemInputPin*, IMemAllocator** pp) const
 void OutpinVideo::GetSubtype(GUID& subtype) const
 {
     subtype = WebmTypes::MEDIASUBTYPE_VP80;
+}
+
+
+void OutpinVideo::OnInpinConnect()
+{
+    assert(!bool(m_pPinConnection));
+    
+    const VP8PassMode m = m_pFilter->GetPassMode();
+    
+    switch (m)
+    {
+        case kPassModeOnePass:
+        case kPassModeLastPass:
+            Outpin::OnInpinConnect();
+            return;
+            
+        case kPassModeFirstPass:
+        {
+            assert(m_preferred_mtv.Size() == 1);
+
+            const AM_MEDIA_TYPE& mt = m_preferred_mtv[0];
+            mt;
+            assert(mt.majortype == MEDIATYPE_Stream);
+            assert(mt.subtype == WebmTypes::MEDIASUBTYPE_VP8_STATS);
+            
+            //Nothing we need to do here.
+            
+            return;
+        }
+        default:
+            assert(false);
+            return;
+    }
+}
+
+
+HRESULT OutpinVideo::OnSetPassMode(VP8PassMode m)
+{
+    if (bool(m_pPinConnection))
+    {
+        const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+        
+        switch (m)
+        {
+            case kPassModeOnePass:
+            case kPassModeLastPass:
+                if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP80)
+                    return VFW_E_CHANGING_FORMAT;  //?
+                    
+                return S_OK;  //output media subtype already what we need
+                
+            case kPassModeFirstPass:
+                if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP8_STATS)
+                    return VFW_E_CHANGING_FORMAT;  //?
+                    
+                return S_OK;  //as above                
+        }
+        
+        assert(false);
+        return E_FAIL;
+    }
+    else
+    {
+        switch (m)
+        {
+            case kPassModeOnePass:
+            case kPassModeLastPass:
+            {
+                const Inpin& inpin = m_pFilter->m_inpin;
+             
+                if (bool(inpin.m_pPinConnection))
+                    Outpin::OnInpinConnect();
+                else
+                    SetDefaultMediaTypes();
+                    
+                return S_OK;                       
+            }                
+            case kPassModeFirstPass:
+                SetFirstPassMediaTypes();
+                return S_OK;
+        }
+        
+        assert(false);
+        return E_FAIL;
+    }
 }
 
 

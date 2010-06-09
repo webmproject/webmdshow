@@ -64,7 +64,7 @@ public:
     GraphUtil::IMemInputPinPtr m_pInputPin;
     GraphUtil::IMemAllocatorPtr m_pAllocator;
         
-    void OnInpinConnect();
+    virtual void OnInpinConnect();
     HRESULT OnInpinDisconnect();
     
 protected:

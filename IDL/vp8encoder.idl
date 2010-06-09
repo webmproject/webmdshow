@@ -33,8 +33,8 @@ enum VP8Deadline
 enum VP8KeyframeMode
 {
     kKeyframeModeDefault = -1,  //use encoder default
-    kKeyframeModeDisabled = 0, //encoder does not place keyframes
-    kKeyframeModeAuto = 1     //encoder determines optimal placement
+    kKeyframeModeDisabled = 0,  //encoder does not place keyframes
+    kKeyframeModeAuto = 1       //encoder determines optimal placement
 };
 
 
@@ -46,19 +46,20 @@ enum VP8EndUsage
 };
 
 
-//enum VP8PassMode
-//{
-//    kPassModeOnePass,
-//    kPassModeFirstPass,
-//    kPassModeLastPass
-//};
+enum VP8PassMode
+{
+    kPassModeOnePass,
+    kPassModeFirstPass,
+    kPassModeLastPass
+};
 
 
 [
    object,
    //uuid(ED3110F6-5211-11DF-94AF-0026B977EEAA),
    //uuid(ED3110FB-5211-11DF-94AF-0026B977EEAA),
-   uuid(ED3110FC-5211-11DF-94AF-0026B977EEAA),
+   //uuid(ED3110FC-5211-11DF-94AF-0026B977EEAA),
+   uuid(ED3110FD-5211-11DF-94AF-0026B977EEAA),
    helpstring("VP8 Encoder Filter Interface")
 ]
 interface IVP8Encoder : IUnknown
@@ -297,7 +298,6 @@ interface IVP8Encoder : IUnknown
     HRESULT SetKeyframeMaxInterval([in] int MaxInterval);
     HRESULT GetKeyframeMaxInterval([out] int* pMaxInterval);
     
-#if 0  //TODO
     //Multi-pass Encoding Mode
     //
     //This value should be set to the current phase for multi-pass encoding.
@@ -305,9 +305,14 @@ interface IVP8Encoder : IUnknown
     HRESULT SetPassMode([in] enum VP8PassMode PassMode);
     HRESULT GetPassMode([out] enum VP8PassMode* pPassMode);
     
+    //Stats Buffer
+    //
+    //The stats buffer is the buffer containing all of the stats packets from
+    //the first pass, concatenated together.  It is only used during the last
+    //pass of a multi-pass (really, two-pass) mode.
+    
     HRESULT SetTwoPassStatsBuf(const BYTE* Buffer, LONGLONG Length);
     HRESULT GetTwoPassStatsBuf(const BYTE** pBuffer, LONGLONG* pLength);
-#endif
 
 }
 

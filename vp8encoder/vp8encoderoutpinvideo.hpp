@@ -8,6 +8,7 @@
 
 #pragma once
 #include "vp8encoderoutpin.hpp"
+#include "vp8encoderidl.h"
 
 namespace VP8EncoderLib
 {
@@ -77,10 +78,14 @@ public:
     
     //local functions
     
+    virtual void OnInpinConnect();
     HRESULT GetFrame(IVP8Sample::Frame&);
+    HRESULT OnSetPassMode(VP8PassMode);
     
 protected:
     void SetDefaultMediaTypes();
+    void SetFirstPassMediaTypes();
+    
     HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const;
     void GetSubtype(GUID&) const;
     

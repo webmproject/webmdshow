@@ -130,14 +130,10 @@ void Filter::Config::Init()
     resize_up_thresh = -1;
     resize_down_thresh = -1;
     end_usage = -1;
-
-#if 0    
+    token_partitions = -1;
     pass_mode = -1;
     two_pass_stats_buf = 0;
     two_pass_stats_buflen = -1;
-#endif
-    
-    token_partitions = -1;
 }    
 
 
@@ -1287,7 +1283,6 @@ HRESULT Filter::GetKeyframeMaxInterval(int* pval)
 }
 
 
-#if 0
 HRESULT Filter::SetPassMode(VP8PassMode m)
 {
     switch (m)
@@ -1311,40 +1306,20 @@ HRESULT Filter::SetPassMode(VP8PassMode m)
     if (m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
         
-    //Instead of a buffer ptr we could use either
-    //IAsyncReader
-    //ISequentialStream
-    //IStream
+    Config::int32_t& tgt = m_cfg.pass_mode;
     
-    //IAsyncReader
-    //ISequentialStream
+    if (m == tgt)  //no need for any other checks 
+        return S_OK;
+        
+    OutpinVideo& outpin = m_outpin_video;
     
-    //ISequentialStream would have less overhead than IAsyncReader
-    //
-    //We have to decide whether we push stat frames downstream
-    //to a pin, or whether we simply write data.
-
-    //if (m_config.pass_mode == m)
-    //    return S_FALSE;
+    hr = outpin.OnSetPassMode(m);
     
-    //if onepass then
-    //  output pin needed = video vp80
-    //  if inpin connected then
-    //    
-    //  if outpin = stream stat then
-    //    if outpin connected
-    //    
-    //
-    //else if twopass.first then
-    //  outpin pin = stream stat
-    //
-    //else if twopass.last then
-    //  reading from stat buf
-    //  outpin pin = video vp880
-    //
-    //endif
-    
-    return E_NOTIMPL;  //TODO
+    if (FAILED(hr))
+        return hr;
+        
+    tgt = m;
+    return S_OK;
 }
 
 
@@ -1359,23 +1334,63 @@ HRESULT Filter::GetPassMode(VP8PassMode* p)
     
     if (FAILED(hr))
         return hr;
-
-    *p = kPassModeOnePass;  //TODO
-    return E_NOTIMPL;  //TODO
+        
+    if (m_cfg.pass_mode < 0)
+        *p = kPassModeOnePass;
+    else
+        *p = static_cast<VP8PassMode>(m_cfg.pass_mode);
+    
+    return S_OK;
 }
 
 
 HRESULT Filter::SetTwoPassStatsBuf(const BYTE* buf, LONGLONG len)
 {
-    return E_NOTIMPL;  //TODO
+    if ((len < 0) || ((len > 0) && (buf == 0)))
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+        
+    m_cfg.two_pass_stats_buf = buf;
+    m_cfg.two_pass_stats_buflen = len;
+
+    return S_OK;
 }
 
 
-HRESULT Filter::GetTwoPassStatsBuf(const BYTE**, LONGLONG*)
+HRESULT Filter::GetTwoPassStatsBuf(const BYTE** pbuf, LONGLONG* plen)
 {
-    return E_NOTIMPL;  //TODO
+    if (pbuf)
+        *pbuf = 0;
+        
+    if (plen)
+        *plen = 0;
+        
+    if ((pbuf == 0) || (plen == 0))
+        return E_POINTER;
+            
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    *pbuf = m_cfg.two_pass_stats_buf;
+    
+    const LONGLONG src = m_cfg.two_pass_stats_buflen;
+    *plen = (src <= 0) ? 0 : src;
+    
+    return S_OK;
 }
-#endif
 
 
 
@@ -1414,6 +1429,18 @@ void Filter::OnStop()
     m_outpin_video.Stop();
     m_inpin.Stop();
 }
+
+
+VP8PassMode Filter::GetPassMode() const
+{
+    const Config::int32_t m = m_cfg.pass_mode;
+    
+    if (m < 0)
+        return kPassModeOnePass;  //default
+        
+    return static_cast<VP8PassMode>(m);
+}
+
 
 
 }  //end namespace VP8EncoderLib

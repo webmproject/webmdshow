@@ -126,13 +126,11 @@ public:
     HRESULT STDMETHODCALLTYPE SetKeyframeMaxInterval(int);    
     HRESULT STDMETHODCALLTYPE GetKeyframeMaxInterval(int*); 
             
-#if 0
     HRESULT STDMETHODCALLTYPE SetPassMode(VP8PassMode);
     HRESULT STDMETHODCALLTYPE GetPassMode(VP8PassMode*);
     
     HRESULT STDMETHODCALLTYPE SetTwoPassStatsBuf(const BYTE*, LONGLONG);    
     HRESULT STDMETHODCALLTYPE GetTwoPassStatsBuf(const BYTE**, LONGLONG*);
-#endif
 
 private:
     class CNondelegating : public IUnknown
@@ -186,9 +184,6 @@ public:
         int32_t resize_up_thresh;
         int32_t resize_down_thresh;        
         int32_t end_usage;
-
-        //rc_twopass_stats_in        
-
         int32_t target_bitrate;
         int32_t min_quantizer;
         int32_t max_quantizer;
@@ -199,20 +194,17 @@ public:
         int32_t decoder_buffer_optimal_size;
         int32_t keyframe_mode;
         int32_t keyframe_min_interval;
-        int32_t keyframe_max_interval;
-        
-        int32_t token_partitions;  
-
-#if 0        
+        int32_t keyframe_max_interval;        
+        int32_t token_partitions;
         int32_t pass_mode;
         const BYTE* two_pass_stats_buf;
         LONGLONG two_pass_stats_buflen;
-#endif
         
         void Init();
     }; 
     
-    Config m_cfg;          
+    Config m_cfg;     
+    VP8PassMode GetPassMode() const;         
     
 private:
     HRESULT OnStart();
