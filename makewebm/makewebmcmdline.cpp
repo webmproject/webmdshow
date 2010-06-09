@@ -50,7 +50,11 @@ CmdLine::CmdLine() :
     m_end_usage(-1),
     m_lag_in_frames(-1),
     m_token_partitions(-1),
-    m_two_pass(-1)
+    m_two_pass(-1),
+    m_dropframe_thresh(-1),
+    m_resize_allowed(-1),
+    m_resize_up_thresh(-1),
+    m_resize_down_thresh(-1)
 {
 }
 
