@@ -178,12 +178,6 @@ int App::operator()(int argc, wchar_t* argv[])
     assert(SUCCEEDED(hr));
     assert(bool(mon));
     
-    DWORD dw;
-    
-    //TODO: fix this 
-    hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
-    assert(SUCCEEDED(hr));
-
     //one-pass:    
     //source -> video -> vp8enc -->  webmmux -> writer
     //       \-> audio -> vorbisenc /
@@ -221,15 +215,20 @@ int App::operator()(int argc, wchar_t* argv[])
     
         status = CreateMuxerGraph(pDemuxOutpinVideo, pDemuxOutpinAudio, pMux);
         
-        if (status)
-            return status;
+        if (status == 0)
+        {        
+            DWORD dw;
             
-        status = RunMuxerGraph(pMux);
+            hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
+            assert(SUCCEEDED(hr));
+        
+            status = RunMuxerGraph(pMux);
+            
+            hr = rot->Revoke(dw);
+            assert(SUCCEEDED(hr));
+        }    
     }
         
-    hr = rot->Revoke(dw);
-    assert(SUCCEEDED(hr));
-    
     m_pGraph.Detach();
 
     const ULONG n = pGraph->Release();
