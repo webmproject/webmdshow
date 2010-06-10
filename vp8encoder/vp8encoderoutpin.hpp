@@ -22,7 +22,6 @@ class Outpin : public Pin
     
 protected:
     HRESULT OnDisconnect();
-    //HRESULT GetName(PIN_INFO&) const;
     
     Outpin(Filter*, const wchar_t* id);
     virtual ~Outpin();    
@@ -60,17 +59,17 @@ public:
         double);
         
     //local functions
-    
+
     GraphUtil::IMemInputPinPtr m_pInputPin;
-    GraphUtil::IMemAllocatorPtr m_pAllocator;
+    GraphUtil::IMemAllocatorPtr m_pAllocator;    
         
     virtual void OnInpinConnect();
     HRESULT OnInpinDisconnect();
     
 protected:
     virtual void SetDefaultMediaTypes() = 0;
-    HRESULT GetAllocator(IMemInputPin*);
-    virtual HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const = 0;
+    virtual HRESULT PostConnect(IPin*) = 0;
+    HRESULT InitAllocator(IMemInputPin*, IMemAllocator*);
     virtual void GetSubtype(GUID&) const = 0;
 
 };

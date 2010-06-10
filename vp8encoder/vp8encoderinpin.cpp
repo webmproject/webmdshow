@@ -239,6 +239,8 @@ HRESULT Inpin::EndOfStream()
     err;
     assert(err == VPX_CODEC_OK);  //TODO
     
+    const VP8PassMode m = m_pFilter->GetPassMode();
+
     vpx_codec_iter_t iter = 0;
 
     for (;;)
@@ -248,52 +250,68 @@ HRESULT Inpin::EndOfStream()
         if (pkt == 0)
             break;
             
-        assert(pkt->kind == VPX_CODEC_CX_FRAME_PKT);
-        
-        AppendFrame(pkt);
+        switch (pkt->kind)
+        {
+            case VPX_CODEC_CX_FRAME_PKT:
+                assert(m != kPassModeFirstPass);
+                AppendFrame(pkt);
+                break;
+                
+            case VPX_CODEC_STATS_PKT:
+                assert(m == kPassModeFirstPass);
+                WriteStats(pkt);
+                break;
+
+            default:
+                assert(false);
+                return E_FAIL;
+        }
     }
-        
+    
     OutpinVideo& outpin = m_pFilter->m_outpin_video;
 
-    while (!m_pending.empty())
-    {
-        if (!bool(outpin.m_pAllocator))
-            break;
+    if (m != kPassModeFirstPass)
+    {        
+        while (!m_pending.empty())
+        {
+            if (!bool(outpin.m_pAllocator))
+                break;
 
-        lock.Release();
-        
-        GraphUtil::IMediaSamplePtr pOutSample;
-
-        const HRESULT hrGetBuffer = outpin.m_pAllocator->GetBuffer(&pOutSample, 0, 0, 0);
-        
-        hr = lock.Seize(m_pFilter);
-
-        if (FAILED(hr))
-            return hr;
+            lock.Release();
             
-        if (FAILED(hrGetBuffer))
-            break;
+            GraphUtil::IMediaSamplePtr pOutSample;
+
+            const HRESULT hrGetBuffer = outpin.m_pAllocator->GetBuffer(&pOutSample, 0, 0, 0);
             
-        assert(bool(pOutSample));
-        
-        PopulateSample(pOutSample);  //consume pending frame
-        
-        if (!bool(outpin.m_pInputPin))
-            break;
-        
-        lock.Release();
-    
-        const HRESULT hrReceive = outpin.m_pInputPin->Receive(pOutSample);
-        
-        hr = lock.Seize(m_pFilter);
+            hr = lock.Seize(m_pFilter);
 
-        if (FAILED(hr))
-            return hr;
+            if (FAILED(hr))
+                return hr;
+                
+            if (FAILED(hrGetBuffer))
+                break;
+                
+            assert(bool(pOutSample));
+            
+            PopulateSample(pOutSample);  //consume pending frame
+            
+            if (!bool(outpin.m_pInputPin))
+                break;
+            
+            lock.Release();
+        
+            const HRESULT hrReceive = outpin.m_pInputPin->Receive(pOutSample);
+            
+            hr = lock.Seize(m_pFilter);
 
-        if (hrReceive != S_OK)
-            break;
+            if (FAILED(hr))
+                return hr;
+
+            if (hrReceive != S_OK)
+                break;
+        }
     }
-        
+            
     //We hold the lock.
 
     if (IPin* pPin = m_pFilter->m_outpin_preview.m_pPinConnection)
@@ -715,6 +733,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     err;
     assert(err == VPX_CODEC_OK);  //TODO
     
+    const VP8PassMode m = m_pFilter->GetPassMode();
+    
     vpx_codec_iter_t iter = 0;
     
     for (;;)
@@ -724,10 +744,26 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         if (pkt == 0)
             break;
             
-        assert(pkt->kind == VPX_CODEC_CX_FRAME_PKT);
-        
-        AppendFrame(pkt);
+        switch (pkt->kind)
+        {
+            case VPX_CODEC_CX_FRAME_PKT:
+                assert(m != kPassModeFirstPass);
+                AppendFrame(pkt);
+                break;
+                
+            case VPX_CODEC_STATS_PKT:
+                assert(m == kPassModeFirstPass);
+                WriteStats(pkt);
+                break;
+
+            default:
+                assert(false);
+                return E_FAIL;
+        }
     }
+    
+    if (m == kPassModeFirstPass)
+        return S_OK;  //nothing else to do
         
     while (!m_pending.empty())
     {
@@ -1042,7 +1078,39 @@ void Inpin::SetConfig()
     if (src.error_resilient >= 0)
         tgt.g_error_resilient = src.error_resilient;
         
-    tgt.g_pass = VPX_RC_ONE_PASS;  //TODO
+    switch (src.pass_mode)
+    {
+        default:
+            //TODO: resolve whether to do this here, 
+            //or in OnStart directly.  The problem we have is 
+            //if you want to adjust one value while started
+            //(e.g. target bitrate), but you want to leave the 
+            //existing value of g_pass alone.  We need something
+            //that says "this value hasn't been set yet".
+            
+            break;
+            
+        case kPassModeOnePass:
+            tgt.g_pass = VPX_RC_ONE_PASS;
+            break;
+            
+        case kPassModeFirstPass:
+            tgt.g_pass = VPX_RC_FIRST_PASS;
+            break;
+            
+        case kPassModeLastPass:
+            tgt.g_pass = VPX_RC_LAST_PASS;
+            
+            if (src.two_pass_stats_buflen >= 0)
+            {
+                vpx_fixed_buf& stats = tgt.rc_twopass_stats_in;
+                
+                stats.buf = const_cast<BYTE*>(src.two_pass_stats_buf);
+                stats.sz = static_cast<size_t>(src.two_pass_stats_buflen);
+            }
+            
+            break;
+    }
     
     if (src.lag_in_frames >= 0)
         tgt.g_lag_in_frames = src.lag_in_frames;

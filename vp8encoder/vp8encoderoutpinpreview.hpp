@@ -43,7 +43,7 @@ public:
 
 protected:
     void SetDefaultMediaTypes();
-    HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const;
+    virtual HRESULT PostConnect(IPin*);
     void GetSubtype(GUID&) const;
     
 };

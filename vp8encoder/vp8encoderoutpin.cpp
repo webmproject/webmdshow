@@ -47,13 +47,15 @@ HRESULT Outpin::Start()  //transition from stopped
     if (m_pPinConnection == 0)
         return S_FALSE;  //nothing we need to do
         
-    assert(bool(m_pAllocator));
-    assert(bool(m_pInputPin));
-    
-    const HRESULT hr = m_pAllocator->Commit();
-    hr;
-    assert(SUCCEEDED(hr));  //TODO
-    
+    if (bool(m_pAllocator))
+    {
+        assert(bool(m_pInputPin));
+        
+        const HRESULT hr = m_pAllocator->Commit();
+        hr;
+        assert(SUCCEEDED(hr));  //TODO
+    }
+        
     return S_OK;
 }
 
@@ -63,11 +65,13 @@ void Outpin::Stop()  //transition to stopped
     if (m_pPinConnection == 0)
         return;  //nothing was done
         
-    assert(bool(m_pAllocator));
-    assert(bool(m_pInputPin));
+    if (bool(m_pAllocator))
+    {
+        assert(bool(m_pInputPin));
     
-    HRESULT hr = m_pAllocator->Decommit();
-    assert(SUCCEEDED(hr));
+        HRESULT hr = m_pAllocator->Decommit();
+        assert(SUCCEEDED(hr));
+    }
 }
 
 
@@ -78,16 +82,9 @@ HRESULT Outpin::Connect(
     if (pin == 0)
         return E_POINTER;
         
-    GraphUtil::IMemInputPinPtr pInputPin;
-
-    HRESULT hr = pin->QueryInterface(&pInputPin);
-    
-    if (hr != S_OK)
-        return hr;
-
     Filter::Lock lock;
     
-    hr = lock.Seize(m_pFilter);
+    HRESULT hr = lock.Seize(m_pFilter);
     
     if (FAILED(hr))
         return hr;
@@ -144,16 +141,11 @@ HRESULT Outpin::Connect(
         m_connection_mtv.Add(mt);
     }
     
-    assert(!bool(m_pAllocator));
-    
-    hr = GetAllocator(pInputPin);
+    hr = PostConnect(pin);
 
     if (FAILED(hr))
         return hr;
         
-    assert(bool(m_pAllocator));
-        
-    m_pInputPin = pInputPin;
     m_pPinConnection = pin;
     
     return S_OK;
@@ -368,16 +360,12 @@ HRESULT Outpin::OnInpinDisconnect()
 }
 
 
-HRESULT Outpin::GetAllocator(IMemInputPin* pInputPin)
+HRESULT Outpin::InitAllocator(
+    IMemInputPin* pInputPin,
+    IMemAllocator* pAllocator)
 {
-    GraphUtil::IMemAllocatorPtr pAllocator;
-    
-    HRESULT hr = GetAllocator(pInputPin, &pAllocator);
-    
-    if (FAILED(hr))
-        return VFW_E_NO_ALLOCATOR;
-
-    assert(bool(pAllocator));    
+    assert(pInputPin);
+    assert(pAllocator);    
 
     ALLOCATOR_PROPERTIES props, actual;
 
@@ -386,7 +374,7 @@ HRESULT Outpin::GetAllocator(IMemInputPin* pInputPin)
     props.cbAlign = -1;     //applies to prefix, too
     props.cbPrefix = -1;    //imediasample::getbuffer does NOT include prefix
 
-    hr = pInputPin->GetAllocatorRequirements(&props);
+    HRESULT hr = pInputPin->GetAllocatorRequirements(&props);
 
     if (props.cBuffers <= 0)
         props.cBuffers = 1;
@@ -426,7 +414,9 @@ HRESULT Outpin::GetAllocator(IMemInputPin* pInputPin)
     if (FAILED(hr) && (hr != E_NOTIMPL))
         return hr;
         
+    m_pInputPin = pInputPin;
     m_pAllocator = pAllocator;
+    
     return S_OK;  //success
 }
 

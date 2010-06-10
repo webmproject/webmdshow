@@ -83,12 +83,20 @@ public:
     HRESULT OnSetPassMode(VP8PassMode);
     
 protected:
+    HRESULT OnDisconnect();
     void SetDefaultMediaTypes();
     void SetFirstPassMediaTypes();
     
+    virtual HRESULT PostConnect(IPin*);
     HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const;
     void GetSubtype(GUID&) const;
     
+    HRESULT PostConnectVideo(IPin*);
+    HRESULT PostConnectStats(IPin*);
+    
+private:
+    IStreamPtr m_pStream;
+
 };
 
 

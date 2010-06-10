@@ -90,6 +90,20 @@ HRESULT OutpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
         
     const AM_MEDIA_TYPE& mt = *pmt;
     
+    {
+        Filter::Lock lock;
+        
+        const HRESULT hr = lock.Seize(m_pFilter);
+        
+        if (FAILED(hr))
+            return hr;
+    
+        const VP8PassMode m = m_pFilter->GetPassMode();
+        
+        if (m == kPassModeFirstPass)
+            return (mt.majortype == MEDIATYPE_Stream) ? S_OK : S_FALSE;
+    }
+    
     if (mt.majortype != MEDIATYPE_Video)
         return S_FALSE;
     
@@ -679,6 +693,13 @@ std::wstring OutpinVideo::GetName() const
 }
 
 
+HRESULT OutpinVideo::OnDisconnect()
+{
+    m_pStream = 0;
+    return Outpin::OnDisconnect();
+}
+
+
 void OutpinVideo::SetDefaultMediaTypes()
 {
     m_preferred_mtv.Clear();
@@ -723,6 +744,7 @@ HRESULT OutpinVideo::GetFrame(IVP8Sample::Frame& f)
 {
     IMemAllocator* const pAlloc_ = m_pAllocator;
     assert(pAlloc_);
+    assert(m_pFilter->GetPassMode() != kPassModeFirstPass);
     
     CMemAllocator* const pAlloc = static_cast<CMemAllocator*>(pAlloc_);
     
@@ -730,9 +752,51 @@ HRESULT OutpinVideo::GetFrame(IVP8Sample::Frame& f)
 }
 
 
-HRESULT OutpinVideo::GetAllocator(IMemInputPin*, IMemAllocator** pp) const
+HRESULT OutpinVideo::PostConnect(IPin* p)
 {
-    return CVP8Sample::CreateAllocator(pp);
+    const VP8PassMode m = m_pFilter->GetPassMode();
+    
+    if (m == kPassModeFirstPass)  //stream output
+        return PostConnectStats(p);
+    else
+        return PostConnectVideo(p);
+}
+
+
+HRESULT OutpinVideo::PostConnectVideo(IPin* p)
+{
+    GraphUtil::IMemInputPinPtr pInputPin;
+    
+    HRESULT hr = p->QueryInterface(&pInputPin);
+    
+    if (FAILED(hr))
+        return hr;
+    
+    GraphUtil::IMemAllocatorPtr pAllocator;
+    
+    hr = CVP8Sample::CreateAllocator(&pAllocator);
+    
+    if (FAILED(hr))
+        return VFW_E_NO_ALLOCATOR;
+
+    return InitAllocator(pInputPin, pAllocator);
+}
+
+
+HRESULT OutpinVideo::PostConnectStats(IPin* p)
+{
+    IStreamPtr pStream;
+    
+    HRESULT hr = p->QueryInterface(&pStream);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    //TODO: create an allocator, if the downstream pin wants one
+        
+    m_pStream = pStream;
+    
+    return S_OK;
 }
 
 
@@ -778,51 +842,29 @@ void OutpinVideo::OnInpinConnect()
 HRESULT OutpinVideo::OnSetPassMode(VP8PassMode m)
 {
     if (bool(m_pPinConnection))
+        return VFW_E_ALREADY_CONNECTED;
+
+    switch (m)
     {
-        const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
-        
-        switch (m)
+        case kPassModeOnePass:
+        case kPassModeLastPass:
         {
-            case kPassModeOnePass:
-            case kPassModeLastPass:
-                if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP80)
-                    return VFW_E_CHANGING_FORMAT;  //?
-                    
-                return S_OK;  //output media subtype already what we need
+            const Inpin& inpin = m_pFilter->m_inpin;
+         
+            if (bool(inpin.m_pPinConnection))
+                Outpin::OnInpinConnect();
+            else
+                SetDefaultMediaTypes();
                 
-            case kPassModeFirstPass:
-                if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP8_STATS)
-                    return VFW_E_CHANGING_FORMAT;  //?
-                    
-                return S_OK;  //as above                
-        }
-        
-        assert(false);
-        return E_FAIL;
-    }
-    else
-    {
-        switch (m)
-        {
-            case kPassModeOnePass:
-            case kPassModeLastPass:
-            {
-                const Inpin& inpin = m_pFilter->m_inpin;
-             
-                if (bool(inpin.m_pPinConnection))
-                    Outpin::OnInpinConnect();
-                else
-                    SetDefaultMediaTypes();
-                    
-                return S_OK;                       
-            }                
-            case kPassModeFirstPass:
-                SetFirstPassMediaTypes();
-                return S_OK;
-        }
-        
-        assert(false);
-        return E_FAIL;
+            return S_OK;                       
+        }                
+        case kPassModeFirstPass:
+            SetFirstPassMediaTypes();
+            return S_OK;
+            
+        default:
+            assert(false);
+            return E_FAIL;
     }
 }
 

@@ -168,15 +168,28 @@ void OutpinPreview::SetDefaultMediaTypes()
 }
 
 
-HRESULT OutpinPreview::GetAllocator(IMemInputPin* pInputPin, IMemAllocator** pp) const
+HRESULT OutpinPreview::PostConnect(IPin* p)
 {
-    HRESULT hr = pInputPin->GetAllocator(pp);
+    GraphUtil::IMemInputPinPtr pInputPin;
+    
+    HRESULT hr = p->QueryInterface(&pInputPin);
     
     if (FAILED(hr))
-        hr = CMediaSample::CreateAllocator(pp);
+        return hr;
+    
+    GraphUtil::IMemAllocatorPtr pAllocator;
+    
+    hr = pInputPin->GetAllocator(&pAllocator);
+    
+    if (FAILED(hr))
+        hr = CMediaSample::CreateAllocator(&pAllocator);
         
-    return hr;
+    if (FAILED(hr))
+        return VFW_E_NO_ALLOCATOR;
+
+    return InitAllocator(pInputPin, pAllocator);
 }
+
 
 
 void OutpinPreview::Render(

@@ -106,7 +106,10 @@ private:
     frames_t m_pending;  //waiting to be pushed downstream
     
     void AppendFrame(const vpx_codec_cx_pkt_t*);
+    void WriteStats(const vpx_codec_cx_pkt_t*);
+    
     void PopulateSample(IMediaSample*);
+    
     void SetConfig();
     vpx_codec_err_t SetTokenPartitions();
     
