@@ -37,8 +37,9 @@ private:
 
     int m_progress;
     
-    int CreateMuxerGraph(IPin* pDemuxVideo, IPin* pDemuxAudio, IBaseFilter* pMux);
-    int RunMuxerGraph(IBaseFilter* pMux);
+    int CreateMuxerGraph(IPin* pDemuxVideo, IPin* pDemuxAudio, IBaseFilter** pMux);
+    int CreateFirstPassGraph(IPin* pDemuxVideo, IPin** pEncoderOutpin);
+    int RunGraph(IMediaSeeking* pSeek);
 
     static bool IsVP8(IPin*);
     static GUID GetSubtype(IPin*);
@@ -66,5 +67,8 @@ private:
     static void DumpAudioMediaType(const AM_MEDIA_TYPE&);
     
     HRESULT SetVP8Options(IVP8Encoder*) const;
+    
+    const wchar_t* GetStatsFileName();    
+    std::wstring m_stats_filename;
 
 };

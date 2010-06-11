@@ -51,6 +51,8 @@ public:
     int GetTokenPartitions() const;    
     int GetTwoPass() const;
 
+    static std::wstring GetPath(const wchar_t*);
+
 private:
     
     const wchar_t* const* m_argv;
@@ -96,7 +98,6 @@ private:
     void PrintUsage() const;
     void PrintVersion() const;
     void ListArgs() const;
-    static std::wstring GetPath(const wchar_t*);
     void SynthesizeOutput();
 
 //doesn't compile for some reason    

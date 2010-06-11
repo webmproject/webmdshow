@@ -29,6 +29,7 @@ using std::setfill;
 using std::endl;
 using std::flush;
 using std::wostringstream;
+using std::wstring;
 using GraphUtil::IPinPtr;
 using GraphUtil::IBaseFilterPtr;
 using GraphUtil::FindOutpinVideo;
@@ -178,54 +179,48 @@ int App::operator()(int argc, wchar_t* argv[])
     assert(SUCCEEDED(hr));
     assert(bool(mon));
     
-    //one-pass:    
-    //source -> video -> vp8enc -->  webmmux -> writer
-    //       \-> audio -> vorbisenc /
-
-    //two-pass first
-    //source -> video -> vp8enc -->  webmmux
-    //                          \-> stat pkts
-
-    if (m_cmdline.GetTwoPass() >= 0)
+    const bool bTwoPass = (m_cmdline.GetTwoPass() >= 1);
+    
+    if (bTwoPass)
     {
-        wcout << "Two-pass VP8 encoding mode not yet implemented." << endl;
-        status = 1;
+        GraphUtil::IPinPtr pEncoderOutpin;
+        
+        status = CreateFirstPassGraph(pDemuxOutpinVideo, &pEncoderOutpin);
+        
+        if (status == 0)
+        {
+            const GraphUtil::IMediaSeekingPtr pSeek(pEncoderOutpin);
+            assert(bool(pSeek));
+
+            status = RunGraph(pSeek);
+            
+            //TODO: if success, then we must tear down the first pass graph,
+            //(but just the objects we creates in CreateFirstPassGraph),
+            //and then re-build it below.
+        }
     }
-    else
+
+    if (!bTwoPass || (status == 0))
     {
         IBaseFilterPtr pMux;
         
-        HRESULT hr = pMux.CreateInstance(WebmTypes::CLSID_WebmMux);
-        
-        if (FAILED(hr))
-        {
-            wcout << "Unable to create WebmMux filter instance.\n"
-                  << hrtext(hr)
-                  << L" (0x" << hex << hr << dec << L")"
-                  << endl;
-                  
-            return 1;
-        }
-        
-        assert(GraphUtil::InpinCount(pMux) == 2);  //TODO: liberalize
-        assert(GraphUtil::OutpinCount(pMux) == 1);
-        
-        hr = m_pGraph->AddFilter(pMux, L"webmmux");
-        assert(SUCCEEDED(hr));
-    
-        status = CreateMuxerGraph(pDemuxOutpinVideo, pDemuxOutpinAudio, pMux);
+        status = CreateMuxerGraph(pDemuxOutpinVideo, pDemuxOutpinAudio, &pMux);
         
         if (status == 0)
         {        
-            DWORD dw;
-            
-            hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
-            assert(SUCCEEDED(hr));
+            const GraphUtil::IMediaSeekingPtr pSeek(pMux);
+            assert(bool(pSeek));
+    
+            //TODO:            
+            //DWORD dw;
+            //
+            //hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
+            //assert(SUCCEEDED(hr));
         
-            status = RunMuxerGraph(pMux);
+            status = RunGraph(pSeek);
             
-            hr = rot->Revoke(dw);
-            assert(SUCCEEDED(hr));
+            //hr = rot->Revoke(dw);
+            //assert(SUCCEEDED(hr));
         }    
     }
         
@@ -241,17 +236,43 @@ int App::operator()(int argc, wchar_t* argv[])
 int App::CreateMuxerGraph(
     IPin* pDemuxOutpinVideo,
     IPin* pDemuxOutpinAudio,
-    IBaseFilter* pMux)
+    IBaseFilter** ppMux)
 {
     assert(bool(m_pGraph));
+    assert(ppMux);
 
     const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
     assert(bool(pBuilder));
 
     const bool bVerbose = m_cmdline.GetVerbose();
+    
+    HRESULT hr = CoCreateInstance(
+                    WebmTypes::CLSID_WebmMux,
+                    0, 
+                    CLSCTX_INPROC_SERVER, 
+                    __uuidof(IBaseFilter), 
+                    (void**)ppMux);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to create WebmMux filter instance.\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+              
+        return 1;
+    }
+    
+    assert(ppMux);    
+    IBaseFilter*& pMux = *ppMux;
 
+    assert(GraphUtil::InpinCount(pMux) == 2);  //TODO: liberalize
+    assert(GraphUtil::OutpinCount(pMux) == 1);
+    
+    hr = m_pGraph->AddFilter(pMux, L"webmmux");
+    assert(SUCCEEDED(hr));
+    
     int nConnections = 0;
-    HRESULT hr;
     
     if (pDemuxOutpinVideo)
     {
@@ -438,13 +459,155 @@ int App::CreateMuxerGraph(
 
 
 
-int App::RunMuxerGraph(IBaseFilter* pMux)
+int App::CreateFirstPassGraph(
+    IPin* pDemuxOutpinVideo,
+    IPin** ppEncoderOutpin)
 {
     assert(bool(m_pGraph));
-    assert(pMux);
+    assert(pDemuxOutpinVideo);
+    assert(ppEncoderOutpin);
+
+    const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
+    assert(bool(pBuilder));
+
+    //const bool bVerbose = m_cmdline.GetVerbose();
     
-    const GraphUtil::IMediaSeekingPtr pSeek(pMux);
-    assert(bool(pSeek));
+    if (IsVP8(pDemuxOutpinVideo))
+    {    
+        wcout << "Video demux stream is already VP8 -- two-pass not supported.\n";
+        return 1;
+    }
+
+    IBaseFilterPtr pCompressor;
+    
+    HRESULT hr = pCompressor.CreateInstance(CLSID_VP8Encoder);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to create VP8 encoder filter instance.\n"
+        
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+                      
+        return 1;
+    }
+    
+    assert(bool(pCompressor));
+    
+    _COM_SMARTPTR_TYPEDEF(IVP8Encoder, __uuidof(IVP8Encoder));
+
+    const IVP8EncoderPtr pVP8(pCompressor);
+    assert(bool(pVP8));
+    
+    hr = pVP8->SetPassMode(kPassModeFirstPass);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to set VP8 encoder pass mode (first pass).\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+              
+        return 1;
+    }
+    
+    hr = SetVP8Options(pVP8);
+    
+    if (FAILED(hr))
+        return 1;
+    
+    hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
+    assert(SUCCEEDED(hr));
+    
+    IPinPtr pVP8Inpin;
+    
+    hr = pCompressor->FindPin(L"input", &pVP8Inpin);
+    assert(SUCCEEDED(hr));
+    assert(bool(pVP8Inpin));
+    
+    hr = pBuilder->Connect(pDemuxOutpinVideo, pVP8Inpin);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to connect demux outpin to VP8 encoder filter inpin.\n"                
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+                      
+        return 1;
+    }
+        
+    IBaseFilterPtr pWriter;
+    
+    hr = pWriter.CreateInstance(CLSID_FileWriter);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to create writer filter instance.\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+              
+        return 1;
+    }
+    
+    assert(bool(pWriter));
+    assert(GraphUtil::InpinCount(pWriter) == 1);
+    
+    m_pGraph->AddFilter(pWriter, L"writer");
+    assert(SUCCEEDED(hr));
+    
+    const GraphUtil::IFileSinkFilterPtr pSink(pWriter);
+    assert(bool(pSink));
+
+    const wchar_t* const filename = GetStatsFileName();
+    
+    if (filename == 0)
+        return 1;
+    
+    hr = pSink->SetFileName(filename, 0);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to set output filename (for two-pass stats) of file writer filter.\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+        
+        return 1;
+    }
+    
+    IPin*& pEncoderOutpin = *ppEncoderOutpin;
+    
+    hr = pCompressor->FindPin(L"output", &pEncoderOutpin);
+    assert(SUCCEEDED(hr));
+    assert(pEncoderOutpin);
+    
+    const GraphUtil::IPinPtr pWriterInpin = GraphUtil::FindInpin(pWriter);
+    assert(bool(pWriterInpin));
+    
+    hr = m_pGraph->ConnectDirect(pEncoderOutpin, pWriterInpin, 0);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to connect VP8 encoder outpin to file writer inpin (for two-pass stats).\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+        
+        return 1;
+    }
+    
+    return 0;  //success   
+}
+
+
+
+int App::RunGraph(IMediaSeeking* pSeek)
+{
+    assert(bool(m_pGraph));
+    assert(pSeek);
     
     const GraphUtil::IMediaEventPtr pEvent(m_pGraph);
     assert(bool(pEvent));
@@ -1917,4 +2080,21 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
     }
 
     return S_OK;    
+}
+
+
+const wchar_t* App::GetStatsFileName()
+{
+    wstring path = CmdLine::GetPath(m_cmdline.GetOutputFileName());
+    
+    const wstring::size_type pos = path.rfind(L'.');
+    
+    if (pos == wstring::npos)
+        path.append(L"-VP8STATS.DAT");
+    else
+        path.replace(pos, path.length(), L"-VP8STATS.DAT");
+        
+    m_stats_filename = path;
+
+    return m_stats_filename.c_str();
 }
