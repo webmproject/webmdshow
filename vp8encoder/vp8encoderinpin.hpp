@@ -105,9 +105,7 @@ private:
     typedef std::list<IVP8Sample::Frame> frames_t;    
     frames_t m_pending;  //waiting to be pushed downstream
     
-    void AppendFrame(const vpx_codec_cx_pkt_t*);
-    void WriteStats(const vpx_codec_cx_pkt_t*);
-    
+    void AppendFrame(const vpx_codec_cx_pkt_t*);    
     void PopulateSample(IMediaSample*);
     
     void SetConfig();

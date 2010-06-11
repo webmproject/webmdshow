@@ -81,6 +81,7 @@ public:
     virtual void OnInpinConnect();
     HRESULT GetFrame(IVP8Sample::Frame&);
     HRESULT OnSetPassMode(VP8PassMode);
+    void WriteStats(const vpx_codec_cx_pkt_t*);
     
 protected:
     HRESULT OnDisconnect();

@@ -869,4 +869,22 @@ HRESULT OutpinVideo::OnSetPassMode(VP8PassMode m)
 }
 
 
+void OutpinVideo::WriteStats(const vpx_codec_cx_pkt_t* pkt)
+{
+    assert(pkt);
+    assert(pkt->kind == VPX_CODEC_STATS_PKT);
+    assert(bool(m_pStream));
+    
+    const vpx_fixed_buf& buf = pkt->data.twopass_stats;    
+    const ULONG cb = static_cast<ULONG>(buf.sz);
+
+    ULONG cbWrite;
+    
+    const HRESULT hr = m_pStream->Write(buf.buf, cb, &cbWrite);
+    hr;
+    assert(SUCCEEDED(hr));
+    assert(cbWrite == cb);
+}
+
+
 }  //end namespace VP8EncoderLib

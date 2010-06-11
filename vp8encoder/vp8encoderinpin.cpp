@@ -241,6 +241,8 @@ HRESULT Inpin::EndOfStream()
     
     const VP8PassMode m = m_pFilter->GetPassMode();
 
+    OutpinVideo& outpin = m_pFilter->m_outpin_video;
+
     vpx_codec_iter_t iter = 0;
 
     for (;;)
@@ -259,7 +261,7 @@ HRESULT Inpin::EndOfStream()
                 
             case VPX_CODEC_STATS_PKT:
                 assert(m == kPassModeFirstPass);
-                WriteStats(pkt);
+                outpin.WriteStats(pkt);
                 break;
 
             default:
@@ -268,8 +270,6 @@ HRESULT Inpin::EndOfStream()
         }
     }
     
-    OutpinVideo& outpin = m_pFilter->m_outpin_video;
-
     if (m != kPassModeFirstPass)
     {        
         while (!m_pending.empty())
@@ -699,7 +699,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     
     m_pFilter->m_outpin_preview.Render(lock, img);
 
-    Outpin& outpin = m_pFilter->m_outpin_video;
+    OutpinVideo& outpin = m_pFilter->m_outpin_video;
     
     if (!bool(outpin.m_pPinConnection))
         return S_OK;
@@ -753,7 +753,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
                 
             case VPX_CODEC_STATS_PKT:
                 assert(m == kPassModeFirstPass);
-                WriteStats(pkt);
+                outpin.WriteStats(pkt);
                 break;
 
             default:
