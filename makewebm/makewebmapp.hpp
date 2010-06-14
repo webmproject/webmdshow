@@ -22,21 +22,21 @@ class App
 {
     App(const App&);
     App& operator=(const App&);
-    
+
 public:
 
     explicit App(HANDLE);
     int operator()(int, wchar_t*[]);
-    
+
 private:
 
     const HANDLE m_hQuit;
-    CmdLine m_cmdline;    
+    CmdLine m_cmdline;
 
     GraphUtil::IFilterGraphPtr m_pGraph;
 
     int m_progress;
-    
+
     int CreateMuxerGraph(IPin* pDemuxVideo, IPin* pDemuxAudio, IBaseFilter** pMux);
     int CreateFirstPassGraph(IPin* pDemuxVideo, IPin** pEncoderOutpin);
     int RunGraph(IMediaSeeking* pSeek);
@@ -48,12 +48,12 @@ private:
     GraphUtil::IBaseFilterPtr FindDemuxFilter(IBaseFilter*) const;
     GraphUtil::IBaseFilterPtr EnumDemuxFilters(IPin*) const;
 
-#if 0    
+#if 0
     bool ConnectVideo(IPin*, IPin*) const;
     HRESULT ConnectVideoConverter(IPin*, IPin*) const;
 #endif
 
-    bool ConnectAudio(IPin*, IPin*) const;        
+    bool ConnectAudio(IPin*, IPin*) const;
     HRESULT ConnectVorbisEncoder(IPin*, IPin*) const;
 
     static void DumpPreferredMediaTypes(IPin*, const wchar_t*, void (*)(const AM_MEDIA_TYPE&));
@@ -65,10 +65,10 @@ private:
     static void DumpVideoInfoHeader2(const VIDEOINFOHEADER2&);
     static void DumpBitMapInfoHeader(const BITMAPINFOHEADER&);
     static void DumpAudioMediaType(const AM_MEDIA_TYPE&);
-    
+
     HRESULT SetVP8Options(IVP8Encoder*) const;
-    
-    const wchar_t* GetStatsFileName();    
+
+    const wchar_t* GetStatsFileName();
     std::wstring m_stats_filename;
 
 };
