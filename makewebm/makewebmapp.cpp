@@ -224,6 +224,17 @@ int App::operator()(int argc, wchar_t* argv[])
         const GraphUtil::IMediaSeekingPtr pSeek(pMux);
         assert(bool(pSeek));
 
+        LONGLONG curr = 0;
+        LONGLONG stop = 0;
+
+        hr = pSeek->SetPositions(
+                &curr,
+                AM_SEEKING_AbsolutePositioning,
+                &stop,
+                AM_SEEKING_NoPositioning);
+
+        assert(SUCCEEDED(hr));
+
         //TODO:
         //DWORD dw;
         //

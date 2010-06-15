@@ -25,7 +25,8 @@ public:
 
 private:
     HANDLE m_hFile;
+    HANDLE m_hMap;
+    void* m_pView;
     LONGLONG m_size;
-    void* m_pMap;
 
 };
