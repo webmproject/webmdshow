@@ -447,6 +447,7 @@ HRESULT OutpinVideo::GetCurrentPosition(LONGLONG* p)
         return VFW_E_NOT_CONNECTED;
 
     const Inpin& inpin = m_pFilter->m_inpin;
+#if 0
     const GraphUtil::IMediaSeekingPtr pSeek(inpin.m_pPinConnection);
         
     if (bool(pSeek))
@@ -459,6 +460,14 @@ HRESULT OutpinVideo::GetCurrentPosition(LONGLONG* p)
         return E_POINTER;
         
     return E_FAIL;
+#else
+    if (p == 0)
+        return E_POINTER;
+        
+    *p = inpin.m_start_reftime;
+
+    return S_OK;
+#endif
 }
 
 

@@ -712,6 +712,9 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         return hr;
         
     assert(st >= 0);
+    assert(st >= m_start_reftime);
+    
+    m_start_reftime = st;
 
     const __int64 duration_ = GetAvgTimePerFrame();
     assert(duration_ > 0);
@@ -982,6 +985,7 @@ HRESULT Inpin::Start()
     m_bDiscontinuity = true;
     m_bEndOfStream = false;
     m_bFlush = false;
+    m_start_reftime = 0;
     
     PurgePending();
 
