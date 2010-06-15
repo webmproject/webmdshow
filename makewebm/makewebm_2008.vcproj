@@ -266,6 +266,14 @@
 			RelativePath=".\makewebmmain.cpp"
 			>
 		</File>
+		<File
+			RelativePath=".\memfile.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\memfile.hpp"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

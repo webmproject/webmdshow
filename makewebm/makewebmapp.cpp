@@ -18,7 +18,6 @@
 #include "vorbistypes.hpp"
 #include "registry.hpp"
 #include "vp8encoderidl.h"
-//#include <vector>
 #include <sstream>
 #include <iomanip>
 using std::hex;
@@ -158,6 +157,7 @@ int App::operator()(int argc, wchar_t* argv[])
                 &App::DumpAudioMediaType);
     }
 
+#if 0
     IRunningObjectTablePtr rot;
 
     hr = GetRunningObjectTable(0, &rot);
@@ -178,6 +178,7 @@ int App::operator()(int argc, wchar_t* argv[])
     hr = CreateItemMoniker(L"!", os.str().c_str(), &mon);
     assert(SUCCEEDED(hr));
     assert(bool(mon));
+#endif
 
     const bool bTwoPass = (m_cmdline.GetTwoPass() >= 1);
 
@@ -187,53 +188,60 @@ int App::operator()(int argc, wchar_t* argv[])
 
         status = CreateFirstPassGraph(pDemuxOutpinVideo, &pEncoderOutpin);
 
-        if (status == 0)
-        {
-            const GraphUtil::IMediaSeekingPtr pSeek(pEncoderOutpin);
-            assert(bool(pSeek));
+        if (status)
+            return status;
 
-            status = RunGraph(pSeek);
+        const GraphUtil::IMediaSeekingPtr pSeek(pEncoderOutpin);
+        assert(bool(pSeek));
 
-            //TODO: if success, then we must tear down the first pass graph,
-            //(but just the objects we creates in CreateFirstPassGraph),
-            //and then re-build it below.
-        }
+        status = RunGraph(pSeek);
+
+        if (status)
+            return status;
+
+        IBaseFilterPtr pWriter;
+
+        hr = m_pGraph->FindFilterByName(L"writer", &pWriter);
+        assert(SUCCEEDED(hr));
+        assert(bool(pWriter));
+
+        hr = m_pGraph->RemoveFilter(pWriter);
+        assert(SUCCEEDED(hr));
     }
 
-    if (!bTwoPass || (status == 0))
     {
         IBaseFilterPtr pMux;
 
-        status = CreateMuxerGraph(pDemuxOutpinVideo, pDemuxOutpinAudio, &pMux);
+        status = CreateMuxerGraph(
+                    bTwoPass,
+                    pDemuxOutpinVideo,
+                    pDemuxOutpinAudio,
+                    &pMux);
 
-        if (status == 0)
-        {
-            const GraphUtil::IMediaSeekingPtr pSeek(pMux);
-            assert(bool(pSeek));
+        if (status)
+            return status;
 
-            //TODO:
-            //DWORD dw;
-            //
-            //hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
-            //assert(SUCCEEDED(hr));
+        const GraphUtil::IMediaSeekingPtr pSeek(pMux);
+        assert(bool(pSeek));
 
-            status = RunGraph(pSeek);
+        //TODO:
+        //DWORD dw;
+        //
+        //hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
+        //assert(SUCCEEDED(hr));
 
-            //hr = rot->Revoke(dw);
-            //assert(SUCCEEDED(hr));
-        }
+        status = RunGraph(pSeek);
+
+        //hr = rot->Revoke(dw);
+        //assert(SUCCEEDED(hr));
     }
-
-    m_pGraph.Detach();
-
-    const ULONG n = pGraph->Release();
-    n;
 
     return status;
 }
 
 
 int App::CreateMuxerGraph(
+    bool bTwoPass,
     IPin* pDemuxOutpinVideo,
     IPin* pDemuxOutpinAudio,
     IBaseFilter** ppMux)
@@ -281,6 +289,8 @@ int App::CreateMuxerGraph(
 
         if (IsVP8(pDemuxOutpinVideo))
         {
+            assert(!bTwoPass);
+
             hr = m_pGraph->ConnectDirect(pDemuxOutpinVideo, pMuxInpinVideo, 0);
 
             if (FAILED(hr))
@@ -297,51 +307,102 @@ int App::CreateMuxerGraph(
         {
             IBaseFilterPtr pCompressor;
 
-            hr = pCompressor.CreateInstance(CLSID_VP8Encoder);
-
-            if (FAILED(hr))
+            if (bTwoPass)
             {
-                wcout << "Unable to create VP8 encoder filter instance.\n"
-
-                      << hrtext(hr)
-                      << L" (0x" << hex << hr << dec << L")"
-                      << endl;
-
-                return 1;
+                hr = m_pGraph->FindFilterByName(L"vp8enc", &pCompressor);
+                assert(SUCCEEDED(hr));
+                assert(bool(pCompressor));
             }
+            else
+            {
+                hr = pCompressor.CreateInstance(CLSID_VP8Encoder);
 
-            assert(bool(pCompressor));
+                if (FAILED(hr))
+                {
+                    wcout << "Unable to create VP8 encoder filter instance.\n"
+
+                          << hrtext(hr)
+                          << L" (0x" << hex << hr << dec << L")"
+                          << endl;
+
+                    return 1;
+                }
+
+                assert(bool(pCompressor));
+            }
 
             _COM_SMARTPTR_TYPEDEF(IVP8Encoder, __uuidof(IVP8Encoder));
 
             const IVP8EncoderPtr pVP8(pCompressor);
             assert(bool(pVP8));
 
+            if (bTwoPass)
+            {
+                hr = pVP8->SetPassMode(kPassModeLastPass);
+
+                if (FAILED(hr))
+                {
+                    wcout << "Unable to set VP8 encoder pass mode (last pass).\n"
+                          << hrtext(hr)
+                          << L" (0x" << hex << hr << dec << L")"
+                          << endl;
+
+                    return 1;
+                }
+
+                const wchar_t* const stats_filename = m_stats_filename.c_str();
+
+                hr = m_stats_file.Open(stats_filename);
+
+                if (FAILED(hr))
+                {
+                    wcout << "Unable to open stats file.\n"
+                          << hrtext(hr)
+                          << L" (0x" << hex << hr << dec << L")"
+                          << endl;
+
+                    return 1;
+                }
+
+                const BYTE* buf;
+                LONGLONG len;
+
+                hr = m_stats_file.GetView(buf, len);
+                assert(SUCCEEDED(hr));
+                assert(buf);
+                assert(len >= 0);
+
+                hr = pVP8->SetTwoPassStatsBuf(buf, len);
+                assert(SUCCEEDED(hr));
+            }
+
             hr = SetVP8Options(pVP8);
 
             if (FAILED(hr))
                 return 1;
 
-            hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
-            assert(SUCCEEDED(hr));
-
-            IPinPtr pVP8Inpin;
-
-            hr = pCompressor->FindPin(L"input", &pVP8Inpin);
-            assert(SUCCEEDED(hr));
-            assert(bool(pVP8Inpin));
-
-            hr = pBuilder->Connect(pDemuxOutpinVideo, pVP8Inpin);
-            //hr = ConnectVideo(pDemuxOutpinVideo, pVP8Inpin);
-
-            if (FAILED(hr))
+            if (!bTwoPass)
             {
-                wcout << "Unable to connect demux outpin to VP8 encoder filter inpin.\n"
-                      << hrtext(hr)
-                      << L" (0x" << hex << hr << dec << L")"
-                      << endl;
+                hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
+                assert(SUCCEEDED(hr));
 
-                return 1;
+                IPinPtr pVP8Inpin;
+
+                hr = pCompressor->FindPin(L"input", &pVP8Inpin);
+                assert(SUCCEEDED(hr));
+                assert(bool(pVP8Inpin));
+
+                hr = pBuilder->Connect(pDemuxOutpinVideo, pVP8Inpin);
+
+                if (FAILED(hr))
+                {
+                    wcout << "Unable to connect demux outpin to VP8 encoder filter inpin.\n"
+                          << hrtext(hr)
+                          << L" (0x" << hex << hr << dec << L")"
+                          << endl;
+
+                    return 1;
+                }
             }
 
             IPinPtr pVP8Outpin;

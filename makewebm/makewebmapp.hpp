@@ -12,6 +12,7 @@
 #include <uuids.h>
 #include "graphutil.hpp"
 #include "makewebmcmdline.hpp"
+#include "memfile.hpp"
 #include <amvideo.h>
 #include <dvdmedia.h>
 #include <list>
@@ -37,8 +38,14 @@ private:
 
     int m_progress;
 
-    int CreateMuxerGraph(IPin* pDemuxVideo, IPin* pDemuxAudio, IBaseFilter** pMux);
+    int CreateMuxerGraph(
+            bool bTwoPass,
+            IPin* pDemuxVideo,
+            IPin* pDemuxAudio,
+            IBaseFilter** pMux);
+
     int CreateFirstPassGraph(IPin* pDemuxVideo, IPin** pEncoderOutpin);
+
     int RunGraph(IMediaSeeking* pSeek);
 
     static bool IsVP8(IPin*);
@@ -70,5 +77,6 @@ private:
 
     const wchar_t* GetStatsFileName();
     std::wstring m_stats_filename;
+    MemFile m_stats_file;
 
 };
