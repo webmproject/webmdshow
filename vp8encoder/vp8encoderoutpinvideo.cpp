@@ -12,6 +12,7 @@
 #include "vp8encoderfilter.hpp"
 #include "vp8encoderoutpinvideo.hpp"
 #include "cvp8sample.hpp"
+#include "cmediasample.hpp"
 #include "mediatypeutil.hpp"
 #include "webmtypes.hpp"
 #include <vfwmsgs.h>
@@ -801,8 +802,61 @@ HRESULT OutpinVideo::PostConnectStats(IPin* p)
     if (FAILED(hr))
         return hr;
         
-    //TODO: create an allocator, if the downstream pin wants one
+    const GraphUtil::IMemInputPinPtr pMemInput(p);
+    
+    if (bool(pMemInput))
+    {
+        GraphUtil::IMemAllocatorPtr pAllocator;
         
+        hr = pMemInput->GetAllocator(&pAllocator);
+
+        if (FAILED(hr))
+        {
+            hr = CMediaSample::CreateAllocator(&pAllocator);
+            
+            if (FAILED(hr))
+                return VFW_E_NO_ALLOCATOR;
+        }
+        
+        assert(bool(pAllocator));
+        
+        ALLOCATOR_PROPERTIES props;
+
+        props.cBuffers = -1;    //number of buffers
+        props.cbBuffer = -1;    //size of each buffer, excluding prefix
+        props.cbAlign = -1;     //applies to prefix, too
+        props.cbPrefix = -1;    //imediasample::getbuffer does NOT include prefix
+
+        hr = pMemInput->GetAllocatorRequirements(&props);
+
+        if (props.cBuffers < 0)
+            props.cBuffers = 0;
+
+        if (props.cbBuffer < 0)
+            props.cbBuffer = 0;
+
+        if (props.cbAlign <= 0)
+            props.cbAlign = 1;
+
+        if (props.cbPrefix < 0)
+            props.cbPrefix = 0;
+            
+        ALLOCATOR_PROPERTIES actual;
+
+        hr = pAllocator->SetProperties(&props, &actual);
+        
+        if (FAILED(hr))
+            return hr;
+            
+        hr = pMemInput->NotifyAllocator(pAllocator, 0);  //allow writes
+        
+        if (FAILED(hr) && (hr != E_NOTIMPL))
+            return hr;
+            
+        m_pAllocator = pAllocator;
+        m_pInputPin = pMemInput;
+    }
+            
     m_pStream = pStream;
     
     return S_OK;
