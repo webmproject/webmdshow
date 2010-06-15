@@ -13,22 +13,22 @@ class CmdLine
 {
     CmdLine(const CmdLine&);
     CmdLine& operator=(const CmdLine&);
-    
+
 public:
 
     CmdLine();
-    
+
     int Parse(int argc, wchar_t* argv[]);
-    
-    const wchar_t* GetInputFileName() const;    
+
+    const wchar_t* GetInputFileName() const;
     const CLSID* GetSplitter() const;
     const CLSID* GetSource() const;
     bool GetList() const;
     bool GetVerbose() const;
-    
+
 private:
-    
-    const wchar_t* const* m_argv;  //unpermutated 
+
+    const wchar_t* const* m_argv;  //unpermutated
     bool m_bUsage;
     bool m_bList;
     bool m_bVerbose;
@@ -36,7 +36,7 @@ private:
     const wchar_t* m_input;
     const CLSID* m_pSplitter;
     const CLSID* m_pSource;
-    
+
     int Parse(wchar_t**);
     int ParseWindows(wchar_t**);
     int ParseShort(wchar_t**);
@@ -46,5 +46,5 @@ private:
     void ListArgs() const;
     static std::wstring GetPath(const wchar_t*);
     static bool IsSwitch(const wchar_t*);
-    
+
 };

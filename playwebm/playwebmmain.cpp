@@ -18,10 +18,10 @@ static BOOL __stdcall ConsoleCtrlHandler(DWORD type)
 {
     if (type != CTRL_C_EVENT)
         return FALSE;  //no, not handled here
-        
+
     const BOOL b = SetEvent(s_hQuit);
     assert(b); b;
-    
+
     return TRUE;  //yes, handled here
 }
 
@@ -35,14 +35,14 @@ int wmain(int argc, wchar_t* argv[])
     assert(b); b;
 
     const HRESULT hr = CoInitialize(0);
-    
+
     if (FAILED(hr))
         return 1;
-        
+
     const int status = CoMain(argc, argv);
-    
+
     CoUninitialize();
-    
+
     return status;
 }
 

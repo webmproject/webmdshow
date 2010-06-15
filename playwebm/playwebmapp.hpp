@@ -17,16 +17,16 @@ class App
 {
     App(const App&);
     App& operator=(const App&);
-    
+
 public:
     explicit App(HANDLE);
     int operator()(int, wchar_t*[]);
-    
+
 private:
     const HANDLE m_hQuit;
-    CmdLine m_cmdline;    
+    CmdLine m_cmdline;
     GraphUtil::IFilterGraphPtr m_pGraph;
-        
+
     int BuildGraph();
     int RunGraph();
     void DestroyGraph();
