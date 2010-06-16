@@ -23,16 +23,16 @@ class Filter : public IBaseFilter,
 {
     friend HRESULT CreateInstance(
             IClassFactory*,
-            IUnknown*, 
-            const IID&, 
+            IUnknown*,
+            const IID&,
             void**);
-    
+
     Filter(IClassFactory*, IUnknown*);
     virtual ~Filter();
-    
+
     Filter(const Filter&);
     Filter& operator=(const Filter&);
-    
+
 public:
 
     //IUnknown
@@ -40,28 +40,28 @@ public:
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IBaseFilter
 
-    HRESULT STDMETHODCALLTYPE GetClassID(CLSID*);    
-    HRESULT STDMETHODCALLTYPE Stop();    
+    HRESULT STDMETHODCALLTYPE GetClassID(CLSID*);
+    HRESULT STDMETHODCALLTYPE Stop();
     HRESULT STDMETHODCALLTYPE Pause();
-    HRESULT STDMETHODCALLTYPE Run(REFERENCE_TIME);    
-    HRESULT STDMETHODCALLTYPE GetState(DWORD, FILTER_STATE*);    
+    HRESULT STDMETHODCALLTYPE Run(REFERENCE_TIME);
+    HRESULT STDMETHODCALLTYPE GetState(DWORD, FILTER_STATE*);
     HRESULT STDMETHODCALLTYPE SetSyncSource(IReferenceClock*);
     HRESULT STDMETHODCALLTYPE GetSyncSource(IReferenceClock**);
-    HRESULT STDMETHODCALLTYPE EnumPins(IEnumPins**);    
-    HRESULT STDMETHODCALLTYPE FindPin(LPCWSTR, IPin**);    
-    HRESULT STDMETHODCALLTYPE QueryFilterInfo(FILTER_INFO*);    
-    HRESULT STDMETHODCALLTYPE JoinFilterGraph(IFilterGraph*, LPCWSTR);    
+    HRESULT STDMETHODCALLTYPE EnumPins(IEnumPins**);
+    HRESULT STDMETHODCALLTYPE FindPin(LPCWSTR, IPin**);
+    HRESULT STDMETHODCALLTYPE QueryFilterInfo(FILTER_INFO*);
+    HRESULT STDMETHODCALLTYPE JoinFilterGraph(IFilterGraph*, LPCWSTR);
     HRESULT STDMETHODCALLTYPE QueryVendorInfo(LPWSTR*);
 
     //IVP8PostProcessing
-    
-    HRESULT STDMETHODCALLTYPE SetFlags(int);    
-    HRESULT STDMETHODCALLTYPE SetDeblockingLevel(int);    
+
+    HRESULT STDMETHODCALLTYPE SetFlags(int);
+    HRESULT STDMETHODCALLTYPE SetDeblockingLevel(int);
     HRESULT STDMETHODCALLTYPE SetNoiseLevel(int);
-    HRESULT STDMETHODCALLTYPE GetFlags(int*);    
+    HRESULT STDMETHODCALLTYPE GetFlags(int*);
     HRESULT STDMETHODCALLTYPE GetDeblockingLevel(int*);
     HRESULT STDMETHODCALLTYPE GetNoiseLevel(int*);
     HRESULT STDMETHODCALLTYPE ApplyPostProcessing();
@@ -75,25 +75,25 @@ private:
         CNondelegating& operator=(const CNondelegating&);
 
     public:
-    
+
         Filter* const m_pFilter;
         LONG m_cRef;
-        
+
         explicit CNondelegating(Filter*);
         virtual ~CNondelegating();
-        
+
         HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
         ULONG STDMETHODCALLTYPE AddRef();
         ULONG STDMETHODCALLTYPE Release();
 
     };
-    
+
     IClassFactory* const m_pClassFactory;
     CNondelegating m_nondelegating;
     IUnknown* const m_pOuter;  //decl must follow m_nondelegating
     REFERENCE_TIME m_start;
     IReferenceClock* m_clock;
-    
+
 public:
     FILTER_INFO m_info;
     FILTER_STATE m_state;
@@ -106,9 +106,9 @@ public:
         int deblock;
         int noise;
     };
-    
+
     Config m_cfg;
-    
+
 private:
     void OnStop();
     void OnStart();

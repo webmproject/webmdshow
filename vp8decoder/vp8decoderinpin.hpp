@@ -18,16 +18,16 @@ class Inpin : public Pin, public IMemInputPin
 {
     Inpin(const Inpin&);
     Inpin& operator=(const Inpin&);
-    
+
 public:
     explicit Inpin(Filter*);
-    
+
     //IUnknown interface:
-    
+
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IPin interface:
 
     HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
@@ -36,47 +36,47 @@ public:
 
     //HRESULT STDMETHODCALLTYPE Disconnect();
 
-    HRESULT STDMETHODCALLTYPE ReceiveConnection( 
+    HRESULT STDMETHODCALLTYPE ReceiveConnection(
         IPin*,
         const AM_MEDIA_TYPE*);
-        
-    HRESULT STDMETHODCALLTYPE QueryInternalConnections( 
+
+    HRESULT STDMETHODCALLTYPE QueryInternalConnections(
         IPin**,
         ULONG*);
-        
+
     HRESULT STDMETHODCALLTYPE EndOfStream();
 
-    HRESULT STDMETHODCALLTYPE BeginFlush();    
+    HRESULT STDMETHODCALLTYPE BeginFlush();
 
     HRESULT STDMETHODCALLTYPE EndFlush();
-    
-    HRESULT STDMETHODCALLTYPE NewSegment( 
+
+    HRESULT STDMETHODCALLTYPE NewSegment(
         REFERENCE_TIME,
         REFERENCE_TIME,
         double);
-        
+
     //IMemInputPin
-    
+
     HRESULT STDMETHODCALLTYPE GetAllocator(
         IMemAllocator**);
-    
-    HRESULT STDMETHODCALLTYPE NotifyAllocator( 
+
+    HRESULT STDMETHODCALLTYPE NotifyAllocator(
         IMemAllocator*,
         BOOL);
-    
+
     HRESULT STDMETHODCALLTYPE GetAllocatorRequirements(ALLOCATOR_PROPERTIES*);
 
-    HRESULT STDMETHODCALLTYPE Receive(IMediaSample*);    
-    
-    HRESULT STDMETHODCALLTYPE ReceiveMultiple( 
+    HRESULT STDMETHODCALLTYPE Receive(IMediaSample*);
+
+    HRESULT STDMETHODCALLTYPE ReceiveMultiple(
         IMediaSample**,
         long,
         long*);
-    
+
     HRESULT STDMETHODCALLTYPE ReceiveCanBlock();
 
     //local functions
-        
+
     HRESULT Start();  //from stopped to running/paused
     void Stop();      //from running/paused to stopped
 
@@ -87,12 +87,12 @@ protected:
 public:
     GraphUtil::IMemAllocatorPtr m_pAllocator;
     HRESULT OnApplyPostProcessing();
-    
+
 private:
     bool m_bEndOfStream;
     bool m_bFlush;
     vpx_codec_ctx_t m_ctx;
-    
+
     HRESULT PopulateSample(IMediaSample*, const vpx_image_t*);
 
 };

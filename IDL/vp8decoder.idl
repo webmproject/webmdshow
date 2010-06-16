@@ -21,7 +21,7 @@ enum VP8PostProcessingFlags
 {
     VP8None         = 0x00,
     VP8Deblock      = 0x01,
-    VP8Demacroblock = 0x02,  
+    VP8Demacroblock = 0x02,
     VP8AddNoise     = 0x04
 };
 

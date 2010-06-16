@@ -27,38 +27,38 @@ using std::wstring;
 
 namespace VP8DecoderLib
 {
-    
+
 HRESULT CreateInstance(
     IClassFactory* pClassFactory,
-    IUnknown* pOuter, 
-    const IID& iid, 
+    IUnknown* pOuter,
+    const IID& iid,
     void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     *ppv = 0;
 
     if ((pOuter != 0) && (iid != __uuidof(IUnknown)))
         return E_INVALIDARG;
-    
+
     Filter* p = new (std::nothrow) Filter(pClassFactory, pOuter);
-    
+
     if (p == 0)
         return E_OUTOFMEMORY;
-        
+
     assert(p->m_nondelegating.m_cRef == 0);
-    
+
     const HRESULT hr = p->m_nondelegating.QueryInterface(iid, ppv);
-    
+
     if (SUCCEEDED(hr))
     {
         assert(*ppv);
         assert(p->m_nondelegating.m_cRef == 1);
-        
+
         return S_OK;
     }
-    
+
     assert(*ppv == 0);
     assert(p->m_nondelegating.m_cRef == 0);
 
@@ -80,23 +80,23 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_outpin(this)
 {
     m_pClassFactory->LockServer(TRUE);
-            
+
     const HRESULT hr = CLockable::Init();
     hr;
     assert(SUCCEEDED(hr));
-        
+
     m_info.pGraph = 0;
     m_info.achName[0] = L'\0';
-    
-    //TODO: these need to be read from and written to the .grf stream.    
+
+    //TODO: these need to be read from and written to the .grf stream.
     m_cfg.flags = 0;
     m_cfg.deblock = 0;
     m_cfg.noise = 0;
-    
-#ifdef _DEBUG        
+
+#ifdef _DEBUG
     odbgstream os;
     os << "vp8dec::filter::ctor" << endl;
-#endif    
+#endif
 }
 #pragma warning(default:4355)
 
@@ -109,7 +109,7 @@ Filter::~Filter()
 #endif
 
     m_pClassFactory->LockServer(FALSE);
-}      
+}
 
 
 Filter::CNondelegating::CNondelegating(Filter* p)
@@ -125,18 +125,18 @@ Filter::CNondelegating::~CNondelegating()
 
 
 HRESULT Filter::CNondelegating::QueryInterface(
-    const IID& iid, 
+    const IID& iid,
     void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-     
-    if (iid == __uuidof(IUnknown))    
+
+    if (iid == __uuidof(IUnknown))
     {
         pUnk = this;  //must be nondelegating
-    }   
+    }
     else if ((iid == __uuidof(IBaseFilter)) ||
              (iid == __uuidof(IMediaFilter)) ||
              (iid == __uuidof(IPersist)))
@@ -152,7 +152,7 @@ HRESULT Filter::CNondelegating::QueryInterface(
 #if 0
         wodbgstream os;
         os << "vp8dec::filter::QI: iid=" << IIDStr(iid) << std::endl;
-#endif        
+#endif
         pUnk = 0;
         return E_NOINTERFACE;
     }
@@ -167,17 +167,17 @@ ULONG Filter::CNondelegating::AddRef()
     return InterlockedIncrement(&m_cRef);
 }
 
-    
+
 ULONG Filter::CNondelegating::Release()
 {
     const LONG n = InterlockedDecrement(&m_cRef);
-    
+
     //odbgstream os;
     //os << "Filter::Release: n=" << n << endl;
-    
+
     if (n > 0)
         return n;
-        
+
     delete m_pFilter;
     return 0;
 }
@@ -205,7 +205,7 @@ HRESULT Filter::GetClassID(CLSID* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     *p = CLSID_VP8Decoder;
     return S_OK;
 }
@@ -220,28 +220,28 @@ HRESULT Filter::Stop()
     //odbgstream os;
 
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     //odbgstream os;
     //os << "mkvsplit::Filter::Stop" << endl;
 
     switch (m_state)
     {
         case State_Paused:
-        case State_Running:            
+        case State_Running:
             m_state = State_Stopped;
             OnStop();    //decommit outpin's allocator
-            break;            
+            break;
 
         case State_Stopped:
         default:
             break;
     }
-    
+
     return S_OK;
 }
 
@@ -252,15 +252,15 @@ HRESULT Filter::Pause()
     //GetState()).
 
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     //odbgstream os;
     //os << "mkvsplit::Filter::Pause" << endl;
-        
+
     switch (m_state)
     {
         case State_Stopped:
@@ -270,9 +270,9 @@ HRESULT Filter::Pause()
         case State_Running:
         case State_Paused:
         default:
-            break;            
+            break;
     }
-    
+
     m_state = State_Paused;
     return S_OK;
 }
@@ -281,12 +281,12 @@ HRESULT Filter::Pause()
 HRESULT Filter::Run(REFERENCE_TIME start)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     //odbgstream os;
     //os << "mkvsplit::Filter::Run" << endl;
 
@@ -296,53 +296,53 @@ HRESULT Filter::Run(REFERENCE_TIME start)
             OnStart();
             break;
 
-        case State_Paused:        
+        case State_Paused:
         case State_Running:
         default:
-            break;            
+            break;
     }
 
     m_start = start;
     m_state = State_Running;
-    
+
     return S_OK;
 }
 
 
-HRESULT Filter::GetState( 
+HRESULT Filter::GetState(
     DWORD,
     FILTER_STATE* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     const HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_state;
     return S_OK;
 }
 
 
-HRESULT Filter::SetSyncSource( 
+HRESULT Filter::SetSyncSource(
     IReferenceClock* clock)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     if (m_clock)
         m_clock->Release();
-        
+
     m_clock = clock;
-    
+
     if (m_clock)
         m_clock->AddRef();
 
@@ -350,23 +350,23 @@ HRESULT Filter::SetSyncSource(
 }
 
 
-HRESULT Filter::GetSyncSource( 
+HRESULT Filter::GetSyncSource(
     IReferenceClock** pclock)
 {
     if (pclock == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     IReferenceClock*& clock = *pclock;
-        
+
     clock = m_clock;
-    
+
     if (clock)
         clock->AddRef();
 
@@ -378,65 +378,65 @@ HRESULT Filter::GetSyncSource(
 HRESULT Filter::EnumPins(IEnumPins** pp)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     IPin* pins[2];
-        
+
     pins[0] = &m_inpin;
     pins[1] = &m_outpin;
-    
-    return CEnumPins::CreateInstance(pins, 2, pp);        
+
+    return CEnumPins::CreateInstance(pins, 2, pp);
 }
 
 
 
-HRESULT Filter::FindPin( 
+HRESULT Filter::FindPin(
     LPCWSTR id1,
     IPin** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IPin*& p = *pp;
     p = 0;
-    
+
     if (id1 == 0)
         return E_INVALIDARG;
-        
+
     {
         Pin* const pPin = &m_inpin;
-        
+
         const wstring& id2_ = pPin->m_id;
         const wchar_t* const id2 = id2_.c_str();
-        
+
         if (wcscmp(id1, id2) == 0)  //case-sensitive
         {
             p = pPin;
             p->AddRef();
-            
+
             return S_OK;
         }
-    }    
-        
+    }
+
     {
         Pin* const pPin = &m_outpin;
 
         const wstring& id2_ = pPin->m_id;
         const wchar_t* const id2 = id2_.c_str();
-        
+
         if (wcscmp(id1, id2) == 0)  //case-sensitive
         {
             p = pPin;
             p->AddRef();
-            
+
             return S_OK;
         }
-    }    
-    
+    }
+
     return VFW_E_NOT_FOUND;
 }
 
@@ -445,11 +445,11 @@ HRESULT Filter::QueryFilterInfo(FILTER_INFO* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -459,30 +459,30 @@ HRESULT Filter::QueryFilterInfo(FILTER_INFO* p)
     assert(e == 0);
 
     p->pGraph = m_info.pGraph;
-    
+
     if (p->pGraph)
         p->pGraph->AddRef();
-        
+
     return S_OK;
 }
 
 
-HRESULT Filter::JoinFilterGraph( 
+HRESULT Filter::JoinFilterGraph(
     IFilterGraph *pGraph,
     LPCWSTR name)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
-    //NOTE: 
+
+    //NOTE:
     //No, do not adjust reference counts here!
     //Read the docs for the reasons why.
-    //ENDNOTE.    
-    
+    //ENDNOTE.
+
     m_info.pGraph = pGraph;
 
     if (name == 0)
@@ -494,7 +494,7 @@ HRESULT Filter::JoinFilterGraph(
         e;
         assert(e == 0);  //TODO
     }
-    
+
     return S_OK;
 }
 
@@ -503,9 +503,9 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 {
     if (pstr == 0)
         return E_POINTER;
-        
+
     wchar_t*& str = *pstr;
-    
+
     str = 0;
     return E_NOTIMPL;
 }
@@ -514,17 +514,17 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 HRESULT Filter::SetFlags(int Flags)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     if (Flags & ~0x07)
         return E_INVALIDARG;
-        
+
     m_cfg.flags = Flags;
-    
+
     return S_OK;
 }
 
@@ -532,20 +532,20 @@ HRESULT Filter::SetFlags(int Flags)
 HRESULT Filter::SetDeblockingLevel(int level)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     if (level < 0)
         return E_INVALIDARG;
-        
+
     if (level > 16)
         return E_INVALIDARG;
-        
+
     m_cfg.deblock = level;
-    
+
     return S_OK;
 }
 
@@ -553,20 +553,20 @@ HRESULT Filter::SetDeblockingLevel(int level)
 HRESULT Filter::SetNoiseLevel(int level)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     if (level < 0)
         return E_INVALIDARG;
-        
+
     if (level > 16)
         return E_INVALIDARG;
-        
+
     m_cfg.noise = level;
-    
+
     return S_OK;
 }
 
@@ -575,16 +575,16 @@ HRESULT Filter::GetFlags(int* pFlags)
 {
     if (pFlags == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     *pFlags = m_cfg.flags;
-    
+
     return S_OK;
 }
 
@@ -593,16 +593,16 @@ HRESULT Filter::GetDeblockingLevel(int* pLevel)
 {
     if (pLevel == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     *pLevel = m_cfg.deblock;
-    
+
     return S_OK;
 }
 
@@ -611,16 +611,16 @@ HRESULT Filter::GetNoiseLevel(int* pLevel)
 {
     if (pLevel == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     *pLevel = m_cfg.noise;
-    
+
     return S_OK;
 }
 
@@ -628,24 +628,24 @@ HRESULT Filter::GetNoiseLevel(int* pLevel)
 HRESULT Filter::ApplyPostProcessing()
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_state != State_Paused)
         return VFW_E_NOT_PAUSED;
-        
+
     return m_inpin.OnApplyPostProcessing();
-}    
+}
 
 
 void Filter::OnStart()
 {
     HRESULT hr = m_inpin.Start();
     assert(SUCCEEDED(hr));  //TODO
-    
+
     hr = m_outpin.Start();
     assert(SUCCEEDED(hr));  //TODO
 }
