@@ -26,14 +26,12 @@ class App
 
 public:
 
-    explicit App(HANDLE);
+    App();
     int operator()(int, wchar_t*[]);
 
 private:
 
-    const HANDLE m_hQuit;
     CmdLine m_cmdline;
-
     GraphUtil::IFilterGraphPtr m_pGraph;
 
     int m_progress;

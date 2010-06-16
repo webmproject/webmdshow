@@ -36,11 +36,11 @@ using GraphUtil::FindOutpinAudio;
 using GraphUtil::FindInpinVideo;
 using GraphUtil::FindInpinAudio;
 
+extern HANDLE g_hQuit;
 
-App::App(HANDLE hQuit) :
-    m_hQuit(hQuit)
+
+App::App()
 {
-    assert(m_hQuit);
 }
 
 
@@ -690,10 +690,8 @@ int App::RunGraph(IMediaSeeking* pSeek)
     assert(hr == S_OK);
     assert(h);
 
-    //DWORD dw = WaitForSingleObject(h, 0);
-
     enum { nh = 2 };
-    const HANDLE ha[nh] = { m_hQuit, h };
+    const HANDLE ha[nh] = { g_hQuit, h };
 
     const GraphUtil::IMediaControlPtr pControl(m_pGraph);
     assert(bool(pControl));
@@ -725,12 +723,7 @@ int App::RunGraph(IMediaSeeking* pSeek)
             DispatchMessage(&msg);
         }
 
-        const DWORD dw = MsgWaitForMultipleObjects(
-                            nh,
-                            ha,
-                            0,
-                            100,  //timeout (ms)
-                            QS_ALLINPUT);
+        const DWORD dw = MsgWaitForMultipleObjects(nh, ha, 0, 100, QS_ALLINPUT);
 
         if (dw == WAIT_TIMEOUT)
         {
