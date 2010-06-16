@@ -17,35 +17,35 @@ class OutpinPreview : public Outpin
 {
     OutpinPreview(const OutpinPreview&);
     OutpinPreview& operator=(const OutpinPreview&);
-    
+
 protected:
     std::wstring GetName() const;
-    
-public:    
+
+public:
     explicit OutpinPreview(Filter*);
-    virtual ~OutpinPreview();    
+    virtual ~OutpinPreview();
 
     //IUnknown interface:
-    
+
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IPin interface:
 
     //HRESULT STDMETHODCALLTYPE Connect(IPin*, const AM_MEDIA_TYPE*);
 
     HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
-    
+
     //local functions
-    
+
     void Render(CLockable::Lock&, const vpx_image_t*);
 
 protected:
     void SetDefaultMediaTypes();
     virtual HRESULT PostConnect(IPin*);
     void GetSubtype(GUID&) const;
-    
+
 };
 
 

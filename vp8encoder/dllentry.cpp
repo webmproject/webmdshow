@@ -23,8 +23,8 @@ namespace VP8EncoderLib
 {
     HRESULT CreateInstance(
             IClassFactory*,
-            IUnknown*, 
-            const IID&, 
+            IUnknown*,
+            const IID&,
             void**);
 
 }  //end namespace VP8EncoderLib
@@ -34,8 +34,8 @@ static CFactory s_factory(&s_cLock, &VP8EncoderLib::CreateInstance);
 
 
 BOOL APIENTRY DllMain(
-    HINSTANCE hModule, 
-    DWORD  dwReason, 
+    HINSTANCE hModule,
+    DWORD  dwReason,
     LPVOID)
 {
    switch (dwReason)
@@ -51,7 +51,7 @@ BOOL APIENTRY DllMain(
        default:
           break;
    }
-   
+
     return TRUE;
 }
 
@@ -85,7 +85,7 @@ STDAPI DllUnregisterServer()
                     0,
                     CLSID_VP8Encoder);
 
-    //TODO                    
+    //TODO
     //assert(SUCCEEDED(hr));
 
     hr = ComReg::UnRegisterCoclass(CLSID_VP8Encoder);
@@ -95,7 +95,7 @@ STDAPI DllUnregisterServer()
     hr = ComReg::ComRegGetModuleFileName(g_hModule, filename_);
     assert(SUCCEEDED(hr));
     assert(!filename_.empty());
-    
+
     const wchar_t* const filename = filename_.c_str();
 
     hr = ComReg::UnRegisterTypeLibResource(filename);
@@ -111,10 +111,10 @@ STDAPI DllRegisterServer()
     HRESULT hr = ComReg::ComRegGetModuleFileName(g_hModule, filename_);
     assert(SUCCEEDED(hr));
     assert(!filename_.empty());
-    
+
     const wchar_t* const filename = filename_.c_str();
 
-#if _DEBUG    
+#if _DEBUG
     const wchar_t friendlyname[] = L"WebM VP8 Encoder Filter (Debug)";
 #else
     const wchar_t friendlyname[] = L"WebM VP8 Encoder Filter";
@@ -122,7 +122,7 @@ STDAPI DllRegisterServer()
 
     hr = DllUnregisterServer();
     assert(SUCCEEDED(hr));
-    
+
     hr = ComReg::RegisterTypeLibResource(filename, 0);
     assert(SUCCEEDED(hr));
 
@@ -138,17 +138,17 @@ STDAPI DllRegisterServer()
             LIBID_VP8EncoderLib,     //typelib
             0,    //no version specified
             0);   //no toolbox bitmap
-            
+
     assert(SUCCEEDED(hr));   //TODO
-            
+
     const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
     assert(bool(pMapper));
-    
+
     enum { cPins = 2 };
     REGFILTERPINS pins[cPins];
-    
+
     REGFILTERPINS& inpin = pins[0];
-    
+
     enum { nInpinMediaTypes = 2 };
     const REGPINTYPES inpinMediaTypes[nInpinMediaTypes] =
     {
@@ -162,7 +162,7 @@ STDAPI DllRegisterServer()
     inpin.bZero = FALSE;
     inpin.bMany = FALSE;
     inpin.clsConnectsToFilter = 0;  //obsolete
-    inpin.strConnectsToPin = 0;     //obsolete    
+    inpin.strConnectsToPin = 0;     //obsolete
     inpin.nMediaTypes = nInpinMediaTypes;
     inpin.lpMediaType = inpinMediaTypes;
 
@@ -180,26 +180,26 @@ STDAPI DllRegisterServer()
     outpin.bZero = FALSE;
     outpin.bMany = FALSE;
     outpin.clsConnectsToFilter = 0;  //obsolete
-    outpin.strConnectsToPin = 0;     //obsolete    
+    outpin.strConnectsToPin = 0;     //obsolete
     outpin.nMediaTypes = nOutpinMediaTypes;
     outpin.lpMediaType = outpinMediaTypes;
 
     //pin setup complete
-    
+
     REGFILTER2 filter;
-    
+
     filter.dwVersion = 1;
     filter.dwMerit = MERIT_DO_NOT_USE;
     filter.cPins = cPins;
     filter.rgPins = pins;
-    
+
     hr = pMapper->RegisterFilter(
             CLSID_VP8Encoder,
             friendlyname,
             0,
             &CLSID_LegacyAmFilterCategory,
             0,
-            &filter);                       
+            &filter);
 
     return hr;
 }

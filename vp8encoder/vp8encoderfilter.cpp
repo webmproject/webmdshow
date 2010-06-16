@@ -26,38 +26,38 @@ using std::wstring;
 
 namespace VP8EncoderLib
 {
-    
+
 HRESULT CreateInstance(
     IClassFactory* pClassFactory,
-    IUnknown* pOuter, 
-    const IID& iid, 
+    IUnknown* pOuter,
+    const IID& iid,
     void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     *ppv = 0;
 
     if ((pOuter != 0) && (iid != __uuidof(IUnknown)))
         return E_INVALIDARG;
-    
+
     Filter* p = new (std::nothrow) Filter(pClassFactory, pOuter);
-    
+
     if (p == 0)
         return E_OUTOFMEMORY;
-        
+
     assert(p->m_nondelegating.m_cRef == 0);
-    
+
     const HRESULT hr = p->m_nondelegating.QueryInterface(iid, ppv);
-    
+
     if (SUCCEEDED(hr))
     {
         assert(*ppv);
         assert(p->m_nondelegating.m_cRef == 1);
-        
+
         return S_OK;
     }
-    
+
     assert(*ppv == 0);
     assert(p->m_nondelegating.m_cRef == 0);
 
@@ -80,19 +80,19 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_outpin_preview(this)
 {
     m_pClassFactory->LockServer(TRUE);
-            
-    const HRESULT hr = CLockable::Init();    
+
+    const HRESULT hr = CLockable::Init();
     assert(SUCCEEDED(hr));
-    
+
     m_info.pGraph = 0;
     m_info.achName[0] = L'\0';
-    
+
     m_cfg.Init();
-    
-#ifdef _DEBUG        
+
+#ifdef _DEBUG
     odbgstream os;
     os << "vp8enc::filter::ctor" << endl;
-#endif    
+#endif
 }
 #pragma warning(default:4355)
 
@@ -105,7 +105,7 @@ Filter::~Filter()
 #endif
 
     m_pClassFactory->LockServer(FALSE);
-}      
+}
 
 
 void Filter::Config::Init()
@@ -134,7 +134,10 @@ void Filter::Config::Init()
     pass_mode = -1;
     two_pass_stats_buf = 0;
     two_pass_stats_buflen = -1;
-}    
+    two_pass_vbr_bias_pct = -1;
+    two_pass_vbr_minsection_pct = -1;
+    two_pass_vbr_maxsection_pct = -1;
+}
 
 
 
@@ -151,18 +154,18 @@ Filter::CNondelegating::~CNondelegating()
 
 
 HRESULT Filter::CNondelegating::QueryInterface(
-    const IID& iid, 
+    const IID& iid,
     void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-     
-    if (iid == __uuidof(IUnknown))    
+
+    if (iid == __uuidof(IUnknown))
     {
         pUnk = this;  //must be nondelegating
-    }   
+    }
     else if ((iid == __uuidof(IBaseFilter)) ||
              (iid == __uuidof(IMediaFilter)) ||
              (iid == __uuidof(IPersist)))
@@ -178,7 +181,7 @@ HRESULT Filter::CNondelegating::QueryInterface(
 #if 0
         wodbgstream os;
         os << "vp8enc::filter::QI: iid=" << IIDStr(iid) << std::endl;
-#endif        
+#endif
         pUnk = 0;
         return E_NOINTERFACE;
     }
@@ -193,17 +196,17 @@ ULONG Filter::CNondelegating::AddRef()
     return InterlockedIncrement(&m_cRef);
 }
 
-    
+
 ULONG Filter::CNondelegating::Release()
 {
     const LONG n = InterlockedDecrement(&m_cRef);
-    
+
     //odbgstream os;
     //os << "Filter::Release: n=" << n << endl;
-    
+
     if (n > 0)
         return n;
-        
+
     delete m_pFilter;
     return 0;
 }
@@ -231,7 +234,7 @@ HRESULT Filter::GetClassID(CLSID* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     *p = CLSID_VP8Encoder;
     return S_OK;
 }
@@ -246,28 +249,28 @@ HRESULT Filter::Stop()
     //odbgstream os;
 
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     //odbgstream os;
     //os << "mkvsplit::Filter::Stop" << endl;
 
     switch (m_state)
     {
         case State_Paused:
-        case State_Running:            
+        case State_Running:
             m_state = State_Stopped;
             OnStop();    //decommit outpin's allocator
-            break;            
+            break;
 
         case State_Stopped:
         default:
             break;
     }
-    
+
     return S_OK;
 }
 
@@ -278,31 +281,31 @@ HRESULT Filter::Pause()
     //GetState()).
 
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     //odbgstream os;
     //os << "mkvsplit::Filter::Pause" << endl;
-        
+
     switch (m_state)
     {
         case State_Stopped:
             hr = OnStart();  //commit outpin's allocator
-            
+
             if (FAILED(hr))
                 return hr;
-                
+
             break;
 
         case State_Running:
         case State_Paused:
         default:
-            break;            
+            break;
     }
-    
+
     m_state = State_Paused;
     return S_OK;
 }
@@ -311,12 +314,12 @@ HRESULT Filter::Pause()
 HRESULT Filter::Run(REFERENCE_TIME start)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     //odbgstream os;
     //os << "mkvsplit::Filter::Run" << endl;
 
@@ -324,59 +327,59 @@ HRESULT Filter::Run(REFERENCE_TIME start)
     {
         case State_Stopped:
             hr = OnStart();  //commit outpin's allocator
-            
+
             if (FAILED(hr))
                 return hr;
 
             break;
 
-        case State_Paused:        
+        case State_Paused:
         case State_Running:
         default:
-            break;            
+            break;
     }
 
     m_start = start;
     m_state = State_Running;
-    
+
     return S_OK;
 }
 
 
-HRESULT Filter::GetState( 
+HRESULT Filter::GetState(
     DWORD,
     FILTER_STATE* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     const HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_state;
     return S_OK;
 }
 
 
-HRESULT Filter::SetSyncSource( 
+HRESULT Filter::SetSyncSource(
     IReferenceClock* clock)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     if (m_clock)
         m_clock->Release();
-        
+
     m_clock = clock;
-    
+
     if (m_clock)
         m_clock->AddRef();
 
@@ -384,23 +387,23 @@ HRESULT Filter::SetSyncSource(
 }
 
 
-HRESULT Filter::GetSyncSource( 
+HRESULT Filter::GetSyncSource(
     IReferenceClock** pclock)
 {
     if (pclock == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     IReferenceClock*& clock = *pclock;
-        
+
     clock = m_clock;
-    
+
     if (clock)
         clock->AddRef();
 
@@ -412,62 +415,62 @@ HRESULT Filter::GetSyncSource(
 HRESULT Filter::EnumPins(IEnumPins** pp)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     IPin* pins[3] =
     {
         &m_inpin,
         &m_outpin_video,
         &m_outpin_preview
-    };        
-    
-    return CEnumPins::CreateInstance(pins, 3, pp);        
+    };
+
+    return CEnumPins::CreateInstance(pins, 3, pp);
 }
 
 
 
-HRESULT Filter::FindPin( 
+HRESULT Filter::FindPin(
     LPCWSTR id1,
     IPin** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IPin*& p = *pp;
     p = 0;
-    
+
     if (id1 == 0)
         return E_INVALIDARG;
-        
+
     Pin* pins[3] =
     {
         &m_inpin,
         &m_outpin_video,
         &m_outpin_preview
     };
-    
+
     Pin** iter = pins;
 
     for (int i = 0; i < 3; ++i)
     {
         Pin* const pin = *iter++;
-        
+
         const wstring& id2_ = pin->m_id;
         const wchar_t* const id2 = id2_.c_str();
-        
+
         if (wcscmp(id1, id2) == 0)  //case-sensitive
         {
             p = pin;
             p->AddRef();
-            
+
             return S_OK;
         }
-    }    
-            
+    }
+
     return VFW_E_NOT_FOUND;
 }
 
@@ -476,11 +479,11 @@ HRESULT Filter::QueryFilterInfo(FILTER_INFO* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -490,30 +493,30 @@ HRESULT Filter::QueryFilterInfo(FILTER_INFO* p)
     assert(e == 0);
 
     p->pGraph = m_info.pGraph;
-    
+
     if (p->pGraph)
         p->pGraph->AddRef();
-        
+
     return S_OK;
 }
 
 
-HRESULT Filter::JoinFilterGraph( 
+HRESULT Filter::JoinFilterGraph(
     IFilterGraph *pGraph,
     LPCWSTR name)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
-    //NOTE: 
+
+    //NOTE:
     //No, do not adjust reference counts here!
     //Read the docs for the reasons why.
-    //ENDNOTE.    
-    
+    //ENDNOTE.
+
     m_info.pGraph = pGraph;
 
     if (name == 0)
@@ -525,7 +528,7 @@ HRESULT Filter::JoinFilterGraph(
         e;
         assert(e == 0);  //TODO
     }
-    
+
     return S_OK;
 }
 
@@ -534,9 +537,9 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 {
     if (pstr == 0)
         return E_POINTER;
-        
+
     wchar_t*& str = *pstr;
-    
+
     str = 0;
     return E_NOTIMPL;
 }
@@ -545,15 +548,15 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 HRESULT Filter::ApplySettings()
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_state == State_Stopped)
         return S_FALSE;
-        
+
     return m_inpin.OnApplySettings();
 }
 
@@ -561,9 +564,9 @@ HRESULT Filter::ApplySettings()
 HRESULT Filter::ResetSettings()
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -576,16 +579,16 @@ HRESULT Filter::SetDeadline(int deadline)
 {
     if (deadline < 0)
         return E_INVALIDARG;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-  
+
     m_cfg.deadline = deadline;
-    
+
     return S_OK;
 }
 
@@ -594,16 +597,16 @@ HRESULT Filter::GetDeadline(int* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     *p = m_cfg.deadline;
-    
+
     return S_OK;
 }
 
@@ -613,16 +616,16 @@ HRESULT Filter::SetThreadCount(int count)
 {
     if (count < 0)
         return E_INVALIDARG;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.threads = count;
-    
+
     return S_OK;
 }
 
@@ -631,16 +634,16 @@ HRESULT Filter::GetThreadCount(int* pCount)
 {
     if (pCount == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *pCount = m_cfg.threads;
-    
+
     return S_OK;
 }
 
@@ -648,14 +651,14 @@ HRESULT Filter::GetThreadCount(int* pCount)
 HRESULT Filter::SetErrorResilient(int val)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     m_cfg.error_resilient = val;
-    
+
     return S_OK;
 }
 
@@ -664,16 +667,16 @@ HRESULT Filter::GetErrorResilient(int* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     *p = m_cfg.error_resilient;
-    
+
     return S_OK;
 }
 
@@ -683,10 +686,10 @@ HRESULT Filter::SetDropframeThreshold(int val)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.dropframe_thresh = val;
     return S_OK;
 }
@@ -696,14 +699,14 @@ HRESULT Filter::GetDropframeThreshold(int* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_cfg.dropframe_thresh;
     return S_OK;
 }
@@ -714,10 +717,10 @@ HRESULT Filter::SetResizeAllowed(int val)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.resize_allowed = val;
     return S_OK;
 }
@@ -727,14 +730,14 @@ HRESULT Filter::GetResizeAllowed(int* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_cfg.resize_allowed;
     return S_OK;
 }
@@ -745,10 +748,10 @@ HRESULT Filter::SetResizeUpThreshold(int val)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.resize_up_thresh = val;
     return S_OK;
 }
@@ -758,14 +761,14 @@ HRESULT Filter::GetResizeUpThreshold(int* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_cfg.resize_up_thresh;
     return S_OK;
 }
@@ -776,10 +779,10 @@ HRESULT Filter::SetResizeDownThreshold(int val)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.resize_down_thresh = val;
     return S_OK;
 }
@@ -789,14 +792,14 @@ HRESULT Filter::GetResizeDownThreshold(int* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_cfg.resize_down_thresh;
     return S_OK;
 }
@@ -805,28 +808,28 @@ HRESULT Filter::GetResizeDownThreshold(int* p)
 HRESULT Filter::SetEndUsage(VP8EndUsage val_)
 {
     const int val = val_;
-    
+
     switch (val)
     {
         case kEndUsageVBR:
         case kEndUsageCBR:
         case kEndUsageDefault:
             break;
-            
+
         default:
             return E_INVALIDARG;
     }
-    
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.end_usage = val;
-    
-    return S_OK;    
+
+    return S_OK;
 }
 
 
@@ -834,17 +837,17 @@ HRESULT Filter::GetEndUsage(VP8EndUsage* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = static_cast<VP8EndUsage>(m_cfg.end_usage);
-    
-    return S_OK;    
+
+    return S_OK;
 }
 
 
@@ -852,16 +855,16 @@ HRESULT Filter::SetLagInFrames(int LagInFrames)
 {
     if (LagInFrames < 0)
         return E_INVALIDARG;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     m_cfg.lag_in_frames = LagInFrames;
-    
+
     return S_OK;
 }
 
@@ -870,16 +873,16 @@ HRESULT Filter::GetLagInFrames(int* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     *p = m_cfg.lag_in_frames;
-    
+
     return S_OK;
 }
 
@@ -888,19 +891,19 @@ HRESULT Filter::SetTokenPartitions(int val)
 {
     if (val > 3)
         return E_INVALIDARG;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
-    
+
     m_cfg.token_partitions = val;
-    
+
     return S_OK;
 }
 
@@ -909,14 +912,14 @@ HRESULT Filter::GetTokenPartitions(int* p)
 {
     if (p == 0)
         return E_POINTER;
-            
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_cfg.token_partitions;
     return S_OK;
 }
@@ -926,65 +929,65 @@ HRESULT Filter::SetTargetBitrate(int value)
 {
     if (value < 0)
         return E_INVALIDARG;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.target_bitrate = value;
     return S_OK;
 }
 
-    
+
 HRESULT Filter::GetTargetBitrate(int* p)
 {
     if (p == 0)
         return E_POINTER;
-                
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *p = m_cfg.target_bitrate;
     return S_OK;
 }
-    
+
 
 HRESULT Filter::SetMinQuantizer(int val)
 {
     if (val > 63)
         return E_INVALIDARG;
-    
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.min_quantizer = val;
     return S_OK;
 }
-    
+
 
 HRESULT Filter::GetMinQuantizer(int* p)
 {
     if (p == 0)
         return E_POINTER;
-            
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     *p = m_cfg.min_quantizer;
     return S_OK;
 }
@@ -998,44 +1001,44 @@ HRESULT Filter::SetMaxQuantizer(int val)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     m_cfg.max_quantizer = val;
     return S_OK;
 }
 
-    
+
 HRESULT Filter::GetMaxQuantizer(int* p)
 {
     if (p == 0)
         return E_POINTER;
-            
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     *p = m_cfg.max_quantizer;
     return S_OK;
 }
-    
+
 
 HRESULT Filter::SetUndershootPct(int val)
 {
     if (val > 100)
         return E_INVALIDARG;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.undershoot_pct = val;
     return S_OK;
 }
@@ -1045,14 +1048,14 @@ HRESULT Filter::GetUndershootPct(int* pval)
 {
     if (pval == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *pval = m_cfg.undershoot_pct;
     return S_OK;
 }
@@ -1062,14 +1065,14 @@ HRESULT Filter::SetOvershootPct(int val)
 {
     if (val > 100)
         return E_INVALIDARG;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.overshoot_pct = val;
     return S_OK;
 }
@@ -1079,30 +1082,30 @@ HRESULT Filter::GetOvershootPct(int* pval)
 {
     if (pval == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *pval = m_cfg.overshoot_pct;
     return S_OK;
 }
-    
+
 
 HRESULT Filter::SetDecoderBufferSize(int val)
 {
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     m_cfg.decoder_buffer_size = val;
-    return S_OK;        
+    return S_OK;
 }
 
 
@@ -1110,30 +1113,30 @@ HRESULT Filter::GetDecoderBufferSize(int* pval)
 {
     if (pval == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     *pval = m_cfg.decoder_buffer_size;
-    return S_OK;        
+    return S_OK;
 }
 
-    
+
 HRESULT Filter::SetDecoderBufferInitialSize(int val)
 {
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     m_cfg.decoder_buffer_initial_size = val;
-    return S_OK;        
+    return S_OK;
 }
 
 
@@ -1141,30 +1144,30 @@ HRESULT Filter::GetDecoderBufferInitialSize(int* pval)
 {
     if (pval == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     *pval = m_cfg.decoder_buffer_initial_size;
-    return S_OK;        
+    return S_OK;
 }
 
-    
+
 HRESULT Filter::SetDecoderBufferOptimalSize(int val)
 {
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     m_cfg.decoder_buffer_optimal_size = val;
-    return S_OK;        
+    return S_OK;
 }
 
 
@@ -1172,19 +1175,19 @@ HRESULT Filter::GetDecoderBufferOptimalSize(int* pval)
 {
     if (pval == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     *pval = m_cfg.decoder_buffer_optimal_size;
-    return S_OK;        
+    return S_OK;
 }
 
-        
+
 HRESULT Filter::SetKeyframeMode(VP8KeyframeMode m)
 {
     switch (m)
@@ -1193,18 +1196,18 @@ HRESULT Filter::SetKeyframeMode(VP8KeyframeMode m)
         case kKeyframeModeDisabled:
         case kKeyframeModeAuto:
             break;
-            
+
         default:
             return E_INVALIDARG;
     }
-    
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_cfg.keyframe_mode = m;
     return S_OK;
 }
@@ -1214,11 +1217,11 @@ HRESULT Filter::GetKeyframeMode(VP8KeyframeMode* pm)
 {
     if (pm == 0)
         return E_POINTER;
-        
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -1232,7 +1235,7 @@ HRESULT Filter::SetKeyframeMinInterval(int val)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -1240,13 +1243,13 @@ HRESULT Filter::SetKeyframeMinInterval(int val)
     return S_OK;
 }
 
-    
+
 HRESULT Filter::GetKeyframeMinInterval(int* pval)
 {
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -1260,7 +1263,7 @@ HRESULT Filter::SetKeyframeMaxInterval(int val)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -1274,7 +1277,7 @@ HRESULT Filter::GetKeyframeMaxInterval(int* pval)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -1291,33 +1294,33 @@ HRESULT Filter::SetPassMode(VP8PassMode m)
 	    case kPassModeFirstPass:
 	    case kPassModeLastPass:
 	        break;
-	        
+
 	    default:
 	        return E_INVALIDARG;
 	}
-	
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-	
+
     if (m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
-        
+
     Config::int32_t& tgt = m_cfg.pass_mode;
-    
-    if (m == tgt)  //no need for any other checks 
+
+    if (m == tgt)  //no need for any other checks
         return S_OK;
-        
+
     OutpinVideo& outpin = m_outpin_video;
-    
+
     hr = outpin.OnSetPassMode(m);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     tgt = m;
     return S_OK;
 }
@@ -1331,15 +1334,15 @@ HRESULT Filter::GetPassMode(VP8PassMode* p)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_cfg.pass_mode < 0)
         *p = kPassModeOnePass;
     else
         *p = static_cast<VP8PassMode>(m_cfg.pass_mode);
-    
+
     return S_OK;
 }
 
@@ -1352,13 +1355,13 @@ HRESULT Filter::SetTwoPassStatsBuf(const BYTE* buf, LONGLONG len)
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
-        
+
     m_cfg.two_pass_stats_buf = buf;
     m_cfg.two_pass_stats_buflen = len;
 
@@ -1370,37 +1373,132 @@ HRESULT Filter::GetTwoPassStatsBuf(const BYTE** pbuf, LONGLONG* plen)
 {
     if (pbuf)
         *pbuf = 0;
-        
+
     if (plen)
         *plen = 0;
-        
+
     if ((pbuf == 0) || (plen == 0))
         return E_POINTER;
-            
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     *pbuf = m_cfg.two_pass_stats_buf;
-    
+
     const LONGLONG src = m_cfg.two_pass_stats_buflen;
     *plen = (src <= 0) ? 0 : src;
-    
+
     return S_OK;
 }
 
+
+HRESULT Filter::SetTwoPassVbrBiasPct(int val)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_cfg.two_pass_vbr_bias_pct = val;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetTwoPassVbrBiasPct(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *p = m_cfg.two_pass_vbr_bias_pct;
+    return S_OK;
+}
+
+
+HRESULT Filter::SetTwoPassVbrMinsectionPct(int val)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_cfg.two_pass_vbr_minsection_pct = val;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetTwoPassVbrMinsectionPct(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *p = m_cfg.two_pass_vbr_minsection_pct;
+    return S_OK;
+}
+
+
+HRESULT Filter::SetTwoPassVbrMaxsectionPct(int val)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_cfg.two_pass_vbr_maxsection_pct = val;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetTwoPassVbrMaxsectionPct(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *p = m_cfg.two_pass_vbr_maxsection_pct;
+    return S_OK;
+}
 
 
 HRESULT Filter::OnStart()
 {
     HRESULT hr = m_inpin.Start();
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     hr = m_outpin_video.Start();
 
     if (FAILED(hr))
@@ -1408,17 +1506,17 @@ HRESULT Filter::OnStart()
         m_inpin.Stop();
         return hr;
     }
-    
+
     hr = m_outpin_preview.Start();
-    
+
     if (FAILED(hr))
     {
         m_outpin_video.Stop();
         m_inpin.Stop();
-        
+
         return hr;
     }
-    
+
     return S_OK;
 }
 
@@ -1434,10 +1532,10 @@ void Filter::OnStop()
 VP8PassMode Filter::GetPassMode() const
 {
     const Config::int32_t m = m_cfg.pass_mode;
-    
+
     if (m < 0)
         return kPassModeOnePass;  //default
-        
+
     return static_cast<VP8PassMode>(m);
 }
 

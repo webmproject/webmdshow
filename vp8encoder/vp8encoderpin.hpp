@@ -19,77 +19,77 @@ class Filter;
 class Pin : public IPin
 {
     Pin& operator=(const Pin&);
-    
+
 protected:
     Pin(Filter*, PIN_DIRECTION, const wchar_t*);
     virtual ~Pin();
-    
-public:    
+
+public:
     Filter* const m_pFilter;
     const PIN_DIRECTION m_dir;
-    const std::wstring m_id;    
+    const std::wstring m_id;
     CMediaTypes m_preferred_mtv;
     CMediaTypes m_connection_mtv;  //only one of these
     GraphUtil::IPinPtr m_pPinConnection;
-    
+
     //IUnknown interface:
-    
+
     //IPin interface:
 
-    //HRESULT STDMETHODCALLTYPE Connect( 
+    //HRESULT STDMETHODCALLTYPE Connect(
     //    IPin *pReceivePin,
     //    const AM_MEDIA_TYPE *pmt);
 
-    //HRESULT STDMETHODCALLTYPE ReceiveConnection( 
+    //HRESULT STDMETHODCALLTYPE ReceiveConnection(
     //    IPin*,
     //    const AM_MEDIA_TYPE*);
-    
+
     HRESULT STDMETHODCALLTYPE Disconnect();
-    
-    HRESULT STDMETHODCALLTYPE ConnectedTo( 
+
+    HRESULT STDMETHODCALLTYPE ConnectedTo(
         IPin **pPin);
-    
-    HRESULT STDMETHODCALLTYPE ConnectionMediaType( 
+
+    HRESULT STDMETHODCALLTYPE ConnectionMediaType(
         AM_MEDIA_TYPE*);
-    
-    HRESULT STDMETHODCALLTYPE QueryPinInfo( 
+
+    HRESULT STDMETHODCALLTYPE QueryPinInfo(
         PIN_INFO*);
-    
-    HRESULT STDMETHODCALLTYPE QueryDirection( 
+
+    HRESULT STDMETHODCALLTYPE QueryDirection(
         PIN_DIRECTION*);
-    
-    HRESULT STDMETHODCALLTYPE QueryId( 
+
+    HRESULT STDMETHODCALLTYPE QueryId(
         LPWSTR*);
-    
-    //HRESULT STDMETHODCALLTYPE QueryAccept( 
+
+    //HRESULT STDMETHODCALLTYPE QueryAccept(
     //    const AM_MEDIA_TYPE*);
-    
-    HRESULT STDMETHODCALLTYPE EnumMediaTypes( 
+
+    HRESULT STDMETHODCALLTYPE EnumMediaTypes(
         IEnumMediaTypes**);
-    
-    //HRESULT STDMETHODCALLTYPE QueryInternalConnections( 
+
+    //HRESULT STDMETHODCALLTYPE QueryInternalConnections(
     //    IPin**,
     //    ULONG*);
-    
+
     //HRESULT STDMETHODCALLTYPE EndOfStream();
-    //    
+    //
     //HRESULT STDMETHODCALLTYPE BeginFlush();
     //
     //HRESULT STDMETHODCALLTYPE EndFlush();
     //
-    //HRESULT STDMETHODCALLTYPE NewSegment( 
+    //HRESULT STDMETHODCALLTYPE NewSegment(
     //    REFERENCE_TIME tStart,
     //    REFERENCE_TIME tStop,
     //    double dRate);
-    
+
     const BITMAPINFOHEADER& GetBMIH() const;
     __int64 GetAvgTimePerFrame() const;
-    
+
 protected:
     //virtual HRESULT GetName(PIN_INFO&) const = 0;
     virtual std::wstring GetName() const = 0;
     virtual HRESULT OnDisconnect();
-    
+
 };
 
 }  //end namespace VP8EncoderLib

@@ -27,7 +27,7 @@ enum VP8Deadline
 
 //Keyframe placement mode
 //
-//Specifies whether keyframes are placed automatically 
+//Specifies whether keyframes are placed automatically
 //by the encoder, or whether this behavior is disabled.
 
 enum VP8KeyframeMode
@@ -41,7 +41,7 @@ enum VP8KeyframeMode
 enum VP8EndUsage
 {
     kEndUsageDefault = -1,
-    kEndUsageVBR = 0, 
+    kEndUsageVBR = 0,
     kEndUsageCBR = 1
 };
 
@@ -69,8 +69,8 @@ interface IVP8Encoder : IUnknown
     //The filter maintains a set of encoder configuration values, held
     //in cache.  Any parameters set (using the methods below) are always
     //applied to the cached value, irrespective of the state of the graph.
-    //    
-    //When the graph is started, the filter initializes the VP8 encoder 
+    //
+    //When the graph is started, the filter initializes the VP8 encoder
     //using the cached configuration values.  This is done automatically,
     //as part of the activities associated with transitioning the filter
     //from the stopped state.
@@ -81,23 +81,23 @@ interface IVP8Encoder : IUnknown
     //call ApplySettings.
     //
     //It is harmless to call ApplySettings while the graph is stopped.
-        
+
     HRESULT ApplySettings();
-    
+
     //ResetSettings
     //
     //Sets the configuration values in cache to their defaults, the same
     //as they had when the filter instance was originally created.
-    
+
     HRESULT ResetSettings();
-    
+
     //Deadline
     //
     //Time to spend encoding, in microseconds. (0=infinite)
-    
+
     HRESULT SetDeadline([in] int Deadline);
     HRESULT GetDeadline([out] int* pDeadline);
-    
+
     //ThreadCount
     //
     //For multi-threaded implementations, use no more than this number of
@@ -111,7 +111,7 @@ interface IVP8Encoder : IUnknown
     //
     //Error resilient mode indicates to the encoder that it should take
     //measures appropriate for streaming over lossy or noisy links, if
-    //possible.  The value 0 means feature is disabled (the default), 
+    //possible.  The value 0 means feature is disabled (the default),
     //and any positive value means the feature is enabled.
 
     HRESULT SetErrorResilient([in] int ErrorResilient);
@@ -129,10 +129,10 @@ interface IVP8Encoder : IUnknown
     //When the data buffer falls below this percentage of fullness, a
     //dropped frame is indicated. Set the threshold to zero (0) to disable
     //this feature.
-    
+
     HRESULT SetDropframeThreshold([in] int DropframeThreshold);
     HRESULT GetDropframeThreshold([out] int* pDropframeThreshold);
-    
+
     //Enable/disable spatial resampling
     //
     //Spatial resampling allows the codec to compress a lower resolution
@@ -165,14 +165,14 @@ interface IVP8Encoder : IUnknown
     //
     //Indicates whether the end usage of this stream is to be streamed over
     //a bandwidth constrained link (kEndUsageCBR), or whether it will be
-    //played back on a high bandwidth link, as from a local disk, where 
+    //played back on a high bandwidth link, as from a local disk, where
     //higher variations in bitrate are acceptable (kEndUsageVBR, the default).
 
     HRESULT SetEndUsage([in] enum VP8EndUsage EndUsage);
     HRESULT GetEndUsage([out] enum VP8EndUsage* pEndUsage);
-    
+
     //LagInFrames
-    //    
+    //
     //If set, this value allows the encoder to consume a number of input
     //frames before producing output frames. This allows the encoder to
     //base decisions for the current frame on future frames. This does
@@ -182,10 +182,10 @@ interface IVP8Encoder : IUnknown
     //Note that this is a maximum value -- the encoder may produce frames
     //sooner than the given limit. Set this value to 0 to disable this
     //feature.
-    
+
     HRESULT SetLagInFrames([in] int LagInFrames);
     HRESULT GetLagInFrames([out] int* pLagInFrames);
-    
+
     //VP8 token partition mode
     //
     //This defines VP8 partitioning mode for compressed data, i.e., the number of
@@ -195,7 +195,7 @@ interface IVP8Encoder : IUnknown
     //Value 1 = two token partitions
     //Value 2 = four token partitions
     //Value 3 = eight token partitions
-    
+
     HRESULT SetTokenPartitions([in] int TokenPartition);
     HRESULT GetTokenPartitions([out] int* pTokenPartition);
 
@@ -228,7 +228,7 @@ interface IVP8Encoder : IUnknown
     //This value, expressed as a percentage of the target bitrate, describes
     //the target bitrate for easier frames, allowing bits to be saved for
     //harder frames. Set to zero to use the codec default.
-    
+
     HRESULT SetUndershootPct([in] int UndershootPct);
     HRESULT GetUndershootPct([out] int* pUndershootPct);
 
@@ -237,7 +237,7 @@ interface IVP8Encoder : IUnknown
     //This value, expressed as a percentage of the target bitrate, describes
     //the maximum allowed bitrate for a given frame.  Set to zero to use the
     //codec default.
-    
+
     HRESULT SetOvershootPct([in] int OvershootPct);
     HRESULT GetOvershootPct([out] int* pOvershootPct);
 
@@ -247,7 +247,7 @@ interface IVP8Encoder : IUnknown
     //decoding application. Note that this value is expressed in units of
     //time (milliseconds). For example, a value of 5000 indicates that the
     //client will buffer (at least) 5000ms worth of encoded data.
-    
+
     HRESULT SetDecoderBufferSize([in] int TimeInMilliseconds);
     HRESULT GetDecoderBufferSize([out] int* pTimeInMilliseconds);
 
@@ -277,7 +277,7 @@ interface IVP8Encoder : IUnknown
 
     HRESULT SetKeyframeMode([in] enum VP8KeyframeMode Mode);
     HRESULT GetKeyframeMode([out] enum VP8KeyframeMode* pMode);
-    
+
     //Keyframe minimum interval
     //
     //This value, expressed as a number of frames, prevents the encoder from
@@ -297,22 +297,51 @@ interface IVP8Encoder : IUnknown
 
     HRESULT SetKeyframeMaxInterval([in] int MaxInterval);
     HRESULT GetKeyframeMaxInterval([out] int* pMaxInterval);
-    
+
     //Multi-pass Encoding Mode
     //
     //This value should be set to the current phase for multi-pass encoding.
-    
+
     HRESULT SetPassMode([in] enum VP8PassMode PassMode);
     HRESULT GetPassMode([out] enum VP8PassMode* pPassMode);
-    
+
     //Stats Buffer
     //
     //The stats buffer is the buffer containing all of the stats packets from
     //the first pass, concatenated together.  It is only used during the last
     //pass of a multi-pass (really, two-pass) mode.
-    
+
     HRESULT SetTwoPassStatsBuf(const BYTE* Buffer, LONGLONG Length);
     HRESULT GetTwoPassStatsBuf(const BYTE** pBuffer, LONGLONG* pLength);
+
+    //Two-pass mode CBR/VBR bias
+    //
+    //Bias, expressed on a scale of 0 to 100, for determining target size
+    //for the current frame. The value 0 indicates the optimal CBR mode
+    //value should be used. The value 100 indicates the optimal VBR mode
+    //value should be used. Values in between indicate which way the
+    //encoder should "lean."
+    //
+    //RC mode bias between CBR and VBR(0-100: 0->CBR, 100->VBR)
+
+    HRESULT SetTwoPassVbrBiasPct([in] int Bias);
+    HRESULT GetTwoPassVbrBiasPct([out] int* pBias);
+
+    //Two-pass mode per-GOP minimum bitrate
+    //
+    //This value, expressed as a percentage of the target bitrate, indicates
+    //the minimum bitrate to be used for a single GOP (aka "section").
+
+    HRESULT SetTwoPassVbrMinsectionPct([in] int Bitrate);
+    HRESULT GetTwoPassVbrMinsectionPct([out] int* pBitrate);
+
+    //Two-pass mode per-GOP maximum bitrate
+    //
+    //This value, expressed as a percentage of the target bitrate, indicates
+    //the maximum bitrate to be used for a single GOP (aka "section").
+
+    HRESULT SetTwoPassVbrMaxsectionPct([in] int Bitrate);
+    HRESULT GetTwoPassVbrMaxsectionPct([out] int* pBitrate);
 
 }
 

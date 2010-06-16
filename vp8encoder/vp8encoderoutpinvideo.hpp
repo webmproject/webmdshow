@@ -19,20 +19,20 @@ class OutpinVideo : public Outpin,
 {
     OutpinVideo(const OutpinVideo&);
     OutpinVideo& operator=(const OutpinVideo&);
-    
+
 protected:
     std::wstring GetName() const;
-    
-public:    
+
+public:
     explicit OutpinVideo(Filter*);
-    virtual ~OutpinVideo();    
+    virtual ~OutpinVideo();
 
     //IUnknown interface:
-    
+
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IPin interface:
 
     //HRESULT STDMETHODCALLTYPE Connect(IPin*, const AM_MEDIA_TYPE*);
@@ -40,61 +40,61 @@ public:
     HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
 
     //IMediaSeeking
-    
-    HRESULT STDMETHODCALLTYPE GetCapabilities(DWORD*);    
-    HRESULT STDMETHODCALLTYPE CheckCapabilities(DWORD*);    
-    HRESULT STDMETHODCALLTYPE IsFormatSupported(const GUID*);
-    HRESULT STDMETHODCALLTYPE QueryPreferredFormat(GUID*);    
-    HRESULT STDMETHODCALLTYPE GetTimeFormat(GUID*);    
-    HRESULT STDMETHODCALLTYPE IsUsingTimeFormat(const GUID*);    
-    HRESULT STDMETHODCALLTYPE SetTimeFormat(const GUID*);    
-    HRESULT STDMETHODCALLTYPE GetDuration(LONGLONG*);    
-    HRESULT STDMETHODCALLTYPE GetStopPosition(LONGLONG*);    
-    HRESULT STDMETHODCALLTYPE GetCurrentPosition(LONGLONG*);    
 
-    HRESULT STDMETHODCALLTYPE ConvertTimeFormat( 
+    HRESULT STDMETHODCALLTYPE GetCapabilities(DWORD*);
+    HRESULT STDMETHODCALLTYPE CheckCapabilities(DWORD*);
+    HRESULT STDMETHODCALLTYPE IsFormatSupported(const GUID*);
+    HRESULT STDMETHODCALLTYPE QueryPreferredFormat(GUID*);
+    HRESULT STDMETHODCALLTYPE GetTimeFormat(GUID*);
+    HRESULT STDMETHODCALLTYPE IsUsingTimeFormat(const GUID*);
+    HRESULT STDMETHODCALLTYPE SetTimeFormat(const GUID*);
+    HRESULT STDMETHODCALLTYPE GetDuration(LONGLONG*);
+    HRESULT STDMETHODCALLTYPE GetStopPosition(LONGLONG*);
+    HRESULT STDMETHODCALLTYPE GetCurrentPosition(LONGLONG*);
+
+    HRESULT STDMETHODCALLTYPE ConvertTimeFormat(
         LONGLONG*,
         const GUID*,
         LONGLONG,
         const GUID*);
-    
-    HRESULT STDMETHODCALLTYPE SetPositions( 
+
+    HRESULT STDMETHODCALLTYPE SetPositions(
         LONGLONG*,
         DWORD,
         LONGLONG*,
         DWORD);
-    
-    HRESULT STDMETHODCALLTYPE GetPositions( 
+
+    HRESULT STDMETHODCALLTYPE GetPositions(
         LONGLONG*,
         LONGLONG*);
-    
-    HRESULT STDMETHODCALLTYPE GetAvailable( 
+
+    HRESULT STDMETHODCALLTYPE GetAvailable(
         LONGLONG*,
         LONGLONG*);
-    
-    HRESULT STDMETHODCALLTYPE SetRate(double);    
-    HRESULT STDMETHODCALLTYPE GetRate(double*);    
+
+    HRESULT STDMETHODCALLTYPE SetRate(double);
+    HRESULT STDMETHODCALLTYPE GetRate(double*);
     HRESULT STDMETHODCALLTYPE GetPreroll(LONGLONG*);
-    
+
     //local functions
-    
+
     virtual void OnInpinConnect();
     HRESULT GetFrame(IVP8Sample::Frame&);
     HRESULT OnSetPassMode(VP8PassMode);
     void WriteStats(const vpx_codec_cx_pkt_t*);
-    
+
 protected:
     HRESULT OnDisconnect();
     void SetDefaultMediaTypes();
     void SetFirstPassMediaTypes();
-    
+
     virtual HRESULT PostConnect(IPin*);
     HRESULT GetAllocator(IMemInputPin*, IMemAllocator**) const;
     void GetSubtype(GUID&) const;
-    
+
     HRESULT PostConnectVideo(IPin*);
     HRESULT PostConnectStats(IPin*);
-    
+
 private:
     IStreamPtr m_pStream;
 

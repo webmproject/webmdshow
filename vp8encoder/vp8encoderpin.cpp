@@ -24,7 +24,7 @@ namespace VP8EncoderLib
 
 Pin::Pin(
     Filter* pFilter,
-    PIN_DIRECTION dir, 
+    PIN_DIRECTION dir,
     const wchar_t* id) :
     m_pFilter(pFilter),
     m_dir(dir),
@@ -42,12 +42,12 @@ Pin::~Pin()
 HRESULT Pin::EnumMediaTypes(IEnumMediaTypes** pp)
 {
     Filter::Lock lock;
-    
+
     HRESULT hr = lock.Seize(m_pFilter);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     return m_preferred_mtv.CreateEnum(this, pp);
 }
 
@@ -55,24 +55,24 @@ HRESULT Pin::EnumMediaTypes(IEnumMediaTypes** pp)
 HRESULT Pin::Disconnect()
 {
     Filter::Lock lock;
-    
+
     HRESULT hr = lock.Seize(m_pFilter);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     if (m_pFilter->m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
-        
+
     if (!bool(m_pPinConnection))
         return S_FALSE;
-        
+
     hr = OnDisconnect();
     assert(SUCCEEDED(hr));
 
-    m_pPinConnection = 0;    
+    m_pPinConnection = 0;
     m_connection_mtv.Clear();
-    
+
     return S_OK;
 }
 
@@ -87,42 +87,42 @@ HRESULT Pin::ConnectedTo(IPin** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IPin*& p = *pp;
-    
+
     Filter::Lock lock;
-    
+
     HRESULT hr = lock.Seize(m_pFilter);
-    
+
     if (FAILED(hr))
         return hr;
 
     p = m_pPinConnection;
-    
+
     if (p == 0)
         return VFW_E_NOT_CONNECTED;
-        
+
     p->AddRef();
     return S_OK;
 }
-        
-    
+
+
 HRESULT Pin::ConnectionMediaType(AM_MEDIA_TYPE* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Filter::Lock lock;
-    
+
     HRESULT hr = lock.Seize(m_pFilter);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     if (!bool(m_pPinConnection))
         return VFW_E_NOT_CONNECTED;
 
-    const CMediaTypes& mtv = m_connection_mtv;        
+    const CMediaTypes& mtv = m_connection_mtv;
     assert(mtv.Size() == 1);
 
     return mtv.Copy(0, *p);
@@ -133,19 +133,19 @@ HRESULT Pin::QueryPinInfo(PIN_INFO* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Filter::Lock lock;
-    
+
     HRESULT hr = lock.Seize(m_pFilter);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     PIN_INFO& i = *p;
-    
+
     i.pFilter = static_cast<IBaseFilter*>(m_pFilter);
     i.pFilter->AddRef();
-    
+
     i.dir = m_dir;
 
     //hr = GetName(i);
@@ -171,7 +171,7 @@ HRESULT Pin::QueryDirection(PIN_DIRECTION* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     *p = m_dir;
     return S_OK;
 }
@@ -181,18 +181,18 @@ HRESULT Pin::QueryId(LPWSTR* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     wchar_t*& id = *p;
-    
+
     const size_t len = m_id.length();            //wchar strlen
     const size_t buflen = len + 1;               //wchar strlen + wchar null
     const size_t cb = buflen * sizeof(wchar_t);  //total bytes
 
-    id = (wchar_t*)CoTaskMemAlloc(cb);    
-    
+    id = (wchar_t*)CoTaskMemAlloc(cb);
+
     if (id == 0)
         return E_OUTOFMEMORY;
-    
+
     const errno_t e = wcscpy_s(id, buflen, m_id.c_str());
     e;
     assert(e == 0);
@@ -204,51 +204,51 @@ HRESULT Pin::QueryId(LPWSTR* p)
 const BITMAPINFOHEADER& Pin::GetBMIH() const
 {
     assert(m_connection_mtv.Size() == 1);
-    
+
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
     assert(mt.pbFormat);
 
     if (mt.formattype == FORMAT_VideoInfo)
-    {    
-        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));    
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
 
         const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
         const BITMAPINFOHEADER& bmih = vih.bmiHeader;
 
         return bmih;
     }
-        
+
     assert(mt.formattype == FORMAT_VideoInfo2);
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));    
+    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
 
     const VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
     const BITMAPINFOHEADER& bmih = vih.bmiHeader;
 
     return bmih;
 }
-    
+
 
 __int64 Pin::GetAvgTimePerFrame() const
 {
     assert(m_connection_mtv.Size() == 1);
-    
+
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
     assert(mt.pbFormat);
 
     if (mt.formattype == FORMAT_VideoInfo)
-    {    
-        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));    
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
 
-        const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);        
+        const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
         return vih.AvgTimePerFrame;
     }
-        
+
     assert(mt.formattype == FORMAT_VideoInfo2);
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));    
+    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
 
     const VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
     return vih.AvgTimePerFrame;
 }
-    
+
 
 }  //end namespace VP8EncoderLib
