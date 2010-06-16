@@ -50,6 +50,9 @@ public:
     int GetLagInFrames() const;
     int GetTokenPartitions() const;
     int GetTwoPass() const;
+    int GetTwoPassVbrBiasPct() const;
+    int GetTwoPassVbrMinsectionPct() const;
+    int GetTwoPassVbrMaxsectionPct() const;
 
     static std::wstring GetPath(const wchar_t*);
 
@@ -88,6 +91,9 @@ private:
     int m_lag_in_frames;
     int m_token_partitions;
     int m_two_pass;
+    int m_two_pass_vbr_bias_pct;
+    int m_two_pass_vbr_minsection_pct;
+    int m_two_pass_vbr_maxsection_pct;
 
     static bool IsSwitch(const wchar_t*);
     int Parse(wchar_t**);

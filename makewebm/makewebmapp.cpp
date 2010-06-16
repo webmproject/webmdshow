@@ -2151,6 +2151,57 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
         }
     }
 
+    const int two_pass_vbr_bias_pct = m_cmdline.GetTwoPassVbrBiasPct();
+
+    if (two_pass_vbr_bias_pct >= 0)
+    {
+        const HRESULT hr = pVP8->SetTwoPassVbrBiasPct(two_pass_vbr_bias_pct);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder two-pass VBR bias pct.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
+    const int two_pass_vbr_minsection_pct = m_cmdline.GetTwoPassVbrMinsectionPct();
+
+    if (two_pass_vbr_minsection_pct >= 0)
+    {
+        const HRESULT hr = pVP8->SetTwoPassVbrMinsectionPct(two_pass_vbr_minsection_pct);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder two-pass VBR minsection pct.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
+    const int two_pass_vbr_maxsection_pct = m_cmdline.GetTwoPassVbrMaxsectionPct();
+
+    if (two_pass_vbr_maxsection_pct >= 0)
+    {
+        const HRESULT hr = pVP8->SetTwoPassVbrMaxsectionPct(two_pass_vbr_maxsection_pct);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder two-pass VBR maxsection pct.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
     return S_OK;
 }
 

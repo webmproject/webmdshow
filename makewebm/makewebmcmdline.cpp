@@ -54,7 +54,10 @@ CmdLine::CmdLine() :
     m_dropframe_thresh(-1),
     m_resize_allowed(-1),
     m_resize_up_thresh(-1),
-    m_resize_down_thresh(-1)
+    m_resize_down_thresh(-1),
+    m_two_pass_vbr_bias_pct(-1),
+    m_two_pass_vbr_minsection_pct(-1),
+    m_two_pass_vbr_maxsection_pct(-1)
 {
 }
 
@@ -1084,6 +1087,21 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
+    status = ParseOpt(i, arg, len, L"two-pass-vbr-bias-pct", m_two_pass_vbr_bias_pct, 0, 100);
+
+    if (status)
+        return status;
+
+    status = ParseOpt(i, arg, len, L"two-pass-vbr-minsection-pct", m_two_pass_vbr_minsection_pct, 0, 1000);  //?
+
+    if (status)
+        return status;
+
+    status = ParseOpt(i, arg, len, L"two-pass-vbr-maxsection-pct", m_two_pass_vbr_maxsection_pct, 0, 1000);  //?
+
+    if (status)
+        return status;
+
     status = ParseOpt(i, arg, len, L"undershoot-pct", m_undershoot_pct, 0, 100);
 
     if (status)
@@ -1270,6 +1288,24 @@ int CmdLine::GetTwoPass() const
 }
 
 
+int CmdLine::GetTwoPassVbrBiasPct() const
+{
+    return m_two_pass_vbr_bias_pct;
+}
+
+
+int CmdLine::GetTwoPassVbrMinsectionPct() const
+{
+    return m_two_pass_vbr_minsection_pct;
+}
+
+
+int CmdLine::GetTwoPassVbrMaxsectionPct() const
+{
+    return m_two_pass_vbr_maxsection_pct;
+}
+
+
 void CmdLine::PrintVersion() const
 {
     wcout << "makewebm ";
@@ -1315,6 +1351,9 @@ void CmdLine::PrintUsage() const
           << L"  --thread-count                  number of threads to use for VP8 encoding\n"
           << L"  --token-partitions              number of sub-streams\n"
           << L"  --two-pass                      two-pass encoding\n"
+          << L"  --two-pass-vbr-bias-pct         CBR/VBR bias\n"
+          << L"  --two-pass-vbr-minsection-pct   minimum bitrate\n"
+          << L"  --two-pass-vbr-maxsection-pct   maximum bitrate\n"
           << L"  --undershoot-pct                percent of target bitrate for easier frames\n"
           << L"  --overshoot-pct                 percent of target bitrate for harder frames\n"
           << L"  -l, --list                      print switch values, but do not run app\n"
@@ -1353,6 +1392,9 @@ void CmdLine::PrintUsage() const
           << L"    necessary to achieve best quality\n"
           << L"  1 (or \"realtime\") means real-time encoding\n"
           << L"  1000000 (or \"good\") means good quality (the default)\n";
+
+    wcout << '\n'
+          << "TODO: MORE PARAMS TO BE DESCRIBED HERE\n";
 
     wcout << endl;
 }
@@ -1516,6 +1558,15 @@ void CmdLine::ListArgs() const
 
     if (m_two_pass >= 0)
         wcout << L"two-pass: " << m_two_pass << L'\n';
+
+    if (m_two_pass_vbr_bias_pct >= 0)
+        wcout << L"two-pass-vbr-bias-pct: " << m_two_pass_vbr_bias_pct << L'\n';
+
+    if (m_two_pass_vbr_minsection_pct >= 0)
+        wcout << L"two-pass-vbr-minsection-pct: " << m_two_pass_vbr_minsection_pct << L'\n';
+
+    if (m_two_pass_vbr_maxsection_pct >= 0)
+        wcout << L"two-pass-vbr-maxsection-pct: " << m_two_pass_vbr_maxsection_pct << L'\n';
 
     if (m_undershoot_pct >= 0)
         wcout << L"undershoot-pct: " << m_undershoot_pct << L'\n';
