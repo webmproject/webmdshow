@@ -23,16 +23,16 @@ class Inpin : public Pin
 {
     Inpin(const Inpin&);
     Inpin& operator=(const Inpin&);
-    
+
 public:
     explicit Inpin(Filter*);
-    
+
     //IUnknown interface:
-    
+
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IPin interface:
 
     HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
@@ -41,25 +41,25 @@ public:
 
     //HRESULT STDMETHODCALLTYPE Disconnect();
 
-    HRESULT STDMETHODCALLTYPE ReceiveConnection( 
+    HRESULT STDMETHODCALLTYPE ReceiveConnection(
         IPin*,
         const AM_MEDIA_TYPE*);
-        
-    HRESULT STDMETHODCALLTYPE QueryInternalConnections( 
+
+    HRESULT STDMETHODCALLTYPE QueryInternalConnections(
         IPin**,
         ULONG*);
-        
+
     HRESULT STDMETHODCALLTYPE EndOfStream();
 
-    HRESULT STDMETHODCALLTYPE BeginFlush();    
+    HRESULT STDMETHODCALLTYPE BeginFlush();
 
     HRESULT STDMETHODCALLTYPE EndFlush();
-    
-    HRESULT STDMETHODCALLTYPE NewSegment( 
+
+    HRESULT STDMETHODCALLTYPE NewSegment(
         REFERENCE_TIME,
         REFERENCE_TIME,
         double);
-        
+
 protected:
     HRESULT GetName(PIN_INFO&) const;
     HRESULT OnDisconnect();
@@ -67,8 +67,8 @@ protected:
 public:
     GraphUtil::IMemAllocatorPtr m_pAllocator;
     //GraphUtil::IAsyncReaderPtr m_pAsyncReader;
-    MkvReader m_reader;    
+    MkvReader m_reader;
 
 };
-    
+
 }  //end namespace WebmSplit

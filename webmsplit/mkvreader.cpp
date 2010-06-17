@@ -35,7 +35,7 @@ bool MkvReader::IsOpen() const
 }
 
 
-HRESULT MkvReader::MkvRead( 
+HRESULT MkvReader::MkvRead(
     LONGLONG start,
     LONG len,
     BYTE* ptr)
@@ -45,7 +45,7 @@ HRESULT MkvReader::MkvRead(
 }
 
 
-HRESULT MkvReader::MkvLength( 
+HRESULT MkvReader::MkvLength(
     LONGLONG* pTotal,
     LONGLONG* pAvailable)
 {

@@ -17,23 +17,23 @@ class MkvReader : public MkvParser::IMkvFile
 {
     MkvReader(const MkvReader&);
     MkvReader& operator=(const MkvReader&);
-    
+
 public:
     MkvReader();
     virtual ~MkvReader();
-    
+
     void SetSource(IAsyncReader*);
     bool IsOpen() const;
-    
-    HRESULT MkvRead( 
+
+    HRESULT MkvRead(
         LONGLONG,
         LONG,
         BYTE*);
-    
-    HRESULT MkvLength( 
+
+    HRESULT MkvLength(
         LONGLONG*,
         LONGLONG*);
-    
+
 private:
     GraphUtil::IAsyncReaderPtr m_pSource;
 

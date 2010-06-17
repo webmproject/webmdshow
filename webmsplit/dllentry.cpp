@@ -23,8 +23,8 @@ namespace WebmSplit
 {
     HRESULT CreateInstance(
             IClassFactory*,
-            IUnknown*, 
-            const IID&, 
+            IUnknown*,
+            const IID&,
             void**);
 
 }  //end namespace WebmSplit
@@ -34,8 +34,8 @@ static CFactory s_factory(&s_cLock, &WebmSplit::CreateInstance);
 
 
 BOOL APIENTRY DllMain(
-    HINSTANCE hModule, 
-    DWORD  dwReason, 
+    HINSTANCE hModule,
+    DWORD  dwReason,
     LPVOID)
 {
     switch (dwReason)
@@ -51,7 +51,7 @@ BOOL APIENTRY DllMain(
         default:
             break;
     }
-   
+
     return TRUE;
 }
 
@@ -84,7 +84,7 @@ STDAPI DllUnregisterServer()
                     &CLSID_LegacyAmFilterCategory,
                     0,
                     WebmTypes::CLSID_WebmSplit);
-                    
+
     //assert(SUCCEEDED(hr));
 
     //hr = ComReg::UnRegisterCustomFileType(L".mkv", WebmSplit::CLSID_WebmSplit);
@@ -103,10 +103,10 @@ STDAPI DllRegisterServer()
     HRESULT hr = ComReg::ComRegGetModuleFileName(s_hModule, filename_);
     assert(SUCCEEDED(hr));
     assert(!filename_.empty());
-    
+
     const wchar_t* const filename = filename_.c_str();
 
-#if _DEBUG    
+#if _DEBUG
     const wchar_t friendlyname[] = L"WebM Splitter Filter (Debug)";
 #else
     const wchar_t friendlyname[] = L"WebM Splitter Filter";
@@ -114,7 +114,7 @@ STDAPI DllRegisterServer()
 
     hr = DllUnregisterServer();
     assert(SUCCEEDED(hr));
-    
+
     hr = ComReg::RegisterCoclass(
             WebmTypes::CLSID_WebmSplit,
             friendlyname,
@@ -127,27 +127,27 @@ STDAPI DllRegisterServer()
             GUID_NULL,     //typelib
             0,    //no version specified
             0);   //no toolbox bitmap
-            
+
     assert(SUCCEEDED(hr));
-            
+
 #if 0
     hr = ComReg::RegisterCustomFileType(
             L".webm",
             CLSID_AsyncReader,             //source
-            MEDIATYPE_Stream,              //major 
+            MEDIATYPE_Stream,              //major
             WebmTypes::MEDIASUBTYPE_WEBM); //minor
-                
+
     assert(SUCCEEDED(hr));
 #endif
 
     const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
     assert(bool(pMapper));
-    
+
     enum { cPins = 2 };
     REGFILTERPINS pins[cPins];
-    
+
     REGFILTERPINS& inpin = pins[0];
-    
+
     enum { nInpinMediaTypes = 1 };
     const REGPINTYPES inpinMediaTypes[nInpinMediaTypes] =
     {
@@ -160,7 +160,7 @@ STDAPI DllRegisterServer()
     inpin.bZero = FALSE;
     inpin.bMany = FALSE;
     inpin.clsConnectsToFilter = 0;  //obsolete
-    inpin.strConnectsToPin = 0;     //obsolete    
+    inpin.strConnectsToPin = 0;     //obsolete
     inpin.nMediaTypes = nInpinMediaTypes;
     inpin.lpMediaType = inpinMediaTypes;
 
@@ -172,26 +172,26 @@ STDAPI DllRegisterServer()
     outpin.bZero = FALSE;            //?
     outpin.bMany = TRUE;
     outpin.clsConnectsToFilter = 0;  //obsolete
-    outpin.strConnectsToPin = 0;     //obsolete    
+    outpin.strConnectsToPin = 0;     //obsolete
     outpin.nMediaTypes = 0;
     outpin.lpMediaType = 0;
 
     //pin setup complete
-    
+
     REGFILTER2 filter;
-    
+
     filter.dwVersion = 1;
     filter.dwMerit = MERIT_NORMAL;
     filter.cPins = cPins;
     filter.rgPins = pins;
-    
+
     hr = pMapper->RegisterFilter(
             WebmTypes::CLSID_WebmSplit,
             friendlyname,
             0,
             &CLSID_LegacyAmFilterCategory,
             0,
-            &filter);                       
+            &filter);
 
     return hr;
 }

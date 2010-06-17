@@ -31,25 +31,25 @@ HRESULT Inpin::QueryInterface(const IID& iid, void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-    
+
     if (iid == __uuidof(IUnknown))
         pUnk = static_cast<IPin*>(this);
-        
+
     else if (iid == __uuidof(IPin))
         pUnk = static_cast<IPin*>(this);
-        
+
     else
     {
         pUnk = 0;
         return E_NOINTERFACE;
     }
-    
+
     pUnk->AddRef();
     return S_OK;
 }
-    
+
 
 ULONG Inpin::AddRef()
 {
@@ -69,28 +69,28 @@ HRESULT Inpin::Connect(IPin*, const AM_MEDIA_TYPE*)
 }
 
 
-HRESULT Inpin::QueryInternalConnections( 
+HRESULT Inpin::QueryInternalConnections(
     IPin** pa,
     ULONG* pn)
 {
     if (pn == 0)
         return E_POINTER;
-        
+
     Filter::Lock lock;
-    
+
     HRESULT hr = lock.Seize(m_pFilter);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     const Filter::outpins_t& outpins = m_pFilter->m_outpins;
     const ULONG m = static_cast<ULONG>(outpins.size());
-    
+
     //odbgstream os;
     //os << "WebmSplit::inpin: QueryInternalConnections; m=" << m << endl;
-    
+
     ULONG& n = *pn;
-    
+
     if (n == 0)
     {
         if (pa == 0)  //query for required number
@@ -98,100 +98,100 @@ HRESULT Inpin::QueryInternalConnections(
             n = m;
             return S_OK;
         }
-        
+
         return S_FALSE;  //means "insufficient number of array elements"
     }
-    
+
     if (n < m)
     {
         n = 0;
         return S_FALSE;  //means "insufficient number of array elements"
     }
-        
+
     if (pa == 0)
     {
         n = 0;
         return E_POINTER;
     }
-    
+
     typedef Filter::outpins_t::const_iterator iter_t;
-    
+
     iter_t i = outpins.begin();
     const iter_t j = outpins.end();
-    
+
     IPin** k = pa;
-    
+
     while (i != j)
     {
         Outpin* const p = *i++;
         assert(p);
-        
+
         IPin*& q = *k++;
-        
+
         q = p;
         q->AddRef();
     }
 
-    n = m;    
-    return S_OK;        
+    n = m;
+    return S_OK;
 }
 
 
-HRESULT Inpin::ReceiveConnection( 
+HRESULT Inpin::ReceiveConnection(
     IPin* pin,
     const AM_MEDIA_TYPE* pmt)
 {
     if (pin == 0)
         return E_INVALIDARG;
-        
+
     GraphUtil::IAsyncReaderPtr pReader;
-        
+
     HRESULT hr = pin->QueryInterface(&pReader);
-    
+
     if (hr != S_OK)
         return hr;
 
     Filter::Lock lock;
-        
+
     hr = lock.Seize(m_pFilter);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_pFilter->m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
 
     if (bool(m_pPinConnection))
         return VFW_E_ALREADY_CONNECTED;
-        
+
     //assert(!bool(m_pReader));
 
     m_connection_mtv.Clear();
-    
+
     if ((pmt != 0) && (pmt->majortype != GUID_NULL))
     {
         hr = QueryAccept(pmt);
-        
+
         if (hr != S_OK)
             return VFW_E_TYPE_NOT_ACCEPTED;
     }
-            
+
     hr = m_connection_mtv.Add(*pmt);
-    
+
     if (FAILED(hr))
         return hr;
-        
-    m_reader.SetSource(pReader);                    
+
+    m_reader.SetSource(pReader);
     hr = m_pFilter->Open(&m_reader);
-    
+
     if (FAILED(hr))
     {
         m_reader.SetSource(0);
         return hr;
     }
-        
+
     m_pPinConnection = pin;
-    
+
     return S_OK;
 }
 
@@ -200,13 +200,13 @@ HRESULT Inpin::EndOfStream()
 {
     return E_UNEXPECTED;
 }
-    
+
 
 HRESULT Inpin::BeginFlush()
 {
     return E_UNEXPECTED;
 }
-    
+
 
 HRESULT Inpin::EndFlush()
 {
@@ -214,7 +214,7 @@ HRESULT Inpin::EndFlush()
 }
 
 
-HRESULT Inpin::NewSegment( 
+HRESULT Inpin::NewSegment(
     REFERENCE_TIME,
     REFERENCE_TIME,
     double)
@@ -227,14 +227,14 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
 {
     if (pmt == 0)
         return E_INVALIDARG;
-        
+
     const AM_MEDIA_TYPE& mt = *pmt;
-    
+
     if (mt.majortype == MEDIATYPE_Stream)
         return S_OK;
-        
+
     //TODO: accept only MEDIASUBTYPE_MKV?
-        
+
     return S_FALSE;
 }
 
@@ -243,15 +243,15 @@ HRESULT Inpin::OnDisconnect()
 {
     //odbgstream os;
     //os << "WebmSplit::Inpin::OnDisconnect: calling OnDisconnectInpin" << endl;
-    
+
     const HRESULT hr = m_pFilter->OnDisconnectInpin();
     hr;
     assert(SUCCEEDED(hr));  //TODO
-    
+
     //os << "WebmSplit::Inpin::OnDisconnect: called OnDisconnectInpin" << endl;
 
     m_reader.SetSource(0);
-    
+
     return S_OK;
 }
 
@@ -259,7 +259,7 @@ HRESULT Inpin::OnDisconnect()
 HRESULT Inpin::GetName(PIN_INFO& info) const
 {
     const wchar_t name[] = L"MKV";  //TODO
-    
+
 #if _MSC_VER >= 1400
     enum { namelen = sizeof(info.achName) / sizeof(WCHAR) };
     const errno_t e = wcscpy_s(info.achName, namelen, name);
