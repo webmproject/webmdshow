@@ -19,22 +19,22 @@ using std::wstring;
 
 std::wostream& operator<<(std::wostream& os, const IIDStr& iidstr)
 {
-    wchar_t guidstr[CHARS_IN_GUID];   
-    
+    wchar_t guidstr[CHARS_IN_GUID];
+
     StringFromGUID2(iidstr.m_iid, guidstr, CHARS_IN_GUID);
 
     const wstring subkey = wstring(L"Interface\\") + guidstr;
-    
+
     const Registry::Key key(HKEY_CLASSES_ROOT, subkey);
-    
+
     if (!key.is_open())
         return os << guidstr;
-        
+
     wstring buf;
-    
+
     if (key(buf))
         return os << buf;
-        
+
     return os << guidstr;
 }
 

@@ -15,16 +15,16 @@
 using std::wstring;
 using std::wostringstream;
 
-GUID ComReg::GUIDFromString(const wchar_t* const_str)  
+GUID ComReg::GUIDFromString(const wchar_t* const_str)
 {
     wchar_t* const str = const_cast<wchar_t*>(const_str);
-    
+
     GUID guid;
-    
+
     const HRESULT hr = CLSIDFromString(str, &guid);
     assert(SUCCEEDED(hr));  //TODO
     hr;
-    
+
     return guid;
 }
 
@@ -32,28 +32,28 @@ GUID ComReg::GUIDFromString(const wchar_t* const_str)
 HRESULT ComReg::ComRegGetModuleFileName(HMODULE h, std::wstring& result)
 {
     DWORD n = 256;  //number of TCHARS
-    
+
     for (;;)
     {
         void* const pv = _alloca(n * sizeof(wchar_t));
         wchar_t* const buf = (wchar_t*)pv;
-        
+
         const DWORD dw = GetModuleFileNameW(h, buf, n);
-        
+
         if (dw == 0)  //error
         {
             result.clear();
-            
+
             const DWORD e = GetLastError();
             return HRESULT_FROM_WIN32(e);
         }
-        
+
         if (dw >= n)  //truncation
         {
             n *= 2;
             continue;
         }
-        
+
         result = buf;
         return S_OK;
     }
@@ -67,52 +67,52 @@ HRESULT ComReg::RegisterCustomFileType(
     const GUID& subtype)
 {
     Registry::Key parent, key;
-    
+
     LONG e = parent.open(
-                HKEY_CLASSES_ROOT, 
-                L"Media Type\\Extensions", 
+                HKEY_CLASSES_ROOT,
+                L"Media Type\\Extensions",
                 KEY_CREATE_SUB_KEY);
-                
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     e = key.create<wchar_t>(parent, ext, 0, 0, KEY_SET_VALUE, 0);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     wchar_t buf[guid_buflen];
-    
+
     int n = StringFromGUID2(filter, buf, guid_buflen);
     assert(n == guid_buflen);
-    
+
     e = key.set(L"Source Filter", buf);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     if (mediatype != GUID_NULL)
-    {        
+    {
         n = StringFromGUID2(mediatype, buf, guid_buflen);
         assert(n == guid_buflen);
-        
+
         e = key.set(L"Media Type", buf);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if (subtype != GUID_NULL)
     {
         n = StringFromGUID2(subtype, buf, guid_buflen);
         assert(n == guid_buflen);
-        
+
         e = key.set(L"Subtype", buf);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     return S_OK;
 }
 
@@ -122,53 +122,53 @@ HRESULT ComReg::UnRegisterCustomFileType(
     const GUID& filter)
 {
     Registry::Key parent, key;
-    
+
     LONG e = parent.open(HKEY_CLASSES_ROOT, L"Media Type\\Extensions", KEY_ALL_ACCESS);
-                
+
     if (e == ERROR_FILE_NOT_FOUND)  //weird
         return S_FALSE;
 
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     e = key.open(parent, ext, KEY_ALL_ACCESS);
-    
+
     if (e == ERROR_FILE_NOT_FOUND)  //normal
         return S_FALSE;  //not an error if key does not already exist
-        
+
     if (e)  //indicates a deeper problem
         return HRESULT_FROM_WIN32(e);
-        
+
     wstring clsidstr;
-        
+
     e = key.query(L"Source Filter", clsidstr);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-                
+
     const wchar_t* const const_str = clsidstr.c_str();
     wchar_t* const str = const_cast<wchar_t*>(const_str);
-    
+
     CLSID clsid;
-        
+
     const HRESULT hr = CLSIDFromString(str, &clsid);
     hr;
     assert(SUCCEEDED(hr));
-    
+
     if (clsid != filter)
         return S_FALSE;
-    
-    //const wstring key_ = wstring(L"Media Type\\Extensions") + ext;    
+
+    //const wstring key_ = wstring(L"Media Type\\Extensions") + ext;
     //const DWORD dw = Registry::SHDeleteKey(HKEY_CLASSES_ROOT, key_.c_str());
     //assert(dw == ERROR_SUCCESS);
-    
+
     key.close();
-    
+
     e = Registry::DeleteKey(parent, ext);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     return S_OK;
 }
 
@@ -184,69 +184,69 @@ HRESULT ComReg::RegisterCustomFileType(
     assert(filter != GUID_NULL);
     assert(mediatype != GUID_NULL);
     assert(subtype != GUID_NULL);
-    
+
     Registry::Key parent, key1, key2;
-    
+
     LONG e = parent.open(
-                HKEY_CLASSES_ROOT, 
-                L"Media Type", 
+                HKEY_CLASSES_ROOT,
+                L"Media Type",
                 KEY_CREATE_SUB_KEY);
-                
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     wchar_t buf[guid_buflen];
-    
+
     int n = StringFromGUID2(mediatype, buf, guid_buflen);
     assert(n == guid_buflen);
 
     e = key1.create<wchar_t>(parent, buf, 0, 0, KEY_SET_VALUE, 0);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     n = StringFromGUID2(subtype, buf, guid_buflen);
     assert(n == guid_buflen);
-    
+
     e = key2.create<wchar_t>(key1, buf, 0, 0, KEY_SET_VALUE, 0);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     const wchar_t* arg = *argv;
     assert(arg);
-    
+
     int i = 0;
-        
+
     for (;;)
     {
         wostringstream os;
         os << i;
-        
+
         const wstring name_ = os.str();
         const wchar_t* const name = name_.c_str();
-        
+
         e = key2.set(name, arg);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-            
+
         arg = *++argv;
-        
+
         if (arg == 0)
             break;
-            
+
         ++i;
-    }    
+    }
 
     n = StringFromGUID2(filter, buf, guid_buflen);
     assert(n == guid_buflen);
 
     e = key2.set(L"Source Filter", buf);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-        
+
     return S_OK;
 }
 
@@ -265,102 +265,102 @@ static HRESULT CreateClsidKey(
     int toolboxbitmap)
 {
     Registry::Key clsid_key;
-    
+
     LONG e = clsid_key.create(HKEY_CLASSES_ROOT, clsid_keyname);
-                    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-    
+
     if (friendlyname)
     {
         e = clsid_key.set(friendlyname);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if (insertable)
     {
-        Registry::Key subkey;        
+        Registry::Key subkey;
 
         e = subkey.create(clsid_key, L"Insertable");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if (control)
     {
         Registry::Key subkey;
-        
+
         e = subkey.create(clsid_key, L"Control");
 
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if (versionindependentprogid)
     {
         Registry::Key subkey;
-        
+
         e = subkey.create(clsid_key, L"VersionIndependentProgID");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-        
+
         e = subkey.set(versionindependentprogid);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if (progid)
     {
         Registry::Key subkey;
-        
+
         e = subkey.create(clsid_key, L"ProgID");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-            
+
         e = subkey.set(progid);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if (inprocserver)
     {
         Registry::Key subkey;
-        
+
         e = subkey.create(clsid_key, L"InprocServer32");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-    
+
         e = subkey.set(inprocserver);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-            
+
         if (threadingmodel != ComReg::kSingleThreading)
         {
-            const wchar_t* const a[3] = 
+            const wchar_t* const a[3] =
             {
                 L"Apartment",
                 L"Free",
                 L"Both"
             };
-            
+
             const wchar_t* const val = a[threadingmodel];
-            
+
             e = subkey.set(L"ThreadingModel", val);
-            
+
             if (e)
                 return HRESULT_FROM_WIN32(e);
         }
     }
-    
+
     if (typelib != GUID_NULL)
     {
         wchar_t guid_str[ComReg::guid_buflen];
@@ -370,47 +370,47 @@ static HRESULT CreateClsidKey(
         n;
 
         Registry::Key subkey;
-        
+
         e = subkey.create(clsid_key, L"TypeLib");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-            
+
         e = subkey.set(guid_str);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if (version)
     {
         Registry::Key subkey;
-        
+
         e = subkey.create(clsid_key, L"Version");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-            
+
         e = subkey.set(version);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     if ((toolboxbitmap > 0) && (inprocserver != 0))
     {
         Registry::Key subkey;
-        
+
         e = subkey.create(clsid_key, L"ToolBoxBitmap32");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-            
+
         std::wostringstream os;
         os << inprocserver << L", " << toolboxbitmap;
-        
+
         e = subkey.set(os.str().c_str());  //TODO: fix registry.hpp
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
@@ -424,38 +424,38 @@ static HRESULT CreateProgidKey(
     const wchar_t* friendlyname,
     const wchar_t* progid,
     const wchar_t* curver,  //only for versionindependentprogid
-    bool insertable)  
+    bool insertable)
 {
     assert(progid);
-    
+
     Registry::Key progid_key;
-    
+
     LONG e = progid_key.create(HKEY_CLASSES_ROOT, progid);
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
 
     if (friendlyname)
-    {    
+    {
         e = progid_key.set(friendlyname);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     Registry::Key subkey;
-    
+
     e = subkey.create(progid_key, L"CLSID");
-    
+
     if (e)
         return HRESULT_FROM_WIN32(e);
-    
+
     e = subkey.set<wchar_t>(0, clsid_str);  //TODO: fix registry.hpp
 
     if (insertable)
-    {        
+    {
         e = subkey.create(progid_key, L"Insertable");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
@@ -463,16 +463,16 @@ static HRESULT CreateProgidKey(
     if (curver)
     {
         e = subkey.create(progid_key, L"CurVer");
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
-            
+
         e = subkey.set(curver);
-        
+
         if (e)
             return HRESULT_FROM_WIN32(e);
     }
-    
+
     return S_OK;
 }
 
@@ -495,7 +495,7 @@ HRESULT ComReg::RegisterCoclass(
     const int n = StringFromGUID2(clsid, clsid_str, guid_buflen);
     assert(n == guid_buflen);
     n;
-    
+
     const wstring clsid_keyname = wstring(L"CLSID\\") + clsid_str;
 
     HRESULT hr = CreateClsidKey(
@@ -510,36 +510,36 @@ HRESULT ComReg::RegisterCoclass(
                     typelib,
                     version,
                     toolboxbitmap);
-                    
+
     if (hr != S_OK)
         return hr;
-        
+
     if (versionindependentprogid)
     {
         hr = CreateProgidKey(
-                clsid_str, 
-                friendlyname, 
+                clsid_str,
+                friendlyname,
                 versionindependentprogid,
                 progid,
                 insertable);  //TODO: pass false here?
-                
+
         if (hr != S_OK)
             return hr;
     }
-    
+
     if (progid)
     {
         hr = CreateProgidKey(
-                clsid_str, 
-                friendlyname, 
+                clsid_str,
+                friendlyname,
                 progid,
                 0,  //no CurVer for progid
                 insertable);
-                
+
         if (hr != S_OK)
             return hr;
     }
-    
+
     return S_OK;
 }
 
@@ -552,54 +552,54 @@ HRESULT ComReg::UnRegisterCoclass(const GUID& clsid)
     const int n = StringFromGUID2(clsid, clsid_str, clsid_strlen);
     assert(n == clsid_strlen);
     n;
-    
+
     const wstring clsid_keyname = wstring(L"CLSID\\") + clsid_str;
-    
+
     Registry::Key clsid_key(HKEY_CLASSES_ROOT, clsid_keyname); //TODO: , KEY_QUERY_VALUE | KEY_SET_VALUE);
-    
+
     if (!clsid_key.is_open())
         return S_OK;
-        
+
     Registry::Key subkey(clsid_key, L"VersionIndependentProgID");  //open
-    
+
     if (subkey.is_open())
     {
         wstring val;
-        
+
         if (subkey(val))
         {
             const DWORD dw = Registry::SHDeleteKey(HKEY_CLASSES_ROOT, val);
             assert(dw == ERROR_SUCCESS);
             dw;
-            
+
             //TODO: delete subkey from clsid_key
         }
     }
-    
+
     subkey.open(clsid_key, L"ProgID");
-    
+
     if (subkey.is_open())
     {
         wstring val;
-        
+
         if (subkey(val))
         {
             const DWORD dw = Registry::SHDeleteKey(HKEY_CLASSES_ROOT, val);
             assert(dw == ERROR_SUCCESS);
             dw;
-            
+
             //TODO: delete subkey
         }
 
     }
-    
-    subkey.close();    
+
+    subkey.close();
     clsid_key.close();
-    
+
     const DWORD dw = Registry::SHDeleteKey(HKEY_CLASSES_ROOT, clsid_keyname);
     assert(dw == ERROR_SUCCESS);
     dw;
-    
+
     return S_OK;
 }
 
@@ -609,23 +609,23 @@ HRESULT ComReg::RegisterTypeLibResource(
     const wchar_t* helpdir_)
 {
     ITypeLib* pTypeLib;
-    
+
     HRESULT hr = LoadTypeLib(fullpath_, &pTypeLib);
     //Does not register if filename is a full path, which is what we want.
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     assert(pTypeLib);
-    
+
     wchar_t* const fullpath = const_cast<wchar_t*>(fullpath_);
     wchar_t* const helpdir = const_cast<wchar_t*>(helpdir_);
-    
+
     hr = RegisterTypeLib(pTypeLib, fullpath, helpdir);
-    
+
     pTypeLib->Release();
     pTypeLib = 0;
-    
+
     return hr;
 }
 
@@ -633,42 +633,42 @@ HRESULT ComReg::RegisterTypeLibResource(
 HRESULT ComReg::UnRegisterTypeLibResource(const wchar_t* fullpath)
 {
     ITypeLib* pTypeLib;
-    
+
     HRESULT hr = LoadTypeLib(fullpath, &pTypeLib);
     //Does not register if filename is a full path, which is what we want.
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     assert(pTypeLib);
-    
+
     TLIBATTR* pLibAttr;
-    
+
     hr = pTypeLib->GetLibAttr(&pLibAttr);
-    
+
     if (FAILED(hr))
     {
         pTypeLib->Release();
         pTypeLib = 0;
-        
+
         return hr;
     }
-    
-    assert(pLibAttr);    
+
+    assert(pLibAttr);
     const TLIBATTR a(*pLibAttr);
-    
+
     pTypeLib->ReleaseTLibAttr(pLibAttr);
-    
+
     pTypeLib->Release();
     pTypeLib = 0;
 
     hr = UnRegisterTypeLib(
-            a.guid, 
-            a.wMajorVerNum, 
-            a.wMinorVerNum, 
+            a.guid,
+            a.wMajorVerNum,
+            a.wMinorVerNum,
             a.lcid,
             a.syskind);
-            
+
     return hr;
 }
 
@@ -678,34 +678,34 @@ HRESULT ComReg::GetTypeLibAttr(
     TLIBATTR& a)
 {
     ITypeLib* pTypeLib;
-    
+
     HRESULT hr = LoadTypeLib(fullpath, &pTypeLib);
     //Does not register if filename is a full path, which is what we want.
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     assert(pTypeLib);
-    
+
     TLIBATTR* pLibAttr;
-    
+
     hr = pTypeLib->GetLibAttr(&pLibAttr);
-    
+
     if (FAILED(hr))
     {
         pTypeLib->Release();
         pTypeLib = 0;
-        
+
         return hr;
     }
-    
-    assert(pLibAttr);    
+
+    assert(pLibAttr);
     a = *pLibAttr;
-    
+
     pTypeLib->ReleaseTLibAttr(pLibAttr);
-    
+
     pTypeLib->Release();
     pTypeLib = 0;
-            
+
     return S_OK;
 }

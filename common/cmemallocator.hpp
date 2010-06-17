@@ -28,18 +28,18 @@ public:
         virtual HRESULT DestroySample(IMemSample*) = 0;
         virtual HRESULT Destroy(CMemAllocator*) = 0;
     };
-        
+
 protected:
 
     explicit CMemAllocator(ISampleFactory*);
     virtual ~CMemAllocator();
-    
+
 public:
-    
+
     ISampleFactory* const m_pSampleFactory;
 
     static HRESULT CreateInstance(ISampleFactory*, IMemAllocator**);
-    
+
     ULONG GetCount() const;
 
     //IUnknown
@@ -47,28 +47,28 @@ public:
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IMemAllocator
 
-    HRESULT STDMETHODCALLTYPE SetProperties( 
+    HRESULT STDMETHODCALLTYPE SetProperties(
         ALLOCATOR_PROPERTIES*,
         ALLOCATOR_PROPERTIES*);
-    
-    HRESULT STDMETHODCALLTYPE GetProperties( 
+
+    HRESULT STDMETHODCALLTYPE GetProperties(
         ALLOCATOR_PROPERTIES*);
-    
+
     HRESULT STDMETHODCALLTYPE Commit();
-    
+
     HRESULT STDMETHODCALLTYPE Decommit();
-    
-    HRESULT STDMETHODCALLTYPE GetBuffer( 
+
+    HRESULT STDMETHODCALLTYPE GetBuffer(
         IMediaSample**,
         REFERENCE_TIME*,
         REFERENCE_TIME*,
         DWORD);
-    
+
     HRESULT STDMETHODCALLTYPE ReleaseBuffer(IMediaSample*);
-    
+
 private:
 
     ULONG m_cRef;
@@ -76,11 +76,11 @@ private:
     ALLOCATOR_PROPERTIES m_props;
     bool m_bCommitted;
     long m_cActive;
-    
+
     typedef std::list<IMemSample*> samples_t;
     samples_t m_samples;
 
     HRESULT CreateSample();
     IMediaSample* GetSample();
-    
+
 };

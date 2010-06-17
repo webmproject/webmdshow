@@ -9,7 +9,7 @@
 #pragma once
 
 [
-    uuid(ED3110F9-5211-11DF-94AF-0026B977EEAA)    
+    uuid(ED3110F9-5211-11DF-94AF-0026B977EEAA)
 ]
 interface IMemSample : IUnknown
 {
@@ -17,4 +17,4 @@ interface IMemSample : IUnknown
     virtual HRESULT STDMETHODCALLTYPE Initialize() = 0;
     virtual HRESULT STDMETHODCALLTYPE Finalize() = 0;
     virtual HRESULT STDMETHODCALLTYPE Destroy() = 0;
-};    
+};

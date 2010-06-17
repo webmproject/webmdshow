@@ -24,7 +24,7 @@ interface IVP8Sample : IUnknown
         REFERENCE_TIME start;
         REFERENCE_TIME stop;
     };
-    
+
     virtual Frame& GetFrame() = 0;
 
 };

@@ -44,11 +44,11 @@ HRESULT CMediaTypes::CEnumMediaTypes::Clone(
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IEnumMediaTypes*& p = *pp;
-    
+
     p = new (std::nothrow) CEnumMediaTypes(*this);
-    
+
     return p ? S_OK : E_OUTOFMEMORY;
 }
 
@@ -74,12 +74,12 @@ void CMediaTypes::CEnumMediaTypes::ReleaseItems(AM_MEDIA_TYPE** a, ULONG n)
 HRESULT CMediaTypes::Add(const AM_MEDIA_TYPE& src)
 {
     AM_MEDIA_TYPE tgt;
-    
+
     const HRESULT hr = MediaTypeUtil::Copy(src, tgt);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     m_vec.push_back(tgt);
 
     return S_OK;
@@ -90,10 +90,10 @@ HRESULT CMediaTypes::Clear()
 {
     while (!m_vec.empty())
     {
-        MediaTypeUtil::Destroy(m_vec.back());        
+        MediaTypeUtil::Destroy(m_vec.back());
         m_vec.pop_back();
     }
-    
+
     return S_OK;
 }
 
@@ -103,7 +103,7 @@ ULONG CMediaTypes::Size() const
     const vec_t::size_type n = m_vec.size();
     return static_cast<ULONG>(n);
 }
-    
+
 const AM_MEDIA_TYPE& CMediaTypes::operator[](ULONG i) const
 {
     return m_vec.at(i);
@@ -134,11 +134,11 @@ HRESULT CMediaTypes::CreateEnum(
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IEnumMediaTypes*& p = *pp;
-    
+
     p = new (std::nothrow) CEnumMediaTypes(pPin, this);
-    
+
     return p ? S_OK : E_OUTOFMEMORY;
 }
 
@@ -149,16 +149,16 @@ CMediaTypes::CMediaTypes()
 
 
 CMediaTypes::~CMediaTypes()
-{        
+{
     Clear();
-}    
+}
 
-    
+
 HRESULT CMediaTypes::GetCount(ULONG& n) const
 {
     const vec_t::size_type size = m_vec.size();
     n = static_cast<ULONG>(size);
-    
+
     return S_OK;
 }
 

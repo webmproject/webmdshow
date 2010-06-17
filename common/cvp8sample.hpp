@@ -23,22 +23,22 @@ protected:
 
     explicit CVP8Sample(CMemAllocator*);
     virtual ~CVP8Sample();
-    
+
 public:
 
     static HRESULT CreateAllocator(IMemAllocator**);
     static HRESULT GetFrame(CMemAllocator*, IVP8Sample::Frame&);
-    
+
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IVP8Sample interface:
-    
+
     Frame& GetFrame();
 
     //IMemSample interface:
-    
+
     ULONG STDMETHODCALLTYPE GetCount();
     HRESULT STDMETHODCALLTYPE Initialize();
     HRESULT STDMETHODCALLTYPE Finalize();
@@ -46,57 +46,57 @@ public:
 
     //IMediaSample interface:
 
-    HRESULT STDMETHODCALLTYPE GetPointer( 
+    HRESULT STDMETHODCALLTYPE GetPointer(
         BYTE** ppBuffer);
-    
+
     long STDMETHODCALLTYPE GetSize();
-    
-    HRESULT STDMETHODCALLTYPE GetTime( 
+
+    HRESULT STDMETHODCALLTYPE GetTime(
         REFERENCE_TIME* pTimeStart,
         REFERENCE_TIME* pTimeEnd);
-    
-    HRESULT STDMETHODCALLTYPE SetTime( 
+
+    HRESULT STDMETHODCALLTYPE SetTime(
         REFERENCE_TIME* pTimeStart,
         REFERENCE_TIME* pTimeEnd);
-    
+
     HRESULT STDMETHODCALLTYPE IsSyncPoint();
-    
-    HRESULT STDMETHODCALLTYPE SetSyncPoint( 
+
+    HRESULT STDMETHODCALLTYPE SetSyncPoint(
         BOOL bIsSyncPoint);
-    
+
     HRESULT STDMETHODCALLTYPE IsPreroll();
-    
-    HRESULT STDMETHODCALLTYPE SetPreroll( 
+
+    HRESULT STDMETHODCALLTYPE SetPreroll(
         BOOL bIsPreroll);
-    
+
     long STDMETHODCALLTYPE GetActualDataLength();
-    
+
     HRESULT STDMETHODCALLTYPE SetActualDataLength(long);
-    
-    HRESULT STDMETHODCALLTYPE GetMediaType( 
+
+    HRESULT STDMETHODCALLTYPE GetMediaType(
         AM_MEDIA_TYPE** ppMediaType);
-    
-    HRESULT STDMETHODCALLTYPE SetMediaType( 
+
+    HRESULT STDMETHODCALLTYPE SetMediaType(
         AM_MEDIA_TYPE* pMediaType);
-    
+
     HRESULT STDMETHODCALLTYPE IsDiscontinuity();
-    
-    HRESULT STDMETHODCALLTYPE SetDiscontinuity( 
+
+    HRESULT STDMETHODCALLTYPE SetDiscontinuity(
         BOOL bDiscontinuity);
-    
-    HRESULT STDMETHODCALLTYPE GetMediaTime( 
+
+    HRESULT STDMETHODCALLTYPE GetMediaTime(
         LONGLONG* pTimeStart,
         LONGLONG* pTimeEnd);
-    
-    HRESULT STDMETHODCALLTYPE SetMediaTime( 
+
+    HRESULT STDMETHODCALLTYPE SetMediaTime(
         LONGLONG* pTimeStart,
         LONGLONG* pTimeStop);
-        
+
 protected:
 
     CMemAllocator* const m_pAllocator;
     ULONG m_cRef;
-    
+
     struct SampleFactory : CMemAllocator::ISampleFactory
     {
     private:
@@ -105,7 +105,7 @@ protected:
 
     protected:
         virtual ~SampleFactory();
-                
+
     public:
         SampleFactory();
 
@@ -114,21 +114,21 @@ protected:
         HRESULT FinalizeSample(IMemSample*);
         HRESULT DestroySample(IMemSample*);
         HRESULT Destroy(CMemAllocator*);
-        
+
         typedef std::list<IVP8Sample::Frame> frames_t;
         frames_t m_pool;  //for reuse
 
     private:
         void PurgePool();
-    
+
     };
 
     static HRESULT CreateInstance(CMemAllocator*, CVP8Sample*&);
-    
+
 private:
 
     IVP8Sample::Frame m_frame;
     bool m_preroll;
     bool m_discontinuity;
-    
+
 };

@@ -16,22 +16,22 @@ HRESULT MediaTypeUtil::Create(
     AM_MEDIA_TYPE*& ptgt)
 {
     ptgt = (AM_MEDIA_TYPE*)CoTaskMemAlloc(sizeof(AM_MEDIA_TYPE));
-    
+
     if (ptgt == 0)
         return E_OUTOFMEMORY;
-        
+
     const HRESULT hr = Copy(src, *ptgt);
-    
+
     if (FAILED(hr))
     {
-        CoTaskMemFree(ptgt);        
+        CoTaskMemFree(ptgt);
         ptgt = 0;
     }
-        
+
     return hr;
 }
-        
-    
+
+
 void MediaTypeUtil::Free(AM_MEDIA_TYPE* p)
 {
     if (p)
@@ -39,7 +39,7 @@ void MediaTypeUtil::Free(AM_MEDIA_TYPE* p)
         Destroy(*p);
         CoTaskMemFree(p);
     }
-}    
+}
 
 
 HRESULT MediaTypeUtil::Copy(
@@ -47,23 +47,23 @@ HRESULT MediaTypeUtil::Copy(
     AM_MEDIA_TYPE& tgt)
 {
     tgt = src;
-    
+
     if (src.cbFormat == 0)
     {
        tgt.pbFormat = 0;
        return S_OK;
     }
-    
+
     tgt.pbFormat = (BYTE*)CoTaskMemAlloc(src.cbFormat);
-    
+
     if (tgt.pbFormat == 0)
     {
         tgt.cbFormat = 0;
         return E_OUTOFMEMORY;
     }
-    
+
     memcpy(tgt.pbFormat, src.pbFormat, src.cbFormat);
-    
+
     return S_OK;
 }
 
@@ -71,7 +71,7 @@ HRESULT MediaTypeUtil::Copy(
 void MediaTypeUtil::Destroy(AM_MEDIA_TYPE& tgt)
 {
     CoTaskMemFree(tgt.pbFormat);
-    
+
     tgt.pbFormat = 0;
     tgt.cbFormat = 0;
 }

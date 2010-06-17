@@ -44,8 +44,8 @@ protected:
 private:
 
     basic_dbgstreambuf(const basic_dbgstreambuf<elem_t, traits_t>&);
-    
-    basic_dbgstreambuf<elem_t, traits_t>& 
+
+    basic_dbgstreambuf<elem_t, traits_t>&
         operator=(const basic_dbgstreambuf<elem_t, traits_t>&);
 
     //void resize(std::basic_string<TCHAR>::size_type);
@@ -68,7 +68,7 @@ inline basic_dbgstreambuf<elem_t, traits_t>::~basic_dbgstreambuf()
     sync();
     setp(0, 0, 0);
     delete[] m_buf;
-}        
+}
 
 
 template<typename elem_t, typename traits_t>
@@ -111,7 +111,7 @@ inline void OutputDebugStringX(const wchar_t* str)
 
 
 template<typename elem_t, typename traits_t>
-inline typename basic_dbgstreambuf<elem_t, traits_t>::int_type 
+inline typename basic_dbgstreambuf<elem_t, traits_t>::int_type
 basic_dbgstreambuf<elem_t, traits_t>::overflow(int_type c_)
 {
     if (traits_t::eq_int_type(traits_t::eof(), c_))
@@ -120,39 +120,39 @@ basic_dbgstreambuf<elem_t, traits_t>::overflow(int_type c_)
     const elem_t c = traits_t::to_char_type(c_);
 
     //sync();
-    //NOTE: No, we can't do this here, since dbgview will 
-    //break the text across lines when the auto-scroll 
+    //NOTE: No, we can't do this here, since dbgview will
+    //break the text across lines when the auto-scroll
     //option is enabled.
-    
+
     const ptrdiff_t oldlen = epptr() - pbase();
     const ptrdiff_t newlen = oldlen ? 2 * oldlen : 1;
-    
+
     if (elem_t* const newbuf = new (std::nothrow) elem_t[newlen + 1])
     {
-        const std::streamsize pos = ppos();        
+        const std::streamsize pos = ppos();
 
 #if _MSC_VER >= 1400
         const size_t size_in_bytes = newlen * sizeof(elem_t);
         traits_t::_Copy_s(newbuf, size_in_bytes, pbase(), pos);
 #else
-        traits_t::copy(newbuf, pbase(), pos);        
+        traits_t::copy(newbuf, pbase(), pos);
 #endif
-        
+
         setp(newbuf, newbuf + pos, newbuf + newlen);
 
         delete[] m_buf;
-        m_buf = newbuf;    
+        m_buf = newbuf;
 
         *pptr() = c;
         pbump(1);
 
         return traits_t::not_eof(c_);
     }
-    
+
     if (oldlen)
     {
         sync();
-            
+
         *pbase() = c;
         pbump(1);
     }
@@ -161,14 +161,14 @@ basic_dbgstreambuf<elem_t, traits_t>::overflow(int_type c_)
         const elem_t str[2] = { c, elem_t() };
         OutputDebugStringX(str);
     }
-    
+
     return traits_t::not_eof(c_);
 }
 
 
 template<typename elem_t, typename traits_t>
 inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
-    const elem_t* str, 
+    const elem_t* str,
     std::streamsize n)
 {
     if (n <= plen())
@@ -179,28 +179,28 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
 #else
         traits_t::copy(pptr(), str, n);
 #endif
-        
+
         pbump(n);
 
         return n;
     }
-    
+
     const std::streamsize pos = ppos();
     const std::streamsize newlen = pos + n;
-    
+
     if (elem_t* const newbuf = new (std::nothrow) elem_t[newlen + 1])
     {
 #if _MSC_VER >= 1400
         size_t size_in_bytes = newlen * sizeof(elem_t);
         traits_t::_Copy_s(newbuf, size_in_bytes, pbase(), pos);
 #else
-        traits_t::copy(newbuf, pbase(), pos);        
+        traits_t::copy(newbuf, pbase(), pos);
 #endif
 
         setp(newbuf, newbuf + pos, newbuf + newlen);
 
         delete[] m_buf;
-        m_buf = newbuf;    
+        m_buf = newbuf;
 
 #if _MSC_VER >= 1400
         size_in_bytes = plen() * sizeof(elem_t);
@@ -208,31 +208,31 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
 #else
         traits_t::copy(pptr(), str, n);
 #endif
-        
+
         pbump(n);
 
         return n;
     }
-    
+
     const ptrdiff_t oldlen_ = epptr() - pbase();
 
     if (oldlen_ == 0)
     {
         elem_t buf[2];
-        
+
         buf[1] = elem_t();
-        
+
         for (std::streamsize i = 0; i < n; ++i)
         {
             buf[0] = *str++;
             OutputDebugStringX(buf);
         }
-                    
+
         return n;
     }
-    
+
     std::streamsize nn = n;
-    
+
     if (std::streamsize len = plen())
     {
 #if _MSC_VER >= 1400
@@ -241,11 +241,11 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
 #else
         traits_t::copy(pptr(), str, len);
 #endif
-        
+
         pbump(len);
 
         str += len;
-        nn -= len;        
+        nn -= len;
     }
 
     const std::streamsize oldlen = static_cast<std::streamsize>(oldlen_);
@@ -255,9 +255,9 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
 #endif
 
     for (;;)
-    {    
+    {
         sync();
-        
+
         if (nn <= oldlen)
         {
 #if _MSC_VER >= 1400
@@ -265,20 +265,20 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
 #else
             traits_t::copy(pbase(), str, nn);
 #endif
-            
+
             pbump(nn);
-            
+
             return n;
         }
-        
+
 #if _MSC_VER >= 1400
         traits_t::_Copy_s(pbase(), size_in_bytes, str, oldlen);
 #else
         traits_t::copy(pbase(), str, oldlen);
 #endif
-        
+
         pbump(oldlen);
-        
+
         str += oldlen;
         nn -= oldlen;
     }
@@ -290,7 +290,7 @@ inline int basic_dbgstreambuf<elem_t, traits_t>::sync()
 {
     if (ppos() == 0)  //avoid unnecessary carriage return in dbgview
         return 0;
-        
+
     *pptr() = elem_t();
     OutputDebugStringX(pbase());
 
@@ -298,7 +298,7 @@ inline int basic_dbgstreambuf<elem_t, traits_t>::sync()
 
     return 0;
 }
-        
+
 
 //template<typename elem_t, typename traits_t>
 //inline void basic_dbgstreambuf<elem_t, traits_t>::resize(std::basic_string<TCHAR>::size_type n)
@@ -313,7 +313,7 @@ inline int basic_dbgstreambuf<elem_t, traits_t>::sync()
 
 
 template<typename elem_t, typename traits_t>
-inline typename basic_dbgstreambuf<elem_t, traits_t>::pos_type 
+inline typename basic_dbgstreambuf<elem_t, traits_t>::pos_type
 basic_dbgstreambuf<elem_t, traits_t>::seekoff(
     off_type off,
     std::ios_base::seekdir way,
@@ -324,7 +324,7 @@ basic_dbgstreambuf<elem_t, traits_t>::seekoff(
     if (which & std::ios_base::out)
     {
        const ptrdiff_t buflen = epptr() - pbase();
-            
+
         switch (way)
         {
             case std::ios_base::beg:
@@ -353,7 +353,7 @@ basic_dbgstreambuf<elem_t, traits_t>::seekoff(
 
 
 template<typename elem_t, typename traits_t>
-inline typename basic_dbgstreambuf<elem_t, traits_t>::pos_type 
+inline typename basic_dbgstreambuf<elem_t, traits_t>::pos_type
 basic_dbgstreambuf<elem_t, traits_t>::seekpos(
     pos_type pos_,
     std::ios_base::openmode which)

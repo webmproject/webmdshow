@@ -16,40 +16,40 @@
 struct hrtext
 {
     const HRESULT hr;
-    
+
     hrtext(HRESULT hr_) : hr(hr_) {}
-    
+
 private:
 
     hrtext& operator=(const hrtext&);
-    
+
 };
 
 
 inline std::ostream& operator<<(std::ostream& os, const hrtext& val)
 {
     char buf[MAX_ERROR_TEXT_LEN];
-    
+
     const DWORD n = AMGetErrorTextA(val.hr, buf, MAX_ERROR_TEXT_LEN);
-    
+
     if (n == 0)
         return os << "<notext>";
-        
+
     char* str = buf + n;
-    
+
     for (;;)
     {
         if (*str >= ' ')
             break;
-            
+
         *str = '\0';
-        
+
         if (str == buf)
             break;
-            
+
         --str;
-    }    
-    
+    }
+
     return os << buf;
 }
 
@@ -57,26 +57,26 @@ inline std::ostream& operator<<(std::ostream& os, const hrtext& val)
 inline std::wostream& operator<<(std::wostream& os, const hrtext& val)
 {
     wchar_t buf[MAX_ERROR_TEXT_LEN];
-    
+
     const DWORD n = AMGetErrorTextW(val.hr, buf, MAX_ERROR_TEXT_LEN);
-    
+
     if (n == 0)
         return os << L"<notext>";
-        
+
     wchar_t* str = buf + n;
-    
+
     for (;;)
     {
         if (*str >= L' ')
             break;
-            
+
         *str = L'\0';
-        
+
         if (str == buf)
             break;
-            
+
         --str;
-    }    
-    
+    }
+
     return os << buf;
 }

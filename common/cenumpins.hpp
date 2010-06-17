@@ -12,10 +12,10 @@
 
 class CEnumPins : public TEnumXXX<IEnumPins, IPin*>
 {
-    virtual ~CEnumPins();    
-    CEnumPins(const CEnumPins&);    
+    virtual ~CEnumPins();
+    CEnumPins(const CEnumPins&);
     CEnumPins& operator=(const CEnumPins&);
-    
+
 public:
 
     CEnumPins(IPin* const*, ULONG);
@@ -24,10 +24,10 @@ public:
     explicit CEnumPins(T* const*, ULONG);
 
     static HRESULT CreateInstance(IPin* const*, ULONG, IEnumPins**);
-    
+
     template<typename T>
     static HRESULT CreateInstance(T* const*, ULONG, IEnumPins**);
-    
+
     HRESULT STDMETHODCALLTYPE Clone(IEnumPins**);
 
 protected:
@@ -40,7 +40,7 @@ private:
 
     typedef std::vector<IPin*> pins_t;
     pins_t m_pins;
-    
+
 };
 
 
@@ -48,14 +48,14 @@ template<typename T>
 inline CEnumPins::CEnumPins(T* const* i, ULONG n)
 {
     m_pins.reserve(n);
-    
+
     T* const* j = i + n;
-    
+
     while (i != j)
     {
         IPin* const p = *i++;
         p->AddRef();
-        
+
         m_pins.push_back(p);
     }
 }
@@ -68,10 +68,10 @@ inline HRESULT CEnumPins::CreateInstance(
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IEnumPins*& p = *pp;
-    
+
     p = new (std::nothrow) CEnumPins(i, n);
-    
+
     return p ? S_OK : E_OUTOFMEMORY;
 }

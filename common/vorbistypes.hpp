@@ -27,15 +27,15 @@ namespace VorbisTypes
         DWORD bitsPerSample;
         DWORD headerSize[3];
     };
-    
-    //Matroska/FFmpeg:    
+
+    //Matroska/FFmpeg:
     extern const GUID MEDIASUBTYPE_Vorbis2;
-    extern const GUID FORMAT_Vorbis2;    
-    
+    extern const GUID FORMAT_Vorbis2;
+
     //Xiph/Ogg Decoder:
     extern const GUID MEDIATYPE_OggPacketStream;
     extern const GUID FORMAT_OggIdentHeader;
-    
+
     //Xiph/Ogg Encoder:
     extern const GUID MEDIASUBTYPE_Vorbis;
     extern const GUID FORMAT_Vorbis;

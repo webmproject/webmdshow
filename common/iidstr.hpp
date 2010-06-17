@@ -13,7 +13,7 @@ class IIDStr
 {
 public:
     IIDStr(const IID&);
-    const IID& m_iid;    
+    const IID& m_iid;
 private:
     IIDStr(const IIDStr&);
     IIDStr& operator=(const IIDStr&);

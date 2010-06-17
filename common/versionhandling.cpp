@@ -29,7 +29,7 @@ void VersionHandling::GetVersion(
 #if 0
     char fname[_MAX_PATH];
 
-    const DWORD gmfnStatus = 
+    const DWORD gmfnStatus =
         GetModuleFileName(0, fname, sizeof fname);
 
     assert(gmfnStatus);
@@ -40,12 +40,12 @@ void VersionHandling::GetVersion(
     const errno_t e = _get_wpgmptr(&fname);
     assert(e == 0);
 #endif
-    
+
     DWORD handle;
 
     const DWORD size = GetFileVersionInfoSize(fname, &handle);
     assert(size);
-    
+
     BYTE* const buf = (BYTE*)_malloca(size);
 
     BOOL b = GetFileVersionInfo(fname, handle, size, buf);
@@ -61,7 +61,7 @@ void VersionHandling::GetVersion(
 
     major = WORD(p->dwProductVersionMS >> 16);
     minor = WORD(p->dwProductVersionMS);
-    
+
     revision = WORD(p->dwProductVersionLS >> 16);
     build = WORD(p->dwProductVersionLS);
 }
@@ -71,7 +71,7 @@ void VersionHandling::GetVersion(const wchar_t* fname, std::wostream& os)
 {
     WORD major, minor, revision, build;
     VersionHandling::GetVersion(fname, major, minor, revision, build);
-    
+
     os << major
        << L'.'
        << minor
@@ -80,7 +80,7 @@ void VersionHandling::GetVersion(const wchar_t* fname, std::wostream& os)
        << L'.'
        << build;
 }
-    
+
 
 
 #if 0
@@ -97,7 +97,7 @@ const std::string VersionHandling::version(bool full)
     _ultoa(ms_major, buf, 10);
 
     string value = buf;
-    
+
     const DWORD ms_minor = ms & 0x0000FFFF;
 
     _ultoa(ms_minor, buf, 10);

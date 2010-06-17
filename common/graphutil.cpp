@@ -65,27 +65,27 @@ GraphUtil::IPinPtr
 GraphUtil::FindPin(IBaseFilter* f, PIN_DIRECTION dir_requested)
 {
     assert(f);
-    
+
     IEnumPinsPtr e;
-    
+
     HRESULT hr = f->EnumPins(&e);
-    
+
     if (FAILED(hr))
         return 0;
-        
+
     assert(bool(e));
-    
+
     for (;;)
     {
         IPinPtr p;
-        
+
         hr = e->Next(1, &p, 0);
-        
+
         if (hr != S_OK)
             return 0;
-            
+
         assert(bool(p));
-        
+
         PIN_DIRECTION dir_actual;
 
         hr = p->QueryDirection(&dir_actual);
@@ -98,40 +98,40 @@ GraphUtil::FindPin(IBaseFilter* f, PIN_DIRECTION dir_requested)
 
 GraphUtil::IPinPtr
 GraphUtil::FindPin(
-    IBaseFilter* f, 
+    IBaseFilter* f,
     PIN_DIRECTION dir_requested,
     const GUID& majortype,
     const GUID* subtype)
 {
     assert(f);
-    
+
     IEnumPinsPtr e;
-    
+
     HRESULT hr = f->EnumPins(&e);
-    
+
     if (FAILED(hr))
         return 0;
-        
+
     assert(bool(e));
-    
+
     for (;;)
     {
         IPinPtr p;
-        
+
         hr = e->Next(1, &p, 0);
-        
+
         if (hr != S_OK)
             return 0;
-            
+
         assert(bool(p));
-        
+
         PIN_DIRECTION dir_actual;
 
         hr = p->QueryDirection(&dir_actual);
 
         if (FAILED(hr) || (dir_actual != dir_requested))
             continue;
-            
+
         if (Match(p, majortype, subtype))
             return p;
     }
@@ -141,27 +141,27 @@ GraphUtil::FindPin(
 ULONG GraphUtil::PinCount(IBaseFilter* f)
 {
     assert(f);
-    
+
     IEnumPinsPtr e;
-    
+
     HRESULT hr = f->EnumPins(&e);
-    
+
     if (FAILED(hr))
         return 0;
-        
+
     assert(bool(e));
-    
+
     ULONG n = 0;
-    
+
     for (;;)
     {
         IPinPtr p;
-        
+
         hr = e->Next(1, &p, 0);
-        
+
         if (hr != S_OK)
             return n;
-            
+
         assert(bool(p));
 
         ++n;
@@ -172,34 +172,34 @@ ULONG GraphUtil::PinCount(IBaseFilter* f)
 ULONG GraphUtil::PinCount(IBaseFilter* f, PIN_DIRECTION dir_requested)
 {
     assert(f);
-    
+
     IEnumPinsPtr e;
-    
+
     HRESULT hr = f->EnumPins(&e);
-    
+
     if (FAILED(hr))
         return 0;
-        
+
     assert(bool(e));
-    
+
     ULONG n = 0;
-    
+
     for (;;)
     {
         IPinPtr p;
-        
+
         hr = e->Next(1, &p, 0);
-        
+
         if (hr != S_OK)
             return n;
-            
+
         assert(bool(p));
-        
+
         PIN_DIRECTION dir_actual;
 
         hr = p->QueryDirection(&dir_actual);
 
-        if (SUCCEEDED(hr) && (dir_actual == dir_requested))        
+        if (SUCCEEDED(hr) && (dir_actual == dir_requested))
             ++n;
     }
 }
@@ -207,60 +207,60 @@ ULONG GraphUtil::PinCount(IBaseFilter* f, PIN_DIRECTION dir_requested)
 
 HRESULT GraphUtil::ConnectDirect(
     IFilterGraph* pGraph,
-    IBaseFilter* fOut, 
+    IBaseFilter* fOut,
     IBaseFilter* fIn,
     const AM_MEDIA_TYPE* pmt)
 {
     assert(pGraph);
     assert(fOut);
     assert(fIn);
-    
+
     const IPinPtr pOut(FindOutpin(fOut));
-    
+
     if (!bool(pOut))
         return E_FAIL;
-        
+
     const IPinPtr pIn(FindInpin(fIn));
-    
+
     if (!bool(pIn))
         return E_FAIL;
-        
+
     return pGraph->ConnectDirect(pOut, pIn, pmt);
 }
 
 
 bool GraphUtil::Match(
-    IPin* pin, 
+    IPin* pin,
     const GUID& majortype,
     const GUID* subtype)
 {
     assert(pin);
-    
+
     IEnumMediaTypesPtr e;
-    
+
     HRESULT hr = pin->EnumMediaTypes(&e);
-    
+
     if (FAILED(hr))
         return false;
-        
+
     assert(bool(e));
-    
+
     for (;;)
     {
         AM_MEDIA_TYPE* pmt;
-        
+
         hr = e->Next(1, &pmt, 0);
-        
+
         if (hr != S_OK)
             return false;
-            
+
         assert(pmt);
-        
+
         const int bMajor = (pmt->majortype == majortype);
         const int bSubtype = subtype ? (pmt->subtype == *subtype) : 1;
-        
+
         MediaTypeUtil::Free(pmt);
-        
+
         if (bMajor && bSubtype)
             return true;
     }
@@ -271,11 +271,11 @@ std::wstring GraphUtil::ToString(const GUID& g)
 {
     enum { cch = 39 };
     wchar_t str[cch];
-    
+
     const int n = StringFromGUID2(g, str, cch);
     n;
     assert(n == 39);
-    
+
     return str;
 }
 
@@ -301,7 +301,7 @@ FourCCGUID::FourCCGUID(const char* str)
 
 FourCCGUID::FourCCGUID(DWORD Data1_)
 {
-    Data1 = Data1_;    
+    Data1 = Data1_;
     Data2 = 0x0000;
     Data3 = 0x0010;
     Data4[0] = 0x80;
@@ -319,34 +319,34 @@ bool FourCCGUID::IsFourCC(const GUID& guid)
 {
     if (guid.Data2 != 0x0000)
         return false;
-        
+
     if (guid.Data3 != 0x0010)
         return false;
-        
+
     if (guid.Data4[0] != 0x80)
         return false;
-        
+
     if (guid.Data4[1] != 0x00)
         return false;
-        
+
     if (guid.Data4[2] != 0x00)
         return false;
-        
+
     if (guid.Data4[3] != 0xAA)
         return false;
-        
+
     if (guid.Data4[4] != 0x00)
         return false;
-        
+
     if (guid.Data4[5] != 0x38)
         return false;
-        
+
     if (guid.Data4[6] != 0x9B)
         return false;
-        
+
     if (guid.Data4[7] != 0x71)
         return false;
-        
+
     return true;
 }
 

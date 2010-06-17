@@ -20,19 +20,19 @@ public:
 
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
-    ULONG STDMETHODCALLTYPE Release();    
+    ULONG STDMETHODCALLTYPE Release();
 
-    HRESULT STDMETHODCALLTYPE CreateInstance(IUnknown*, const IID&, void**);    
+    HRESULT STDMETHODCALLTYPE CreateInstance(IUnknown*, const IID&, void**);
     HRESULT STDMETHODCALLTYPE LockServer(BOOL);
-    
+
 private:
 
     const create_t m_create;
-    
+
     ULONG* const m_pcLock;
     ULONG m_cRef;
-    
+
     CFactory(const CFactory&);
     CFactory& operator=(const CFactory&);
 
-};    
+};

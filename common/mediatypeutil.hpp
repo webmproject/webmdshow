@@ -11,11 +11,11 @@
 namespace MediaTypeUtil
 {
     HRESULT Copy(const AM_MEDIA_TYPE& src, AM_MEDIA_TYPE& tgt);
-    void Destroy(AM_MEDIA_TYPE&);    
+    void Destroy(AM_MEDIA_TYPE&);
 
     HRESULT Create(const AM_MEDIA_TYPE& src, AM_MEDIA_TYPE*& ptgt);
-    void Free(AM_MEDIA_TYPE*);    
-    
+    void Free(AM_MEDIA_TYPE*);
+
 }  //end namespace MediaTypeUtil
 
 

@@ -10,10 +10,10 @@
 #include "vorbistypes.hpp"
 
 // {8D2FD10B-5841-4a6b-8905-588FEC1ADED9}
-const GUID VorbisTypes::MEDIASUBTYPE_Vorbis2 = 
+const GUID VorbisTypes::MEDIASUBTYPE_Vorbis2 =
 { 0x8D2FD10B, 0x5841, 0x4a6b, { 0x89, 0x05, 0x58, 0x8F, 0xEC, 0x1A, 0xDE, 0xD9 } };
 
-// {B36E107F-A938-4387-93C7-55E966757473}    
+// {B36E107F-A938-4387-93C7-55E966757473}
 const GUID VorbisTypes::FORMAT_Vorbis2 =
 { 0xB36E107F, 0xA938, 0x4387, { 0x93, 0xC7, 0x55, 0xE9, 0x66, 0x75, 0x74, 0x73 } };
 

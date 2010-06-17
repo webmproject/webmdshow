@@ -20,15 +20,15 @@ CFactory::CFactory(ULONG* pcLock, create_t create)
 CFactory::~CFactory()
 {
 }
-    
+
 
 HRESULT CFactory::QueryInterface(const IID& iid, void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-       
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-     
+
     if (iid == IID_IUnknown)
         pUnk = static_cast<IUnknown*>(this);
 
@@ -60,8 +60,8 @@ ULONG CFactory::Release()
 
 
 HRESULT CFactory::CreateInstance(
-    IUnknown* pOuter, 
-    const IID& iid, 
+    IUnknown* pOuter,
+    const IID& iid,
     void** ppv)
 {
     return (*m_create)(this, pOuter, iid, ppv);
@@ -74,6 +74,6 @@ HRESULT CFactory::LockServer(BOOL b)
         InterlockedIncrement((LONG*)m_pcLock);
     else
         InterlockedDecrement((LONG*)m_pcLock);
-        
+
     return S_OK;
 }

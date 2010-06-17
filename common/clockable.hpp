@@ -13,7 +13,7 @@ class CLockable
 {
     CLockable(const CLockable&);
     CLockable& operator=(const CLockable&);
-    
+
 protected:
 
     CLockable();
@@ -26,7 +26,7 @@ public:
 
     HRESULT Seize(DWORD timeout_ms);
     HRESULT Release();
-    
+
     class Lock
     {
         Lock(const Lock&);
@@ -35,15 +35,15 @@ public:
     public:
         Lock();
         ~Lock();
-        
+
         HRESULT Seize(CLockable*);
         HRESULT Release();
-        
+
     private:
         CLockable* m_pLockable;
-        
+
     };
-        
+
 private:
 
     HANDLE m_hMutex;

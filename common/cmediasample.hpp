@@ -20,28 +20,28 @@ protected:
 
     explicit CMediaSample(CMemAllocator*);
     virtual ~CMediaSample();
-    
+
     struct Factory : CMemAllocator::ISampleFactory
     {
         virtual ~Factory();
-        
+
         HRESULT CreateSample(CMemAllocator*, IMemSample*&);
         HRESULT InitializeSample(IMemSample*);
         HRESULT FinalizeSample(IMemSample*);
         HRESULT DestroySample(IMemSample*);
         HRESULT Destroy(CMemAllocator*);
     };
-    
+
 public:
 
     static HRESULT CreateAllocator(IMemAllocator**);
-    
+
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IMemSample interface:
-    
+
     ULONG STDMETHODCALLTYPE GetCount();
     HRESULT STDMETHODCALLTYPE Initialize();
     HRESULT STDMETHODCALLTYPE Finalize();
@@ -49,59 +49,59 @@ public:
 
     //IMediaSample interface:
 
-    HRESULT STDMETHODCALLTYPE GetPointer( 
+    HRESULT STDMETHODCALLTYPE GetPointer(
         BYTE** ppBuffer);
-    
+
     long STDMETHODCALLTYPE GetSize();
-    
-    HRESULT STDMETHODCALLTYPE GetTime( 
+
+    HRESULT STDMETHODCALLTYPE GetTime(
         REFERENCE_TIME* pTimeStart,
         REFERENCE_TIME* pTimeEnd);
-    
-    HRESULT STDMETHODCALLTYPE SetTime( 
+
+    HRESULT STDMETHODCALLTYPE SetTime(
         REFERENCE_TIME* pTimeStart,
         REFERENCE_TIME* pTimeEnd);
-    
+
     HRESULT STDMETHODCALLTYPE IsSyncPoint();
-    
-    HRESULT STDMETHODCALLTYPE SetSyncPoint( 
+
+    HRESULT STDMETHODCALLTYPE SetSyncPoint(
         BOOL bIsSyncPoint);
-    
+
     HRESULT STDMETHODCALLTYPE IsPreroll();
-    
-    HRESULT STDMETHODCALLTYPE SetPreroll( 
+
+    HRESULT STDMETHODCALLTYPE SetPreroll(
         BOOL bIsPreroll);
-    
+
     long STDMETHODCALLTYPE GetActualDataLength();
-    
+
     HRESULT STDMETHODCALLTYPE SetActualDataLength(long);
-    
-    HRESULT STDMETHODCALLTYPE GetMediaType( 
+
+    HRESULT STDMETHODCALLTYPE GetMediaType(
         AM_MEDIA_TYPE** ppMediaType);
-    
-    HRESULT STDMETHODCALLTYPE SetMediaType( 
+
+    HRESULT STDMETHODCALLTYPE SetMediaType(
         AM_MEDIA_TYPE* pMediaType);
-    
+
     HRESULT STDMETHODCALLTYPE IsDiscontinuity();
-    
-    HRESULT STDMETHODCALLTYPE SetDiscontinuity( 
+
+    HRESULT STDMETHODCALLTYPE SetDiscontinuity(
         BOOL bDiscontinuity);
-    
-    HRESULT STDMETHODCALLTYPE GetMediaTime( 
+
+    HRESULT STDMETHODCALLTYPE GetMediaTime(
         LONGLONG* pTimeStart,
         LONGLONG* pTimeEnd);
-    
-    HRESULT STDMETHODCALLTYPE SetMediaTime( 
+
+    HRESULT STDMETHODCALLTYPE SetMediaTime(
         LONGLONG* pTimeStart,
         LONGLONG* pTimeStop);
-        
+
 protected:
 
     CMemAllocator* const m_pAllocator;
     ULONG m_cRef;
-    
+
     HRESULT Create();
-    
+
 private:
 
     bool m_sync_point;
@@ -112,11 +112,11 @@ private:
     __int64 m_media_start_time;
     __int64 m_media_stop_time;
     long m_actual_data_length;  //what portion of allocated memory holds actual data
-    
+
     BYTE* m_buf;
-    long m_buflen;  //how much memory was allocated 
+    long m_buflen;  //how much memory was allocated
     long m_off;     //to satisfy alignment requirements
-    
+
     AM_MEDIA_TYPE* m_pmt;
 
 };

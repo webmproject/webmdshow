@@ -17,19 +17,19 @@ namespace ComReg
 {
     enum { guid_buflen = 39 };  //includes braces and terminating NUL
     //CHARS_IN_GUID  //see strmif.h
-    
+
     GUID GUIDFromString(const wchar_t*);
-    
+
     HRESULT ComRegGetModuleFileName(HMODULE, std::wstring&);
-    
-    enum ThreadingModel 
+
+    enum ThreadingModel
     {
         kSingleThreading = -1, //no threading model
         kApartment = 0,
         kFree,
         kBoth
     };
-    
+
     HRESULT RegisterCoclass(
                 const GUID& clsid,
                 const wchar_t* friendlyname,
@@ -42,26 +42,26 @@ namespace ComReg
                 const GUID& typelib,
                 const wchar_t* version,
                 int toolboxbitmap32);
-                
-    HRESULT UnRegisterCoclass(const GUID&); 
-                
+
+    HRESULT UnRegisterCoclass(const GUID&);
+
     HRESULT RegisterTypeLibResource(
-                const wchar_t* fullpath, 
+                const wchar_t* fullpath,
                 const wchar_t* helpdir);
-                
+
     HRESULT UnRegisterTypeLibResource(const wchar_t* fullpath);
 
     HRESULT GetTypeLibAttr(const wchar_t*, TLIBATTR&);
-    
+
     HRESULT RegisterCustomFileType(
                 const wchar_t* ext,
                 const GUID& filter,
                 const GUID& mediatype,
                 const GUID& subtype);
-                
+
     HRESULT UnRegisterCustomFileType(
                 const wchar_t* ext,
-                const GUID& filter);                
+                const GUID& filter);
 
     HRESULT RegisterCustomFileType(
                 const wchar_t* const* argv,  //array of check-byte strings

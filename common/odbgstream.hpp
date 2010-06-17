@@ -15,7 +15,7 @@ template<typename elem_t, typename traits_t>
 class basic_odbgstream : public std::basic_ostream<elem_t, traits_t>
 {
 public:
-    
+
     typedef std::basic_ostream<elem_t, traits_t> base_t;
     typedef basic_dbgstreambuf<elem_t, traits_t> dbgstreambuf;
 
@@ -27,8 +27,8 @@ public:
 private:
 
     basic_odbgstream(const basic_odbgstream<elem_t, traits_t>&);
-    
-    basic_odbgstream<elem_t, traits_t>& 
+
+    basic_odbgstream<elem_t, traits_t>&
         operator=(const basic_odbgstream<elem_t, traits_t>&);
 
     dbgstreambuf m_sb;

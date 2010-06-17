@@ -19,33 +19,33 @@ CMediaSample::Factory::~Factory()
 
 
 HRESULT CMediaSample::Factory::CreateSample(
-    CMemAllocator* pAllocator, 
+    CMemAllocator* pAllocator,
     IMemSample*& pResult)
 {
-    assert(pAllocator);    
+    assert(pAllocator);
     pResult = 0;
-    
+
     CMediaSample* const pSample = new (std::nothrow) CMediaSample(pAllocator);
-    
+
     if (pSample == 0)
         return E_OUTOFMEMORY;
-        
+
     HRESULT hr = pSample->Create();
-    
+
     if (FAILED(hr))
     {
         delete pSample;
         return hr;
     }
-    
+
     assert(pSample->m_cRef == 0);
-        
+
     //We don't bother to Initialize here.  The purpose of CreateSample is simply
-    //to create a new sample object to add to allocator's pool, during Commit.  
+    //to create a new sample object to add to allocator's pool, during Commit.
     //The sample will get propertly initialized later, during GetBuffer.
 
     pResult = pSample;
-    
+
     return S_OK;
 }
 
@@ -59,14 +59,14 @@ HRESULT CMediaSample::Factory::InitializeSample(IMemSample* pSample)
 
 HRESULT CMediaSample::Factory::FinalizeSample(IMemSample* pSample)
 {
-    assert(pSample);            
+    assert(pSample);
     return pSample->Finalize();
 }
 
 
 HRESULT CMediaSample::Factory::DestroySample(IMemSample* pSample)
 {
-    assert(pSample);            
+    assert(pSample);
     return pSample->Destroy();
 }
 
@@ -82,20 +82,20 @@ HRESULT CMediaSample::CreateAllocator(IMemAllocator** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IMemAllocator*& p = *pp;
     p = 0;
 
     Factory* const pFactory = new (std::nothrow) Factory;
-    
+
     if (pFactory == 0)
         return E_OUTOFMEMORY;
-    
+
     const HRESULT hr = CMemAllocator::CreateInstance(pFactory, pp);
-    
+
     if (FAILED(hr))
         delete pFactory;
-        
+
     return hr;
 }
 
@@ -105,9 +105,9 @@ HRESULT CMediaSample::Create()
     assert(m_cRef == 0);
     assert(m_buf == 0);
     assert(m_buflen == 0);
-    
+
     ALLOCATOR_PROPERTIES props;
-    
+
     HRESULT hr = m_pAllocator->GetProperties(&props);
     hr;
     assert(SUCCEEDED(hr));
@@ -117,21 +117,21 @@ HRESULT CMediaSample::Create()
 
     const long buflen = props.cbAlign - 1 + props.cbPrefix + props.cbBuffer;
     BYTE* const buf = new (std::nothrow) BYTE[buflen];
-    
+
     if (buf == 0)
         return E_OUTOFMEMORY;
-    
+
     m_buf = buf;
     m_buflen = buflen;
 
     long off = props.cbPrefix;
-    
+
     if (intptr_t n = intptr_t(buf) % props.cbAlign)
         off += props.cbAlign - n;
 
     m_off = off;
 
-    return S_OK;    
+    return S_OK;
 }
 
 
@@ -145,7 +145,7 @@ HRESULT CMediaSample::Initialize()
 {
     assert(m_buf);
     assert(m_pmt == 0);
-    
+
     m_cRef = 0;
     m_sync_point = false;
     m_actual_data_length = 0;
@@ -155,7 +155,7 @@ HRESULT CMediaSample::Initialize()
     m_stop_time = LLONG_MAX;
     m_media_start_time = LLONG_MAX;
     m_media_stop_time = LLONG_MAX;
-    
+
     return S_OK;
 }
 
@@ -164,7 +164,7 @@ HRESULT CMediaSample::Finalize()
 {
     MediaTypeUtil::Free(m_pmt);
     m_pmt = 0;
-    
+
     return S_OK;
 }
 
@@ -178,7 +178,7 @@ HRESULT CMediaSample::Destroy()
 
 CMediaSample::CMediaSample(CMemAllocator* p) :
     m_pAllocator(p),
-    m_cRef(0),  //allocator will adjust 
+    m_cRef(0),  //allocator will adjust
     m_buf(0),
     m_buflen(0),
     m_off(0),
@@ -189,7 +189,7 @@ CMediaSample::CMediaSample(CMemAllocator* p) :
 
 CMediaSample::~CMediaSample()
 {
-    Finalize();  //deallocate media type    
+    Finalize();  //deallocate media type
     delete[] m_buf;
 }
 
@@ -198,24 +198,24 @@ HRESULT CMediaSample::QueryInterface(const IID& iid, void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-    
+
     if (iid == __uuidof(IUnknown))
         pUnk = static_cast<IMediaSample*>(this);
-        
+
     else if (iid == __uuidof(IMediaSample))
         pUnk = static_cast<IMediaSample*>(this);
-        
+
     else if (iid == __uuidof(IMemSample))
         pUnk = static_cast<IMemSample*>(this);
-        
+
     else
     {
         pUnk = 0;
         return E_NOINTERFACE;
     }
-    
+
     pUnk->AddRef();
     return S_OK;
 }
@@ -231,36 +231,36 @@ ULONG CMediaSample::Release()
 {
     if (LONG n = InterlockedDecrement((LONG*)&m_cRef))
         return n;
-    
-    m_pAllocator->ReleaseBuffer(this);    
+
+    m_pAllocator->ReleaseBuffer(this);
     return 0;
-}        
-    
+}
+
 
 HRESULT CMediaSample::GetPointer(BYTE** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     BYTE*& p = *pp;
 
     assert(m_buf);
     assert(m_buflen >= 0);
     assert(m_off >= 0);
     assert(m_off <= m_buflen);
-    
+
     p = m_buf + m_off;
 
 #ifdef _DEBUG
     ALLOCATOR_PROPERTIES props;
-    
+
     const HRESULT hr = m_pAllocator->GetProperties(&props);
     assert(SUCCEEDED(hr));
     assert(props.cbAlign >= 1);
     assert(props.cbPrefix >= 0);
     assert(intptr_t(p - props.cbPrefix) % props.cbAlign == 0);
 #endif
-    
+
     return S_OK;
 }
 
@@ -283,27 +283,27 @@ long CMediaSample::GetSize()
 }
 
 
-HRESULT CMediaSample::GetTime( 
+HRESULT CMediaSample::GetTime(
     REFERENCE_TIME* pstart,
     REFERENCE_TIME* pstop)
 {
     if (m_start_time == LLONG_MAX)
         return VFW_E_SAMPLE_TIME_NOT_SET;
-        
+
     if (pstart)
         *pstart = m_start_time;
-        
+
     if (m_stop_time == LLONG_MAX)
         return VFW_S_NO_STOP_TIME;
-        
+
     if (pstop)
         *pstop = m_stop_time;
-        
+
     return S_OK;
 }
 
 
-HRESULT CMediaSample::SetTime( 
+HRESULT CMediaSample::SetTime(
     REFERENCE_TIME* pstart,
     REFERENCE_TIME* pstop)
 {
@@ -311,12 +311,12 @@ HRESULT CMediaSample::SetTime(
         m_start_time = *pstart;
     else
         m_start_time = LLONG_MAX;
-        
+
     if (pstop)
         m_stop_time = *pstop;
     else
         m_stop_time = LLONG_MAX;
-        
+
     return S_OK;
 }
 
@@ -355,38 +355,38 @@ long CMediaSample::GetActualDataLength()
 
 HRESULT CMediaSample::SetActualDataLength(long len)
 {
-    m_actual_data_length = len;    
+    m_actual_data_length = len;
     return S_OK;
 }
 
 
-HRESULT CMediaSample::GetMediaType( 
+HRESULT CMediaSample::GetMediaType(
     AM_MEDIA_TYPE** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     AM_MEDIA_TYPE*& p = *pp;
-        
+
     if (m_pmt)
         return MediaTypeUtil::Create(*m_pmt, p);
-        
+
     p = 0;
     return S_FALSE;  //means "no media type"
 }
 
 
-HRESULT CMediaSample::SetMediaType( 
+HRESULT CMediaSample::SetMediaType(
     AM_MEDIA_TYPE* pmt)
 {
     if (pmt == 0)
     {
         MediaTypeUtil::Free(m_pmt);
         m_pmt = 0;
-        
+
         return S_OK;
     }
-    
+
     return MediaTypeUtil::Create(*pmt, m_pmt);
 }
 
@@ -404,7 +404,7 @@ HRESULT CMediaSample::SetDiscontinuity(BOOL b)
 }
 
 
-HRESULT CMediaSample::GetMediaTime( 
+HRESULT CMediaSample::GetMediaTime(
     LONGLONG* pstart,
     LONGLONG* pstop)
 {
@@ -413,7 +413,7 @@ HRESULT CMediaSample::GetMediaTime(
 
     if (pstart)
         *pstart = m_media_start_time;
-        
+
     if (pstop)
     {
         if (m_media_stop_time != LLONG_MAX)
@@ -421,12 +421,12 @@ HRESULT CMediaSample::GetMediaTime(
         else  //kind of bugus
             *pstop = m_media_start_time + 1; //?
     }
-        
+
     return S_OK;
 }
 
 
-HRESULT CMediaSample::SetMediaTime( 
+HRESULT CMediaSample::SetMediaTime(
     LONGLONG* pstart,
     LONGLONG* pstop)
 {
@@ -434,7 +434,7 @@ HRESULT CMediaSample::SetMediaTime(
         m_media_start_time = *pstart;
     else
         m_media_start_time = LLONG_MAX;
-        
+
     if (pstop)
         m_media_stop_time = *pstop;
     else  //kind of bogus

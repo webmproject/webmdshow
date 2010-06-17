@@ -16,17 +16,17 @@ HRESULT CVP8Sample::CreateAllocator(IMemAllocator** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IMemAllocator*& pResult = *pp;
     pResult = 0;
-        
+
     SampleFactory* pSampleFactory = new (std::nothrow) SampleFactory;
-    
+
     if (pSampleFactory == 0)
         return E_OUTOFMEMORY;
-        
+
     const HRESULT hr = CMemAllocator::CreateInstance(pSampleFactory, &pResult);
-    
+
     if (FAILED(hr))
     {
         pSampleFactory->Destroy(0);
@@ -35,19 +35,19 @@ HRESULT CVP8Sample::CreateAllocator(IMemAllocator** pp)
 
     return S_OK;
 }
-    
-    
+
+
 HRESULT CVP8Sample::GetFrame(CMemAllocator* pAlloc, IVP8Sample::Frame& f)
-{    
+{
     CMemAllocator::Lock lock;
-    
+
     HRESULT hr = lock.Seize(pAlloc);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     ALLOCATOR_PROPERTIES props;
-    
+
     hr = pAlloc->GetProperties(&props);
     assert(SUCCEEDED(hr));
     assert(props.cBuffers > 0);
@@ -56,12 +56,12 @@ HRESULT CVP8Sample::GetFrame(CMemAllocator* pAlloc, IVP8Sample::Frame& f)
     assert(props.cbPrefix >= 0);
 
     const long buflen = props.cbAlign - 1 + props.cbPrefix + props.cbBuffer;
-    
+
     CMemAllocator::ISampleFactory* const pFactory_ = pAlloc->m_pSampleFactory;
     assert(pFactory_);
-    
+
     SampleFactory* const pFactory = static_cast<SampleFactory*>(pFactory_);
-    SampleFactory::frames_t& pool = pFactory->m_pool;    
+    SampleFactory::frames_t& pool = pFactory->m_pool;
 
     if (!pool.empty())
     {
@@ -69,7 +69,7 @@ HRESULT CVP8Sample::GetFrame(CMemAllocator* pAlloc, IVP8Sample::Frame& f)
         assert(f.buf);
         assert(f.buflen >= buflen);
 
-        pool.pop_front();        
+        pool.pop_front();
     }
     else
     {
@@ -77,25 +77,25 @@ HRESULT CVP8Sample::GetFrame(CMemAllocator* pAlloc, IVP8Sample::Frame& f)
 
         if (buf == 0)
             return E_OUTOFMEMORY;
-    
+
         f.buf = buf;
         f.buflen = buflen;
 
         long off = props.cbPrefix;
-    
+
         if (intptr_t n = intptr_t(buf) % props.cbAlign)
             off += props.cbAlign - n;
 
         f.off = off;
     }
-        
+
     BYTE* const ptr = f.buf + f.off;
     ptr;
     assert(intptr_t(ptr - props.cbPrefix) % props.cbAlign == 0);
 
     return S_OK;
 }
-    
+
 
 CVP8Sample::SampleFactory::SampleFactory()
 {
@@ -113,16 +113,16 @@ HRESULT CVP8Sample::SampleFactory::CreateSample(
 {
     pResult = 0;
 
-    CVP8Sample* pSample;    
-    
+    CVP8Sample* pSample;
+
     const HRESULT hr = CVP8Sample::CreateInstance(pAllocator, pSample);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     assert(pSample);
     assert(pSample->GetCount() == 0);
-        
+
     pResult = pSample;
     return S_OK;
 }
@@ -131,11 +131,11 @@ HRESULT CVP8Sample::SampleFactory::CreateSample(
 HRESULT CVP8Sample::SampleFactory::InitializeSample(IMemSample* p)
 {
     assert(p);
-    
+
     const HRESULT hr = p->Initialize();
     assert(SUCCEEDED(hr));
     assert(p->GetCount() == 0);
-    
+
     return S_OK;
 }
 
@@ -148,28 +148,28 @@ HRESULT CVP8Sample::SampleFactory::FinalizeSample(IMemSample* p)
     //it holds its own lock.  There's no special locking we need
     //to here, because the allocator owns the sample factory
     //object it was given when it (the allocator) was created.
-    
+
     IVP8Sample* pSample;
-    
+
     HRESULT hr = p->QueryInterface(&pSample);
     assert(SUCCEEDED(hr));
     assert(pSample);
-    
+
     //NOTE: we don't bother releasing the IVP8Sample ptr, because
     //the sample is in the process of being destroyed.  We don't want
-    //to trigger another call to IMemAllocator::ReleaseBuffer from 
+    //to trigger another call to IMemAllocator::ReleaseBuffer from
     //IMediaSample::Release.
-    
-    IVP8Sample::Frame& f = pSample->GetFrame();    
+
+    IVP8Sample::Frame& f = pSample->GetFrame();
     assert(f.buf);
 
     m_pool.push_back(f);
-    
+
     f.buf = 0;
-    
+
     hr = p->Finalize();
     assert(SUCCEEDED(hr));
-    
+
     return S_OK;
 }
 
@@ -194,30 +194,30 @@ void CVP8Sample::SampleFactory::PurgePool()
     {
         IVP8Sample::Frame& f = m_pool.front();
         assert(f.buf);
-        
+
         delete[] f.buf;
-        
+
         m_pool.pop_front();
     }
 }
 
 
 HRESULT CVP8Sample::CreateInstance(
-    CMemAllocator* pAllocator, 
+    CMemAllocator* pAllocator,
     CVP8Sample*& pSample)
 {
     if (pAllocator == 0)
         return E_INVALIDARG;
-        
+
     pSample = new (std::nothrow) CVP8Sample(pAllocator);
-    
+
     return pSample ? S_OK : E_OUTOFMEMORY;
 }
 
-    
+
 CVP8Sample::CVP8Sample(CMemAllocator* p)
     : m_pAllocator(p),
-      m_cRef(0)  //allocator will adjust 
+      m_cRef(0)  //allocator will adjust
 {
     m_frame.buf = 0;
 }
@@ -233,15 +233,15 @@ HRESULT CVP8Sample::QueryInterface(const IID& iid, void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-    
+
     if (iid == __uuidof(IUnknown))
         pUnk = static_cast<IMediaSample*>(this);
-        
+
     else if (iid == __uuidof(IMediaSample))
         pUnk = static_cast<IMediaSample*>(this);
-        
+
     else if (iid == __uuidof(IMemSample))
         pUnk = static_cast<IMemSample*>(this);
 
@@ -253,7 +253,7 @@ HRESULT CVP8Sample::QueryInterface(const IID& iid, void** ppv)
         pUnk = 0;
         return E_NOINTERFACE;
     }
-    
+
     pUnk->AddRef();
     return S_OK;
 }
@@ -268,13 +268,13 @@ ULONG CVP8Sample::AddRef()
 ULONG CVP8Sample::Release()
 {
     assert(m_cRef > 0);
-    
+
     if (LONG n = InterlockedDecrement((LONG*)&m_cRef))
         return n;
-    
-    m_pAllocator->ReleaseBuffer(this);    
+
+    m_pAllocator->ReleaseBuffer(this);
     return 0;
-}        
+}
 
 
 CVP8Sample::Frame& CVP8Sample::GetFrame()
@@ -293,7 +293,7 @@ HRESULT CVP8Sample::Initialize()
 {
     assert(m_frame.buf == 0);
     m_cRef = 0;
-    
+
     return S_OK;
 }
 
@@ -312,39 +312,39 @@ HRESULT CVP8Sample::Destroy()
 }
 
 
-    
+
 HRESULT CVP8Sample::GetPointer(BYTE** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     BYTE*& p = *pp;
-    
+
     const Frame& f = m_frame;
     assert(f.buf);
     assert(f.buflen >= 0);
     assert(f.off >= 0);
     assert(f.off <= f.buflen);
-    
+
     p = f.buf + f.off;
 
 #ifdef _DEBUG
     ALLOCATOR_PROPERTIES props;
-    
+
     const HRESULT hr = m_pAllocator->GetProperties(&props);
     assert(SUCCEEDED(hr));
     assert(props.cbAlign >= 1);
     assert(props.cbPrefix >= 0);
     assert(intptr_t(p - props.cbPrefix) % props.cbAlign == 0);
 #endif
-    
+
     return S_OK;
 }
 
 
 long CVP8Sample::GetSize()
 {
-    const Frame& f = m_frame;    
+    const Frame& f = m_frame;
     assert(f.buf);
     assert(f.off <= f.buflen);
 
@@ -363,34 +363,34 @@ long CVP8Sample::GetSize()
 }
 
 
-HRESULT CVP8Sample::GetTime( 
+HRESULT CVP8Sample::GetTime(
     REFERENCE_TIME* pstart,
     REFERENCE_TIME* pstop)
 {
     const Frame& f = m_frame;
     assert(f.buf);
     assert(f.start >= 0);
-    
+
     if (pstart == 0)
         return E_POINTER;
-        
+
     *pstart = f.start;
-        
+
     if (pstop == 0)
         return S_OK;
-        
+
     if (f.stop < f.start)  //no stop time
     {
         *pstop = f.start + 1;
         return VFW_S_NO_STOP_TIME;
     }
-    
-    *pstop = f.stop;        
+
+    *pstop = f.stop;
     return S_OK;
 }
 
 
-HRESULT CVP8Sample::SetTime( 
+HRESULT CVP8Sample::SetTime(
     REFERENCE_TIME*,
     REFERENCE_TIME*)
 {
@@ -445,20 +445,20 @@ HRESULT CVP8Sample::SetActualDataLength(long)
 }
 
 
-HRESULT CVP8Sample::GetMediaType( 
+HRESULT CVP8Sample::GetMediaType(
     AM_MEDIA_TYPE** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     AM_MEDIA_TYPE*& p = *pp;
-        
+
     p = 0;
     return S_FALSE;  //means "no media type"
 }
 
 
-HRESULT CVP8Sample::SetMediaType( 
+HRESULT CVP8Sample::SetMediaType(
     AM_MEDIA_TYPE*)
 {
     return E_NOTIMPL;
@@ -484,7 +484,7 @@ HRESULT CVP8Sample::SetDiscontinuity(BOOL b)
 }
 
 
-HRESULT CVP8Sample::GetMediaTime( 
+HRESULT CVP8Sample::GetMediaTime(
     LONGLONG*,
     LONGLONG*)
 {
@@ -492,7 +492,7 @@ HRESULT CVP8Sample::GetMediaTime(
 }
 
 
-HRESULT CVP8Sample::SetMediaTime( 
+HRESULT CVP8Sample::SetMediaTime(
     LONGLONG*,
     LONGLONG*)
 {

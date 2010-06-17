@@ -19,15 +19,15 @@ public:
     ULONG STDMETHODCALLTYPE Release();
 
     HRESULT STDMETHODCALLTYPE Next(ULONG, XXX*, ULONG*);
-    HRESULT STDMETHODCALLTYPE Skip(ULONG);        
-    HRESULT STDMETHODCALLTYPE Reset();        
+    HRESULT STDMETHODCALLTYPE Skip(ULONG);
+    HRESULT STDMETHODCALLTYPE Reset();
     //HRESULT STDMETHODCALLTYPE Clone(IEnumBase**);
-    
+
 protected:
 
     TEnumXXX();
     TEnumXXX(const TEnumXXX&);
-    
+
     virtual ~TEnumXXX();
 
     virtual HRESULT GetCount(ULONG&) const = 0;
@@ -37,10 +37,10 @@ protected:
 private:
 
     TEnumXXX& operator=(const TEnumXXX&);
-    
+
     ULONG m_cRef;
     ULONG m_index;
-    
+
 };
 
 
@@ -74,21 +74,21 @@ inline HRESULT TEnumXXX<IEnumBase, XXX>::QueryInterface(
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-    
+
     if (iid == __uuidof(IUnknown))
         pUnk = this;
-        
+
     else if (iid == __uuidof(IEnumBase))
         pUnk = this;
-    
-    else    
+
+    else
     {
         pUnk = 0;
         return E_NOINTERFACE;
     }
-    
+
     pUnk->AddRef();
     return S_OK;
 }
@@ -106,7 +106,7 @@ inline ULONG TEnumXXX<IEnumBase, XXX>::Release()
 {
     if (LONG n = InterlockedDecrement((LONG*)&m_cRef))
         return n;
-        
+
     delete this;
     return 0;
 }
@@ -120,52 +120,52 @@ inline HRESULT TEnumXXX<IEnumBase, XXX>::Next(
 {
     if (pn)
         *pn = 0;
-        
+
     if (c == 0) //weird
         return S_OK;
-        
+
     if (pa == 0)
         return E_POINTER;
-        
+
     if ((c > 1) && (pn == 0))
         return E_INVALIDARG;
-        
+
     ULONG index_max;
-    
+
     HRESULT hr = GetCount(index_max);
-    
+
     if (FAILED(hr))  //out of sync
         return hr;
-        
+
     if (m_index >= index_max)
         return S_FALSE;
-        
+
     const ULONG nn = index_max - m_index;
     const ULONG n = (c < nn) ? c : nn;
-    
+
     ULONG i = 0;
-    
+
     for (;;)
     {
         XXX& item = pa[i];
-        
+
         hr = GetItem(m_index, item);
-        
+
         if (FAILED(hr))
         {
             ReleaseItems(pa, i);
             return hr;
         }
-        
+
         ++m_index;
 
         if (++i == n)
             break;
     }
-    
+
     if (pn)
         *pn = n;
-        
+
     return (n < c) ? S_FALSE : S_OK;
 }
 
@@ -179,13 +179,13 @@ inline HRESULT TEnumXXX<IEnumBase, XXX>::Skip(ULONG n)
 
     if (FAILED(hr))
         return hr;
-        
+
     m_index += n;
-    
+
     return (m_index >= max_index) ? S_FALSE : S_OK;
 }
-        
-    
+
+
 template<class IEnumBase, class XXX>
 inline HRESULT TEnumXXX<IEnumBase, XXX>::Reset()
 {
@@ -199,9 +199,9 @@ inline HRESULT TEnumXXX<IEnumBase, XXX>::Reset()
 //{
 //    if (pp == 0)
 //        return E_POINTER;
-//        
+//
 //    IEnumBase*& p = *pp;
-//    
+//
 //    return
 //}
 

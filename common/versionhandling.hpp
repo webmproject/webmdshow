@@ -15,11 +15,11 @@ namespace VersionHandling
 {
     void GetVersion(
             const wchar_t*,
-            WORD& major, 
-            WORD& minor, 
-            WORD& revision, 
+            WORD& major,
+            WORD& minor,
+            WORD& revision,
             WORD& build);
-            
+
     void GetVersion(const wchar_t*, std::wostream&);
 }
 

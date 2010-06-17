@@ -13,12 +13,12 @@
 CEnumPins::CEnumPins(IPin* const* a, ULONG n)
 {
     m_pins.reserve(n);
-    
+
     for (ULONG i = 0; i < n; ++i)
     {
         IPin* const p = a[i];
         p->AddRef();
-        
+
         m_pins.push_back(p);
     }
 }
@@ -30,7 +30,7 @@ CEnumPins::~CEnumPins()
     {
         IPin* const p = m_pins.back();
         m_pins.pop_back();
-        
+
         p->Release();
     }
 }
@@ -39,14 +39,14 @@ CEnumPins::~CEnumPins()
 CEnumPins::CEnumPins(const CEnumPins& rhs)
 {
     const pins_t::size_type n = rhs.m_pins.size();
-    
+
     m_pins.reserve(n);
-    
+
     for (ULONG i = 0; i < n; ++i)
     {
         IPin* const p = rhs.m_pins[i];
         p->AddRef();
-        
+
         m_pins.push_back(p);
     }
 }
@@ -56,11 +56,11 @@ HRESULT CEnumPins::Clone(IEnumPins** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IEnumPins*& p = *pp;
-    
-    p = new (std::nothrow) CEnumPins(*this);    
-    
+
+    p = new (std::nothrow) CEnumPins(*this);
+
     return p ? S_OK : E_OUTOFMEMORY;
 }
 
@@ -69,7 +69,7 @@ HRESULT CEnumPins::GetCount(ULONG& n) const
 {
     const pins_t::size_type size = m_pins.size();
     n = static_cast<ULONG>(size);
-    
+
     return S_OK;
 }
 
@@ -78,7 +78,7 @@ HRESULT CEnumPins::GetItem(ULONG i, IPin*& p)
 {
     p = m_pins[i];
     p->AddRef();
-    
+
     return S_OK;
 }
 
@@ -100,12 +100,12 @@ HRESULT CEnumPins::CreateInstance(
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IEnumPins*& p = *pp;
-    
+
     p = new (std::nothrow) CEnumPins(a, n);
-    
+
     return p ? S_OK : E_OUTOFMEMORY;
 }
 
-    
+
