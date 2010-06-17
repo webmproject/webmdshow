@@ -16,27 +16,27 @@ class MkvFile : public MkvParser::IMkvFile
 {
     MkvFile(const MkvFile&);
     MkvFile& operator=(const MkvFile&);
-    
+
 public:
     MkvFile();
     virtual ~MkvFile();
-    
+
     HRESULT Open(const wchar_t*);
     HRESULT Close();
     bool IsOpen() const;
-    
-    HRESULT MkvRead( 
+
+    HRESULT MkvRead(
         LONGLONG,
         LONG,
         BYTE*);
-    
-    HRESULT MkvLength( 
+
+    HRESULT MkvLength(
         LONGLONG*,
         LONGLONG*);
-    
+
 private:
     HANDLE m_hFile;
-    LONGLONG m_length;    
+    LONGLONG m_length;
 
     HRESULT SetPosition(LONGLONG) const;
 

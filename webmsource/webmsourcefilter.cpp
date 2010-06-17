@@ -36,35 +36,35 @@ const LONGLONG Filter::kNoSeek(std::numeric_limits<LONGLONG>::min());
 
 HRESULT CreateInstance(
     IClassFactory* pClassFactory,
-    IUnknown* pOuter, 
-    const IID& iid, 
+    IUnknown* pOuter,
+    const IID& iid,
     void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     *ppv = 0;
 
     if ((pOuter != 0) && (iid != __uuidof(IUnknown)))
         return E_INVALIDARG;
-    
+
     Filter* p = new (std::nothrow) Filter(pClassFactory, pOuter);
-    
+
     if (p == 0)
         return E_OUTOFMEMORY;
-        
+
     assert(p->m_nondelegating.m_cRef == 0);
-    
+
     const HRESULT hr = p->m_nondelegating.QueryInterface(iid, ppv);
-    
+
     if (SUCCEEDED(hr))
     {
         assert(*ppv);
         assert(p->m_nondelegating.m_cRef == 1);
-        
+
         return S_OK;
     }
-    
+
     assert(*ppv == 0);
     assert(p->m_nondelegating.m_cRef == 0);
 
@@ -87,18 +87,18 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_seekTime(kNoSeek)
 {
     m_pClassFactory->LockServer(TRUE);
-            
+
     const HRESULT hr = CLockable::Init();
     hr;
     assert(SUCCEEDED(hr));
-        
+
     m_info.pGraph = 0;
     m_info.achName[0] = L'\0';
-    
-#ifdef _DEBUG        
+
+#ifdef _DEBUG
     odbgstream os;
     os << "webmsrc::ctor" << endl;
-#endif    
+#endif
 }
 #pragma warning(default:4355)
 
@@ -114,25 +114,25 @@ Filter::~Filter()
     {
         Outpin* p = m_pins.back();
         assert(p);
-        
+
         m_pins.pop_back();
         delete p;
     }
-    
+
     delete m_pSegment;
 
     m_pClassFactory->LockServer(FALSE);
-}      
+}
 
 
 #if 0
 void Filter::Init()
 {
     assert(m_hThread == 0);
-    
+
     const BOOL b = ResetEvent(m_hStop);
     assert(b);
-    
+
     const uintptr_t h = _beginthreadex(
                             0,  //security
                             0,  //stack size
@@ -140,7 +140,7 @@ void Filter::Init()
                             this,
                             0,   //run immediately
                             0);  //thread id
-                            
+
     m_hThread = reinterpret_cast<HANDLE>(h);
     assert(m_hThread);
 }
@@ -150,17 +150,17 @@ void Filter::Final()
 {
     if (m_hThread == 0)
         return;
-        
+
     BOOL b = SetEvent(m_hStop);
     assert(b);
-    
+
     const DWORD dw = WaitForSingleObject(m_hThread, INFINITE);
     assert(dw == WAIT_OBJECT_0);
- 
+
     b = CloseHandle(m_hThread);
     assert(b);
-    
-    m_hThread = 0;   
+
+    m_hThread = 0;
 }
 #endif
 
@@ -178,18 +178,18 @@ Filter::nondelegating_t::~nondelegating_t()
 
 
 HRESULT Filter::nondelegating_t::QueryInterface(
-    const IID& iid, 
+    const IID& iid,
     void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
-        
+
     IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
-     
-    if (iid == __uuidof(IUnknown))    
+
+    if (iid == __uuidof(IUnknown))
     {
         pUnk = this;  //must be nondelegating
-    }   
+    }
     else if ((iid == __uuidof(IBaseFilter)) ||
              (iid == __uuidof(IMediaFilter)) ||
              (iid == __uuidof(IPersist)))
@@ -209,7 +209,7 @@ HRESULT Filter::nondelegating_t::QueryInterface(
 #if 0
         wodbgstream os;
         os << "webmsource::filter::QI: iid=" << IIDStr(iid) << std::endl;
-#endif        
+#endif
         pUnk = 0;
         return E_NOINTERFACE;
     }
@@ -224,12 +224,12 @@ ULONG Filter::nondelegating_t::AddRef()
     return InterlockedIncrement(&m_cRef);
 }
 
-    
+
 ULONG Filter::nondelegating_t::Release()
 {
     if (LONG n = InterlockedDecrement(&m_cRef))
         return n;
-    
+
     delete m_pFilter;
     return 0;
 }
@@ -257,7 +257,7 @@ HRESULT Filter::GetClassID(CLSID* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     *p = WebmTypes::CLSID_WebmSource;
     return S_OK;
 }
@@ -270,17 +270,17 @@ HRESULT Filter::Stop()
     //the filter is stopped.
 
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     switch (m_state)
     {
         case State_Paused:
         case State_Running:
-            
+
             //Stop is synchronous.  When stop completes, all threads
             //should be stopped.  What does "stopped" mean"  In our
             //case it probably means "terminated".
@@ -296,8 +296,8 @@ HRESULT Filter::Stop()
             //needs to do to tell the streaming thread to stop.
             //One implementation strategy is to have build a
             //vector of thread handles, and then wait for a signal
-            //on one of them.  When the handle is signalled 
-            //(meaning that the thread has terminated), then 
+            //on one of them.  When the handle is signalled
+            //(meaning that the thread has terminated), then
             //we remove that handle from the vector, close the
             //handle, and the wait again.  Repeat until the
             //all threads have been terminated.
@@ -305,21 +305,21 @@ HRESULT Filter::Stop()
             //and decommit the allocator.  (In fact, we could
             //decommit the allocator immediately, and then wait
             //for the threads to terminated.)
-            
+
             lock.Release();
 
-            OnStop();            
-            
+            OnStop();
+
             hr = lock.Seize(this);
             assert(SUCCEEDED(hr));  //TODO
-            
-            break;            
+
+            break;
 
         case State_Stopped:
         default:
             break;
     }
-    
+
     m_state = State_Stopped;
     return S_OK;
 }
@@ -328,15 +328,15 @@ HRESULT Filter::Stop()
 HRESULT Filter::Pause()
 {
     //Unlike Stop(), Pause() can be asynchronous (that's why you have
-    //GetState()).  We could use that here to build the samples index.    
+    //GetState()).  We could use that here to build the samples index.
 
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     switch (m_state)
     {
         case State_Stopped:
@@ -346,9 +346,9 @@ HRESULT Filter::Pause()
         case State_Running:
         case State_Paused:
         default:
-            break;            
+            break;
     }
-    
+
     m_state = State_Paused;
     return S_OK;
 }
@@ -357,58 +357,58 @@ HRESULT Filter::Pause()
 HRESULT Filter::Run(REFERENCE_TIME start)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     switch (m_state)
     {
         case State_Stopped:
             OnStart();
             break;
 
-        case State_Paused:        
+        case State_Paused:
         case State_Running:
         default:
-            break;            
+            break;
     }
 
     m_start = start;
     m_state = State_Running;
-    
+
     return S_OK;
 }
 
 
-HRESULT Filter::GetState( 
+HRESULT Filter::GetState(
     DWORD /* timeout */ ,
     FILTER_STATE* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     //What the GetState.timeout parameter refers to is not to locking
     //the filter, but rather to waiting to determine the current state.
-    //A request to Stop is always synchronous (hence no timeout parameter), 
+    //A request to Stop is always synchronous (hence no timeout parameter),
     //but a request to Pause can be asynchronous, so the caller can say
     //how long he's willing to wait for the transition (to paused) to
     //complete.
-    
-    //TODO: implement a waiting scheme here.  We'll probably have to 
+
+    //TODO: implement a waiting scheme here.  We'll probably have to
     //use SignalObjectAndWait atomically release the mutex and then
-    //wait for the condition variable to change.    
+    //wait for the condition variable to change.
     //if (hr == VFW_E_TIMEOUT)
     //    return VFW_S_STATE_INTERMEDIATE;
-    
+
     Lock lock;
-    
+
     const HRESULT hr = lock.Seize(this);
-    
+
     //The lock is only used for synchronization.  If Seize fails,
     //it means there's a serious problem with the filter.
-    
+
     if (FAILED(hr))
         return E_FAIL;
 
@@ -418,21 +418,21 @@ HRESULT Filter::GetState(
 
 
 
-HRESULT Filter::SetSyncSource( 
+HRESULT Filter::SetSyncSource(
     IReferenceClock* clock)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     if (m_clock)
         m_clock->Release();
-        
+
     m_clock = clock;
-    
+
     if (m_clock)
         m_clock->AddRef();
 
@@ -440,23 +440,23 @@ HRESULT Filter::SetSyncSource(
 }
 
 
-HRESULT Filter::GetSyncSource( 
+HRESULT Filter::GetSyncSource(
     IReferenceClock** pclock)
 {
     if (pclock == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
     IReferenceClock*& clock = *pclock;
-        
+
     clock = m_clock;
-    
+
     if (clock)
         clock->AddRef();
 
@@ -467,57 +467,57 @@ HRESULT Filter::GetSyncSource(
 HRESULT Filter::EnumPins(IEnumPins** pp)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_pins.empty())
-        return CEnumPins::CreateInstance(0, 0, pp);        
-        
+        return CEnumPins::CreateInstance(0, 0, pp);
+
     Outpin* const* const i = &m_pins[0];
     const ULONG n = static_cast<ULONG>(m_pins.size());
-        
+
     return CEnumPins::CreateInstance<Outpin>(i, n, pp);
 }
 
 
 
-HRESULT Filter::FindPin( 
+HRESULT Filter::FindPin(
     LPCWSTR id1,
     IPin** pp)
 {
     if (pp == 0)
         return E_POINTER;
-        
+
     IPin*& p = *pp;
     p = 0;
-    
+
     if (id1 == 0)
         return E_INVALIDARG;
-        
+
     typedef pins_t::const_iterator iter_t;
 
     iter_t i = m_pins.begin();
     const iter_t j = m_pins.end();
-    
+
     while (i != j)
     {
         Pin* const pPin = *i++;
 
         const wstring& id2_ = pPin->m_id;
         const wchar_t* const id2 = id2_.c_str();
-        
+
         if (wcscmp(id1, id2) == 0)  //case-sensitive
         {
             p = pPin;
             p->AddRef();
-            
+
             return S_OK;
         }
-    }    
-    
+    }
+
     return VFW_E_NOT_FOUND;
 }
 
@@ -527,11 +527,11 @@ HRESULT Filter::QueryFilterInfo(FILTER_INFO* p)
 {
     if (p == 0)
         return E_POINTER;
-        
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -541,30 +541,30 @@ HRESULT Filter::QueryFilterInfo(FILTER_INFO* p)
     assert(e == 0);
 
     p->pGraph = m_info.pGraph;
-    
+
     if (p->pGraph)
         p->pGraph->AddRef();
-        
+
     return S_OK;
 }
 
 
-HRESULT Filter::JoinFilterGraph( 
+HRESULT Filter::JoinFilterGraph(
     IFilterGraph *pGraph,
     LPCWSTR name)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
-    //NOTE: 
+
+    //NOTE:
     //No, do not adjust reference counts here!
     //Read the docs for the reasons why.
-    //ENDNOTE.    
-    
+    //ENDNOTE.
+
     m_info.pGraph = pGraph;
 
     if (name == 0)
@@ -575,27 +575,27 @@ HRESULT Filter::JoinFilterGraph(
         //const errno_t e = wcscpy_s(m_info.achName, size, name);
         //e;
         //assert(e == 0);
-        
+
         //if (wcslen(name) >= size)
         //    return E_INVALIDARG;
-        
+
         const wchar_t* src = name;
-        
+
         wchar_t* const dst_begin = m_info.achName;
         wchar_t* const dst_end = dst_begin + size - 1;
-        
+
         wchar_t* dst = dst_begin;
-        
+
         while ((dst < dst_end) && (*dst++ = *src++))
             ;
-            
+
         *dst++ = L'\0';
-        
+
         const size_t size_ = dst - dst_begin;
         size_;
         assert(size_ <= size);
     }
-    
+
     return S_OK;
 }
 
@@ -604,9 +604,9 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 {
     if (pstr == 0)
         return E_POINTER;
-        
+
     wchar_t*& str = *pstr;
-    
+
     str = 0;
     return E_NOTIMPL;
 }
@@ -615,34 +615,34 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 HRESULT Filter::Load(LPCOLESTR filename, const AM_MEDIA_TYPE* pmt)
 {
     pmt;
-    
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     if (m_file.IsOpen())
         return E_UNEXPECTED;
-        
+
     assert(m_pSegment == 0);
-        
+
     hr = m_file.Open(filename);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     hr = CreateSegment();
-    
+
     if (FAILED(hr))
     {
         m_file.Close();
         return hr;
     }
-        
+
     m_filename = filename;
-        
+
     return S_OK;
 }
 
@@ -651,98 +651,98 @@ HRESULT Filter::CreateSegment()
 {
     assert(m_file.IsOpen());
     assert(m_pSegment == 0);
-    
+
     __int64 result, pos;
-    
+
     MkvParser::EBMLHeader h;
-    
+
     result = h.Parse(&m_file, pos);
-    
+
     if (result < 0)  //error
         return static_cast<HRESULT>(result);
-        
+
     assert(result == 0);  //all data available in local file
-        
+
     if (h.m_version > 1)
         return VFW_E_INVALID_FILE_FORMAT;
-        
+
     if (h.m_maxIdLength > 8)
         return VFW_E_INVALID_FILE_FORMAT;
-    
+
     if (h.m_maxSizeLength > 8)
         return VFW_E_INVALID_FILE_FORMAT;
 
     const char* const docType = h.m_docType.c_str();
-            
+
     if (_stricmp(docType, "webm") == 0)
         __noop;
     else if (_stricmp(docType, "matroska") == 0)
         __noop;
     else
         return VFW_E_INVALID_FILE_FORMAT;
-        
+
     if (h.m_docTypeVersion > 2)
         return VFW_E_INVALID_FILE_FORMAT;
-        
+
     if (h.m_docTypeReadVersion > 2)
         return VFW_E_INVALID_FILE_FORMAT;
-        
+
     //Just the EBML header has been consumed.  pos points
     //to start of (first) segment.
-    
+
     MkvParser::Segment* p;
-    
+
     result = MkvParser::Segment::CreateInstance(&m_file, pos, p);
-    
+
     if (result < 0)
         return static_cast<HRESULT>(result);
-        
-    assert(result == 0);  //all data available in local file        
+
+    assert(result == 0);  //all data available in local file
     assert(p);
-    
+
     std::auto_ptr<MkvParser::Segment> pSegment(p);
-    
+
     const HRESULT hr = pSegment->Load();
-    
+
     if (FAILED(hr))
         return hr;
-        
+
 #ifdef _DEBUG
     if (const MkvParser::SegmentInfo* pInfo = pSegment->GetInfo())
     {
         wstring muxingApp, writingApp;
-    
+
         if (const wchar_t* str = pInfo->GetMuxingApp())
             muxingApp = str;
-        
+
         if (const wchar_t* str = pInfo->GetWritingApp())
             writingApp = str;
-            
+
         pInfo = 0;
     }
 #endif
-    
+
     const MkvParser::Tracks* const pTracks = pSegment->GetTracks();
-    
+
     if (pTracks == 0)
         return S_FALSE;
-    
+
     assert(m_pins.empty());
 
     using namespace MkvParser;
-    
-    typedef Stream::TCreateOutpins<VideoTrack, VideoStream, Filter> EV;    
+
+    typedef Stream::TCreateOutpins<VideoTrack, VideoStream, Filter> EV;
     pTracks->EnumerateVideoTracks(EV(this, &VideoStream::CreateInstance));
-    
+
     typedef Stream::TCreateOutpins<AudioTrack, AudioStream, Filter> EA;
     pTracks->EnumerateAudioTracks(EA(this, &AudioStream::CreateInstance));
-    
+
     if (m_pins.empty())
         return VFW_E_INVALID_FILE_FORMAT;  //TODO: better return value here?
-        
+
     m_pSegment = pSegment.release();
     m_pSeekBase = 0;
-    m_seekTime = kNoSeek;    
+    m_seekTime = kNoSeek;
 
     return S_OK;
 }
@@ -760,36 +760,36 @@ HRESULT Filter::GetCurFile(LPOLESTR* pname, AM_MEDIA_TYPE* pmt)
 {
     if (pmt)
         memset(pmt, 0, sizeof(AM_MEDIA_TYPE));  //TODO
-        
+
     if (pname == 0)
         return E_POINTER;
-        
+
     wchar_t*& name = *pname;
     name = 0;
-    
+
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
-    
+
     if (!m_file.IsOpen())
         return S_FALSE;
-        
+
     const size_t len = m_filename.length();
     const size_t size = len + 1;
     const size_t cb = size * sizeof(wchar_t);
-    
+
     name = (wchar_t*)CoTaskMemAlloc(cb);
-    
+
     if (name == 0)
         return E_OUTOFMEMORY;
-        
+
     const errno_t e = wcscpy_s(name, size, m_filename.c_str());
     e;
     assert(e == 0);
-    
+
     return S_OK;
 }
 
@@ -803,18 +803,18 @@ ULONG Filter::GetMiscFlags()
 void Filter::OnStart()
 {
     typedef pins_t::iterator iter_t;
-    
+
     iter_t i = m_pins.begin();
     const iter_t j = m_pins.end();
-    
+
     while (i != j)
     {
         Outpin* const pPin = *i++;
         assert(pPin);
-        
+
         pPin->Init();
     }
-    
+
     //Init();
 }
 
@@ -822,17 +822,17 @@ void Filter::OnStart()
 void Filter::OnStop()
 {
     //Final();
-    
+
     typedef pins_t::iterator iter_t;
-    
+
     iter_t i = m_pins.begin();
     const iter_t j = m_pins.end();
-    
+
     while (i != j)
     {
         Outpin* const pPin = *i++;
         assert(pPin);
-        
+
         pPin->Final();
     }
 }
@@ -841,87 +841,87 @@ void Filter::OnStop()
 int Filter::GetConnectionCount() const
 {
     //filter already locked by caller
-    
+
     int n = 0;
-    
+
     typedef pins_t::const_iterator iter_t;
-    
+
     iter_t i = m_pins.begin();
     const iter_t j = m_pins.end();
-    
+
     while (i != j)
     {
         const Outpin* const pin = *i++;
         assert(pin);
-        
+
         if (pin->m_connection)
             ++n;
     }
-    
+
     return n;
-}        
+}
 
 
 void Filter::SetCurrPosition(
-    LONGLONG currTime, 
-    DWORD dwCurr, 
+    LONGLONG currTime,
+    DWORD dwCurr,
     Outpin* pOutpin)
 {
     assert(pOutpin);
     assert(pOutpin->m_connection);
 
     MkvParser::Stream* const pOutpinStream = pOutpin->m_pStream;
-    
+
     //odbgstream os;
-        
+
     if (m_seekTime == currTime)
     {
         pOutpinStream->SetCurrPosition(m_pSeekBase);
         //os << "webmsource::filter::setcurrpos: seektime=currtime #1" << endl;
         return;
     }
-    
-    if (pOutpinStream->m_pTrack->GetType() == 1)  //video    
+
+    if (pOutpinStream->m_pTrack->GetType() == 1)  //video
     {
         const AM_MEDIA_TYPE& mt = pOutpin->m_connection_mtv[0];
         const BOOL bVideo = (mt.majortype == MEDIATYPE_Video);
         bVideo;
         assert(bVideo);
-        
+
         m_pSeekBase = pOutpinStream->SetCurrPosition(currTime, dwCurr);
-        m_seekTime = currTime;        
+        m_seekTime = currTime;
         //os << "webmsource::filter::setcurrpos: outpin is video #2" << endl;
         return;
     }
-    
+
     typedef pins_t::const_iterator iter_t;
-    
+
     iter_t i = m_pins.begin();
     const iter_t j = m_pins.end();
-    
+
     while (i != j)
     {
         const Outpin* const pin = *i++;
         assert(pin);
-        
+
         if (pin->m_connection == 0)
             continue;
-        
+
         const AM_MEDIA_TYPE& mt = pin->m_connection_mtv[0];
         const BOOL bVideo = (mt.majortype == MEDIATYPE_Video);
-        
+
         if (!bVideo)
             continue;
-            
+
         MkvParser::Stream* const pStream = pin->m_pStream;
         assert(pStream);
         assert(pStream != pOutpinStream);
         assert(pStream->m_pTrack->GetType() == 1);  //video
-        
+
         const LONGLONG ns = pOutpinStream->GetSeekTime(currTime, dwCurr);
         m_pSeekBase = pStream->GetSeekBase(ns);
         m_seekTime = currTime;
-        
+
         //os << "webmsource::filter::setcurrpos: searched for and found video pin;"
         //   << " timecode[ns]=" << ns
         //   << " seekbase.time[ns]="
@@ -934,11 +934,11 @@ void Filter::SetCurrPosition(
         //os << "webmsource::filter::setcurrpos: searched for and found video pin #3b" << endl;
         return;
     }
-    
+
     //os << "webmsource::filter::setcurrpos: searched for but did not find video pin #4" << endl;
 
     m_pSeekBase = pOutpinStream->SetCurrPosition(currTime, dwCurr);
-    m_seekTime = currTime;        
+    m_seekTime = currTime;
 }
 
 
