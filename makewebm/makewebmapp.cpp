@@ -88,6 +88,33 @@ int App::operator()(int argc, wchar_t* argv[])
     }
 #endif
 
+    const wchar_t* const ext = wcsrchr(m_cmdline.GetInputFileName(), L'.');
+    
+    if ((ext != 0) && (_wcsicmp(ext, L".GRF") == 0))
+    {
+        status = LoadGraph();
+        
+        if (status)
+            return status;
+            
+        GraphUtil::IBaseFilterPtr pMuxer;
+        
+        hr = m_pGraph->FindFilterByName(L"webmmux", &pMuxer);
+        
+        if (hr != S_OK)
+        {
+            wcout << L"WebM muxer filter not found.";
+            return 1;
+        }
+        
+        const GraphUtil::IMediaSeekingPtr pSeek(pMuxer);
+        assert(bool(pSeek));
+
+        status = RunGraph(pSeek);        
+
+        return status;
+    }
+    
     IBaseFilterPtr pReader;
 
     hr = pBuilder->AddSourceFilter(m_cmdline.GetInputFileName(), L"source", &pReader);
@@ -671,6 +698,74 @@ int App::CreateFirstPassGraph(
         return 1;
     }
 
+    return 0;  //success
+}
+
+
+int App::LoadGraph()
+{
+    const wchar_t* const input_filename = m_cmdline.GetInputFileName();
+    
+    if (StgIsStorageFile(input_filename) != S_OK)
+    {
+        wcout << "Input GraphEdit file is not a storage file." << endl;
+        return 1;
+    }
+    
+    IStoragePtr pStg;
+    
+    HRESULT hr = StgOpenStorage(
+                    input_filename,
+                    0,
+                    STGM_TRANSACTED | STGM_READ | STGM_SHARE_DENY_WRITE,
+                    0,
+                    0,
+                    &pStg);
+                    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to open GraphEdit storage file.\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+
+        return 1;
+    }
+    
+    IStreamPtr pStream;
+    
+    hr = pStg->OpenStream(
+            L"ActiveMovieGraph",
+            0,
+            STGM_READ | STGM_SHARE_EXCLUSIVE,
+            0,
+            &pStream);
+            
+    if (FAILED(hr))
+    {
+        wcout << "Unable to open GraphEdit file stream.\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+
+        return 1;
+    }
+
+    const IPersistStreamPtr pPersistStream(m_pGraph);
+    assert(bool(pPersistStream));
+    
+    hr = pPersistStream->Load(pStream);
+    
+    if (FAILED(hr))
+    {
+        wcout << "Unable to open load GraphEdit stream.\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+
+        return 1;
+    }        
+    
     return 0;  //success
 }
 
