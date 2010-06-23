@@ -118,7 +118,10 @@ int App::operator()(int argc, wchar_t* argv[])
 
     IBaseFilterPtr pReader;
 
-    hr = pBuilder->AddSourceFilter(m_cmdline.GetInputFileName(), L"source", &pReader);
+    hr = pBuilder->AddSourceFilter(
+            m_cmdline.GetInputFileName(),
+            L"source",
+            &pReader);
 
     if (FAILED(hr))
     {
@@ -273,7 +276,11 @@ int App::operator()(int argc, wchar_t* argv[])
         //TODO:
         //DWORD dw;
         //
-        //hr = rot->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pGraph, mon, &dw);
+        //hr = rot->Register(
+        //       ROTFLAGS_REGISTRATIONKEEPSALIVE,
+        //       pGraph,
+        //       mon,
+        //       &dw);
         //assert(SUCCEEDED(hr));
 
         status = RunGraph(pSeek);
@@ -337,11 +344,15 @@ int App::CreateMuxerGraph(
         {
             assert(!bTwoPass);
 
-            hr = m_pGraph->ConnectDirect(pDemuxOutpinVideo, pMuxInpinVideo, 0);
+            hr = m_pGraph->ConnectDirect(
+                    pDemuxOutpinVideo,
+                    pMuxInpinVideo,
+                    0);
 
             if (FAILED(hr))
             {
-                wcout << "Unable to (directly) connect splitter video outpin to muxer video inpin.\n"
+                wcout << "Unable to (directly) connect splitter video outpin"
+                      << " to muxer video inpin.\n"
                       << hrtext(hr)
                       << L" (0x" << hex << hr << dec << L")"
                       << endl;
@@ -388,7 +399,8 @@ int App::CreateMuxerGraph(
 
                 if (FAILED(hr))
                 {
-                    wcout << "Unable to set VP8 encoder pass mode (last pass).\n"
+                    wcout << "Unable to set VP8 encoder pass mode"
+                          << " (last pass).\n"
                           << hrtext(hr)
                           << L" (0x" << hex << hr << dec << L")"
                           << endl;
@@ -396,7 +408,8 @@ int App::CreateMuxerGraph(
                     return 1;
                 }
 
-                const wchar_t* const stats_filename = m_stats_filename.c_str();
+                const wchar_t* const stats_filename =
+                    m_stats_filename.c_str();
 
                 hr = m_stats_file.Open(stats_filename);
 
@@ -442,7 +455,8 @@ int App::CreateMuxerGraph(
 
                 if (FAILED(hr))
                 {
-                    wcout << "Unable to connect demux outpin to VP8 encoder filter inpin.\n"
+                    wcout << "Unable to connect demux outpin to"
+                          << " VP8 encoder filter inpin.\n"
                           << hrtext(hr)
                           << L" (0x" << hex << hr << dec << L")"
                           << endl;
@@ -461,7 +475,8 @@ int App::CreateMuxerGraph(
 
             if (FAILED(hr))
             {
-                wcout << "Unable to connect VP8 encoder outpin to muxer video inpin.\n"
+                wcout << "Unable to connect VP8 encoder outpin"
+                      << " to muxer video inpin.\n"
                       << hrtext(hr)
                       << L" (0x" << hex << hr << dec << L")"
                       << endl;
@@ -488,7 +503,10 @@ int App::CreateMuxerGraph(
         {
             if (m_cmdline.GetRequireAudio())
             {
-                wcout << "Source has audio, but no audio stream connected to muxer." << endl;
+                wcout << "Source has audio,"
+                      << " but no audio stream connected to muxer."
+                      << endl;
+
                 return 1;
             }
         }
@@ -506,7 +524,9 @@ int App::CreateMuxerGraph(
 
     if (nConnections <= 0)
     {
-        wcout << L"No splitter outpins are connected to muxer inpins." << endl;
+        wcout << L"No splitter outpins are connected to muxer inpins."
+              << endl;
+
         return 1;
     }
 
@@ -557,7 +577,8 @@ int App::CreateMuxerGraph(
         return 1;
     }
 
-    //TODO: this needs to be a dedicated switch, e.g. --dry-run or --build-only
+    //TODO: this needs to be a dedicated switch,
+    //e.g. --dry-run or --build-only
     //if (bList)
     //    return 1;  //soft error
 
@@ -581,7 +602,9 @@ int App::CreateFirstPassGraph(
 
     if (IsVP8(pDemuxOutpinVideo))
     {
-        wcout << "Video demux stream is already VP8 -- two-pass not supported.\n";
+        wcout << "Video demux stream is already VP8"
+              << " -- two-pass not supported.\n";
+
         return 1;
     }
 
@@ -637,7 +660,8 @@ int App::CreateFirstPassGraph(
 
     if (FAILED(hr))
     {
-        wcout << "Unable to connect demux outpin to VP8 encoder filter inpin.\n"
+        wcout << "Unable to connect demux outpin to"
+              << " VP8 encoder filter inpin.\n"
               << hrtext(hr)
               << L" (0x" << hex << hr << dec << L")"
               << endl;
@@ -677,7 +701,8 @@ int App::CreateFirstPassGraph(
 
     if (FAILED(hr))
     {
-        wcout << "Unable to set output filename (for two-pass stats) of file writer filter.\n"
+        wcout << "Unable to set output filename (for two-pass stats)"
+              << " of file writer filter.\n"
               << hrtext(hr)
               << L" (0x" << hex << hr << dec << L")"
               << endl;
@@ -698,7 +723,8 @@ int App::CreateFirstPassGraph(
 
     if (FAILED(hr))
     {
-        wcout << "Unable to connect VP8 encoder outpin to file writer inpin (for two-pass stats).\n"
+        wcout << "Unable to connect VP8 encoder outpin to file writer inpin"
+              << " (for two-pass stats).\n"
               << hrtext(hr)
               << L" (0x" << hex << hr << dec << L")"
               << endl;
@@ -902,7 +928,12 @@ int App::RunGraph(IMediaSeeking* pSeek)
             DispatchMessage(&msg);
         }
 
-        const DWORD dw = MsgWaitForMultipleObjects(nh, ha, 0, 100, QS_ALLINPUT);
+        const DWORD dw = MsgWaitForMultipleObjects(
+                            nh,
+                            ha,
+                            0,
+                            100,
+                            QS_ALLINPUT);
 
         if (dw == WAIT_TIMEOUT)
         {
@@ -1327,7 +1358,7 @@ GraphUtil::IBaseFilterPtr App::AddDemuxFilter(IBaseFilter* pReader) const
     assert(bool(m_pGraph));
     assert(pReader);
 
-    if (GraphUtil::OutpinCount(pReader) > 1)  //assume source, not merely reader
+    if (GraphUtil::OutpinCount(pReader) > 1)  //source, not reader
         return pReader;
 
     const IPinPtr pPin = GraphUtil::FindOutpin(pReader);
@@ -1357,7 +1388,10 @@ GraphUtil::IBaseFilterPtr App::AddDemuxFilter(IBaseFilter* pReader) const
 
         if (hr != S_OK)
         {
-            wcout << "No acceptable media types found on source filter's outpins." << endl;
+            wcout << "No acceptable media types found"
+                  << " on source filter's outpins."
+                  << endl;
+
             return 0;
         }
 
@@ -1459,7 +1493,10 @@ GraphUtil::IBaseFilterPtr App::EnumDemuxFilters(IPin* pOutputPin) const
 
     if (FAILED(hr))
     {
-        wcout << "Unable to enumerate filters that can demux the source filter." << endl;
+        wcout << "Unable to enumerate filters"
+              << " that can demux the source filter."
+              << endl;
+
         return 0;
     }
 
@@ -1471,7 +1508,10 @@ GraphUtil::IBaseFilterPtr App::EnumDemuxFilters(IPin* pOutputPin) const
 
         if (hr != S_OK)
         {
-            wcout << "No filters found that can demux the source filter." << endl;
+            wcout << "No filters found"
+                  << " that can demux the source filter."
+                  << endl;
+
             return 0;
         }
 
@@ -1723,7 +1763,9 @@ HRESULT App::ConnectVideoConverter(IPin* pDemuxOutpin, IPin* pVP8Inpin) const
         hr = pConfig->AddFilterToCache(f);
         assert(SUCCEEDED(hr));
 
-        const HRESULT hrConnect = pBuilder->Connect(pDemuxOutpin, pMuxInpin);
+        const HRESULT hrConnect = pBuilder->Connect(
+                                    pDemuxOutpin,
+                                    pMuxInpin);
 
         hr = pConfig->RemoveFilterFromCache(f);
         assert(SUCCEEDED(hr));
@@ -1913,7 +1955,11 @@ void App::DumpPreferredMediaTypes(
 
     if (FAILED(hr))
     {
-        wcout << L"Unable to enumerate preferred media types for " << id << "." << endl;
+        wcout << L"Unable to enumerate preferred media types for "
+              << id
+              << "."
+              << endl;
+
         return;
     }
 
@@ -2082,15 +2128,18 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
         }
     }
 
-    const int decoder_buffer_initial_size = m_cmdline.GetDecoderBufferInitialSize();
+    const int decoder_buffer_initial_size =
+        m_cmdline.GetDecoderBufferInitialSize();
 
     if (decoder_buffer_initial_size >= 0)
     {
-        const HRESULT hr = pVP8->SetDecoderBufferInitialSize(decoder_buffer_initial_size);
+        const HRESULT hr = pVP8->SetDecoderBufferInitialSize(
+                            decoder_buffer_initial_size);
 
         if (FAILED(hr))
         {
-            wcout << "Unable to set VP8 encoder decoder buffer initial size.\n"
+            wcout << "Unable to set VP8 encoder"
+                  << " decoder buffer initial size.\n"
                   << hrtext(hr)
                   << L" (0x" << hex << hr << dec << L")"
                   << endl;
@@ -2099,15 +2148,18 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
         }
     }
 
-    const int decoder_buffer_optimal_size = m_cmdline.GetDecoderBufferOptimalSize();
+    const int decoder_buffer_optimal_size =
+        m_cmdline.GetDecoderBufferOptimalSize();
 
     if (decoder_buffer_optimal_size >= 0)
     {
-        const HRESULT hr = pVP8->SetDecoderBufferOptimalSize(decoder_buffer_optimal_size);
+        const HRESULT hr = pVP8->SetDecoderBufferOptimalSize(
+                            decoder_buffer_optimal_size);
 
         if (FAILED(hr))
         {
-            wcout << "Unable to set VP8 encoder decoder buffer optimal size.\n"
+            wcout << "Unable to set VP8 encoder"
+                  << " decoder buffer optimal size.\n"
                   << hrtext(hr)
                   << L" (0x" << hex << hr << dec << L")"
                   << endl;
@@ -2138,7 +2190,8 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
 
     if (keyframe_min_interval >= 0)
     {
-        const HRESULT hr = pVP8->SetKeyframeMinInterval(keyframe_min_interval);
+        const HRESULT hr = pVP8->SetKeyframeMinInterval(
+                            keyframe_min_interval);
 
         if (FAILED(hr))
         {
@@ -2155,7 +2208,8 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
 
     if (keyframe_max_interval >= 0)
     {
-        const HRESULT hr = pVP8->SetKeyframeMaxInterval(keyframe_max_interval);
+        const HRESULT hr = pVP8->SetKeyframeMaxInterval(
+                            keyframe_max_interval);
 
         if (FAILED(hr))
         {
@@ -2340,15 +2394,18 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
         }
     }
 
-    const int two_pass_vbr_minsection_pct = m_cmdline.GetTwoPassVbrMinsectionPct();
+    const int two_pass_vbr_minsection_pct =
+        m_cmdline.GetTwoPassVbrMinsectionPct();
 
     if (two_pass_vbr_minsection_pct >= 0)
     {
-        const HRESULT hr = pVP8->SetTwoPassVbrMinsectionPct(two_pass_vbr_minsection_pct);
+        const HRESULT hr = pVP8->SetTwoPassVbrMinsectionPct(
+                            two_pass_vbr_minsection_pct);
 
         if (FAILED(hr))
         {
-            wcout << "Unable to set VP8 encoder two-pass VBR minsection pct.\n"
+            wcout << "Unable to set VP8 encoder"
+                  << " two-pass VBR minsection pct.\n"
                   << hrtext(hr)
                   << L" (0x" << hex << hr << dec << L")"
                   << endl;
@@ -2357,15 +2414,18 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
         }
     }
 
-    const int two_pass_vbr_maxsection_pct = m_cmdline.GetTwoPassVbrMaxsectionPct();
+    const int two_pass_vbr_maxsection_pct =
+        m_cmdline.GetTwoPassVbrMaxsectionPct();
 
     if (two_pass_vbr_maxsection_pct >= 0)
     {
-        const HRESULT hr = pVP8->SetTwoPassVbrMaxsectionPct(two_pass_vbr_maxsection_pct);
+        const HRESULT hr = pVP8->SetTwoPassVbrMaxsectionPct(
+            two_pass_vbr_maxsection_pct);
 
         if (FAILED(hr))
         {
-            wcout << "Unable to set VP8 encoder two-pass VBR maxsection pct.\n"
+            wcout << "Unable to set VP8 encoder"
+                  << " two-pass VBR maxsection pct.\n"
                   << hrtext(hr)
                   << L" (0x" << hex << hr << dec << L")"
                   << endl;

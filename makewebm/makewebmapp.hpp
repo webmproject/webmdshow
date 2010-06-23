@@ -64,8 +64,16 @@ private:
     bool ConnectAudio(IPin*, IPin*) const;
     HRESULT ConnectVorbisEncoder(IPin*, IPin*) const;
 
-    static void DumpPreferredMediaTypes(IPin*, const wchar_t*, void (*)(const AM_MEDIA_TYPE&));
-    static void DumpConnectionMediaType(IPin*, const wchar_t*, void (*)(const AM_MEDIA_TYPE&));
+    static void DumpPreferredMediaTypes(
+                    IPin*,
+                    const wchar_t*,
+                    void (*)(const AM_MEDIA_TYPE&));
+
+    static void DumpConnectionMediaType(
+                    IPin*,
+                    const wchar_t*,
+                    void (*)(const AM_MEDIA_TYPE&));
+
     void DisplayProgress(IMediaSeeking*, bool);
 
     static void DumpVideoMediaType(const AM_MEDIA_TYPE&);
