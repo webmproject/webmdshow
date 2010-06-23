@@ -7,7 +7,7 @@ mailto:matthewjheaney@google.com
 Summary
    The WebmM Project DirectShow Filters package ("webmdshow") allows you
    to encode and decode VP8 video, and write and read WebM files, all using
-   Microsoft DirectShow. 
+   Microsoft DirectShow.
 
 
 Preliminaries
@@ -66,7 +66,7 @@ Installation
    To uninstall, you can choose the uninstall option from the Add or Remove
    Programs control panel, or run the uninstall_webmdshow.exe in the install
    directory listed above.
-   
+
    The webmdshow package also includes a couple of simple command-line
    utilities for reading and writing WebM files, that are implemented using the
    Webm DirectShow filters.  The utility PLAYWEBM (playwebm.exe) is for basic
@@ -81,7 +81,7 @@ Description of Microsoft DirectShow and the WebM DirectShow Filters
    Windows.  Streams are constructed from "filters" that are connected via
    "pins".  You mix and match different kinds of filters in order to construct
    a stream having the characteristics you desire.
-   
+
    A WebM file is a container for a video stream encoded as VP8, and an audio
    stream encoded as Vorbis.  The file itself uses the ".webm" file extension.
    The file format is a subset of the Matroska container format, with "webm"
@@ -129,7 +129,7 @@ Description of Microsoft DirectShow and the WebM DirectShow Filters
    for Webm muxing and demuxing together in one downloadable package. If you
    think that this would be of interest to the WebM Project community, please
    file a bug report at the link listed above.
-   
+
 
 Playing WebM Files on Windows using DirectShow
    Once you have installed the WEBMSOURCE filter, VP8DECODER filter, and
@@ -208,43 +208,43 @@ Authoring WebM Files On Windows Using DirectShow
    behavior.  The switches are described here, but you can always
    get the list by running MAKEWEBM without any arguments, or by
    specifying the --help (or -h) switch.
-   
+
    Switches can be specified using short-form syntax (preceded by
    a single hypen), long-form syntax (preceded by a pair of hyphens),
-   or using Windows-style syntax (preceded by a forward slash).   
+   or using Windows-style syntax (preceded by a forward slash).
    Switches and arguments and can be specified in any order.  Switches
    can be abbrievated, and long-form options are case-insensitive.
-   
+
    The value for long-form switches can be specified as part of the
    switch itself by separating the switch from the value using an
    equal sign.  If no equal sign is present, then the value stands
    by itself as the next command-line argument.  For example:
-   
+
       makewebm --input=XYZ.AVI ...
       makewebm --input XYZ.AVI ...
-   
-   The value for Windows-style switches can be specified as part of 
+
+   The value for Windows-style switches can be specified as part of
    the switch itself by separating the switch from the value using
    a colon.  If no colon is present, then the value stands by itself
    as the next command-line argument.  For example:
-   
+
       makewebm /input:XYZ.AVI ...
       makewebm /input XYZ.AVI ...
-      
+
    Short-form switches that accept a value require that the value
    appear as the next command-line argument.  The reason is that you're
    allowed to use a long-form spelling for some switches, for example:
-   
+
       makewebm -i XYZ.AVI  ...
       makewebm -input XYZ.AVI  ...
-   
+
    Where there is ambiguity among switches (e.g. "/ver"), the precedence
    of switches is determined by their order in the help (usage) display.
-   
+
    MAKEWEBM requires that the input filename be specified. The input file
    can be specified using the --input (or -i) switch, or as the (first)
    argument.
-   
+
    The output file can specified using the --output (or -o) switch,
    or as the (second) argument.  This names the resulting WebM file.
    If you don't specify the output filename value explicitly, its value
@@ -261,7 +261,7 @@ Authoring WebM Files On Windows Using DirectShow
    MAKEWEBM only transcodes input streams if they aren't encoded as
    VP8 (for video) or Vorbis (for audio).  If a stream already has
    that encoding, then it is connected directly to the WEBMMUX filter
-   as is, without being re-encoded. 
+   as is, without being re-encoded.
 
    If MAKEWEBM needs to encode to Vorbis audio, and it cannot find a
    filter to perform the encoding, then by default it will make a
@@ -273,7 +273,7 @@ Authoring WebM Files On Windows Using DirectShow
    arguments and switches, without building the actual graph.  If you
    also specify the --verbose (or -v) switch, the input and output
    filenames are expanded to their full paths.
-   
+
    If you specify the --verbose (or -v) switch (without also specifying
    the --list switch), then as the graph is being built the app prints
    the media subtype and format of the pins being connected.  This is
@@ -282,7 +282,7 @@ Authoring WebM Files On Windows Using DirectShow
    The --version (or -V) switch prints the value of the app's version
    resource. If you submit a bug report, please include the version
    value of your copy of the MAKEWEBM app in your report.
-   
+
    By default, while MAKWEBM is running, it prints the progress of the
    mux by over-writing the same line on standard output.  (The value
    it writes is the current position in the output file, expressed as
