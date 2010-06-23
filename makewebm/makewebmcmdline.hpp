@@ -53,6 +53,7 @@ public:
     int GetTwoPassVbrBiasPct() const;
     int GetTwoPassVbrMinsectionPct() const;
     int GetTwoPassVbrMaxsectionPct() const;
+    const wchar_t* GetSaveGraphFile() const;
 
     static std::wstring GetPath(const wchar_t*);
 
@@ -95,6 +96,9 @@ private:
     int m_two_pass_vbr_minsection_pct;
     int m_two_pass_vbr_maxsection_pct;
 
+    std::wstring m_save_graph_file_str;
+    const wchar_t* m_save_graph_file_ptr;
+
     static bool IsSwitch(const wchar_t*);
     int Parse(wchar_t**);
     int ParseShort(wchar_t**);
@@ -105,6 +109,7 @@ private:
     void PrintVersion() const;
     void ListArgs() const;
     void SynthesizeOutput();
+    void SynthesizeSaveGraph();
 
 //doesn't compile for some reason
 //    enum { kValueIsRequired = std::numeric_limits<int>::min() };

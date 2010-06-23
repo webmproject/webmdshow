@@ -33,8 +33,9 @@ private:
 
     CmdLine m_cmdline;
     GraphUtil::IFilterGraphPtr m_pGraph;
-    
+
     int LoadGraph();
+    int SaveGraph();
 
     int m_progress;
 

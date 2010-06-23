@@ -57,7 +57,8 @@ CmdLine::CmdLine() :
     m_resize_down_thresh(-1),
     m_two_pass_vbr_bias_pct(-1),
     m_two_pass_vbr_minsection_pct(-1),
-    m_two_pass_vbr_maxsection_pct(-1)
+    m_two_pass_vbr_maxsection_pct(-1),
+    m_save_graph_file_ptr(0)
 {
 }
 
@@ -177,6 +178,18 @@ int CmdLine::Parse(int argc, wchar_t* argv[])
 
         assert(m_output);
 #endif
+    }
+
+    if (m_save_graph_file_ptr)  //had a request
+    {
+        if (m_two_pass >= 1)  //two-pass requested
+        {
+            wcout << "Unable to save GraphEdit storage file in two-pass mode." << endl;
+            return 1;
+        }
+
+        if (wcslen(m_save_graph_file_ptr) == 0)  //request, but no filename
+            SynthesizeSaveGraph();
     }
 
     if (i < j)  //not all args consumed
@@ -1067,6 +1080,27 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
+    if (_wcsnicmp(arg, L"save-graph", len) == 0)
+    {
+        const wchar_t*& f = m_save_graph_file_ptr;
+
+        if (has_value)
+        {
+            f = arg + len + 1;
+            return 1;
+        }
+
+        f = *++i;
+
+        if ((f == 0) || IsSwitch(f)) //no value specified
+        {
+            f = L"";
+            return 1;
+        }
+
+        return 2;
+    }
+
     status = ParseOpt(i, arg, len, L"target-bitrate", m_target_bitrate, 0, -1);
 
     if (status)
@@ -1129,6 +1163,12 @@ const wchar_t* CmdLine::GetInputFileName() const
 const wchar_t* CmdLine::GetOutputFileName() const
 {
     return m_output;
+}
+
+
+const wchar_t* CmdLine::GetSaveGraphFile() const
+{
+    return m_save_graph_file_ptr;
 }
 
 
@@ -1347,6 +1387,7 @@ void CmdLine::PrintUsage() const
           << L"  --resize-up-threshold           spatial resampling up threshold\n"
           << L"  --resize-down-threshold         spatial resampling down threshold\n"
           << L"  --script-mode                   print progress in script-friendly way\n"
+          << L"  --save-graph                    save graph as GraphEdit storage file (*.grf)\n"
           << L"  --target-bitrate                target bandwidth (in kilobits/second)\n"
           << L"  --thread-count                  number of threads to use for VP8 encoding\n"
           << L"  --token-partitions              number of sub-streams\n"
@@ -1433,6 +1474,17 @@ void CmdLine::ListArgs() const
 
         wcout << L"\"\n";
     }
+
+    wcout << L"save-graph : ";
+
+    if (m_save_graph_file_ptr == 0)
+        wcout << "(no save graph file requested)\n";
+
+    else if (wcslen(m_save_graph_file_ptr) == 0)
+        wcout << "(will be synthesized from output filename)\n";
+
+    else
+        wcout << m_save_graph_file_ptr << L'\n';
 
     wcout << L"script-mode: " << boolalpha << m_script << L'\n';
     wcout << L"verbose    : " << boolalpha << m_verbose << L'\n';
@@ -1664,7 +1716,28 @@ void CmdLine::SynthesizeOutput()
     else
         path.replace(pos, len, L".webm");
 
-    m_output = m_synthesized_output.c_str();
+    m_output = path.c_str();
+}
+
+
+void CmdLine::SynthesizeSaveGraph()
+{
+    wstring& path = m_save_graph_file_str;
+    path = GetPath(m_output);
+
+    const wstring::size_type pos = path.rfind(L'.');
+    const wstring::size_type len = path.length();
+
+    if (pos == wstring::npos)  //weird: no ext
+        path.append(L".grf");
+
+    else if (_wcsicmp(path.c_str() + pos, L".grf") == 0)  //weird: match
+        path.replace(pos, len, L"_graph.grf");
+
+    else
+        path.replace(pos, len, L".grf");  //typical
+
+    m_save_graph_file_ptr = m_save_graph_file_str.c_str();
 }
 
 
