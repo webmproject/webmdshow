@@ -20,6 +20,7 @@ namespace VP8EncoderLib
 
 class Filter : public IBaseFilter,
                public IVP8Encoder,
+               public IPersistStream,
                public CLockable
 {
     friend HRESULT CreateInstance(
@@ -141,6 +142,13 @@ public:
     HRESULT STDMETHODCALLTYPE SetTwoPassVbrMaxsectionPct(int);
     HRESULT STDMETHODCALLTYPE GetTwoPassVbrMaxsectionPct(int*);
 
+    ///IPersistStream
+
+    HRESULT STDMETHODCALLTYPE IsDirty();
+    HRESULT STDMETHODCALLTYPE Load(IStream*);
+    HRESULT STDMETHODCALLTYPE Save(IStream*, BOOL);
+    HRESULT STDMETHODCALLTYPE GetSizeMax(ULARGE_INTEGER*);
+
 private:
     class CNondelegating : public IUnknown
     {
@@ -173,12 +181,13 @@ public:
     Inpin m_inpin;
     OutpinVideo m_outpin_video;
     OutpinPreview m_outpin_preview;
+    bool m_bDirty;
 
     struct Config
     {
         typedef __int32 int32_t;
 
-        int32_t deadline;
+        int32_t deadline;  //TODO: does this really belong here?
 
         //g_usage
         int32_t threads;

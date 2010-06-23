@@ -77,7 +77,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_clock(0),
       m_inpin(this),
       m_outpin_video(this),
-      m_outpin_preview(this)
+      m_outpin_preview(this),
+      m_bDirty(false)
 {
     m_pClassFactory->LockServer(TRUE);
 
@@ -171,6 +172,10 @@ HRESULT Filter::CNondelegating::QueryInterface(
              (iid == __uuidof(IPersist)))
     {
         pUnk = static_cast<IBaseFilter*>(m_pFilter);
+    }
+    else if (iid == __uuidof(IPersistStream))
+    {
+        pUnk = static_cast<IPersistStream*>(m_pFilter);
     }
     else if (iid == __uuidof(IVP8Encoder))
     {
@@ -571,6 +576,8 @@ HRESULT Filter::ResetSettings()
         return hr;
 
     m_cfg.Init();
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -588,6 +595,7 @@ HRESULT Filter::SetDeadline(int deadline)
         return hr;
 
     m_cfg.deadline = deadline;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -625,6 +633,7 @@ HRESULT Filter::SetThreadCount(int count)
         return hr;
 
     m_cfg.threads = count;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -658,6 +667,7 @@ HRESULT Filter::SetErrorResilient(int val)
         return hr;
 
     m_cfg.error_resilient = val;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -691,6 +701,8 @@ HRESULT Filter::SetDropframeThreshold(int val)
         return hr;
 
     m_cfg.dropframe_thresh = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -722,6 +734,8 @@ HRESULT Filter::SetResizeAllowed(int val)
         return hr;
 
     m_cfg.resize_allowed = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -753,6 +767,8 @@ HRESULT Filter::SetResizeUpThreshold(int val)
         return hr;
 
     m_cfg.resize_up_thresh = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -784,6 +800,8 @@ HRESULT Filter::SetResizeDownThreshold(int val)
         return hr;
 
     m_cfg.resize_down_thresh = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -828,6 +846,7 @@ HRESULT Filter::SetEndUsage(VP8EndUsage val_)
         return hr;
 
     m_cfg.end_usage = val;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -864,6 +883,7 @@ HRESULT Filter::SetLagInFrames(int LagInFrames)
         return hr;
 
     m_cfg.lag_in_frames = LagInFrames;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -903,6 +923,7 @@ HRESULT Filter::SetTokenPartitions(int val)
         return VFW_E_NOT_STOPPED;
 
     m_cfg.token_partitions = val;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -938,6 +959,8 @@ HRESULT Filter::SetTargetBitrate(int value)
         return hr;
 
     m_cfg.target_bitrate = value;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -972,6 +995,8 @@ HRESULT Filter::SetMinQuantizer(int val)
         return hr;
 
     m_cfg.min_quantizer = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1006,6 +1031,8 @@ HRESULT Filter::SetMaxQuantizer(int val)
         return hr;
 
     m_cfg.max_quantizer = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1040,6 +1067,8 @@ HRESULT Filter::SetUndershootPct(int val)
         return hr;
 
     m_cfg.undershoot_pct = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1074,6 +1103,8 @@ HRESULT Filter::SetOvershootPct(int val)
         return hr;
 
     m_cfg.overshoot_pct = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1105,6 +1136,8 @@ HRESULT Filter::SetDecoderBufferSize(int val)
         return hr;
 
     m_cfg.decoder_buffer_size = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1136,6 +1169,8 @@ HRESULT Filter::SetDecoderBufferInitialSize(int val)
         return hr;
 
     m_cfg.decoder_buffer_initial_size = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1167,6 +1202,8 @@ HRESULT Filter::SetDecoderBufferOptimalSize(int val)
         return hr;
 
     m_cfg.decoder_buffer_optimal_size = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1209,6 +1246,8 @@ HRESULT Filter::SetKeyframeMode(VP8KeyframeMode m)
         return hr;
 
     m_cfg.keyframe_mode = m;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1240,6 +1279,8 @@ HRESULT Filter::SetKeyframeMinInterval(int val)
         return hr;
 
     m_cfg.keyframe_min_interval = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1268,6 +1309,8 @@ HRESULT Filter::SetKeyframeMaxInterval(int val)
         return hr;
 
     m_cfg.keyframe_max_interval = val;
+    m_bDirty = true;
+
     return S_OK;
 }
 
@@ -1290,14 +1333,15 @@ HRESULT Filter::SetPassMode(VP8PassMode m)
 {
     switch (m)
     {
+        //case kPassModeDefault:  //TODO
         case kPassModeOnePass:
-	    case kPassModeFirstPass:
-	    case kPassModeLastPass:
-	        break;
+        case kPassModeFirstPass:
+        case kPassModeLastPass:
+            break;
 
-	    default:
-	        return E_INVALIDARG;
-	}
+        default:
+            return E_INVALIDARG;
+    }
 
     Lock lock;
 
@@ -1308,6 +1352,10 @@ HRESULT Filter::SetPassMode(VP8PassMode m)
 
     if (m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
+
+
+    //TODO: for now, don't serialize pass mode
+
 
     Config::int32_t& tgt = m_cfg.pass_mode;
 
@@ -1406,6 +1454,7 @@ HRESULT Filter::SetTwoPassVbrBiasPct(int val)
         return hr;
 
     m_cfg.two_pass_vbr_bias_pct = val;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -1438,6 +1487,7 @@ HRESULT Filter::SetTwoPassVbrMinsectionPct(int val)
         return hr;
 
     m_cfg.two_pass_vbr_minsection_pct = val;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -1470,6 +1520,7 @@ HRESULT Filter::SetTwoPassVbrMaxsectionPct(int val)
         return hr;
 
     m_cfg.two_pass_vbr_maxsection_pct = val;
+    m_bDirty = true;
 
     return S_OK;
 }
@@ -1490,6 +1541,124 @@ HRESULT Filter::GetTwoPassVbrMaxsectionPct(int* p)
     *p = m_cfg.two_pass_vbr_maxsection_pct;
     return S_OK;
 }
+
+
+
+HRESULT Filter::IsDirty()
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    return m_bDirty ? S_OK : S_FALSE;
+}
+
+
+HRESULT Filter::Load(IStream* pStream)
+{
+    if (pStream == 0)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+
+    unsigned __int32 size;
+    ULONG cbRead;
+
+    hr = pStream->Read(&size, 4, &cbRead);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (cbRead != 4)
+        return E_FAIL;
+
+    if (size != sizeof(Config))
+        return E_FAIL;
+
+    Config cfg;
+
+    hr = pStream->Read(&cfg, size, &cbRead);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (cbRead != size)
+        return E_FAIL;
+
+    m_cfg = cfg;
+
+    m_cfg.pass_mode = -1;
+    m_cfg.two_pass_stats_buf = 0;
+    m_cfg.two_pass_stats_buflen = -1;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::Save(IStream* pStm, BOOL fClearDirty)
+{
+    if (pStm == 0)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    typedef unsigned __int32 uint32_t;
+
+    const uint32_t size = static_cast<uint32_t>(sizeof(Config));
+
+    ULONG cbWritten;
+
+    hr = pStm->Write(&size, 4, &cbWritten);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (cbWritten != 4)
+        return E_FAIL;  //?
+
+    hr = pStm->Write(&m_cfg, size, &cbWritten);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (cbWritten != size)
+        return E_FAIL;
+
+    if (fClearDirty)
+        m_bDirty = false;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetSizeMax(ULARGE_INTEGER* pcb)
+{
+    if (pcb == 0)
+        return E_POINTER;
+
+    ULARGE_INTEGER& cb = *pcb;
+
+    cb.QuadPart = 4 + sizeof(Config);
+
+    return S_OK;
+}
+
 
 
 HRESULT Filter::OnStart()
