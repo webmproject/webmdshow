@@ -18,19 +18,19 @@ class AudioStream : public Stream
     explicit AudioStream(AudioTrack*);
     AudioStream(const AudioStream&);
     AudioStream& operator=(const AudioStream&);
-    
+
 public:
     static AudioStream* CreateInstance(AudioTrack*);
-    
+
     void GetMediaTypes(CMediaTypes&) const;
     HRESULT QueryAccept(const AM_MEDIA_TYPE*) const;
 
-#if 0  //if we decide to support Xiph Ogg Vorbis decoder filter:    
+#if 0  //if we decide to support Xiph Ogg Vorbis decoder filter:
     HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&);
 #endif
 
     HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const;
-    
+
     long GetBufferSize() const;
 
 protected:
@@ -38,12 +38,12 @@ protected:
     HRESULT OnPopulateSample(const BlockEntry* pNext, IMediaSample* pSample);
 
     void GetVorbisMediaTypes(CMediaTypes&) const;
-    
-#if 0  //if we decide to support Xiph Ogg Vorbis decoder filter:    
-    bool SendPreroll(IMediaSample*);        
+
+#if 0  //if we decide to support Xiph Ogg Vorbis decoder filter:
+    bool SendPreroll(IMediaSample*);
     bool (AudioStream::*m_preroll)(IMediaSample*);
     bool DoNothing(IMediaSample*);
-    bool SendOggIdentPacket(IMediaSample*);    
+    bool SendOggIdentPacket(IMediaSample*);
     bool SendOggCommentPacket(IMediaSample*);
     bool SendOggSetupPacket(IMediaSample*);
 #endif

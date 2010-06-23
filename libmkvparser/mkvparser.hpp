@@ -53,7 +53,7 @@ struct EBMLHeader
     std::string m_docType;
     __int64 m_docTypeVersion;
     __int64 m_docTypeReadVersion;
-    
+
     __int64 Parse(IMkvFile*, LONGLONG&);
 };
 
@@ -70,27 +70,27 @@ class Block
 public:
     const __int64 m_start;
     const __int64 m_size;
-    
+
     Block(__int64 start, __int64 size, IMkvFile*);
-    
+
     ULONG GetNumber() const;
     SHORT GetRelativeTimeCode() const;
-    
+
     __int64 GetTimeCode(Cluster*) const;  //absolute, but not scaled
-    __int64 GetTime(Cluster*) const;      //absolute, and scaled (nanosecond units)
+    __int64 GetTime(Cluster*) const;      //absolute, and scaled (ns units)
     //BYTE GetFlags() const;
     bool IsKey() const;
     void SetKey(bool);
 
     LONG GetSize() const;
     HRESULT Read(IMkvFile*, BYTE*) const;
-    
+
 private:
     __int64 m_track;   //Track::Number()
     SHORT m_timecode;  //relative to cluster
     BYTE m_flags;
     __int64 m_frame_off;
-    LONG m_frame_size;    
+    LONG m_frame_size;
 
 };
 
@@ -99,10 +99,10 @@ class BlockEntry
 {
     BlockEntry(const BlockEntry&);
     BlockEntry& operator=(const BlockEntry&);
-    
+
 public:
     virtual ~BlockEntry();
-    
+
     typedef std::deque<BlockEntry*> entries_t;
     typedef entries_t::size_type index_t;
 
@@ -111,7 +111,7 @@ public:
     virtual index_t GetIndex() const = 0;
     virtual const Block* GetBlock() const = 0;
     virtual bool IsBFrame() const = 0;
-    
+
 protected:
     BlockEntry();
 
@@ -127,7 +127,7 @@ public:
     SimpleBlock(Cluster*, index_t, __int64 start, __int64 size);
 
     bool EOS() const;
-    Cluster* GetCluster() const; 
+    Cluster* GetCluster() const;
     index_t GetIndex() const;
     const Block* GetBlock() const;
     bool IsBFrame() const;
@@ -136,7 +136,7 @@ protected:
     Cluster* const m_pCluster;
     const index_t m_index;
     Block m_block;
-    
+
 };
 
 
@@ -148,28 +148,28 @@ class BlockGroup : public BlockEntry
 public:
     BlockGroup(Cluster*, index_t, __int64, __int64);
     ~BlockGroup();
-    
+
     bool EOS() const;
-    Cluster* GetCluster() const; 
+    Cluster* GetCluster() const;
     index_t GetIndex() const;
     const Block* GetBlock() const;
     bool IsBFrame() const;
-    
+
     SHORT GetPrevTimeCode() const;  //relative to block's time
     SHORT GetNextTimeCode() const;  //as above
-    
+
 protected:
     Cluster* const m_pCluster;
     const index_t m_index;
-    
+
 private:
     BlockGroup(Cluster*, index_t, ULONG);
     void ParseBlock(__int64 start, __int64 size);
 
     SHORT m_prevTimeCode;
     SHORT m_nextTimeCode;
-    
-    //TODO: the Matroska spec says you can have multiple blocks within the 
+
+    //TODO: the Matroska spec says you can have multiple blocks within the
     //same block group, with blocks ranked by priority (the flag bits).
     //For now we just cache a single block.
 #if 0
@@ -178,7 +178,7 @@ private:
 #else
     Block* m_pBlock;
 #endif
-    
+
 };
 
 
@@ -187,25 +187,25 @@ class Track
     Track(const Track&);
     Track& operator=(const Track&);
 
-public:    
+public:
     Segment* const m_pSegment;
     virtual ~Track();
-    
+
     BYTE GetType() const;
     ULONG GetNumber() const;
     const wchar_t* GetName() const;
     const wchar_t* GetCodecName() const;
     const char* GetCodecId() const;
     const bytes_t& GetCodecPrivate() const;
-    
+
     const BlockEntry* GetEOS() const;
-    
-    struct Settings 
+
+    struct Settings
     {
         __int64 start;
         __int64 size;
     };
-    
+
     struct Info
     {
         __int64 type;
@@ -217,22 +217,22 @@ public:
         std::wstring codecName;
         Settings settings;
     };
-    
+
     HRESULT GetFirst(const BlockEntry*&) const;
 
     HRESULT GetNextBlock(
-        const BlockEntry* pCurr, 
+        const BlockEntry* pCurr,
         const BlockEntry*& pNext) const;
 
     virtual HRESULT GetNextTime(
-                const BlockEntry* pCurr, 
+                const BlockEntry* pCurr,
                 const BlockEntry* pNextBlock,
                 const BlockEntry*& pNextTime) const = 0;
 
     virtual bool VetEntry(const BlockEntry*) const = 0;
-        
+
 protected:
-    Track(Segment*, const Info&);        
+    Track(Segment*, const Info&);
     const Info m_info;
 
     class EOSBlock : public BlockEntry
@@ -240,15 +240,15 @@ protected:
     public:
         EOSBlock();
 
-        bool EOS() const;    
+        bool EOS() const;
         Cluster* GetCluster() const;
         index_t GetIndex() const;
         const Block* GetBlock() const;
         bool IsBFrame() const;
     };
-    
+
     EOSBlock m_eos;
-    
+
 };
 
 
@@ -256,15 +256,15 @@ class VideoTrack : public Track
 {
     VideoTrack(const VideoTrack&);
     VideoTrack& operator=(const VideoTrack&);
-    
+
 public:
-    VideoTrack(Segment*, const Info&);    
+    VideoTrack(Segment*, const Info&);
     __int64 GetWidth() const;
     __int64 GetHeight() const;
     double GetFrameRate() const;
-    
+
     HRESULT GetNextTime(
-        const BlockEntry* pCurr, 
+        const BlockEntry* pCurr,
         const BlockEntry* pNextBlock,
         const BlockEntry*& pNextTime) const;
 
@@ -274,7 +274,7 @@ private:
     __int64 m_width;
     __int64 m_height;
     double m_rate;
-    
+
 };
 
 
@@ -284,13 +284,13 @@ class AudioTrack : public Track
     AudioTrack& operator=(const AudioTrack&);
 
 public:
-    AudioTrack(Segment*, const Info&);    
+    AudioTrack(Segment*, const Info&);
     double GetSamplingRate() const;
     __int64 GetChannels() const;
     __int64 GetBitDepth() const;
-    
+
     HRESULT GetNextTime(
-        const BlockEntry* pCurr, 
+        const BlockEntry* pCurr,
         const BlockEntry* pNextBlock,
         const BlockEntry*& pNextTime) const;
 
@@ -313,16 +313,16 @@ public:
     Segment* const m_pSegment;
     const __int64 m_start;
     const __int64 m_size;
-    
+
     Tracks(Segment*, __int64 start, __int64 size);
     virtual ~Tracks();
 
     Track* GetTrack(ULONG) const;
-    
+
 private:
     typedef std::map<ULONG, Track*> tracks_map_t;
     tracks_map_t m_tracks_map;
-    
+
     struct Less
     {
         bool operator()(const Track* lhs, const Track* rhs) const
@@ -330,21 +330,21 @@ private:
             return (lhs->GetNumber() < rhs->GetNumber());
         }
     };
-    
+
     typedef std::set<Track*, Less> tracks_set_t;
-    tracks_set_t m_video_tracks_set;    
-    tracks_set_t m_audio_tracks_set;    
+    tracks_set_t m_video_tracks_set;
+    tracks_set_t m_audio_tracks_set;
 
     void ParseTrackEntry(__int64, __int64);
-    
+
     template<typename E, typename T>
     void EnumerateTracksSet(const E& e, const tracks_set_t& tt) const
     {
         typedef tracks_set_t::const_iterator iter_t;
-        
+
         iter_t i = tt.begin();
         const iter_t j = tt.end();
-        
+
         while (i != j)  //TODO: replace with STL equivalent
         {
             T* const pTrack = static_cast<T*>(*i++);
@@ -358,13 +358,13 @@ public:
     {
         EnumerateTracksSet<E, VideoTrack>(e, m_video_tracks_set);
     }
-    
+
     template<typename E>
     void EnumerateAudioTracks(const E& e) const
     {
-        EnumerateTracksSet<E, AudioTrack>(e, m_audio_tracks_set);        
-    }    
-    
+        EnumerateTracksSet<E, AudioTrack>(e, m_audio_tracks_set);
+    }
+
     template<typename E>
     void EnumerateTracks(const E& e) const
     {
@@ -372,7 +372,7 @@ public:
 
         iter_t i = m_tracks_map.begin();
         const iter_t j = m_tracks_map.end();
-        
+
         while (i != j)
         {
             const tracks_map_t::value_type& value = *i++;
@@ -380,7 +380,7 @@ public:
             e(pTrack);
         }
     }
-        
+
 };
 
 
@@ -388,18 +388,18 @@ class SegmentInfo
 {
     SegmentInfo(const SegmentInfo&);
     SegmentInfo& operator=(const SegmentInfo&);
-    
+
 public:
     Segment* const m_pSegment;
     const __int64 m_start;
     const __int64 m_size;
-    
+
     SegmentInfo(Segment*, __int64 start, __int64 size);
     __int64 GetTimeCodeScale() const;
     __int64 GetDuration() const;  //scaled
     const wchar_t* GetMuxingApp() const;
     const wchar_t* GetWritingApp() const;
-    
+
 private:
     __int64 m_timecodeScale;
     double m_duration;
@@ -407,6 +407,34 @@ private:
     std::wstring m_writingApp;
 
 };
+
+
+class CuePoint
+{
+    CuePoint& operator=(const CuePoint&);
+public:
+    __int64 m_timecode;
+
+};
+
+
+class Cues
+{
+    Cues(const Cues&);
+    Cues& operator=(const Cues&);
+
+public:
+    Segment* const m_pSegment;
+    const __int64 m_start;
+    const __int64 m_size;
+
+    Cues(Segment*, __int64 start, __int64 size);
+
+private:
+    void ParseCuePoint(IMkvFile*, __int64 start, __int64 size);
+
+};
+
 
 
 class Cluster
@@ -420,52 +448,52 @@ public:
 
     Segment* const m_pSegment;
     const index_t m_index;
-    
-public:    
+
+public:
     static Cluster* Parse(Segment*, index_t, __int64 off);
 
     Cluster();  //EndOfStream
     ~Cluster();
-    
+
     bool EOS() const;
-    
+
     //TimeCode (unscaled) and Time (ns) of the cluster itself:
     __int64 GetTimeCode();  //absolute, but not scaled
     __int64 GetTime();      //absolute, and scaled (nanosecond units)
-    
+
     //Time (ns) of first (earliest) block:
     __int64 GetFirstTime();
-    
+
     const BlockEntry* GetFirst();
     const BlockEntry* GetLast();
-    const BlockEntry* GetNext(const BlockEntry*) const;    
+    const BlockEntry* GetNext(const BlockEntry*) const;
     const BlockEntry* GetEntry(const Track*);
     const BlockEntry* GetMaxKey(const VideoTrack*);
-    
+
     struct CompareTime : std::binary_function<__int64, Cluster*, bool>
     {
         bool operator()(__int64 left_ns, Cluster* c) const
         {
             return (left_ns < c->GetTime());
         }
-        
+
         bool operator()(Cluster* c, __int64 right_ns) const
         {
             return (c->GetTime() < right_ns);
         }
-        
+
         bool operator()(Cluster* lhs, Cluster* rhs) const
         {
             return lhs->GetTimeCode() < rhs->GetTimeCode();
         }
     };
-    
-protected:    
+
+protected:
     Cluster(Segment*, index_t, __int64 off);
-    
+
 private:
     __int64 m_start;
-    __int64 m_size;    
+    __int64 m_size;
     __int64 m_timecode;
     BlockEntry::entries_t m_entries;
 
@@ -473,7 +501,7 @@ private:
     void LoadBlockEntries();
     void ParseBlockGroup(__int64, __int64);
     void ParseSimpleBlock(__int64, __int64);
-    
+
 };
 
 
@@ -490,7 +518,7 @@ public:
     const __int64 m_start;  //posn of segment payload
     const __int64 m_size;   //size of segment payload
     Cluster m_eos;  //TODO: make private?
-    
+
     //__int64 GetStop() const;
 
     static __int64 CreateInstance(IMkvFile*, LONGLONG, Segment*&);
@@ -499,43 +527,47 @@ public:
     //for big-bang loading (source filter)
     HRESULT Load();
 
-    //for incremental loading (splitter)    
+    //for incremental loading (splitter)
     __int64 Unparsed() const;
     __int64 ParseHeaders();
     HRESULT ParseCluster(Cluster*&, __int64& newpos) const;
     bool AddCluster(Cluster*, __int64);
 
-    const Tracks* GetTracks() const;    
+    const Tracks* GetTracks() const;
     const SegmentInfo* GetInfo() const;
     __int64 GetDuration() const;
-    
+
     //NOTE: this turned out to be too inefficient.
     //__int64 Load(__int64 time_nanoseconds);
 
     Cluster* GetFirst();
     Cluster* GetLast();
     ULONG GetCount() const;
-    
+
     Cluster* GetNext(const Cluster*);
 
     Cluster* GetCluster(__int64 time_nanoseconds);
 
     void GetCluster(
-        __int64 time_nanoseconds, 
-        Track*, 
-        Cluster*&, 
+        __int64 time_nanoseconds,
+        Track*,
+        Cluster*&,
         const BlockEntry*&);
-    
+
+    const Cues* GetCues() const;
+
 private:
-    __int64 m_pos;  //absolute file posn; what has been consumed so far    
+    __int64 m_pos;  //absolute file posn; what has been consumed so far
     //SeekHead* m_pSeekHead;
     SegmentInfo* m_pInfo;
-    Tracks* m_pTracks;    
+    Tracks* m_pTracks;
+    Cues* m_pCues;
     Cluster::clusters_t m_clusters;
-    Cluster::index_t m_index;
+    //Cluster::index_t m_index;
     void ParseSeekHead(__int64 pos, __int64 size);
     void ParseSeekEntry(__int64 pos, __int64 size);
     void ParseSecondarySeekHead(__int64 off);
+    void ParseCues(__int64 off);
 
 };
 

@@ -16,13 +16,13 @@ class VideoTrack;
 
 class VideoStream : public Stream
 {
-    explicit VideoStream(VideoTrack*);    
+    explicit VideoStream(VideoTrack*);
     VideoStream(const VideoStream&);
     VideoStream& operator=(const VideoStream&);
-    
+
 public:
     static VideoStream* CreateInstance(VideoTrack*);
-    
+
     void GetMediaTypes(CMediaTypes&) const;
     HRESULT QueryAccept(const AM_MEDIA_TYPE*) const;
     HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const;
