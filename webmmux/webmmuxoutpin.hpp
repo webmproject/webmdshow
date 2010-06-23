@@ -10,61 +10,61 @@
 #include "webmmuxpin.hpp"
 #include "graphutil.hpp"
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class Outpin : public Pin
 {
     Outpin(const Outpin&);
     Outpin& operator=(const Outpin&);
-    
+
 public:
 
     explicit Outpin(Filter*);
     ~Outpin();
-    
+
     void Init();   //transition from Stopped
     void Final();  //transitio to Stopped
-    
+
     //IUnknown interface:
-    
+
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
-    
+
     //IPin interface:
 
     HRESULT STDMETHODCALLTYPE Connect(IPin*, const AM_MEDIA_TYPE*);
 
     //HRESULT STDMETHODCALLTYPE Disconnect();
 
-    HRESULT STDMETHODCALLTYPE ReceiveConnection( 
+    HRESULT STDMETHODCALLTYPE ReceiveConnection(
         IPin*,
         const AM_MEDIA_TYPE*);
-        
+
     HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
 
-    HRESULT STDMETHODCALLTYPE QueryInternalConnections( 
+    HRESULT STDMETHODCALLTYPE QueryInternalConnections(
         IPin**,
         ULONG*);
-        
+
     HRESULT STDMETHODCALLTYPE EndOfStream();
-    HRESULT STDMETHODCALLTYPE BeginFlush();    
+    HRESULT STDMETHODCALLTYPE BeginFlush();
     HRESULT STDMETHODCALLTYPE EndFlush();
-    
-    HRESULT STDMETHODCALLTYPE NewSegment( 
+
+    HRESULT STDMETHODCALLTYPE NewSegment(
         REFERENCE_TIME,
         REFERENCE_TIME,
         double);
-        
+
     //local functions
-    
+
     HRESULT GetCurrentPosition(LONGLONG&) const;
 
 protected:
 
     virtual HRESULT OnDisconnect();
-    
+
 private:
 
     GraphUtil::IMemAllocatorPtr m_pAllocator;
@@ -73,7 +73,7 @@ private:
 public:
 
     IStreamPtr m_pStream;
-    
+
 };
-    
-}  //end namespace WebmMux
+
+}  //end namespace WebmMuxLib

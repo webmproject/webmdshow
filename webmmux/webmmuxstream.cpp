@@ -13,7 +13,7 @@
 #include <climits>
 
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 Stream::Frame::Frame()
@@ -65,7 +65,7 @@ int Stream::GetTrackNumber() const
 void Stream::WriteTrackEntry(int tn)
 {
     EbmlIO::File& f = m_context.m_file;
-    
+
     f.WriteID1(0xAE);  //TrackEntry ID (level 2)
 
     //allocate 2 bytes for track entry size field
@@ -73,23 +73,23 @@ void Stream::WriteTrackEntry(int tn)
 
     WriteTrackNumber(tn);
     WriteTrackUID();
-    WriteTrackType();    
+    WriteTrackType();
     WriteTrackName();
     WriteTrackCodecID();
     WriteTrackCodecPrivate();
     WriteTrackCodecName();
     WriteTrackSettings();
-    
+
     const __int64 end_pos = f.GetPosition();
 
-    const __int64 size_ = end_pos - begin_pos;    
+    const __int64 size_ = end_pos - begin_pos;
     assert(size_ <= USHRT_MAX);
-    
+
     const USHORT size = static_cast<USHORT>(size_);
-    
+
     f.SetPosition(begin_pos - 2);
     f.Write2UInt(size);
-    
+
     f.SetPosition(end_pos);
 }
 
@@ -100,15 +100,15 @@ void Stream::WriteTrackNumber(int tn_)
 
     assert(tn_ > 0);
     assert(tn_ < 128);
-    
+
     m_trackNumber = tn_;
 
     const BYTE tn = static_cast<BYTE>(tn_);
-    
+
     f.WriteID1(0xD7);     //track number ID  //1101 0111
-    f.Write1UInt(1);       
+    f.Write1UInt(1);
     f.Serialize1UInt(tn);
-}    
+}
 
 
 void Stream::WriteTrackUID()
@@ -116,7 +116,7 @@ void Stream::WriteTrackUID()
     EbmlIO::File& f = m_context.m_file;
 
     const TrackUID_t uid = CreateTrackUID();
-    
+
     f.WriteID2(0x73C5);    //TrackUID ID
     f.Write1UInt(8);
     f.Serialize8UInt(uid);
@@ -142,31 +142,31 @@ Stream::TrackUID_t Stream::CreateTrackUID()
 {
     TrackUID_t result;
 
-    //TODO: Do we need to do this?    
+    //TODO: Do we need to do this?
     //NOTE: The TrackUID is serialized in the normal way (the same
     //as for any other integer that is the payload of an EBML tag),
-    //but the Matroska spec does say that this is an unsigned 
+    //but the Matroska spec does say that this is an unsigned
     //integer.  In order to allow this integer value to be used
     //as an EBML varying-size integer, we restrict its value so
     //that it satifies the constraints for a varying size integer
     //that is streamed out using 8 bytes.  That means the upper
-    //byte (the first in the stream) is 0 (the upper byte in the 
-    //stream is reserved for indicating that this integer 
+    //byte (the first in the stream) is 0 (the upper byte in the
+    //stream is reserved for indicating that this integer
     //occupies 8 bytes total in the stream), and the low order
     //byte (the last in the stream) is even, which prevents
     //the integer from ever having a value with all bits set
     //(because then it would look like a signed integer).
-    
+
     BYTE* p = reinterpret_cast<BYTE*>(&result);
     BYTE* const q = p + 7;
-    
+
     {
         const int n = rand();
-        
+
         BYTE& b0 = *p++;
-        
+
         b0 = static_cast<BYTE>(n >> 4); //throw away low-order bits
-        
+
         b0 &= 0xFE;  //ensure low order bit is not set
     }
 
@@ -175,9 +175,9 @@ Stream::TrackUID_t Stream::CreateTrackUID()
         const int n = rand();
         *p++ = static_cast<BYTE>(n >> 4); //throw away low-order bits
     }
-    
+
     *p = 0;
-    
+
     return result;
 }
 
@@ -195,7 +195,7 @@ void Stream::Frame::Write(
     file.WriteID1(0xA3);    //SimpleBlock ID
     file.Write4UInt(block_size);
 
-#ifdef _DEBUG    
+#ifdef _DEBUG
     const __int64 pos = file.GetPosition();
 #endif
 
@@ -208,7 +208,7 @@ void Stream::Frame::Write(
     file.Write1UInt(tn);   //track number
 
     const ULONG ft = GetTimecode();
-      
+
     {
         const LONG tc_ = LONG(ft) - LONG(cluster_timecode);
         assert(tc_ >= SHRT_MIN);
@@ -216,10 +216,10 @@ void Stream::Frame::Write(
 
         const SHORT tc = static_cast<SHORT>(tc_);
 
-        file.Serialize2SInt(tc);       //relative timecode 
+        file.Serialize2SInt(tc);       //relative timecode
     }
 
-    BYTE flags = 0;   
+    BYTE flags = 0;
 
     if (IsKey())
         flags |= BYTE(1 << 7);
@@ -239,4 +239,4 @@ void Stream::Frame::Write(
 
 
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

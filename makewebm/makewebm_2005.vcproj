@@ -194,6 +194,14 @@
 				RelativePath=".\resource.h"
 				>
 			</File>
+			<File
+				RelativePath="..\IDL\webmmuxidl.c"
+				>
+			</File>
+			<File
+				RelativePath="..\IDL\webmmuxidl.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Common Files"

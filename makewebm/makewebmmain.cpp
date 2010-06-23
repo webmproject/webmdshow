@@ -28,7 +28,7 @@ static BOOL __stdcall ConsoleCtrlHandler(DWORD type)
 
 int wmain(int argc, wchar_t* argv[])
 {
-    g_hQuit = CreateEvent(0, 1, 0, 0);  //manual-reset event, initially non-signalled
+    g_hQuit = CreateEvent(0, 1, 0, 0);  //manual-reset event, non-signalled
     assert(g_hQuit);
 
     const BOOL b = SetConsoleCtrlHandler(&ConsoleCtrlHandler, TRUE);

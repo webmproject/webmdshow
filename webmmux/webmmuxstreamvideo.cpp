@@ -14,7 +14,7 @@
 #include <cassert>
 #include <uuids.h>
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 StreamVideo::VideoFrame::VideoFrame()
@@ -47,25 +47,25 @@ const BITMAPINFOHEADER& StreamVideo::GetBitmapInfoHeader() const
     if (mt.formattype == FORMAT_VideoInfo)
     {
         assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
-        
+
         VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
         BITMAPINFOHEADER& bmih = vih.bmiHeader;
         assert(bmih.biSize >= sizeof(BITMAPINFOHEADER));
-        
+
         return bmih;
-    }   
-    
+    }
+
     assert(mt.formattype == FORMAT_VideoInfo2);
-    
+
     {
         assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
-        
+
         VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
         BITMAPINFOHEADER& bmih = vih.bmiHeader;
         assert(bmih.biSize >= sizeof(BITMAPINFOHEADER));
-        
+
         return bmih;
-    }    
+    }
 }
 
 
@@ -77,32 +77,32 @@ float StreamVideo::GetFramerate() const
 
     if (mt.formattype == FORMAT_VideoInfo)
     {
-        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));        
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
         VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-        
+
         if (vih.AvgTimePerFrame <= 0)
             return 0;
-            
+
         //[ticks/sec] / [ticks/frame] = [frames/sec]
         const float result = 10000000.0f / float(vih.AvgTimePerFrame);
-        
-        return result;
-    }   
-    
-    if (mt.formattype == FORMAT_VideoInfo2)
-    {
-        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));        
-        VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
-        
-        if (vih.AvgTimePerFrame <= 0)
-            return 0;
-            
-        //[ticks/sec] / [ticks/frame] = [frames/sec]
-        const float result = 10000000.0f / float(vih.AvgTimePerFrame);
-        
+
         return result;
     }
-    
+
+    if (mt.formattype == FORMAT_VideoInfo2)
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
+        VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+
+        if (vih.AvgTimePerFrame <= 0)
+            return 0;
+
+        //[ticks/sec] / [ticks/frame] = [frames/sec]
+        const float result = 10000000.0f / float(vih.AvgTimePerFrame);
+
+        return result;
+    }
+
     return 0;
 }
 
@@ -110,7 +110,7 @@ float StreamVideo::GetFramerate() const
 void StreamVideo::WriteTrackType()
 {
     EbmlIO::File& f = m_context.m_file;
-    
+
     f.WriteID1(0x83);     //track type
     f.Write1UInt(1);
     f.Serialize1UInt(1);  //1=video
@@ -142,7 +142,7 @@ void StreamVideo::Flush()
 
 
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib
 
 
 

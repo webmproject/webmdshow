@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class Context;
@@ -17,7 +17,7 @@ class Stream
 {
     Stream(Stream&);
     Stream& operator=(const Stream&);
-    
+
 public:
 
     virtual ~Stream();
@@ -29,10 +29,10 @@ public:
     virtual int EndOfStream() = 0;
     virtual void Flush() = 0;
     virtual bool Wait() const = 0;
-    
+
     void SetTrackNumber(int);
     int GetTrackNumber() const;
-        
+
     class Frame
     {
         Frame(const Frame&);
@@ -51,15 +51,15 @@ public:
         virtual void Release();
 
     };
-   
+
     Context& m_context;
 
 protected:
 
     explicit Stream(Context&);
-    
-    typedef __int64 TrackUID_t;    
-    static TrackUID_t CreateTrackUID();    
+
+    typedef __int64 TrackUID_t;
+    static TrackUID_t CreateTrackUID();
 
     int m_trackNumber;
 
@@ -71,8 +71,8 @@ protected:
     virtual void WriteTrackCodecPrivate();
     virtual void WriteTrackCodecName() = 0;
     virtual void WriteTrackSettings();
-    
+
 };
 
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

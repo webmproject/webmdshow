@@ -10,20 +10,20 @@
 #include "webmmuxstream.hpp"
 #include <list>
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class StreamVideo : public Stream
 {
     StreamVideo(const StreamVideo&);
     StreamVideo& operator=(const StreamVideo&);
-    
+
 protected:
     StreamVideo(Context&, const AM_MEDIA_TYPE&);
     ~StreamVideo();
 
     void WriteTrackType();
-    
+
 public:
     void Flush();
     bool Wait() const;
@@ -40,18 +40,18 @@ public:
 
     virtual LONG GetLastTimecode() const = 0;
 
-    typedef std::list<VideoFrame*> frames_t;    
+    typedef std::list<VideoFrame*> frames_t;
     frames_t& GetFrames();
     frames_t& GetKeyFrames();
-    
+
 protected:
     frames_t m_vframes;
-    frames_t m_rframes;    
-    AM_MEDIA_TYPE m_mt;     
+    frames_t m_rframes;
+    AM_MEDIA_TYPE m_mt;
 
     const BITMAPINFOHEADER& GetBitmapInfoHeader() const;
     float GetFramerate() const;
 
 };
 
-} //end namespace WebmMux
+} //end namespace WebmMuxLib

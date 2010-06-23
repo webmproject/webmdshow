@@ -18,7 +18,8 @@
 #include "vorbistypes.hpp"
 #include "registry.hpp"
 #include "vp8encoderidl.h"
-//#include <objbase.h>
+#include "webmmuxidl.h"
+#include "versionhandling.hpp"
 #include <sstream>
 #include <iomanip>
 using std::hex;
@@ -308,7 +309,7 @@ int App::CreateMuxerGraph(
     const bool bVerbose = m_cmdline.GetVerbose();
 
     HRESULT hr = CoCreateInstance(
-                    WebmTypes::CLSID_WebmMux,
+                    CLSID_WebmMux,
                     0,
                     CLSCTX_INPROC_SERVER,
                     __uuidof(IBaseFilter),
@@ -332,6 +333,43 @@ int App::CreateMuxerGraph(
 
     hr = m_pGraph->AddFilter(pMux, L"webmmux");
     assert(SUCCEEDED(hr));
+
+    {
+        _COM_SMARTPTR_TYPEDEF(IWebmMux, __uuidof(IWebmMux));
+
+        const IWebmMuxPtr pWebmMux(pMux);
+
+        if (!bool(pWebmMux))
+        {
+            wcout << "WebmMux filter instance does not support"
+                  << " IWebmMux interface."
+                  << endl;
+
+            return 1;
+        }
+
+        //_wpgmptr
+        wchar_t* fname;
+
+        const errno_t e = _get_wpgmptr(&fname);
+        assert(e == 0);
+
+        wostringstream os;
+        os << L"makewebm-";
+        VersionHandling::GetVersion(fname, os);
+
+        hr = pWebmMux->SetWritingApp(os.str().c_str());
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set \"makewebm\" as WebM writing app.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return 1;
+        }
+    }
 
     int nConnections = 0;
 

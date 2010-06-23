@@ -12,53 +12,54 @@
 #include "webmmuxstreamaudio.hpp"
 #include <list>
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class Context
 {
    Context(const Context&);
-   Context& operator=(const Context&);    
+   Context& operator=(const Context&);
 
 public:
 
    EbmlIO::File m_file;
+   std::wstring m_writing_app;
 
    Context();
    ~Context();
-    
+
    void SetVideoStream(StreamVideo*);
-   
+
    //TODO: this needs to liberalized to handle multiple audio streams.
    void SetAudioStream(StreamAudio*);
 
-   void Open(IStream*);  
+   void Open(IStream*);
    void Close();
-    
+
     void NotifyVideoFrame(StreamVideo*, StreamVideo::VideoFrame*);
     int NotifyVideoEOS(StreamVideo*);
     void FlushVideo(StreamVideo*);
-    bool WaitVideo() const;    
-      
+    bool WaitVideo() const;
+
     void NotifyAudioFrame(StreamAudio*, StreamAudio::AudioFrame*);
     int NotifyAudioEOS(StreamAudio*);
     void FlushAudio(StreamAudio*);
     bool WaitAudio() const;
-    
+
     ULONG GetTimecodeScale() const;
     ULONG GetTimecode() const;  //of frame most recently written to file
-    
+
 private:
-    
+
    StreamVideo* m_pVideo;
    StreamAudio* m_pAudio;  //TODO: accept multiple audio streams
-   
+
    void Final();
-   
+
    void WriteEbmlHeader();
 
    void InitSegment();
-   void FinalSegment();    
+   void FinalSegment();
 
    void InitFirstSeekHead();
    void FinalFirstSeekHead();
@@ -70,7 +71,7 @@ private:
    void WriteTrack();
 
    __int64 m_segment_pos;
-   __int64 m_first_seekhead_pos;    
+   __int64 m_first_seekhead_pos;
    //__int64 m_second_seekhead_pos;
    __int64 m_info_pos;
    __int64 m_track_pos;
@@ -90,33 +91,37 @@ private:
 
     struct Cluster
     {
-        __int64 m_pos;       //absolute pos within file (NOT offset relative to segment)
+        //absolute pos within file (NOT offset relative to segment)
+        __int64 m_pos;
+
         ULONG m_timecode;
 
         typedef std::list<Keyframe> keyframes_t;
-        keyframes_t m_keyframes;        
+        keyframes_t m_keyframes;
     };
 
-   typedef std::list<Cluster> clusters_t; 
+   typedef std::list<Cluster> clusters_t;
    clusters_t m_clusters;
-   
+
    //void WriteSecondSeekHead();
    void WriteCues();
    //void FinalClusters(__int64 pos);
-   
+
     //bool ReadyToCreateNewClusterVideo(const StreamVideo::VideoFrame&) const;
     void CreateNewCluster(const StreamVideo::VideoFrame*);
     void CreateNewClusterAudioOnly();
-    
-    void WriteVideoFrame(Cluster&, ULONG&);
-    void WriteAudioFrame(Cluster&, ULONG&);   
 
-    void WriteCuePoints(const Cluster&);                
+    void WriteVideoFrame(Cluster&, ULONG&);
+    void WriteAudioFrame(Cluster&, ULONG&);
+
+    void WriteCuePoints(const Cluster&);
     void WriteCuePoint(const Cluster&, const Keyframe&);
 
     //EOS can happen either because we receive a notification from the stream,
     //or because the graph was stopped (before reaching end-of-stream proper).
-    //The following flags are use to keep track of whether we've seen EOS already.
+    //The following flags are use to keep track of whether we've seen
+    //EOS already.
+
     bool m_bEOSVideo;
     bool m_bEOSAudio;
     int m_cEOS;
@@ -125,4 +130,4 @@ private:
 };
 
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

@@ -18,7 +18,7 @@ namespace VorbisTypes
 struct VORBISFORMAT;
 }
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class StreamAudioVorbisOgg : public StreamAudio
@@ -82,4 +82,4 @@ private:
     HRESULT FinalizeTrackCodecPrivate();
 };
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

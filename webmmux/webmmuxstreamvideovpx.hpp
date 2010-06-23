@@ -10,17 +10,17 @@
 #include "webmmuxstreamvideo.hpp"
 #include <vector>
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class StreamVideoVPx : public StreamVideo
 {
     StreamVideoVPx(const StreamVideoVPx&);
     StreamVideoVPx& operator=(const StreamVideoVPx&);
-    
+
 public:
     StreamVideoVPx(Context&, const AM_MEDIA_TYPE&);
-    
+
     HRESULT Receive(IMediaSample*);
     int EndOfStream();
 
@@ -32,19 +32,19 @@ protected:
     void WriteTrackSettings();
 
 private:
-    
+
     class VPxFrame : public VideoFrame
     {
         VPxFrame(const VPxFrame&);
         VPxFrame& operator=(const VPxFrame&);
-      
+
     private:
         IMediaSample* const m_pSample;
         ULONG m_timecode;
 
     public:
         explicit VPxFrame(IMediaSample*, StreamVideoVPx*);
-        ~VPxFrame(); 
+        ~VPxFrame();
 
         bool IsKey() const;
         ULONG GetTimecode() const;
@@ -52,11 +52,11 @@ private:
         const BYTE* GetData() const;
 
     };
-    
+
 public:
-   
+
     LONG GetLastTimecode() const;
 
 };
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

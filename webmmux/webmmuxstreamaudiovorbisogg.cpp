@@ -24,7 +24,7 @@ using std::setfill;
 using std::setw;
 #endif
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 // |StreamAudioVorbisOgg::WriteTrackCodecPrivate| and
@@ -167,17 +167,17 @@ StreamAudioVorbisOgg::VorbisFrame::VorbisFrame(
     __int64 st, sp;  //this is actually samples, not reftime
 
     HRESULT hr = pSample->GetTime(&st, &sp);
-    assert(SUCCEEDED(hr));    
+    assert(SUCCEEDED(hr));
     assert(st >= 0);
-    
+
     const double samples = double(st);
-    
+
     const ULONG samplesPerSec = pStream->GetSamplesPerSec();
     assert(samplesPerSec > 0);
-    
+
     //secs [=] samples / samples/sec
     const double secs = samples / double(samplesPerSec);
-    
+
     const double ns = secs * 1000000000.0;
 
     const Context& ctx = pStream->m_context;
@@ -191,18 +191,18 @@ StreamAudioVorbisOgg::VorbisFrame::VorbisFrame(
 
     const long size = pSample->GetActualDataLength();
     assert(size > 0);
-    
+
     m_size = size;
-    
+
     BYTE* ptr;
-    
+
     hr = pSample->GetPointer(&ptr);
     assert(SUCCEEDED(hr));
     assert(ptr);
-    
+
     m_data = new (std::nothrow) BYTE[m_size];
     assert(m_data);  //TODO
-    
+
     memcpy(m_data, ptr, m_size);
 }
 
@@ -259,7 +259,7 @@ ULONG StreamAudioVorbisOgg::VorbisFrame::GetTimecode() const
 
 ULONG StreamAudioVorbisOgg::VorbisFrame::GetSize() const
 {
-#if 0    
+#if 0
    const long result = m_pSample->GetActualDataLength();
    assert(result >= 0);
 
@@ -348,9 +348,10 @@ HRESULT StreamAudioVorbisOgg::FinalizeTrackCodecPrivate()
 
     if (m_ident.empty() || m_comment.empty() || m_setup.empty())
     {
-        const int bytes_to_write_ = kPRIVATE_DATA_BYTES_RESERVED - 1 - 2; // Void type, length
+        //debit allocated size by Void type (1) and length (2)
+        const int bytes_to_write_ = kPRIVATE_DATA_BYTES_RESERVED - 1 - 2;
         assert(bytes_to_write_ <= USHRT_MAX);
-        
+
         const USHORT bytes_to_write = static_cast<USHORT>(bytes_to_write_);
 
         file.WriteID1(0xEC); // Void
@@ -358,7 +359,7 @@ HRESULT StreamAudioVorbisOgg::FinalizeTrackCodecPrivate()
 
         file.SetPosition(old_pos);
 
-        return S_OK;        
+        return S_OK;
     }
 
     const DWORD ident_len = static_cast<const DWORD>(m_ident.size());
@@ -420,7 +421,9 @@ HRESULT StreamAudioVorbisOgg::FinalizeTrackCodecPrivate()
         file.Write2UInt(bytes_to_write);
     }
 
-    const __int64 actual_bytes_written = file.GetPosition() - private_begin_pos;
+    const __int64 actual_bytes_written =
+        file.GetPosition() - private_begin_pos;
+
     actual_bytes_written;
     assert(actual_bytes_written <= kPRIVATE_DATA_BYTES_RESERVED);
 
@@ -442,10 +445,10 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
     assert(buf);
 
     const long len = pSample->GetActualDataLength();
-    
+
     if (len < 0)
         return E_INVALIDARG;
-        
+
     if (len == 0)
         return S_OK;  //?
 
@@ -457,7 +460,7 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
         assert(buf[0] == 1);
         assert(memcmp(buf + 1, "vorbis", 6) == 0);
         m_ident.assign(buf, buf_end);
-        
+
         return S_OK;
     }
 
@@ -467,7 +470,7 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
         assert(buf[0] == 3);
         assert(memcmp(buf + 1, "vorbis", 6) == 0);
         m_comment.assign(buf, buf_end);
-        
+
         return S_OK;
     }
 
@@ -477,29 +480,29 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
         assert(buf[0] == 5);
         assert(memcmp(buf + 1, "vorbis", 6) == 0);
         m_setup.assign(buf, buf_end);
-        
+
         return S_OK;
     }
 
     EbmlIO::File& file = m_context.m_file;
-    
+
     if (file.GetStream() == 0)
         return S_OK;
-        
-    //In order to construct a frame, we need to have 
+
+    //In order to construct a frame, we need to have
     //both the start and stop times, so we check it
     //here before calling the ctor.
 
     __int64 st, sp;
 
     hr = pSample->GetTime(&st, &sp);
-    
+
     if (FAILED(hr))
         return VFW_E_SAMPLE_TIME_NOT_SET;
-        
+
     if (hr != S_OK)  //do not have stop time
         return E_INVALIDARG;
-    
+
     if (st >= sp)
         return S_OK;  //throw away this sample
 
@@ -507,7 +510,7 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
     assert(SUCCEEDED(hr));  //TODO
 
     m_context.NotifyAudioFrame(this, pFrame);
-    
+
     return S_OK;
 }
 
@@ -517,4 +520,4 @@ int StreamAudioVorbisOgg::EndOfStream()
     return m_context.NotifyAudioEOS(this);
 }
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

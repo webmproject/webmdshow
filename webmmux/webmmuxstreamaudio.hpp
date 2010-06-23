@@ -10,7 +10,7 @@
 #include "webmmuxstream.hpp"
 #include <list>
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 struct Cluster;
@@ -20,20 +20,20 @@ class StreamAudio : public Stream
     StreamAudio(const StreamAudio&);
     StreamAudio& operator=(const StreamAudio&);
 
-protected:    
+protected:
     StreamAudio(Context&, const BYTE*, ULONG);
 
     void WriteTrackType();
     void WriteTrackSettings();
-    
+
     const void* GetFormat(ULONG&) const;
-    
+
     virtual ULONG GetSamplesPerSec() const = 0;
     virtual BYTE GetChannels() const = 0;
 
 public:
     ~StreamAudio();
-    
+
     void Flush();
     bool Wait() const;
 
@@ -44,20 +44,20 @@ public:
 
     protected:
         AudioFrame();
-        
+
     public:
         bool IsKey() const;
 
-    };      
+    };
 
-    typedef std::list<AudioFrame*> frames_t;    
+    typedef std::list<AudioFrame*> frames_t;
     frames_t& GetFrames();
 
 private:
     void* const m_pFormat;
     const ULONG m_cFormat;
     frames_t m_frames;
-    
+
 };
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

@@ -14,7 +14,7 @@
 #include <vfwmsgs.h>
 #include <cassert>
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 InpinAudio::InpinAudio(Filter* p) :
@@ -64,7 +64,7 @@ HRESULT InpinAudio::GetAllocatorRequirements(ALLOCATOR_PROPERTIES*)
 
     if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2)
         return StreamAudioVorbis::GetAllocatorRequirements(mt, props);
- 
+
     else if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis)
         return StreamAudioVorbisOgg::GetAllocatorRequirements(mt, props);
 
@@ -86,7 +86,7 @@ HRESULT InpinAudio::OnInit()
 
     if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2)
         pStream = StreamAudioVorbis::CreateStream(ctx, mt);
-        
+
     else if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis)
         pStream = StreamAudioVorbisOgg::CreateStream(ctx, mt);
 
@@ -114,4 +114,4 @@ HANDLE InpinAudio::GetOtherHandle() const
 }
 
 
-} //end namespace WebmMux
+} //end namespace WebmMuxLib

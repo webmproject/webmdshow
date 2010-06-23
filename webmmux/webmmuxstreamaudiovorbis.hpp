@@ -16,16 +16,16 @@ namespace VorbisTypes
 struct VORBISFORMAT2;
 }
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class StreamAudioVorbis : public StreamAudio
 {
     StreamAudioVorbis(const StreamAudioVorbis&);
     StreamAudioVorbis& operator=(const StreamAudioVorbis&);
-    
+
 protected:
-    StreamAudioVorbis(Context&, const BYTE*, ULONG);    
+    StreamAudioVorbis(Context&, const BYTE*, ULONG);
 
     ULONG GetSamplesPerSec() const;
     BYTE GetChannels() const;
@@ -55,7 +55,7 @@ private:
     {
         VorbisFrame& operator=(const VorbisFrame&);
         VorbisFrame(const VorbisFrame&);
-      
+
     private:
         ULONG m_timecode;
         BYTE* m_data;
@@ -68,9 +68,9 @@ private:
         ULONG GetTimecode() const;
         ULONG GetSize() const;
         const BYTE* GetData() const;
-      
+
     };
-    
+
 };
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

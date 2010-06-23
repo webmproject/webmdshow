@@ -19,7 +19,7 @@ using std::hex;
 using std::dec;
 #endif
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 StreamVideoVPx::VPxFrame::VPxFrame(
@@ -33,18 +33,18 @@ StreamVideoVPx::VPxFrame::VPxFrame(
     __int64 st, sp;  //reftime units
 
     const HRESULT hr = m_pSample->GetTime(&st, &sp);
-    assert(SUCCEEDED(hr));    
-    assert(st >= 0);    
-    
+    assert(SUCCEEDED(hr));
+    assert(st >= 0);
+
     const __int64 ns = st * 100;  //nanoseconds
-    
+
     const Context& ctx = pStream->m_context;
     const ULONG scale = ctx.GetTimecodeScale();
     assert(scale >= 1);
-    
+
     const __int64 tc = ns / scale;
     assert(tc <= ULONG_MAX);
-    
+
     m_timecode = static_cast<ULONG>(tc);
 }
 
@@ -57,7 +57,7 @@ StreamVideoVPx::VPxFrame::~VPxFrame()
 
 
 ULONG StreamVideoVPx::VPxFrame::GetTimecode() const
-{    
+{
     return m_timecode;
 }
 
@@ -72,7 +72,7 @@ ULONG StreamVideoVPx::VPxFrame::GetSize() const
 {
     const long result = m_pSample->GetActualDataLength();
     assert(result >= 0);
-    
+
     return result;
 }
 
@@ -80,11 +80,11 @@ ULONG StreamVideoVPx::VPxFrame::GetSize() const
 const BYTE* StreamVideoVPx::VPxFrame::GetData() const
 {
     BYTE* ptr;
-    
+
     const HRESULT hr = m_pSample->GetPointer(&ptr);
     assert(SUCCEEDED(hr));
     assert(ptr);
-    
+
     return ptr;
 }
 
@@ -131,47 +131,47 @@ void StreamVideoVPx::WriteTrackSettings()
     EbmlIO::File& f = m_context.m_file;
 
     f.WriteID1(0xE0);  //video settings
-    
+
     //allocate 2 bytes of storage for size of settings
-    const __int64 begin_pos = f.SetPosition(2, STREAM_SEEK_CUR);    
-    
+    const __int64 begin_pos = f.SetPosition(2, STREAM_SEEK_CUR);
+
     const BITMAPINFOHEADER& bmih = GetBitmapInfoHeader();
     assert(bmih.biSize >= sizeof(BITMAPINFOHEADER));
     assert(bmih.biWidth > 0);
     assert(bmih.biWidth <= USHRT_MAX);
     assert(bmih.biHeight > 0);
     assert(bmih.biHeight <= USHRT_MAX);
-    
+
     const USHORT width = static_cast<USHORT>(bmih.biWidth);
     const USHORT height = static_cast<USHORT>(bmih.biHeight);
 
     f.WriteID1(0xB0);  //width
     f.Write1UInt(2);
     f.Serialize2UInt(width);
-    
+
     f.WriteID1(0xBA);  //height
     f.Write1UInt(2);
     f.Serialize2UInt(height);
-    
+
     const float framerate = GetFramerate();
-    
+
     if (framerate > 0)
     {
         f.WriteID3(0x2383E3);  //frame rate
         f.Write1UInt(4);
-        f.Serialize4Float(framerate);    
+        f.Serialize4Float(framerate);
     }
 
     const __int64 end_pos = f.GetPosition();
-    
+
     const __int64 size_ = end_pos - begin_pos;
     assert(size_ <= USHRT_MAX);
-    
+
     const USHORT size = static_cast<USHORT>(size_);
 
     f.SetPosition(begin_pos - 2);
     f.Write2UInt(size);
-    
+
     f.SetPosition(end_pos);
 }
 
@@ -179,21 +179,21 @@ void StreamVideoVPx::WriteTrackSettings()
 HRESULT StreamVideoVPx::Receive(IMediaSample* pSample)
 {
     assert(pSample);
-    
+
 #if 0
     __int64 st, sp;
     const HRESULT hrTime = pSample->GetTime(&st, &sp);
 
-    odbgstream os;    
-    
+    odbgstream os;
+
     os << "webmmux::vpx::receive: hrTime="
        << hex << hrTime << dec;
-       
+
     if (SUCCEEDED(hrTime))
     {
         os << " st=" << st
            << " st.ms=" << double(st) / 10000;
-           
+
         if (hrTime == S_OK)
             os << " sp="
                << sp
@@ -202,25 +202,25 @@ HRESULT StreamVideoVPx::Receive(IMediaSample* pSample)
                << " dt.ms="
                << (double(sp-st) / 10000);
     }
-    
+
     //os << " frame.GetTimecode="
     //   << pFrame->GetTimecode();
-        
+
     os << endl;
 #endif
 
     EbmlIO::File& file = m_context.m_file;
-    
+
     if (file.GetStream() == 0)
         return S_OK;
 
     VPxFrame* const pFrame = new (std::nothrow) VPxFrame(pSample, this);
     assert(pFrame);  //TODO
-    
+
     assert(!m_vframes.empty() || pFrame->IsKey());
-           
+
     m_vframes.push_back(pFrame);
-    
+
     m_context.NotifyVideoFrame(this, pFrame);
 
     return S_OK;
@@ -237,13 +237,13 @@ LONG StreamVideoVPx::GetLastTimecode() const
 {
     if (m_vframes.empty())
         return -1;
-        
+
     VideoFrame* const pFrame = m_vframes.back();
     assert(pFrame);
-    
+
     return pFrame->GetTimecode();
 }
 
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib
 

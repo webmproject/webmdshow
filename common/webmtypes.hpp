@@ -15,7 +15,7 @@ namespace WebmTypes
     extern const GUID MEDIASUBTYPE_I420;
     extern const GUID MEDIASUBTYPE_VP8_STATS;
 
-    extern const CLSID CLSID_WebmMux;
+    //extern const CLSID CLSID_WebmMux;
     extern const CLSID CLSID_WebmSource;
     extern const CLSID CLSID_WebmSplit;
 }

@@ -10,6 +10,7 @@
 #include "cfactory.hpp"
 #include "comreg.hpp"
 #include "webmtypes.hpp"
+#include "webmmuxidl.h"
 #include "vorbistypes.hpp"
 #include "graphutil.hpp"
 #include <cassert>
@@ -18,41 +19,41 @@
 
 static ULONG s_cLock;
 
-namespace WebmMux
+namespace WebmMuxLib
 {
     extern HMODULE s_hModule = 0;
-    
+
     HRESULT CreateInstance(
             IClassFactory*,
-            IUnknown*, 
-            const IID&, 
+            IUnknown*,
+            const IID&,
             void**);
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib
 
 
-static CFactory s_factory(&s_cLock, &WebmMux::CreateInstance);
+static CFactory s_factory(&s_cLock, &WebmMuxLib::CreateInstance);
 
 
 BOOL APIENTRY DllMain(
-    HINSTANCE hModule, 
-    DWORD  dwReason, 
+    HINSTANCE hModule,
+    DWORD  dwReason,
     LPVOID)
 {
-	switch (dwReason)
-	{
-	    case DLL_PROCESS_ATTACH:
+    switch (dwReason)
+    {
+        case DLL_PROCESS_ATTACH:
         {
-            WebmMux::s_hModule = hModule;
-	        break;
+            WebmMuxLib::s_hModule = hModule;
+            break;
         }
-	    case DLL_THREAD_ATTACH:
-	    case DLL_THREAD_DETACH:
-	    case DLL_PROCESS_DETACH:
-	    default:
-		    break;
-	}
-	
+        case DLL_THREAD_ATTACH:
+        case DLL_THREAD_DETACH:
+        case DLL_PROCESS_DETACH:
+        default:
+            break;
+    }
+
     return TRUE;
 }
 
@@ -69,7 +70,7 @@ STDAPI DllGetClassObject(
     const IID& iid,
     void** ppv)
 {
-    if (clsid == WebmTypes::CLSID_WebmMux)
+    if (clsid == CLSID_WebmMux)
         return s_factory.QueryInterface(iid, ppv);
 
     return CLASS_E_CLASSNOTAVAILABLE;
@@ -84,11 +85,11 @@ STDAPI DllUnregisterServer()
     HRESULT hr = pMapper->UnregisterFilter(
                     &CLSID_LegacyAmFilterCategory,
                     0,
-                    WebmTypes::CLSID_WebmMux);
-                    
+                    CLSID_WebmMux);
+
     //assert(SUCCEEDED(hr));
 
-    hr = ComReg::UnRegisterCoclass(WebmTypes::CLSID_WebmMux);
+    hr = ComReg::UnRegisterCoclass(CLSID_WebmMux);
 
     return SUCCEEDED(hr) ? S_OK : S_FALSE;
 }
@@ -98,13 +99,15 @@ STDAPI DllRegisterServer()
 {
     std::wstring filename_;
 
-    HRESULT hr = ComReg::ComRegGetModuleFileName(WebmMux::s_hModule, filename_);
+    HRESULT hr = ComReg::ComRegGetModuleFileName(
+                    WebmMuxLib::s_hModule,
+                    filename_);
     assert(SUCCEEDED(hr));
     assert(!filename_.empty());
-    
+
     const wchar_t* const filename = filename_.c_str();
 
-#if _DEBUG    
+#if _DEBUG
     const wchar_t friendlyname[] = L"WebM Muxer Filter (Debug)";
 #else
     const wchar_t friendlyname[] = L"WebM Muxer Filter";
@@ -112,9 +115,9 @@ STDAPI DllRegisterServer()
 
     hr = DllUnregisterServer();
     assert(SUCCEEDED(hr));
-    
+
     hr = ComReg::RegisterCoclass(
-            WebmTypes::CLSID_WebmMux,
+            CLSID_WebmMux,
             friendlyname,
             filename,
             L"Webm.Muxer",
@@ -125,7 +128,7 @@ STDAPI DllRegisterServer()
             GUID_NULL,      //typelib
             0,              //no version specified
             0);             //no toolbox bitmap
-            
+
     //hr = ComReg::RegisterTypeLibResource(filename, 0);
     //assert(SUCCEEDED(hr));
 
@@ -133,11 +136,11 @@ STDAPI DllRegisterServer()
     assert(bool(pMapper));
 
     REGFILTERPINS pins[3];
-    
+
     //video inpin
-    
+
     REGFILTERPINS& inpin_v = pins[0];
-    
+
     inpin_v.strName = 0;              //obsolete
     inpin_v.bRendered = TRUE;  //TODO: correct value?
     inpin_v.bOutput = FALSE;
@@ -145,7 +148,7 @@ STDAPI DllRegisterServer()
     inpin_v.bMany = FALSE;
     inpin_v.clsConnectsToFilter = 0;  //obsolete
     inpin_v.strConnectsToPin = 0;     //obsolete
-    
+
     enum { kVideoTypes = 1 };
 
     const REGPINTYPES inpintypes_v[kVideoTypes] =
@@ -153,7 +156,7 @@ STDAPI DllRegisterServer()
         { &MEDIATYPE_Video, &WebmTypes::MEDIASUBTYPE_VP80 }
     };
 
-    inpin_v.nMediaTypes = kVideoTypes;          
+    inpin_v.nMediaTypes = kVideoTypes;
     inpin_v.lpMediaType = inpintypes_v;
 
     //audio inpin
@@ -167,25 +170,25 @@ STDAPI DllRegisterServer()
     inpin_a.bMany = FALSE;
     inpin_a.clsConnectsToFilter = 0;
     inpin_a.strConnectsToPin = 0;
-    
+
     enum { kAudioTypes = 2 };
-    
+
     const REGPINTYPES inpintypes_a[kAudioTypes] =
     {
         //matroska.org:
-        { &MEDIATYPE_Audio, &VorbisTypes::MEDIASUBTYPE_Vorbis2 },  
-        
+        { &MEDIATYPE_Audio, &VorbisTypes::MEDIASUBTYPE_Vorbis2 },
+
         //xiph.org:
         { &MEDIATYPE_Audio, &VorbisTypes::MEDIASUBTYPE_Vorbis }
     };
-    
+
     inpin_a.nMediaTypes = kAudioTypes;
     inpin_a.lpMediaType = inpintypes_a;
 
     //stream outpin
-    
+
     REGFILTERPINS& outpin = pins[2];
-    
+
     outpin.strName = 0;              //obsolete
     outpin.bRendered = FALSE;
     outpin.bOutput = TRUE;
@@ -193,33 +196,33 @@ STDAPI DllRegisterServer()
     outpin.bMany = FALSE;
     outpin.clsConnectsToFilter = 0;  //obsolete
     outpin.strConnectsToPin = 0;     //obsolete
-    
+
     enum { kOutpinTypes = 1 };
 
     const REGPINTYPES outpin_types[kOutpinTypes] =
     {
         { &MEDIATYPE_Stream, &WebmTypes::MEDIASUBTYPE_WEBM }
     };
-    
-    outpin.nMediaTypes = kOutpinTypes;          
+
+    outpin.nMediaTypes = kOutpinTypes;
     outpin.lpMediaType = outpin_types;
-    
+
     //pin setup complete
-    
+
     REGFILTER2 filter;
-    
+
     filter.dwVersion = 1;
     filter.dwMerit = MERIT_DO_NOT_USE;
     filter.cPins = 3;
     filter.rgPins = pins;
-    
+
     hr = pMapper->RegisterFilter(
-            WebmTypes::CLSID_WebmMux,
+            CLSID_WebmMux,
             friendlyname,
             0,
             &CLSID_LegacyAmFilterCategory,
             0,
-            &filter);                       
+            &filter);
 
     return hr;
 }

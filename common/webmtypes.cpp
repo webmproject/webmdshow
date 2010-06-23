@@ -35,14 +35,14 @@ const GUID WebmTypes::MEDIASUBTYPE_VP80 =
 const GUID WebmTypes::MEDIASUBTYPE_I420 =
 { 0x30323449, 0x0000, 0x0010, { 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 } };
 
-
-const CLSID WebmTypes::CLSID_WebmMux =
-{ /* ED3110F0-5211-11DF-94AF-0026B977EEAA */
-    0xED3110F0,
-    0x5211,
-    0x11DF,
-    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
-};
+//now defined in type library
+//const CLSID WebmTypes::CLSID_WebmMux =
+//{ /* ED3110F0-5211-11DF-94AF-0026B977EEAA */
+//    0xED3110F0,
+//    0x5211,
+//    0x11DF,
+//    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
+//};
 
 
 const CLSID WebmTypes::CLSID_WebmSource =

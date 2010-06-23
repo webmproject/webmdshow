@@ -40,7 +40,7 @@ IStream* EbmlIO::File::GetStream() const
 HRESULT EbmlIO::File::SetSize(__int64 size)
 {
     return EbmlIO::SetSize(m_pStream, size);
-}    
+}
 
 
 __int64 EbmlIO::File::SetPosition(
@@ -88,7 +88,7 @@ void EbmlIO::File::Serialize4UInt(ULONG val)
 
 void EbmlIO::File::Serialize2UInt(USHORT val)
 {
-    EbmlIO::Serialize(m_pStream, &val, 2);    
+    EbmlIO::Serialize(m_pStream, &val, 2);
 }
 
 
@@ -139,7 +139,7 @@ ULONG EbmlIO::File::ReadID4()
     return EbmlIO::ReadID4(m_pStream);
 }
 
-  
+
 void EbmlIO::File::Write8UInt(__int64 val)
 {
     EbmlIO::Write8UInt(m_pStream, val);
@@ -186,30 +186,30 @@ HRESULT EbmlIO::SetSize(IStream* pStream, __int64 size_)
 {
     assert(pStream);
     assert(size_ >= 0);
-    
+
     ULARGE_INTEGER size;
     size.QuadPart = size_;
-        
+
     return pStream->SetSize(size);
 }
 
 
 __int64 EbmlIO::SetPosition(
     IStream* pStream,
-    __int64 move_, 
+    __int64 move_,
     STREAM_SEEK origin)
 {
     assert(pStream);
-    
+
     LARGE_INTEGER move;
     move.QuadPart = move_;
-    
+
     ULARGE_INTEGER newpos;
-    
+
     const HRESULT hr = pStream->Seek(move, origin, &newpos);
     assert(SUCCEEDED(hr));
     hr;
-    
+
     return newpos.QuadPart;
 }
 
@@ -220,9 +220,9 @@ void EbmlIO::Write(
     ULONG cb)
 {
     assert(pStream);
-    
+
     ULONG cbWritten;
-    
+
     const HRESULT hr = pStream->Write(buf, cb, &cbWritten);
     assert(SUCCEEDED(hr));
     assert(cbWritten == cb);
@@ -235,7 +235,7 @@ void EbmlIO::Write8UInt(ISequentialStream* pStream, __int64 val)
 {
     assert(val <= 0x00FFFFFFFFFFFFFE);  //0000 000x 1111 1111 ...
     val |= 0x0100000000000000;          //always write 8 bytes
-    
+
     Serialize(pStream, &val, 8);
 }
 
@@ -244,7 +244,7 @@ void EbmlIO::Write4UInt(ISequentialStream* pStream, ULONG val)
 {
     assert(val <= 0x0FFFFFFE);  //000x 1111 1111 ...
     val |= 0x10000000;  //always write 4 bytes
-    
+
     Serialize(pStream, &val, 4);
 }
 
@@ -253,7 +253,7 @@ void EbmlIO::Write2UInt(ISequentialStream* pStream, USHORT val)
 {
     assert(val <= 0x3FFE);  //0x11 1111 1111 1110
     val |= 0x4000;          //always write 2 bytes
-    
+
     Serialize(pStream, &val, 2);
 }
 
@@ -262,7 +262,7 @@ void EbmlIO::Write1UInt(ISequentialStream* pStream, BYTE val)
 {
     assert(val <= 0x7E);  //x111 1110
     val |= 0x80;          //always write 1 byte
-    
+
     Serialize(pStream, &val, 1);
 }
 
@@ -272,7 +272,7 @@ void EbmlIO::WriteID4(ISequentialStream* pStream, ULONG id)
     assert(pStream);
     assert(id & 0x10000000);  //always write 4 bytes
     assert(id <= 0x1FFFFFFE);
-    
+
     Serialize(pStream, &id, 4);
 }
 
@@ -280,28 +280,28 @@ void EbmlIO::WriteID4(ISequentialStream* pStream, ULONG id)
 ULONG EbmlIO::ReadID4(ISequentialStream* pStream)
 {
     assert(pStream);
-    
+
     ULONG id;
-    
+
     BYTE* const p = reinterpret_cast<BYTE*>(&id);
     BYTE* q = p + 4;
-    
+
     for (;;)
     {
         ULONG cb;
-        
+
         const HRESULT hr = pStream->Read(--q, 1, &cb);
         assert(hr == S_OK);
         assert(cb == 1);
         hr;
-        
+
         if (q == p)
             break;
     }
-    
+
     assert(id & 0x10000000);
     assert(id <= 0x1FFFFFFE);
-    
+
     return id;
 }
 
@@ -311,7 +311,7 @@ void EbmlIO::WriteID3(ISequentialStream* pStream, ULONG id)
     assert(pStream);
     assert(id & 0x200000);  //always write 3 bytes
     assert(id <= 0x3FFFFE);
-    
+
     Serialize(pStream, &id, 3);
 }
 
@@ -321,7 +321,7 @@ void EbmlIO::WriteID2(ISequentialStream* pStream, USHORT id)
     assert(pStream);
     assert(id & 0x4000);  //always write 2 bytes
     assert(id <= 0x7FFE);
-    
+
     Serialize(pStream, &id, 2);
 }
 
@@ -331,10 +331,10 @@ void EbmlIO::WriteID1(ISequentialStream* pStream, BYTE id)
     assert(pStream);
     assert(id & 0x80);  //always write 1 byte
     assert(id <= 0xFE);
-    
+
     Serialize(pStream, &id, 1);
 }
-  
+
 
 void EbmlIO::Write1String(
     ISequentialStream* pStream,
@@ -342,12 +342,12 @@ void EbmlIO::Write1String(
 {
     assert(pStream);
     assert(str);
-    
+
     const size_t size_ = strlen(str);
     assert(size_ <= 255);
-    
+
     const BYTE size = static_cast<BYTE>(size_);
-    
+
     Write1UInt(pStream, size);
     Write(pStream, str, size);
 }
@@ -361,23 +361,23 @@ void EbmlIO::Write1String(
 {
     assert(pStream);
     assert(str);
-    
+
     const size_t strlen_ = strlen(str);
     const size_t size_ = (strlen_ >= buflen) ? strlen_ : buflen;
     assert(size_ <= 255);
-    
+
     Write1UInt(pStream, static_cast<BYTE>(size_));
     Write(pStream, str, static_cast<ULONG>(strlen_));
-    
+
     if (strlen_ >= buflen)
         return;
-        
+
     const BYTE b = 0;
-    
+
     const size_t count = buflen - strlen_;
-    
+
     for (size_t i = 0; i < count; ++i)
-        Write(pStream, &b, 1);    
+        Write(pStream, &b, 1);
 }
 #endif
 
@@ -389,7 +389,7 @@ void EbmlIO::Write1UTF8(
 {
     assert(pStream);
     assert(str);
-    
+
     const int cb = WideCharToMultiByte(
                     CP_UTF8,
                     0,   //flags (must be 0 for UTF-8 conversion)
@@ -401,34 +401,34 @@ void EbmlIO::Write1UTF8(
                     0);
 
     assert(cb > 0);
-    
+
     char* const buf = (char*)_malloca(cb);
-    
+
     const int n = WideCharToMultiByte(
                     CP_UTF8,
-                    0, 
+                    0,
                     str,
                     -1,
-                    buf, 
+                    buf,
                     cb,
                     0,
                     0);
-                    
-    assert(n == cb);    
+
+    assert(n == cb);
     assert(n > 0);
-    
+
     const size_t nn = n - 1;
     assert(nn <= 255);
-    
+
 #ifdef _DEBUG
     const size_t strlen_ = strlen(buf);
     assert(strlen_ == nn);
     assert(buf[nn] == '\0');
 #endif
-    
+
     const BYTE size = static_cast<BYTE>(nn);
 
-    Write1UInt(pStream, size); 
+    Write1UInt(pStream, size);
     Write(pStream, buf, size);
 }
 
@@ -442,13 +442,13 @@ void EbmlIO::Serialize(
     assert(p);
     assert(q);
     assert(q >= p);
-    
+
     while (q != p)
     {
         --q;
-        
+
         ULONG cbWritten;
-    
+
         const HRESULT hr = pStream->Write(q, 1, &cbWritten);
         assert(SUCCEEDED(hr));
         assert(cbWritten == 1);
@@ -463,9 +463,9 @@ void EbmlIO::Serialize(
     ULONG len)
 {
     assert(buf);
-    
+
     const BYTE* const p = static_cast<const BYTE*>(buf);
     const BYTE* const q = p + len;
-    
+
     Serialize(pStream, p, q);
 }

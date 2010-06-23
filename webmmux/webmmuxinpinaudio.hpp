@@ -9,7 +9,7 @@
 #pragma once
 #include "webmmuxinpin.hpp"
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class StreamAudio;
@@ -35,4 +35,4 @@ protected:
 
 };
 
-}  //end namespace WebmMux
+}  //end namespace WebmMuxLib

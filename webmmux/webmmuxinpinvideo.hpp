@@ -9,7 +9,7 @@
 #pragma once
 #include "webmmuxinpin.hpp"
 
-namespace WebmMux
+namespace WebmMuxLib
 {
 
 class Context;
@@ -19,12 +19,12 @@ class InpinVideo : public Inpin
 {
     InpinVideo(const InpinVideo&);
     InpinVideo& operator=(const InpinVideo&);
-    
+
 public:
 
     explicit InpinVideo(Filter*);
     ~InpinVideo();
-    
+
     HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
     HRESULT STDMETHODCALLTYPE GetAllocatorRequirements(ALLOCATOR_PROPERTIES*);
 
@@ -34,7 +34,7 @@ protected:
     void OnFinal();
 
     HANDLE GetOtherHandle() const;
-    
+
     HRESULT QueryAcceptVP80(const AM_MEDIA_TYPE&) const;
     HRESULT VetBitmapInfoHeader(const BITMAPINFOHEADER&) const;
     HRESULT GetAllocatorRequirementsVP80(ALLOCATOR_PROPERTIES&) const;
@@ -42,5 +42,5 @@ protected:
     static StreamVideo* CreateStreamVP80(Context&, const AM_MEDIA_TYPE&);
 
 };
-    
-}  //end namespace WebmMux
+
+}  //end namespace WebmMuxLib
