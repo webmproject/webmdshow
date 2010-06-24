@@ -37,11 +37,16 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				AdditionalIncludeDirectories="$(IntDir)"
+				TypeLibraryName="$(IntDir)/$(InputName).tlb"
+				OutputDirectory="$(InputDir)"
+				HeaderFileName="$(InputName)idl.h"
+				InterfaceIdentifierFileName="$(InputName)idl.c"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)libmpegparser"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;_WIN32_WINNT=0x0400;NOMINMAX"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -117,10 +122,15 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				AdditionalIncludeDirectories="$(IntDir)"
+				TypeLibraryName="$(IntDir)/$(InputName).tlb"
+				OutputDirectory="$(InputDir)"
+				HeaderFileName="$(InputName)idl.h"
+				InterfaceIdentifierFileName="$(InputName)idl.c"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)libmpegparser"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;NOMINMAX;_WIN32_WINNT=0x0400;NOMINMAX"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -288,7 +298,35 @@
 				>
 			</File>
 			<File
+				RelativePath="..\IDL\webmmux.idl"
+				>
+			</File>
+			<File
 				RelativePath=".\webmmux.rc"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						AdditionalIncludeDirectories="$(IntDir)"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						AdditionalIncludeDirectories="$(IntDir)"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\IDL\webmmuxidl.c"
+				>
+			</File>
+			<File
+				RelativePath="..\IDL\webmmuxidl.h"
 				>
 			</File>
 		</Filter>
