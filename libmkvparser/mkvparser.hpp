@@ -415,7 +415,8 @@ class CuePoint
 public:
     void Parse(IMkvFile*, __int64 start, __int64 size);
 
-    __int64 m_timecode;  //absolute
+    __int64 m_timecode;               //absolute but unscaled
+    __int64 GetTime(Segment*) const;  //absolute and scaled (ns units)
 
     struct TrackPosition
     {
@@ -429,6 +430,38 @@ public:
 
     typedef std::list<TrackPosition> track_positions_t;
     track_positions_t m_track_positions;
+
+    const TrackPosition* Find(const Track*) const;
+
+    class CompareTime : std::binary_function<__int64, Cluster*, bool>
+    {
+        CompareTime& operator=(const CompareTime&);
+    public:
+        Segment* const m_pSegment;
+
+        explicit CompareTime(Segment* p) : m_pSegment(p) {}
+        CompareTime(const CompareTime& rhs) : m_pSegment(rhs.m_pSegment) {}
+
+        __int64 GetTime(const CuePoint& cp) const
+        {
+            return cp.GetTime(m_pSegment);
+        }
+
+        bool operator()(__int64 left_ns, const CuePoint& cp) const
+        {
+            return (left_ns < GetTime(cp));
+        }
+
+        bool operator()(const CuePoint& cp, __int64 right_ns) const
+        {
+            return (GetTime(cp) < right_ns);
+        }
+
+        bool operator()(const CuePoint& lhs, const CuePoint& rhs) const
+        {
+            return (lhs.m_timecode < rhs.m_timecode);
+        }
+    };
 
 private:
     void ParseTrackPosition(IMkvFile*, __int64, __int64);
@@ -447,6 +480,7 @@ public:
     const __int64 m_size;
 
     Cues(Segment*, __int64 start, __int64 size);
+    const CuePoint::TrackPosition* Find(__int64 time_ns, const Track*) const;
 
 private:
     typedef std::deque<CuePoint> cue_points_t;
@@ -587,6 +621,12 @@ private:
     void ParseSeekEntry(__int64 pos, __int64 size);
     void ParseSecondarySeekHead(__int64 off);
     void ParseCues(__int64 off);
+
+    bool SearchCues(
+        __int64 time_ns,
+        Track*,
+        Cluster*&,
+        const BlockEntry*&);
 
 };
 

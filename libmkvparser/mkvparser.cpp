@@ -1579,6 +1579,15 @@ Cues::Cues(Segment* pSegment, __int64 start_, __int64 size_) :
         {
             CuePoint p;
             p.Parse(pFile, pos, size);
+
+#ifdef _DEBUG
+            if (!m_cue_points.empty())
+            {
+                const CuePoint& b = m_cue_points.back();
+                assert(p.m_timecode > b.m_timecode);
+            }
+#endif
+
             m_cue_points.push_back(p);
         }
 
@@ -1587,6 +1596,40 @@ Cues::Cues(Segment* pSegment, __int64 start_, __int64 size_) :
     }
 
     assert(pos == stop);
+}
+
+
+const CuePoint::TrackPosition*
+Cues::Find(__int64 time_ns, const Track* pTrack) const
+{
+    assert(time_ns >= 0);
+    assert(pTrack);
+
+    if (m_cue_points.empty())
+        return 0;
+
+    typedef cue_points_t::const_iterator iter_t;
+
+    const iter_t i = m_cue_points.begin();
+
+    {
+        const CuePoint& f = *i;
+
+        if (time_ns <= f.GetTime(m_pSegment))
+           return f.Find(pTrack);
+    }
+
+    const iter_t j = m_cue_points.end();
+
+    const CuePoint::CompareTime pred(m_pSegment);
+
+    const iter_t k = std::upper_bound(i, j, time_ns, pred);
+    assert(k != i);
+
+    const CuePoint& cp = *--iter_t(k);
+    assert(cp.GetTime(m_pSegment) <= time_ns);
+
+    return cp.Find(pTrack);
 }
 
 
@@ -1678,6 +1721,45 @@ void CuePoint::ParseTrackPosition(
     assert(p.m_block != 0);
 
     m_track_positions.push_back(p);
+}
+
+
+const CuePoint::TrackPosition* CuePoint::Find(const Track* pTrack) const
+{
+    assert(pTrack);
+
+    const ULONG n = pTrack->GetNumber();
+
+    typedef track_positions_t::const_iterator iter_t;
+
+    iter_t i = m_track_positions.begin();
+    const iter_t j = m_track_positions.end();
+
+    while (i != j)
+    {
+        const TrackPosition& p = *i++;
+
+        if (p.m_track == n)
+            return &p;
+    }
+
+    return 0;  //no matching track number found
+}
+
+
+__int64 CuePoint::GetTime(Segment* pSegment) const
+{
+    assert(pSegment);
+
+    const SegmentInfo* const pInfo = pSegment->GetInfo();
+    assert(pInfo);
+
+    const __int64 scale = pInfo->GetTimeCodeScale();
+    assert(scale >= 1);
+
+    const __int64 time = scale * m_timecode;
+
+    return time;
 }
 
 
@@ -1846,22 +1928,35 @@ void Segment::GetCluster(
 
     const iter_t j = m_clusters.end();
 
-    iter_t k = std::upper_bound(i, j, time_ns, Cluster::CompareTime());
-    assert(k != i);
-
-    pCluster = *--k;
-    assert(pCluster);
-    assert(pCluster->GetTime() <= time_ns);
-
     if (pTrack->GetType() == 2)  //audio
     {
+        //TODO: we could decide to use cues for this, as we do for video.
+        //But we only use it for video because looking around for a keyframe
+        //can get expensive.  Audio doesn't require anything special we a
+        //straight cluster search is good enough (we assume).
+
+        iter_t k = std::upper_bound(i, j, time_ns, Cluster::CompareTime());
+        assert(k != i);
+
+        pCluster = *--k;
+        assert(pCluster);
+        assert(pCluster->GetTime() <= time_ns);
+
         pBlockEntry = pCluster->GetEntry(pTrack);
         return;
     }
 
     assert(pTrack->GetType() == 1);  //video
 
-    //TODO: use Cues element for this search
+    if (SearchCues(time_ns, pTrack, pCluster, pBlockEntry))
+        return;
+
+    iter_t k = std::upper_bound(i, j, time_ns, Cluster::CompareTime());
+    assert(k != i);
+
+    pCluster = *--k;
+    assert(pCluster);
+    assert(pCluster->GetTime() <= time_ns);
 
     {
         pBlockEntry = pCluster->GetEntry(pTrack);
@@ -1924,6 +2019,69 @@ void Segment::GetCluster(
     pCluster = &m_eos;
     pBlockEntry = pTrack->GetEOS();
 }
+
+
+bool Segment::SearchCues(
+    __int64 time_ns,
+    Track* pTrack,
+    Cluster*&,
+    const BlockEntry*&)
+{
+    if (m_pCues == 0)
+        return false;
+
+    //TODO:
+    //search among cuepoints for time
+    //if time is less then what's already loaded then
+    //  return that cluster and we're done
+    //else (time is greater than what's loaded)
+    //  if time isn't "too far into the future" then
+    //     pre-load the necessary clusters
+    //     return that cluster and we're done
+    //  else
+    //     find (earlier) cue point corresponding to something
+    //       already loaded in cache, and return that
+
+    const CuePoint::TrackPosition* const pTP = m_pCues->Find(time_ns, pTrack);
+
+    if (pTP == 0)
+        return false;
+
+    assert(pTP->m_track == pTrack->GetNumber());
+
+    if (m_clusters.empty())
+        return false;
+
+    //A cluster has
+    //   m_start <= 0 means this is the segment-relative offset
+    //   m_start > 0 means this is the absolution pos in the file (of payload)
+    //
+    //The cuepoint::trackpos.m_pos is segment-relative offset of cluster.
+    //
+
+#if 0    //TODO
+    Cluster* const pCluster = m_clusters.back();
+    assert(pCluster);
+
+    if (pCluster->m_start <= 0)  //segment-relative offset
+    {
+        if (pTP->m_pos <= pCluster->m_start)
+
+    }
+
+
+    {
+        pCluster = &m_eos;
+        pBlockEntry = pTrack->GetEOS();
+
+        return;
+    }
+#else
+    return false;
+#endif
+}
+
+
 
 
 const Tracks* Segment::GetTracks() const
