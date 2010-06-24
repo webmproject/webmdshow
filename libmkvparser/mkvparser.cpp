@@ -1576,7 +1576,11 @@ Cues::Cues(Segment* pSegment, __int64 start_, __int64 size_) :
         assert((pos + size) <= stop);
 
         if (id == 0x3B)  //CuePoint ID
-            ParseCuePoint(pFile, pos, size);
+        {
+            CuePoint p;
+            p.Parse(pFile, pos, size);
+            m_cue_points.push_back(p);
+        }
 
         pos += size;  //consume payload
         assert(pos <= stop);
@@ -1586,12 +1590,12 @@ Cues::Cues(Segment* pSegment, __int64 start_, __int64 size_) :
 }
 
 
-void Cues::ParseCuePoint(IMkvFile* pFile, __int64 start_, __int64 size_)
+void CuePoint::Parse(IMkvFile* pFile, __int64 start_, __int64 size_)
 {
     const __int64 stop = start_ + size_;
     __int64 pos = start_;
 
-    __int64 tc = -1;
+    m_timecode = -1;
 
     while (pos < stop)
     {
@@ -1611,14 +1615,69 @@ void Cues::ParseCuePoint(IMkvFile* pFile, __int64 start_, __int64 size_)
         assert((pos + size) <= stop);
 
         if (id == 0x33)  //CueTime ID
-            tc = UnserializeUInt(pFile, pos, size);
+            m_timecode = UnserializeUInt(pFile, pos, size);
 
-        else if (id == 0x37) //CueTrackPositions ID
-            __noop;
+        else if (id == 0x37) //CueTrackPosition(s) ID
+            ParseTrackPosition(pFile, pos, size);
 
         pos += size;  //consume payload
         assert(pos <= stop);
     }
+
+    assert(m_timecode >= 0);
+    assert(!m_track_positions.empty());
+}
+
+
+void CuePoint::ParseTrackPosition(
+    IMkvFile* pFile,
+    __int64 start_,
+    __int64 size_)
+{
+    const __int64 stop = start_ + size_;
+    __int64 pos = start_;
+
+    TrackPosition p;
+
+    p.m_track = -1;
+    p.m_pos = -1;
+    p.m_block = -1;
+
+    while (pos < stop)
+    {
+        long len;
+
+        const __int64 id = ReadUInt(pFile, pos, len);
+        assert(id >= 0);  //TODO
+        assert((pos + len) <= stop);
+
+        pos += len;  //consume ID
+
+        const __int64 size = ReadUInt(pFile, pos, len);
+        assert(size >= 0);
+        assert((pos + len) <= stop);
+
+        pos += len;  //consume Size field
+        assert((pos + size) <= stop);
+
+        if (id == 0x77)  //CueTrack ID
+            p.m_track = UnserializeUInt(pFile, pos, size);
+
+        else if (id == 0x71)  //CueClusterPos ID
+            p.m_pos = UnserializeUInt(pFile, pos, size);
+
+        else if (id == 0x1378)  //CueBlockNumber
+            p.m_block = UnserializeUInt(pFile, pos, size);
+
+        pos += size;  //consume payload
+        assert(pos <= stop);
+    }
+
+    assert(p.m_track > 0);
+    assert(p.m_pos >= 0);
+    assert(p.m_block != 0);
+
+    m_track_positions.push_back(p);
 }
 
 
@@ -1876,6 +1935,12 @@ const Tracks* Segment::GetTracks() const
 const SegmentInfo* Segment::GetInfo() const
 {
     return m_pInfo;
+}
+
+
+const Cues* Segment::GetCues() const
+{
+    return m_pCues;
 }
 
 

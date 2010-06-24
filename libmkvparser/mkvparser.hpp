@@ -13,6 +13,7 @@
 #include <set>
 #include <string>
 #include <deque>
+#include <list>
 #include <functional>
 
 namespace MkvParser
@@ -411,9 +412,26 @@ private:
 
 class CuePoint
 {
-    CuePoint& operator=(const CuePoint&);
 public:
-    __int64 m_timecode;
+    void Parse(IMkvFile*, __int64 start, __int64 size);
+
+    __int64 m_timecode;  //absolute
+
+    struct TrackPosition
+    {
+        __int64 m_track;
+        __int64 m_pos;  //cluster
+        __int64 m_block;
+        //codec_state  //defaults to 0
+        //reference = clusters containing req'd referenced blocks
+        //  reftime = timecode of the referenced block
+    };
+
+    typedef std::list<TrackPosition> track_positions_t;
+    track_positions_t m_track_positions;
+
+private:
+    void ParseTrackPosition(IMkvFile*, __int64, __int64);
 
 };
 
@@ -431,7 +449,8 @@ public:
     Cues(Segment*, __int64 start, __int64 size);
 
 private:
-    void ParseCuePoint(IMkvFile*, __int64 start, __int64 size);
+    typedef std::deque<CuePoint> cue_points_t;
+    cue_points_t m_cue_points;
 
 };
 
