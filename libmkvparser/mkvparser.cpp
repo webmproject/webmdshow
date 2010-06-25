@@ -2035,6 +2035,9 @@ bool Segment::SearchCues(
     if (m_pCues == 0)
         return false;
 
+    if (m_clusters.empty())
+        return false;
+
     //TODO:
     //search among cuepoints for time
     //if time is less then what's already loaded then
@@ -2057,8 +2060,11 @@ bool Segment::SearchCues(
     assert(pTP);
     assert(pTP->m_track == pTrack->GetNumber());
 
-    if (m_clusters.empty())
-        return false;
+    //TODO:
+    //We check whether the cluster having the indicated position
+    //it (pre)loaded in the cache.  If it already in cache, then
+    //we use it.  Otherwise, we should (pre)load clusters until
+    //we reached at least one new keyframe.
 
     pCluster = m_clusters.back();
     assert(pCluster);
@@ -2077,13 +2083,14 @@ bool Segment::SearchCues(
     const iter_t j = m_clusters.end();
 
     const Cluster::ComparePos pred;
+
     const iter_t k = std::upper_bound(i, j, pTP->m_pos, pred);
     assert(k != i);
 
     pCluster = *--iter_t(k);
     assert(pCluster);
     assert(pCluster->m_pos);
-    assert(_abs64(pCluster->m_pos) <= pTP->m_pos);
+    assert(_abs64(pCluster->m_pos) == pTP->m_pos);
 
     pBlockEntry = pCluster->GetEntry(*pCP, *pTP);
     assert(pBlockEntry);
