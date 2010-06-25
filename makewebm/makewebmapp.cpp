@@ -1327,7 +1327,17 @@ void App::DumpAudioMediaType(const AM_MEDIA_TYPE& mt)
 
 void App::DumpVideoInfoHeader(const VIDEOINFOHEADER& vih)
 {
-    //TODO: print vih stuff
+    wcout << "vih.AvgTimePerFrame=" << vih.AvgTimePerFrame;
+
+    if (vih.AvgTimePerFrame > 0)
+    {
+        const double fps = 10000000 / double(vih.AvgTimePerFrame);
+        wcout << " (fps="
+              << std::fixed << std::setprecision(1) << fps
+              << ")";
+    }
+
+    wcout << L'\n';
 
     const BITMAPINFOHEADER& bmih = vih.bmiHeader;
     DumpBitMapInfoHeader(bmih);
@@ -1336,7 +1346,17 @@ void App::DumpVideoInfoHeader(const VIDEOINFOHEADER& vih)
 
 void App::DumpVideoInfoHeader2(const VIDEOINFOHEADER2& vih)
 {
-    //TODO: print vih2 stuff
+    wcout << "vih2.AvgTimePerFrame=" << vih.AvgTimePerFrame;
+
+    if (vih.AvgTimePerFrame > 0)
+    {
+        const double fps = 10000000 / double(vih.AvgTimePerFrame);
+        wcout << " (fps="
+              << std::fixed << std::setprecision(1) << fps
+              << ")";
+    }
+
+    wcout << L'\n';
 
     const BITMAPINFOHEADER& bmih = vih.bmiHeader;
     DumpBitMapInfoHeader(bmih);
