@@ -551,18 +551,37 @@ public:
         }
     };
 
+    struct ComparePos : std::binary_function<__int64, Cluster*, bool>
+    {
+        bool operator()(__int64 left_pos, Cluster* c) const
+        {
+            return (left_pos < _abs64(c->m_pos));
+        }
+
+        bool operator()(Cluster* c, __int64 right_pos) const
+        {
+            return (_abs64(c->m_pos) < right_pos);
+        }
+
+        bool operator()(Cluster* lhs, Cluster* rhs) const
+        {
+            return (_abs64(lhs->m_pos) < _abs64(rhs->m_pos));
+        }
+    };
+
 protected:
     Cluster(Segment*, index_t, __int64 off);
 
 public:
-    __int64 m_start;
+    //__int64 m_start;
+    __int64 m_pos;
     __int64 m_size;
 
 private:
     __int64 m_timecode;
     BlockEntry::entries_t m_entries;
 
-    void Load();
+    __int64 Load();
     void LoadBlockEntries();
     void ParseBlockGroup(__int64, __int64);
     void ParseSimpleBlock(__int64, __int64);

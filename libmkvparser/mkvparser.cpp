@@ -2060,55 +2060,36 @@ bool Segment::SearchCues(
     if (m_clusters.empty())
         return false;
 
-    //A cluster has
-    //   m_start <= 0 means this is the segment-relative offset
-    //   m_start > 0 means this is the absolute pos in the file (of payload)
-    //
-    //The cuepoint::trackpos.m_pos is segment-relative offset of cluster.
-
     pCluster = m_clusters.back();
     assert(pCluster);
+    assert(pCluster->m_pos);
 
-    if (pCluster->m_start <= 0)  //segment-relative offset
-    {
-        const __int64 pos = -pCluster->m_start;
+    const __int64 pos = _abs64(pCluster->m_pos);
 
-        if (pTP->m_pos > pos)
-            return false;  //TODO: pre-load up to cluster at pTP->m_pos
-    }
-    else
-    {
-        const __int64 pos = m_start + pTP->m_pos;  //pos of Cluster ID
+    if (pTP->m_pos > pos)  //don't have this cluster in the cache
+        return false;      //TODO: pre-load up to cluster at pTP->m_pos
 
-        //pCluster->m_start is pos of payload.  This is a few bytes after
-        //the Cluster ID and size.  Once we have set cluster->m_start to
-        //a value > 0 then this means we throw away pos of its ID.
+    typedef Cluster::clusters_t::const_iterator iter_t;
 
-        //pos points to the Cluster ID (which is followed by size).  So
-        //you can simply compare cuepoint pos to cluster->start.  We could
-        //preserve the pos of the Cluster ID (and perhaps the
-        //pos of the size) in the cluster object, so we can compare it to the
-        //cuepoint pos.
+    const iter_t i = m_clusters.begin();
+    assert(pTP->m_pos >= _abs64((*i)->m_pos));
 
-        if (pos >= pCluster->m_start)
-            return false;  //TODO: pre-load up to cluster at pTP->m_pos
+    const iter_t j = m_clusters.end();
 
-        //The cuepoint pos is less than cluster->start, which means we
-        //have the indicated cluster in the cache already (although not
-        //necessarily fully loaded yet).
-    }
+    const Cluster::ComparePos pred;
+    const iter_t k = std::upper_bound(i, j, pTP->m_pos, pred);
+    assert(k != i);
 
-    //TODO: we need to search for the cluster having pTP->m_pos
-    //for now:
-    pCluster = 0;
+    pCluster = *--iter_t(k);
     assert(pCluster);
+    assert(pCluster->m_pos);
+    assert(_abs64(pCluster->m_pos) <= pTP->m_pos);
 
     pBlockEntry = pCluster->GetEntry(*pCP, *pTP);
     assert(pBlockEntry);
 
     return true;
 }
-
 
 
 const Tracks* Segment::GetTracks() const
@@ -3004,24 +2985,25 @@ Track* Tracks::GetTrack(ULONG idx) const
 }
 
 
-void Cluster::Load()
+__int64 Cluster::Load()
 {
     assert(m_pSegment);
 
-    if (m_start > 0)
+    if (m_pos > 0)  //loaded
     {
         assert(m_size > 0);
         assert(m_timecode >= 0);
-        return;
+        return -1;  //don't have start anymore
     }
 
-    assert(m_size == 0);
+    assert(m_pos < 0);  //not loaded yet
+    assert(m_size <= 0);
     assert(m_timecode < 0);
 
     IMkvFile* const pFile = m_pSegment->m_pFile;
 
-    const __int64 off = -m_start;  //relative to segment
-    __int64 pos = m_pSegment->m_start + off;  //absolute
+    m_pos *= -1;                                //relative to segment
+    __int64 pos = m_pSegment->m_start + m_pos;  //absolute
 
     long len;
 
@@ -3037,10 +3019,10 @@ void Cluster::Load()
 
     pos += len;  //consume size
 
-    m_start = pos;
+    const __int64 start = pos;  //of payload
     m_size = size_;
 
-    const __int64 stop = m_start + size_;
+    const __int64 stop = pos + size_;
 
     __int64 timecode = -1;
 
@@ -3077,6 +3059,8 @@ void Cluster::Load()
     assert(timecode >= 0);
 
     m_timecode = timecode;
+
+    return start;
 }
 
 
@@ -3099,7 +3083,7 @@ Cluster* Cluster::Parse(
 Cluster::Cluster() :
     m_pSegment(0),
     m_index(0),
-    m_start(0),
+    m_pos(0),
     m_size(0),
     m_timecode(0)
 {
@@ -3111,7 +3095,7 @@ Cluster::Cluster(
     __int64 off) :
     m_pSegment(pSegment),
     m_index(idx),
-    m_start(off),
+    m_pos(off),
     m_size(0),
     m_timecode(-1)
 {
@@ -3141,15 +3125,15 @@ void Cluster::LoadBlockEntries()
     if (!m_entries.empty())
         return;
 
-    Load();
+    __int64 pos = Load();
+    assert(pos > m_pSegment->m_start);
     assert(m_timecode >= 0);
-    assert(m_start > 0);
+    assert(m_pos > 0);
     assert(m_size > 0);
 
-    IMkvFile* const pFile = m_pSegment->m_pFile;
+    const __int64 stop = pos + m_size;
 
-    __int64 pos = m_start;
-    const __int64 stop = m_start + m_size;
+    IMkvFile* const pFile = m_pSegment->m_pFile;
 
     __int64 timecode = -1;  //of cluster itself
 
@@ -3395,6 +3379,8 @@ Cluster::GetEntry(
 
     if (tp.m_block > 0)
     {
+        assert(tp.m_block <= ee.size());
+
         const int block = static_cast<int>(tp.m_block);
         const int off = block - 1;
 
@@ -3406,8 +3392,13 @@ Cluster::GetEntry(
         assert(!pEntry->EOS());
 
         const Block* const pBlock = pEntry->GetBlock();
+        pBlock;
         assert(pBlock);
         assert(pBlock->GetNumber() == tp.m_track);
+
+        const __int64 timecode = pBlock->GetTimeCode(this);
+        timecode;
+        assert(timecode == cp.m_timecode);
 
         return pEntry;
     }
