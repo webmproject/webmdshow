@@ -2027,7 +2027,7 @@ void Segment::GetCluster(
 
 
 bool Segment::SearchCues(
-    __int64 time_ns,
+    __int64 time_ns_,
     Track* pTrack,
     Cluster*& pCluster,
     const BlockEntry*& pBlockEntry)
@@ -2050,30 +2050,34 @@ bool Segment::SearchCues(
     //     find (earlier) cue point corresponding to something
     //       already loaded in cache, and return that
 
+    Cluster* const pLastCluster = m_clusters.back();
+    assert(pLastCluster);
+    assert(pLastCluster->m_pos);
+
+    const __int64 last_pos = _abs64(pLastCluster->m_pos);
+    const __int64 last_ns = pLastCluster->GetTime();
+
+    __int64 time_ns;
+
+    if (Unparsed() <= 0)  //all clusters loaded
+        time_ns = time_ns_;
+
+    else if (time_ns_ < last_ns)
+        time_ns = time_ns_;
+
+    else
+        time_ns = last_ns;
+
     const CuePoint* pCP;
     const CuePoint::TrackPosition* pTP;
 
     if (!m_pCues->Find(time_ns, pTrack, pCP, pTP))
-        return false;
+        return false;  //weird
 
     assert(pCP);
     assert(pTP);
     assert(pTP->m_track == pTrack->GetNumber());
-
-    //TODO:
-    //We check whether the cluster having the indicated position
-    //it (pre)loaded in the cache.  If it already in cache, then
-    //we use it.  Otherwise, we should (pre)load clusters until
-    //we reached at least one new keyframe.
-
-    pCluster = m_clusters.back();
-    assert(pCluster);
-    assert(pCluster->m_pos);
-
-    const __int64 pos = _abs64(pCluster->m_pos);
-
-    if (pTP->m_pos > pos)  //don't have this cluster in the cache
-        return false;      //TODO: pre-load up to cluster at pTP->m_pos
+    assert(pTP->m_pos <= last_pos);
 
     typedef Cluster::clusters_t::const_iterator iter_t;
 
