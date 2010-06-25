@@ -1333,7 +1333,7 @@ void App::DumpVideoInfoHeader(const VIDEOINFOHEADER& vih)
     {
         const double fps = 10000000 / double(vih.AvgTimePerFrame);
         wcout << " (fps="
-              << std::fixed << std::setprecision(1) << fps
+              << std::fixed << std::setprecision(3) << fps
               << ")";
     }
 
@@ -1352,7 +1352,7 @@ void App::DumpVideoInfoHeader2(const VIDEOINFOHEADER2& vih)
     {
         const double fps = 10000000 / double(vih.AvgTimePerFrame);
         wcout << " (fps="
-              << std::fixed << std::setprecision(1) << fps
+              << std::fixed << std::setprecision(3) << fps
               << ")";
     }
 
