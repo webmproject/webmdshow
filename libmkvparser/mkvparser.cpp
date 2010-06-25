@@ -1599,24 +1599,28 @@ Cues::Cues(Segment* pSegment, __int64 start_, __int64 size_) :
 }
 
 
-const CuePoint::TrackPosition*
-Cues::Find(__int64 time_ns, const Track* pTrack) const
+bool Cues::Find(
+    __int64 time_ns,
+    const Track* pTrack,
+    const CuePoint*& pCP,
+    const CuePoint::TrackPosition*& pTP) const
 {
     assert(time_ns >= 0);
     assert(pTrack);
 
     if (m_cue_points.empty())
-        return 0;
+        return false;
 
     typedef cue_points_t::const_iterator iter_t;
 
     const iter_t i = m_cue_points.begin();
 
-    {
-        const CuePoint& f = *i;
+    pCP = &*i;
 
-        if (time_ns <= f.GetTime(m_pSegment))
-           return f.Find(pTrack);
+    if (time_ns <= pCP->GetTime(m_pSegment))
+    {
+        pTP = pCP->Find(pTrack);
+        return (pTP != 0);
     }
 
     const iter_t j = m_cue_points.end();
@@ -1626,10 +1630,11 @@ Cues::Find(__int64 time_ns, const Track* pTrack) const
     const iter_t k = std::upper_bound(i, j, time_ns, pred);
     assert(k != i);
 
-    const CuePoint& cp = *--iter_t(k);
-    assert(cp.GetTime(m_pSegment) <= time_ns);
+    pCP = &*--iter_t(k);
+    assert(pCP->GetTime(m_pSegment) <= time_ns);
 
-    return cp.Find(pTrack);
+    pTP = pCP->Find(pTrack);
+    return (pTP != 0);
 }
 
 
@@ -2024,8 +2029,8 @@ void Segment::GetCluster(
 bool Segment::SearchCues(
     __int64 time_ns,
     Track* pTrack,
-    Cluster*&,
-    const BlockEntry*&)
+    Cluster*& pCluster,
+    const BlockEntry*& pBlockEntry)
 {
     if (m_pCues == 0)
         return false;
@@ -2042,11 +2047,14 @@ bool Segment::SearchCues(
     //     find (earlier) cue point corresponding to something
     //       already loaded in cache, and return that
 
-    const CuePoint::TrackPosition* const pTP = m_pCues->Find(time_ns, pTrack);
+    const CuePoint* pCP;
+    const CuePoint::TrackPosition* pTP;
 
-    if (pTP == 0)
+    if (!m_pCues->Find(time_ns, pTrack, pCP, pTP))
         return false;
 
+    assert(pCP);
+    assert(pTP);
     assert(pTP->m_track == pTrack->GetNumber());
 
     if (m_clusters.empty())
@@ -2054,33 +2062,52 @@ bool Segment::SearchCues(
 
     //A cluster has
     //   m_start <= 0 means this is the segment-relative offset
-    //   m_start > 0 means this is the absolution pos in the file (of payload)
+    //   m_start > 0 means this is the absolute pos in the file (of payload)
     //
     //The cuepoint::trackpos.m_pos is segment-relative offset of cluster.
-    //
 
-#if 0    //TODO
-    Cluster* const pCluster = m_clusters.back();
+    pCluster = m_clusters.back();
     assert(pCluster);
 
     if (pCluster->m_start <= 0)  //segment-relative offset
     {
-        if (pTP->m_pos <= pCluster->m_start)
+        const __int64 pos = -pCluster->m_start;
 
+        if (pTP->m_pos > pos)
+            return false;  //TODO: pre-load up to cluster at pTP->m_pos
     }
-
-
+    else
     {
-        pCluster = &m_eos;
-        pBlockEntry = pTrack->GetEOS();
+        const __int64 pos = m_start + pTP->m_pos;  //pos of Cluster ID
 
-        return;
+        //pCluster->m_start is pos of payload.  This is a few bytes after
+        //the Cluster ID and size.  Once we have set cluster->m_start to
+        //a value > 0 then this means we throw away pos of its ID.
+
+        //pos points to the Cluster ID (which is followed by size).  So
+        //you can simply compare cuepoint pos to cluster->start.  We could
+        //preserve the pos of the Cluster ID (and perhaps the
+        //pos of the size) in the cluster object, so we can compare it to the
+        //cuepoint pos.
+
+        if (pos >= pCluster->m_start)
+            return false;  //TODO: pre-load up to cluster at pTP->m_pos
+
+        //The cuepoint pos is less than cluster->start, which means we
+        //have the indicated cluster in the cache already (although not
+        //necessarily fully loaded yet).
     }
-#else
-    return false;
-#endif
-}
 
+    //TODO: we need to search for the cluster having pTP->m_pos
+    //for now:
+    pCluster = 0;
+    assert(pCluster);
+
+    pBlockEntry = pCluster->GetEntry(*pCP, *pTP);
+    assert(pBlockEntry);
+
+    return true;
+}
 
 
 
@@ -3345,6 +3372,67 @@ const BlockEntry* Cluster::GetEntry(const Track* pTrack)
     }
 
     return pTrack->GetEOS();  //no satisfactory block found
+}
+
+
+const BlockEntry*
+Cluster::GetEntry(
+    const CuePoint& cp,
+    const CuePoint::TrackPosition& tp)
+{
+    assert(m_pSegment);
+
+    LoadBlockEntries();
+
+    const BlockEntry::entries_t& ee = m_entries;
+    ee;
+    assert(!ee.empty());
+
+    typedef BlockEntry::entries_t::const_iterator iter_t;
+
+    iter_t i = ee.begin();
+    const iter_t j = ee.end();
+
+    if (tp.m_block > 0)
+    {
+        const int block = static_cast<int>(tp.m_block);
+        const int off = block - 1;
+
+        const iter_t k = i + off;
+        assert(k != j);
+
+        const BlockEntry* const pEntry = *k;
+        assert(pEntry);
+        assert(!pEntry->EOS());
+
+        const Block* const pBlock = pEntry->GetBlock();
+        assert(pBlock);
+        assert(pBlock->GetNumber() == tp.m_track);
+
+        return pEntry;
+    }
+
+    while (i != j)
+    {
+        const BlockEntry* const pEntry = *i++;
+        assert(pEntry);
+        assert(!pEntry->EOS());
+
+        const Block* const pBlock = pEntry->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetNumber() != tp.m_track)
+            continue;
+
+        const __int64 timecode = pBlock->GetTimeCode(this);
+
+        if (timecode == cp.m_timecode)
+            return pEntry;
+
+        assert(timecode < cp.m_timecode);
+    }
+
+    return 0;  //no satisfactory block found
 }
 
 

@@ -433,7 +433,7 @@ public:
 
     const TrackPosition* Find(const Track*) const;
 
-    class CompareTime : std::binary_function<__int64, Cluster*, bool>
+    class CompareTime : std::binary_function<__int64, CuePoint, bool>
     {
         CompareTime& operator=(const CompareTime&);
     public:
@@ -480,7 +480,12 @@ public:
     const __int64 m_size;
 
     Cues(Segment*, __int64 start, __int64 size);
-    const CuePoint::TrackPosition* Find(__int64 time_ns, const Track*) const;
+
+    bool Find(
+        __int64 time_ns,
+        const Track*,
+        const CuePoint*&,
+        const CuePoint::TrackPosition*&) const;
 
 private:
     typedef std::deque<CuePoint> cue_points_t;
@@ -520,7 +525,12 @@ public:
     const BlockEntry* GetFirst();
     const BlockEntry* GetLast();
     const BlockEntry* GetNext(const BlockEntry*) const;
+
     const BlockEntry* GetEntry(const Track*);
+    const BlockEntry* GetEntry(
+        const CuePoint&,
+        const CuePoint::TrackPosition&);
+
     const BlockEntry* GetMaxKey(const VideoTrack*);
 
     struct CompareTime : std::binary_function<__int64, Cluster*, bool>
@@ -544,9 +554,11 @@ public:
 protected:
     Cluster(Segment*, index_t, __int64 off);
 
-private:
+public:
     __int64 m_start;
     __int64 m_size;
+
+private:
     __int64 m_timecode;
     BlockEntry::entries_t m_entries;
 
