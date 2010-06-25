@@ -1043,33 +1043,21 @@ __int64 Segment::ParseHeaders()
             assert(m_pInfo == 0);
             m_pInfo = new (std::nothrow) SegmentInfo(this, pos, size);
             assert(m_pInfo);  //TODO
-
-            if (m_pTracks)
-                bQuit = true;
         }
         else if (id == 0x0654AE6B)  //Tracks ID
         {
             assert(m_pTracks == 0);
             m_pTracks = new (std::nothrow) Tracks(this, pos, size);
             assert(m_pTracks);  //TODO
-
-            if (m_pInfo)
-                bQuit = true;
+        }
+        else if (id == 0x0C53BB6B)  //Cues ID
+        {
+            assert(m_pCues == 0);
+            m_pCues = new (std::nothrow) Cues(this, pos, size);
+            assert(m_pCues);  //TODO
         }
         else if (id == 0x0F43B675)  //Cluster ID
         {
-#if 0
-            if (m_pInfo == 0)  //TODO: liberalize
-                __noop;
-
-            else if (m_pTracks == 0)
-                __noop;
-
-            else
-                //ParseCluster(idpos, pos, size);
-                Cluster::Parse(this, m_clusters, pos, size);
-#endif
-
             bQuit = true;
         }
 
