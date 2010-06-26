@@ -2998,19 +2998,21 @@ Track* Tracks::GetTrack(ULONG idx) const
 }
 
 
-__int64 Cluster::Load()
+void Cluster::Load()
 {
     assert(m_pSegment);
+    assert(m_pos);
+    assert(m_size);
 
     if (m_pos > 0)  //loaded
     {
         assert(m_size > 0);
         assert(m_timecode >= 0);
-        return -1;  //don't have start anymore
+        return;
     }
 
     assert(m_pos < 0);  //not loaded yet
-    assert(m_size <= 0);
+    assert(m_size < 0);
     assert(m_timecode < 0);
 
     IMkvFile* const pFile = m_pSegment->m_pFile;
@@ -3032,7 +3034,7 @@ __int64 Cluster::Load()
 
     pos += len;  //consume size
 
-    const __int64 start = pos;  //of payload
+    //const __int64 start = pos;  //of payload
     m_size = size_;
 
     const __int64 stop = pos + size_;
@@ -3072,8 +3074,6 @@ __int64 Cluster::Load()
     assert(timecode >= 0);
 
     m_timecode = timecode;
-
-    return start;
 }
 
 
@@ -3109,7 +3109,7 @@ Cluster::Cluster(
     m_pSegment(pSegment),
     m_index(idx),
     m_pos(off),
-    m_size(0),
+    m_size(-1),
     m_timecode(-1)
 {
 }
@@ -3138,25 +3138,56 @@ void Cluster::LoadBlockEntries()
     if (!m_entries.empty())
         return;
 
-    __int64 pos = Load();
-    assert(pos > m_pSegment->m_start);
-    assert(m_timecode >= 0);
-    assert(m_pos > 0);
-    assert(m_size > 0);
-
-    const __int64 stop = pos + m_size;
+    assert(m_pSegment);
+    assert(m_pos);
+    assert(m_size);
 
     IMkvFile* const pFile = m_pSegment->m_pFile;
 
+    if (m_pos < 0)
+        m_pos *= -1;
+
+    __int64 pos = m_pSegment->m_start + m_pos;
+
+    {
+        long len;
+
+        const __int64 id = ReadUInt(pFile, pos, len);
+        id;
+        assert(id >= 0);
+        assert(id == 0x0F43B675);  //Cluster ID
+
+        pos += len;  //consume id
+
+        const __int64 size = ReadUInt(pFile, pos, len);
+        assert(size > 0);
+
+        pos += len;  //consume size
+
+        //pos now points to start of payload
+
+        if (m_size >= 0)
+            assert(size == m_size);
+        else
+            m_size = size;
+    }
+
+    const __int64 stop = pos + m_size;
     __int64 timecode = -1;  //of cluster itself
 
     while (pos < stop)
     {
         if (Match(pFile, pos, 0x67, timecode))
-            assert(timecode == m_timecode);
+        {
+            if (m_timecode >= 0)
+                assert(timecode == m_timecode);
+            else
+                m_timecode = timecode;
+        }
         else
         {
             long len;
+
             const __int64 id = ReadUInt(pFile, pos, len);
             assert(id >= 0);  //TODO
             assert((pos + len) <= stop);

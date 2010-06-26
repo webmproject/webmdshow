@@ -573,7 +573,6 @@ protected:
     Cluster(Segment*, index_t, __int64 off);
 
 public:
-    //__int64 m_start;
     __int64 m_pos;
     __int64 m_size;
 
@@ -581,7 +580,7 @@ private:
     __int64 m_timecode;
     BlockEntry::entries_t m_entries;
 
-    __int64 Load();
+    void Load();
     void LoadBlockEntries();
     void ParseBlockGroup(__int64, __int64);
     void ParseSimpleBlock(__int64, __int64);
