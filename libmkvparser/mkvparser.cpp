@@ -1105,9 +1105,6 @@ HRESULT Segment::ParseCluster(Cluster*& pCluster, __int64& pos_) const
     __int64 pos = m_pos;  //how much of the file has been consumed
     __int64 off = -1;     //offset of cluster relative to segment
 
-    //This loop should run 1 1/2 times.  During the first pass,
-    //we find the location of the cluster.
-
     while (pos < stop)
     {
         long len;
@@ -1132,45 +1129,39 @@ HRESULT Segment::ParseCluster(Cluster*& pCluster, __int64& pos_) const
         pos += len;  //consume size
         assert(pos <= stop);
 
-        if (size == 0)  //weird
-            continue;
-
         //pos now points to start of payload
+
+        if (size == 0)  //weird
+            continue;   //throw away this (empty) element
 
         pos += size;  //consume payload
         assert(pos <= stop);
 
-        if (off >= 0)  //we found a cluster during the previous pass
-        {
-            //Indicate to caller how much of file has been consumed.
-            //This is the second pass through the loop, so here idpos
-            //is actually the position of the element that follows
-            //the cluster found during the previous pass.  (This just
-            //means that we parsed the entire cluster.)  This is used
-            //later in AddCluster to adjust the current parse position
-            //(the value cached in the segment object itself), to the
-            //file position value just past the cluster we parsed.
-
-            pos_ = idpos;  //file pos that follows cluster we return
-            break;         //we found cluster, so stop parsing
-        }
-
-        //If we find a cluster, we don't terminate the loop just yet.
-        //We need to perform an actual network read of what follows
-        //the cluster, in order to guarantee that the entire cluster
-        //has been loaded into the network cache.
-
         if (id == 0x0F43B675)  //Cluster ID
+        {
             off = idpos - m_start;  //>= 0 means "we found a cluster"
+            break;
+        }
     }
+
+    assert(pos <= stop);
+
+    //Indicate to caller how much of file has been consumed. This is
+    //used later in AddCluster to adjust the current parse position
+    //(the value cached in the segment object itself) to the
+    //file position value just past the cluster we parsed.
+
+    if (off < 0)  //we did not found any more clusters
+    {
+        pos_ = stop;
+        return S_FALSE;  //pos_ >= 0 here means EOF (cluster is NULL)
+    }
+
+    //We found a cluster.  Now read something, to ensure that it is
+    //fully loaded in the network cache.
 
     if (pos >= stop)  //we parsed the entire segment
     {
-        pos_ = stop;  //pass back to caller the value of how much was consumed
-
-        if (off < 0)         //we did not find any more clusters
-            return S_FALSE;  //pos_ >= 0 here means EOF (cluster is NULL)
-
         //We did find a cluster, but it was very last element in the segment.
         //Our preference is that the loop above runs 1 1/2 times:
         //the first pass finds the cluster, and the second pass
@@ -1199,6 +1190,31 @@ HRESULT Segment::ParseCluster(Cluster*& pCluster, __int64& pos_) const
 
         if (hr != S_OK)
             return VFW_E_BUFFER_UNDERFLOW;
+
+        pos_ = stop;
+    }
+    else
+    {
+        long len;
+        const __int64 idpos = pos;
+
+        const __int64 id = SyncReadUInt(m_pFile, pos, stop, len);
+
+        if (id < 0)  //error
+            return static_cast<HRESULT>(id);
+
+        if (id == 0)
+            return VFW_E_INVALID_FILE_FORMAT;
+
+        pos += len;  //consume id
+        assert(pos < stop);
+
+        const __int64 size = SyncReadUInt(m_pFile, pos, stop, len);
+
+        if (size < 0)  //error
+            return static_cast<HRESULT>(size);
+
+        pos_ = idpos;
     }
 
     //We found a cluster, and it has been completely loaded into the
@@ -1206,14 +1222,12 @@ HRESULT Segment::ParseCluster(Cluster*& pCluster, __int64& pos_) const
     //the EBML tag that follows the cluster, or, if we reached EOF,
     //because we actually read the last byte of the cluster).
 
-    assert(off >= 0);  //we found a cluster
-    assert(pos_ >= m_start);
-    assert(pos_ <= stop);
-
     Segment* const this_ = const_cast<Segment*>(this);
     const Cluster::index_t idx = m_clusters.size();
 
     pCluster = Cluster::Parse(this_, idx, off);  //create new cluster object
+    assert(pCluster);
+
     return S_OK;
 }
 
