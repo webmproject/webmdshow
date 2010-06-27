@@ -881,6 +881,8 @@ void Filter::SetCurrPosition(
         return;
     }
 
+    const LONGLONG ns = pOutpinStream->GetSeekTime(currTime, dwCurr);
+
     if (pOutpinStream->m_pTrack->GetType() == 1)  //video
     {
         const AM_MEDIA_TYPE& mt = pOutpin->m_connection_mtv[0];
@@ -888,7 +890,7 @@ void Filter::SetCurrPosition(
         bVideo;
         assert(bVideo);
 
-        m_pSeekBase = pOutpinStream->SetCurrPosition(currTime, dwCurr);
+        m_pSeekBase = pOutpinStream->SetCurrPosition(ns);
         m_seekTime = currTime;
         //os << "webmsource::filter::setcurrpos: outpin is video #2" << endl;
         return;
@@ -918,7 +920,6 @@ void Filter::SetCurrPosition(
         assert(pStream != pOutpinStream);
         assert(pStream->m_pTrack->GetType() == 1);  //video
 
-        const LONGLONG ns = pOutpinStream->GetSeekTime(currTime, dwCurr);
         m_pSeekBase = pStream->GetSeekBase(ns);
         m_seekTime = currTime;
 
@@ -937,7 +938,7 @@ void Filter::SetCurrPosition(
 
     //os << "webmsource::filter::setcurrpos: searched for but did not find video pin #4" << endl;
 
-    m_pSeekBase = pOutpinStream->SetCurrPosition(currTime, dwCurr);
+    m_pSeekBase = pOutpinStream->SetCurrPosition(ns);
     m_seekTime = currTime;
 }
 

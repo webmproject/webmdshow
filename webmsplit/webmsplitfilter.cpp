@@ -1155,6 +1155,8 @@ void Filter::SetCurrPosition(
         return;
     }
 
+    const LONGLONG ns = pSeekStream->GetSeekTime(currTime, dwCurr);
+
     if (pSeekStream->m_pTrack->GetType() == 1)  //video
     {
         const AM_MEDIA_TYPE& mt = pOutpin->m_connection_mtv[0];
@@ -1162,7 +1164,7 @@ void Filter::SetCurrPosition(
         bVideo;
         assert(bVideo);
 
-        m_pSeekBase = pSeekStream->SetCurrPosition(currTime, dwCurr);
+        m_pSeekBase = pSeekStream->SetCurrPosition(ns);
         m_seekTime = currTime;
         //os << "mkvsource::filter::setcurrpos: outpin is video #2" << endl;
         return;
@@ -1192,7 +1194,6 @@ void Filter::SetCurrPosition(
         assert(pStream != pSeekStream);
         assert(pStream->m_pTrack->GetType() == 1);  //video
 
-        const LONGLONG ns = pSeekStream->GetSeekTime(currTime, dwCurr);
         m_pSeekBase = pStream->GetSeekBase(ns);
         m_seekTime = currTime;
 
@@ -1211,7 +1212,7 @@ void Filter::SetCurrPosition(
 
     //os << "mkvsource::filter::setcurrpos: searched for but did not find video pin #4" << endl;
 
-    m_pSeekBase = pSeekStream->SetCurrPosition(currTime, dwCurr);
+    m_pSeekBase = pSeekStream->SetCurrPosition(ns);
     m_seekTime = currTime;
 }
 

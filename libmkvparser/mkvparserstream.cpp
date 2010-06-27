@@ -301,50 +301,12 @@ Cluster* Stream::GetSeekBase(LONGLONG tCurr_ns) const
 }
 
 
-Cluster* Stream::SetCurrPosition(
-    LONGLONG currpos_reftime,
-    DWORD dwCurr_)
+Cluster* Stream::SetCurrPosition(LONGLONG tCurr_ns)
 {
-    const DWORD dwCurrPos = dwCurr_ & AM_SEEKING_PositioningBitsMask;
-    assert(dwCurrPos != AM_SEEKING_NoPositioning);  //handled by caller
-
     Segment* const pSegment = m_pTrack->m_pSegment;
 
     const __int64 duration_ns = pSegment->GetDuration();
     assert(duration_ns >= 0);
-
-    const __int64 currpos_ns = currpos_reftime * 100;
-    __int64 tCurr_ns;
-
-    switch (dwCurrPos)
-    {
-        case AM_SEEKING_IncrementalPositioning:  //applies only to stop pos
-        default:
-            assert(false);
-            return 0;
-
-        case AM_SEEKING_AbsolutePositioning:
-        {
-            tCurr_ns = currpos_ns;
-            break;
-        }
-        case AM_SEEKING_RelativePositioning:
-        {
-            if (m_pCurr == 0)
-                tCurr_ns = currpos_ns;  //t=0 is assumed here
-            else if (m_pCurr->EOS())
-                tCurr_ns = duration_ns + currpos_ns;
-            else
-            {
-                const Block* const pBlock = m_pCurr->GetBlock();
-                assert(pBlock);
-
-                tCurr_ns = pBlock->GetTime(m_pCurr->GetCluster()) + currpos_ns;
-            }
-
-            break;
-        }
-    }
 
     Cluster* pBase;
 

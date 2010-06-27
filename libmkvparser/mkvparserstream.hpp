@@ -54,7 +54,9 @@ public:
     //convert from reftime to ns
 
     Cluster* GetSeekBase(LONGLONG ns) const;
-    Cluster* SetCurrPosition(LONGLONG currTime, DWORD dwCurr);  //reftime
+    //find the cluster that corresponds to this seek time
+
+    Cluster* SetCurrPosition(LONGLONG ns);
     void SetCurrPosition(Cluster*);
 
     void SetStopPosition(LONGLONG, DWORD);
