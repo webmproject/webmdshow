@@ -481,7 +481,13 @@ public:
 
     Cues(Segment*, __int64 start, __int64 size);
 
-    bool Find(
+    bool Find(  //lower bound of time_ns
+        __int64 time_ns,
+        const Track*,
+        const CuePoint*&,
+        const CuePoint::TrackPosition*&) const;
+
+    bool FindNext(  //upper_bound of time_ns
         __int64 time_ns,
         const Track*,
         const CuePoint*&,

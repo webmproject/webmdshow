@@ -890,6 +890,8 @@ void Filter::SetCurrPosition(
         bVideo;
         assert(bVideo);
 
+        pOutpinStream->PreloadSeek(ns);
+
         m_pSeekBase = pOutpinStream->SetCurrPosition(ns);
         m_seekTime = currTime;
         //os << "webmsource::filter::setcurrpos: outpin is video #2" << endl;
@@ -919,6 +921,8 @@ void Filter::SetCurrPosition(
         assert(pStream);
         assert(pStream != pOutpinStream);
         assert(pStream->m_pTrack->GetType() == 1);  //video
+
+        pStream->PreloadSeek(ns);
 
         m_pSeekBase = pStream->GetSeekBase(ns);
         m_seekTime = currTime;

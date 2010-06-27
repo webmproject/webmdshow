@@ -301,6 +301,56 @@ Cluster* Stream::GetSeekBase(LONGLONG tCurr_ns) const
 }
 
 
+void Stream::PreloadSeek(LONGLONG seek_ns)
+{
+    Segment* const pSegment = m_pTrack->m_pSegment;
+
+    const Cues* const pCues = pSegment->GetCues();
+
+    if (pCues == 0)
+        return;  //TODO: try a diffent method of pre-loading clusters
+
+    if (pSegment->Unparsed() <= 0)
+        return;  //nothing needs to be done
+
+    HRESULT hr = Preload();  //ensure we have at least one cluster
+
+    Cluster* pCluster = pSegment->GetLast();
+    assert(pCluster);
+
+    if (pCluster->EOS())
+        return;  //weird: no clusters
+
+    const LONGLONG last_ns = pCluster->GetTime();
+
+    if (seek_ns <= last_ns)
+        return;  //nothing else needs to be done
+
+    const CuePoint* pCP;
+    const CuePoint::TrackPosition* pTP;
+
+    if (!pCues->FindNext(last_ns, m_pTrack, pCP, pTP))
+        return;
+
+    assert(pCP);
+    assert(pTP);
+
+    while (pSegment->Unparsed() > 0)
+    {
+        hr = Preload();
+
+        pCluster = pSegment->GetLast();
+        assert(pCluster);
+        assert(!pCluster->EOS());
+
+        const __int64 pos = _abs64(pCluster->m_pos);
+
+        if (pos >= pTP->m_pos)
+            return;
+    }
+}
+
+
 Cluster* Stream::SetCurrPosition(LONGLONG tCurr_ns)
 {
     Segment* const pSegment = m_pTrack->m_pSegment;

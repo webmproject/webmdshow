@@ -36,7 +36,7 @@ public:
     virtual HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&);
     virtual HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const = 0;
 
-    HRESULT Preload();
+    HRESULT Preload();  //exactly one cluster
     HRESULT PopulateSample(IMediaSample*);
 
     __int64 GetDuration() const;
@@ -55,6 +55,9 @@ public:
 
     Cluster* GetSeekBase(LONGLONG ns) const;
     //find the cluster that corresponds to this seek time
+
+    void PreloadSeek(LONGLONG ns);
+    //(pre)load a few clusters, an anticpation of seek request
 
     Cluster* SetCurrPosition(LONGLONG ns);
     void SetCurrPosition(Cluster*);

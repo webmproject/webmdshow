@@ -1640,6 +1640,39 @@ bool Cues::Find(
 }
 
 
+bool Cues::FindNext(
+    __int64 time_ns,
+    const Track* pTrack,
+    const CuePoint*& pCP,
+    const CuePoint::TrackPosition*& pTP) const
+{
+    pCP = 0;
+    pTP = 0;
+
+    if (m_cue_points.empty())  //weird
+        return false;
+
+    typedef cue_points_t::const_iterator iter_t;
+
+    const iter_t i = m_cue_points.begin();
+    const iter_t j = m_cue_points.end();
+
+    const CuePoint::CompareTime pred(m_pSegment);
+
+    const iter_t k = std::upper_bound(i, j, time_ns, pred);
+
+    if (k == j)  //time_ns is greater than max cue point
+        return false;
+
+    pCP = &*k;
+    assert(pCP->GetTime(m_pSegment) > time_ns);
+
+    pTP = pCP->Find(pTrack);
+
+    return (pTP != 0);
+}
+
+
 void CuePoint::Parse(IMkvFile* pFile, __int64 start_, __int64 size_)
 {
     const __int64 stop = start_ + size_;
