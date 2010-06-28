@@ -37,6 +37,7 @@ public:
     int GetDecoderBufferSize() const;
     int GetDecoderBufferInitialSize() const;
     int GetDecoderBufferOptimalSize() const;
+    double GetKeyframeFrequency() const;
     int GetKeyframeMode() const;
     int GetKeyframeMinInterval() const;
     int GetKeyframeMaxInterval() const;
@@ -82,6 +83,7 @@ private:
     int m_keyframe_mode;
     int m_keyframe_min_interval;
     int m_keyframe_max_interval;
+    double m_keyframe_frequency;
     int m_thread_count;
     int m_dropframe_thresh;
     int m_resize_allowed;

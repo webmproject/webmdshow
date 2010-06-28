@@ -42,6 +42,7 @@ CmdLine::CmdLine() :
     m_decoder_buffer_size(-1),
     m_decoder_buffer_initial_size(-1),
     m_decoder_buffer_optimal_size(-1),
+    m_keyframe_frequency(-1),
     m_keyframe_mode(-2),
     m_keyframe_min_interval(-1),
     m_keyframe_max_interval(-1),
@@ -184,7 +185,10 @@ int CmdLine::Parse(int argc, wchar_t* argv[])
     {
         if (m_two_pass >= 1)  //two-pass requested
         {
-            wcout << "Unable to save GraphEdit storage file in two-pass mode." << endl;
+            wcout << L"Unable to save GraphEdit storage file"
+                  << L" in two-pass mode."
+                  << endl;
+
             return 1;
         }
 
@@ -967,6 +971,57 @@ int CmdLine::ParseLongPost(
         return n;
     }
 
+    if (_wcsnicmp(arg, L"keyframe-frequency", len) == 0)
+    {
+        int n;
+        const wchar_t* value;
+        size_t value_length;
+
+        if (has_value)
+        {
+            value = arg + len + 1;
+            value_length = wcslen(value);
+
+            if (value_length == 0)
+            {
+                wcout << "Empty value specified for keyframe-frequency switch." << endl;
+                return -1;  //error
+            }
+
+            n = 1;
+        }
+        else
+        {
+            value = *++i;
+
+            if (value == 0)
+            {
+                wcout << "No value specified for keyframe-frequency switch." << endl;
+                return -1;  //error
+            }
+
+            value_length = wcslen(value);
+
+            n = 2;
+        }
+
+        std::wistringstream is(value);
+
+        if (!(is >> m_keyframe_frequency) || !is.eof())
+        {
+            wcout << "Bad value specified for keyframe-frequency switch." << endl;
+            return -1;  //error
+        }
+
+        if (m_keyframe_frequency < 0)
+        {
+            wcout << "Value for keyframe-frequency is out-of-range (too small)." << endl;
+            return -1;  //error
+        }
+
+        return n;
+    }
+
     if (_wcsnicmp(arg, L"keyframe-mode", len) == 0)
     {
         int n;
@@ -1268,6 +1323,12 @@ int CmdLine::GetKeyframeMaxInterval() const
 }
 
 
+double CmdLine::GetKeyframeFrequency() const
+{
+    return m_keyframe_frequency;
+}
+
+
 int CmdLine::GetThreadCount() const
 {
     return m_thread_count;
@@ -1376,6 +1437,7 @@ void CmdLine::PrintUsage() const
           << L"  --dropframe-threshold           temporal resampling\n"
           << L"  --end-usage                     {\"VBR\"|\"CBR\"}\n"
           << L"  --error-resilient               defend against lossy or noisy links\n"
+          << L"  --keyframe-frequency            time (in sec) between keyframes\n"
           << L"  --keyframe-mode                 {\"disabled\"|\"auto\"}\n"
           << L"  --keyframe-min-interval         min distance between keyframes\n"
           << L"  --keyframe-max-interval         max distable between keyframes\n"
@@ -1626,6 +1688,15 @@ void CmdLine::ListArgs() const
     if (m_overshoot_pct >= 0)
         wcout << L"overshoot-pct : " << m_overshoot_pct << L'\n';
 
+    if (m_keyframe_frequency >= 0)
+    {
+        wcout << L"keyframe-frequency: "
+              << std::fixed
+              << std::setprecision(3)
+              << m_keyframe_frequency
+              << L'\n';
+    }
+
     if (m_keyframe_mode >= kKeyframeModeDefault)
     {
         wcout << L"keyframe-mode: " << m_keyframe_mode;
@@ -1648,12 +1719,20 @@ void CmdLine::ListArgs() const
 
         wcout << L'\n';
     }
+    else if (m_keyframe_frequency >= 0)
+    {
+        wcout << L"keyframe-mode: 1 (auto implied by keyframe-frequency)" << endl;
+    }
 
     if (m_keyframe_min_interval >= 0)
         wcout << L"keyframe-min-interval: " << m_keyframe_min_interval << L'\n';
+    else if (m_keyframe_frequency >= 0)
+        wcout << L"keyframe-min-interval: (determined from framerate)" << L'\n';
 
     if (m_keyframe_max_interval >= 0)
         wcout << L"keyframe-max-interval: " << m_keyframe_max_interval << L'\n';
+    else
+        wcout << L"keyframe-max-interval: (determined from framerate)" << L'\n';
 
     wcout << endl;
 }
@@ -1785,8 +1864,10 @@ int CmdLine::ParseOpt(
 
         if (str_value)
         {
-            if (IsSwitch(str_value))  //potential optional found
+            if (IsSwitch(str_value) || !iswdigit(*str_value))
             {
+                //potential optional found
+
                 if (is_required)
                 {
                     wcout << "No value specified for " << name << " switch." << endl;
@@ -1829,13 +1910,19 @@ int CmdLine::ParseOpt(
 
     if (value < min)
     {
-        wcout << "Value for " << name << " is out-of-range (too small)." << endl;
+        wcout << "Value for " << name
+              << " is out-of-range (too small)."
+              << endl;
+
         return -1;  //error
     }
 
     if ((max >= min) && (value > max))
     {
-        wcout << "Value for " << name << " is out-of-range (too large)." << endl;
+        wcout << "Value for " << name
+              << " is out-of-range (too large)."
+              << endl;
+
         return -1;  //error
     }
 

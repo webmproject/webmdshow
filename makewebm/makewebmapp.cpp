@@ -22,6 +22,7 @@
 #include "versionhandling.hpp"
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 using std::hex;
 using std::dec;
 using std::wcout;
@@ -472,13 +473,7 @@ int App::CreateMuxerGraph(
                 hr = pVP8->SetTwoPassStatsBuf(buf, len);
                 assert(SUCCEEDED(hr));
             }
-
-            hr = SetVP8Options(pVP8);
-
-            if (FAILED(hr))
-                return 1;
-
-            if (!bTwoPass)
+            else
             {
                 hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
                 assert(SUCCEEDED(hr));
@@ -501,6 +496,31 @@ int App::CreateMuxerGraph(
 
                     return 1;
                 }
+
+                hr = pVP8->SetPassMode(kPassModeOnePass);
+
+                if (FAILED(hr))
+                {
+                    wcout << "Unable to set VP8 encoder pass mode"
+                          << " (one pass).\n"
+                          << hrtext(hr)
+                          << L" (0x" << hex << hr << dec << L")"
+                          << endl;
+
+                    return 1;
+                }
+
+                AM_MEDIA_TYPE mt;
+
+                const HRESULT hrMT = pVP8Inpin->ConnectionMediaType(&mt);
+
+                hr = SetVP8Options(pVP8, SUCCEEDED(hrMT) ? &mt : 0);
+
+                if (SUCCEEDED(hrMT))
+                    MediaTypeUtil::Destroy(mt);
+
+                if (FAILED(hr))
+                    return 1;
             }
 
             IPinPtr pVP8Outpin;
@@ -663,28 +683,6 @@ int App::CreateFirstPassGraph(
 
     assert(bool(pCompressor));
 
-    _COM_SMARTPTR_TYPEDEF(IVP8Encoder, __uuidof(IVP8Encoder));
-
-    const IVP8EncoderPtr pVP8(pCompressor);
-    assert(bool(pVP8));
-
-    hr = pVP8->SetPassMode(kPassModeFirstPass);
-
-    if (FAILED(hr))
-    {
-        wcout << "Unable to set VP8 encoder pass mode (first pass).\n"
-              << hrtext(hr)
-              << L" (0x" << hex << hr << dec << L")"
-              << endl;
-
-        return 1;
-    }
-
-    hr = SetVP8Options(pVP8);
-
-    if (FAILED(hr))
-        return 1;
-
     hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
     assert(SUCCEEDED(hr));
 
@@ -706,6 +704,35 @@ int App::CreateFirstPassGraph(
 
         return 1;
     }
+
+    _COM_SMARTPTR_TYPEDEF(IVP8Encoder, __uuidof(IVP8Encoder));
+
+    const IVP8EncoderPtr pVP8(pCompressor);
+    assert(bool(pVP8));
+
+    hr = pVP8->SetPassMode(kPassModeFirstPass);
+
+    if (FAILED(hr))
+    {
+        wcout << "Unable to set VP8 encoder pass mode (first pass).\n"
+              << hrtext(hr)
+              << L" (0x" << hex << hr << dec << L")"
+              << endl;
+
+        return 1;
+    }
+
+    AM_MEDIA_TYPE mt;
+
+    const HRESULT hrMT = pVP8Inpin->ConnectionMediaType(&mt);
+
+    hr = SetVP8Options(pVP8, SUCCEEDED(hrMT) ? &mt : 0);
+
+    if (SUCCEEDED(hrMT))
+        MediaTypeUtil::Destroy(mt);
+
+    if (FAILED(hr))
+        return 1;
 
     IBaseFilterPtr pWriter;
 
@@ -1185,6 +1212,49 @@ void App::DumpVideoMediaType(const AM_MEDIA_TYPE& mt)
         wcout << "mt.format=" << GraphUtil::ToString(mt.formattype) << L'\n';
     }
 }
+
+
+double App::GetFramerate(const AM_MEDIA_TYPE& mt)
+{
+    __int64 reftime_per_frame;
+
+    if (mt.formattype == FORMAT_VideoInfo)
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
+        assert(mt.pbFormat);
+
+        const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+
+        reftime_per_frame = vih.AvgTimePerFrame;
+    }
+    else if (mt.formattype == FORMAT_VideoInfo2)
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
+        assert(mt.pbFormat);
+
+        const VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+
+        reftime_per_frame = vih.AvgTimePerFrame;
+    }
+    else if (mt.formattype == FORMAT_MPEG2_VIDEO)
+    {
+        const MPEG2VIDEOINFO& mpg = (MPEG2VIDEOINFO&)(*mt.pbFormat);
+        assert(mt.cbFormat >= SIZE_MPEG2VIDEOINFO(&mpg));
+
+        const VIDEOINFOHEADER2& vih = mpg.hdr;
+
+        reftime_per_frame = vih.AvgTimePerFrame;
+    }
+    else
+        return -1;
+
+    if (reftime_per_frame <= 0)
+        return -1;
+
+    const double framerate = 10000000.0 / double(reftime_per_frame);
+    return framerate;
+}
+
 
 
 void App::DumpAudioMediaType(const AM_MEDIA_TYPE& mt)
@@ -2063,7 +2133,9 @@ void App::DumpConnectionMediaType(
 }
 
 
-HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
+HRESULT App::SetVP8Options(
+    IVP8Encoder* pVP8,
+    const AM_MEDIA_TYPE* pmt) const
 {
     assert(pVP8);
 
@@ -2226,30 +2298,47 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
         }
     }
 
-    const int keyframe_mode = m_cmdline.GetKeyframeMode();
+    const double keyframe_frequency = m_cmdline.GetKeyframeFrequency();
 
-    if (keyframe_mode >= kKeyframeModeDefault)
+    if (keyframe_frequency >= 0)
     {
-        const VP8KeyframeMode m = static_cast<VP8KeyframeMode>(keyframe_mode);
-        const HRESULT hr = pVP8->SetKeyframeMode(m);
+        if (pmt == 0)
+        {
+            wcout << L"Connection has no media type when"
+                  << L" keyframe-frequency switch specified."
+                  << endl;
+
+            return E_FAIL;
+        }
+
+        const double framerate = GetFramerate(*pmt);
+
+        if (framerate <= 0)
+        {
+            wcout << L"Connection has no framerate when"
+                  << L" keyframe-frequency switch specified."
+                  << endl;
+
+            return E_FAIL;
+        }
+
+        const double interval__ = framerate * keyframe_frequency;
+        const double interval_ = ceil(interval__);
+        const int interval = static_cast<int>(interval_);
+
+        HRESULT hr = pVP8->SetKeyframeMode(kKeyframeModeAuto);
 
         if (FAILED(hr))
         {
-            wcout << "Unable to set VP8 encoder keyframe mode.\n"
+            wcout << "Unable to set VP8 encoder keyframe mode (to auto).\n"
                   << hrtext(hr)
                   << L" (0x" << hex << hr << dec << L")"
                   << endl;
 
             return hr;
         }
-    }
 
-    const int keyframe_min_interval = m_cmdline.GetKeyframeMinInterval();
-
-    if (keyframe_min_interval >= 0)
-    {
-        const HRESULT hr = pVP8->SetKeyframeMinInterval(
-                            keyframe_min_interval);
+        hr = pVP8->SetKeyframeMinInterval(interval);
 
         if (FAILED(hr))
         {
@@ -2260,14 +2349,8 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
 
             return hr;
         }
-    }
 
-    const int keyframe_max_interval = m_cmdline.GetKeyframeMaxInterval();
-
-    if (keyframe_max_interval >= 0)
-    {
-        const HRESULT hr = pVP8->SetKeyframeMaxInterval(
-                            keyframe_max_interval);
+        hr = pVP8->SetKeyframeMaxInterval(interval);
 
         if (FAILED(hr))
         {
@@ -2277,6 +2360,64 @@ HRESULT App::SetVP8Options(IVP8Encoder* pVP8) const
                   << endl;
 
             return hr;
+        }
+    }
+    else
+    {
+        const int keyframe_mode = m_cmdline.GetKeyframeMode();
+
+        if (keyframe_mode >= kKeyframeModeDefault)
+        {
+            const VP8KeyframeMode m =
+                static_cast<VP8KeyframeMode>(keyframe_mode);
+
+            const HRESULT hr = pVP8->SetKeyframeMode(m);
+
+            if (FAILED(hr))
+            {
+                wcout << "Unable to set VP8 encoder keyframe mode.\n"
+                      << hrtext(hr)
+                      << L" (0x" << hex << hr << dec << L")"
+                      << endl;
+
+                return hr;
+            }
+        }
+
+        const int keyframe_min_interval = m_cmdline.GetKeyframeMinInterval();
+
+        if (keyframe_min_interval >= 0)
+        {
+            const HRESULT hr = pVP8->SetKeyframeMinInterval(
+                                keyframe_min_interval);
+
+            if (FAILED(hr))
+            {
+                wcout << "Unable to set VP8 encoder keyframe min interval.\n"
+                      << hrtext(hr)
+                      << L" (0x" << hex << hr << dec << L")"
+                      << endl;
+
+                return hr;
+            }
+        }
+
+        const int keyframe_max_interval = m_cmdline.GetKeyframeMaxInterval();
+
+        if (keyframe_max_interval >= 0)
+        {
+            const HRESULT hr = pVP8->SetKeyframeMaxInterval(
+                                keyframe_max_interval);
+
+            if (FAILED(hr))
+            {
+                wcout << "Unable to set VP8 encoder keyframe max interval.\n"
+                      << hrtext(hr)
+                      << L" (0x" << hex << hr << dec << L")"
+                      << endl;
+
+                return hr;
+            }
         }
     }
 

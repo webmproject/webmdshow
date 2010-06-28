@@ -81,8 +81,9 @@ private:
     static void DumpVideoInfoHeader2(const VIDEOINFOHEADER2&);
     static void DumpBitMapInfoHeader(const BITMAPINFOHEADER&);
     static void DumpAudioMediaType(const AM_MEDIA_TYPE&);
+    static double GetFramerate(const AM_MEDIA_TYPE&);
 
-    HRESULT SetVP8Options(IVP8Encoder*) const;
+    HRESULT SetVP8Options(IVP8Encoder*, const AM_MEDIA_TYPE*) const;
 
     const wchar_t* GetStatsFileName();
     std::wstring m_stats_filename;
