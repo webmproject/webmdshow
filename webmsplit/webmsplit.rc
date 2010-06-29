@@ -53,8 +53,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,9,8,0
- PRODUCTVERSION 0,9,8,0
+ FILEVERSION 0,9,9,0
+ PRODUCTVERSION 0,9,9,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -71,12 +71,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Google"
             VALUE "FileDescription", "Webm Splitter Filter"
-            VALUE "FileVersion", "0, 9, 8, 0"
+            VALUE "FileVersion", "0, 9, 9, 0"
             VALUE "InternalName", "webmsplit"
             VALUE "LegalCopyright", "Copyright (C) 2010"
             VALUE "OriginalFilename", "webmsplit.dll"
             VALUE "ProductName", "WebM Splitter Filter"
-            VALUE "ProductVersion", "0, 9, 8, 0"
+            VALUE "ProductVersion", "0, 9, 9, 0"
         END
     END
     BLOCK "VarFileInfo"
