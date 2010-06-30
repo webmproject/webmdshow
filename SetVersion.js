@@ -310,9 +310,7 @@ MJH.Main = function() {
 
     function process(strName) {
         var strPath = objFSO.BuildPath(objRootFolder.Path, strName);
-        var objFolder, objFiles, objFile, e;
-        var bFound;
-        var re;
+        var objFolder, objFile;
 
         out.Write("project folder: ");
         out.WriteLine(strPath);
@@ -323,26 +321,14 @@ MJH.Main = function() {
         }
 
         objFolder = objFSO.GetFolder(strPath);
-        re = new RegExp(strName + "\\.rc", "i");
+        strPath = objFSO.BuildPath(objFolder.Path, strName + ".rc");
 
-        objFiles = objFolder.Files;
-        e = new Enumerator(objFiles);
-
-        while (!e.atEnd()) {
-            objFile = e.item();
-
-            if (re.test(objFile.Name)) {
-                bFound = true;
-                break;
-            }
-
-            e.moveNext();
-        }
-
-        if (!bFound) {
+        if (!objFSO.FileExists(strPath)) {
             out.WriteLine("resource file not found");
             return;
         }
+
+        objFile = objFSO.GetFile(strPath);
 
         //out.WriteLine("found resource file:");
         out.Write("path: ");
