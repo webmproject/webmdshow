@@ -78,7 +78,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_inpin(this),
       m_outpin_video(this),
       m_outpin_preview(this),
-      m_bDirty(false)
+      m_bDirty(false),
+      m_bForceKeyframe(false)
 {
     m_pClassFactory->LockServer(TRUE);
 
@@ -1542,6 +1543,33 @@ HRESULT Filter::GetTwoPassVbrMaxsectionPct(int* p)
     return S_OK;
 }
 
+
+HRESULT Filter::SetForceKeyframe()
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_bForceKeyframe = true;
+    return S_OK;
+}
+
+
+HRESULT Filter::ClearForceKeyframe()
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_bForceKeyframe = false;
+    return S_OK;
+}
 
 
 HRESULT Filter::IsDirty()

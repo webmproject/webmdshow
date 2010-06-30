@@ -56,10 +56,7 @@ enum VP8PassMode
 
 [
    object,
-   //uuid(ED3110F6-5211-11DF-94AF-0026B977EEAA),
-   //uuid(ED3110FB-5211-11DF-94AF-0026B977EEAA),
-   //uuid(ED3110FC-5211-11DF-94AF-0026B977EEAA),
-   uuid(ED3110FD-5211-11DF-94AF-0026B977EEAA),
+   uuid(ED3110FE-5211-11DF-94AF-0026B977EEAA),  //v0.9.9.0
    helpstring("VP8 Encoder Filter Interface")
 ]
 interface IVP8Encoder : IUnknown
@@ -188,8 +185,8 @@ interface IVP8Encoder : IUnknown
 
     //VP8 token partition mode
     //
-    //This defines VP8 partitioning mode for compressed data, i.e., the number of
-    //sub-streams in the bitstream. Used for parallelized decoding.
+    //This defines VP8 partitioning mode for compressed data, i.e., the number
+    //of sub-streams in the bitstream. Used for parallelized decoding.
     //
     //Value 0 = one token partition
     //Value 1 = two token partitions
@@ -342,6 +339,17 @@ interface IVP8Encoder : IUnknown
 
     HRESULT SetTwoPassVbrMaxsectionPct([in] int Bitrate);
     HRESULT GetTwoPassVbrMaxsectionPct([out] int* pBitrate);
+
+    //Force Keyframe
+    //
+    //Set a flag to request that a keyframe be created from the next frame
+    //encoded.  When the frame is encoded, automatically clear the flag.
+    //
+    //If the graph is stopped, then this flag will only be applied when the
+    //graph transitions out of stopped.  You can also clear the flag manually.
+
+    HRESULT SetForceKeyframe();
+    HRESULT ClearForceKeyframe();
 
 }
 

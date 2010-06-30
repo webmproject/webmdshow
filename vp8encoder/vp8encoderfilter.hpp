@@ -142,6 +142,9 @@ public:
     HRESULT STDMETHODCALLTYPE SetTwoPassVbrMaxsectionPct(int);
     HRESULT STDMETHODCALLTYPE GetTwoPassVbrMaxsectionPct(int*);
 
+    HRESULT STDMETHODCALLTYPE SetForceKeyframe();
+    HRESULT STDMETHODCALLTYPE ClearForceKeyframe();
+
     ///IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
@@ -225,6 +228,7 @@ public:
     };
 
     Config m_cfg;
+    bool m_bForceKeyframe;
     VP8PassMode GetPassMode() const;
 
 private:

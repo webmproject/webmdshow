@@ -247,7 +247,8 @@ HRESULT Inpin::EndOfStream()
 
     for (;;)
     {
-        const vpx_codec_cx_pkt_t* const pkt = vpx_codec_get_cx_data(&m_ctx, &iter);
+        const vpx_codec_cx_pkt_t* const pkt =
+            vpx_codec_get_cx_data(&m_ctx, &iter);
 
         if (pkt == 0)
             break;
@@ -281,7 +282,8 @@ HRESULT Inpin::EndOfStream()
 
             GraphUtil::IMediaSamplePtr pOutSample;
 
-            const HRESULT hrGetBuffer = outpin.m_pAllocator->GetBuffer(&pOutSample, 0, 0, 0);
+            const HRESULT hrGetBuffer =
+                outpin.m_pAllocator->GetBuffer(&pOutSample, 0, 0, 0);
 
             hr = lock.Seize(m_pFilter);
 
@@ -726,8 +728,11 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     vpx_enc_frame_flags_t f = 0;
 
-    if (bDiscontinuity || (st <= 0))
+    if (m_pFilter->m_bForceKeyframe || bDiscontinuity || (st <= 0))
+    {
         f |= VPX_EFLAG_FORCE_KF;
+        m_pFilter->m_bForceKeyframe = false;
+    }
 
     const Filter::Config::int32_t deadline_ = m_pFilter->m_cfg.deadline;
     const ULONG dl = (deadline_ >= 0) ? deadline_ : kDeadlineGoodQuality;
@@ -742,7 +747,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     for (;;)
     {
-        const vpx_codec_cx_pkt_t* const pkt = vpx_codec_get_cx_data(&m_ctx, &iter);
+        const vpx_codec_cx_pkt_t* const pkt =
+            vpx_codec_get_cx_data(&m_ctx, &iter);
 
         if (pkt == 0)
             break;
@@ -890,7 +896,9 @@ void Inpin::AppendFrame(const vpx_codec_cx_pkt_t* pkt)
 
 #if 0 //def _DEBUG
     odbgstream os;
-    os << "vp8encoder::inpin::appendframe: pending.size=" << m_pending.size() << endl;
+    os << "vp8encoder::inpin::appendframe: pending.size="
+       << m_pending.size()
+       << endl;
 #endif
 }
 
@@ -1214,7 +1222,8 @@ vpx_codec_err_t Inpin::SetTokenPartitions()
     const vp8e_token_partitions token_partitions =
         static_cast<vp8e_token_partitions>(src.token_partitions);
 
-    return vpx_codec_control(&m_ctx, VP8E_SET_TOKEN_PARTITIONS, token_partitions);
+    return vpx_codec_control(
+        &m_ctx, VP8E_SET_TOKEN_PARTITIONS, token_partitions);
 }
 
 
@@ -1285,6 +1294,7 @@ BYTE* Inpin::ConvertYUY2ToYV12(
 
         BYTE* dst0_u = dst_u;
         dst_u += dst_uv_stride;
+
 
         BYTE* dst0_v = dst_v;
         dst_v += dst_uv_stride;

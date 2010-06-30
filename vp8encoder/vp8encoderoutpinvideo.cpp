@@ -825,7 +825,7 @@ HRESULT OutpinVideo::PostConnectStats(IPin* p)
         props.cBuffers = -1;    //number of buffers
         props.cbBuffer = -1;    //size of each buffer, excluding prefix
         props.cbAlign = -1;     //applies to prefix, too
-        props.cbPrefix = -1;    //imediasample::getbuffer does NOT include prefix
+        props.cbPrefix = -1;    //imediasample::getbuf does NOT include prefix
 
         hr = pMemInput->GetAllocatorRequirements(&props);
 
