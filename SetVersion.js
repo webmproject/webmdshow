@@ -25,22 +25,22 @@ MJH.SetVersion = function (objFile, objVersion) {
             } else {
                 if (RegExp.$1 !== major) {
                     out.WriteLine("FILEVERSION has bad major number.");
-                    WScript.Quit();
+                    return;
                 }
 
                 if (RegExp.$2 !== minor) {
                     out.WriteLine("FILEVERSION has bad minor number.");
-                    WScript.Quit();
+                    return;
                 }
 
                 if (RegExp.$3 !== revision) {
                     out.WriteLine("FILEVERSION has bad revision number.");
-                    WScript.Quit();
+                    return;
                 }
 
                 if (RegExp.$4 !== build) {
                     out.WriteLine("FILEVERSION has bad build number.");
-                    WScript.Quit();
+                    return;
                 }
             }
 
@@ -63,6 +63,7 @@ MJH.SetVersion = function (objFile, objVersion) {
 
             out.Write("new:");
             out.WriteLine(strLine);
+            out.WriteLine();
 
         } else if (strLine.match(/PRODUCTVERSION\s+(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$/)) {
             if (major === undefined) {
@@ -73,22 +74,22 @@ MJH.SetVersion = function (objFile, objVersion) {
             } else {
                 if (RegExp.$1 !== major) {
                     out.WriteLine("PRODUCTVERSION has bad major number.");
-                    WScript.Quit();
+                    return;
                 }
 
                 if (RegExp.$2 !== minor) {
                     out.WriteLine("PRODUCTVERSION has bad minor number.");
-                    WScript.Quit();
+                    return;
                 }
 
                 if (RegExp.$3 !== revision) {
                     out.WriteLine("PRODUCTVERSION has bad revision number.");
-                    WScript.Quit();
+                    return;
                 }
 
                 if (RegExp.$4 !== build) {
                     out.WriteLine("PRODUCTVERSION has bad build number.");
-                    WScript.Quit();
+                    return;
                 }
             }
 
@@ -111,31 +112,32 @@ MJH.SetVersion = function (objFile, objVersion) {
 
             out.Write("new:");
             out.WriteLine(strLine);
+            out.WriteLine();
 
         } else if (strLine.match(/VALUE\s+\"FileVersion\"\s*,\s*\"\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\"\s*$/)) {
             if (major === undefined) {
                 out.WriteLine("version not defined in info section");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$1 !== major) {
                 out.WriteLine("\"FileVersion\" has bad major number.");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$2 !== minor) {
                 out.WriteLine("\"FileVersion\" has bad minor number.");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$3 !== revision) {
                 out.WriteLine("\"FileVersion\" has bad revision number.");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$4 !== build) {
                 out.WriteLine("\"FileVersion\" has bad build number.");
-                WScript.Quit();
+                return;
             }
 
             bFileInfo = true;
@@ -158,31 +160,32 @@ MJH.SetVersion = function (objFile, objVersion) {
 
             out.Write("new:");
             out.WriteLine(strLine);
+            out.WriteLine();
 
         } else if (strLine.match(/VALUE\s+\"ProductVersion\"\s*,\s*\"\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\"\s*$/)) {
             if (major === undefined) {
                 out.WriteLine("version not defined in info section");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$1 !== major) {
                 out.WriteLine("\"ProductVersion\" has bad major number.");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$2 !== minor) {
                 out.WriteLine("\"ProductVersion\" has bad minor number.");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$3 !== revision) {
                 out.WriteLine("\"ProductVersion\" has bad revision number.");
-                WScript.Quit();
+                return;
             }
 
             if (RegExp.$4 !== build) {
                 out.WriteLine("\"ProductVersion\" has bad build number.");
-                WScript.Quit();
+                return;
             }
 
             bProductInfo = true;
@@ -204,6 +207,7 @@ MJH.SetVersion = function (objFile, objVersion) {
 
             out.Write("new:");
             out.WriteLine(strLine);
+            out.WriteLine();
 
         }
 
@@ -214,86 +218,31 @@ MJH.SetVersion = function (objFile, objVersion) {
 
     if (!bFileVersion) {
         out.WriteLine("FILEVERSION not found");
-        WScript.Quit();
+        return;
     }
 
     if (!bProductVersion) {
         out.WriteLine("PRODUCTVERSION not found");
-        WScript.Quit();
+        return;
     }
 
     if (!bFileInfo) {
         out.WriteLine("\"FileVersion\" info not found");
-        WScript.Quit();
+        return;
     }
 
     if (!bProductInfo) {
         out.WriteLine("\"ProductVersion\" info not found");
-        WScript.Quit();
-    }
-
-    objText = objFile.OpenAsTextStream(2);  //2 = for writing
-
-    for (idx = 0; idx < strLines.length; ++idx) {
-        objText.WriteLine(strLines[idx]);
-    }
-
-    objText.Close();
-};
-
-
-MJH.ProcessFolder = function (strPath, objVersion) {
-    var out = WScript.StdOut;
-    var objFSO = new ActiveXObject("Scripting.FileSystemObject");
-    var objFolder, objFiles, objFile, e;
-    var strName;
-    var bFound;
-    var re;
-
-    out.Write("project folder: ");
-    out.WriteLine(strPath);
-
-    if (!objFSO.FolderExists(strPath)) {
-        WScript.StdOut.WriteLine("Folder does not exist.");
         return;
     }
 
-    objFolder = objFSO.GetFolder(strPath);
-
-    strName = objFolder.Name;
-    out.Write("name: ");
-    out.WriteLine(strName);
-
-    re = new RegExp(strName + "\\.rc", "i");
-
-    objFiles = objFolder.Files;
-    e = new Enumerator(objFiles);
-
-    while (!e.atEnd()) {
-        objFile = e.item();
-
-        if (re.test(objFile.Name)) {
-            bFound = true;
-            break;
-        }
-
-        e.moveNext();
-    }
-
-    if (!bFound) {
-        out.WriteLine("resource file not found");
-        return;
-    }
-
-    out.WriteLine("found resource file:");
-    out.Write("path: ");
-    out.WriteLine(objFile.Path);
-    out.Write("name: ");
-    out.WriteLine(objFile.Name);
-    out.WriteLine();
-
-    MJH.SetVersion(objFile, objVersion);
-    out.WriteLine();
+//    objText = objFile.OpenAsTextStream(2);  //2 = for writing
+//
+//    for (idx = 0; idx < strLines.length; ++idx) {
+//        objText.WriteLine(strLines[idx]);
+//    }
+//
+//    objText.Close();
 };
 
 
@@ -301,16 +250,16 @@ MJH.Main = function() {
     var out = WScript.StdOut;
     var objFSO = new ActiveXObject("Scripting.FileSystemObject");
     var objArgs = WScript.Arguments;
-    var objFolder;
+    var objRootFolder;
     var objVersion;
 
     if (objArgs.Length <= 0) {
-        WScript.StdOut.WriteLine("Too few arguments.");
+        out.WriteLine("Too few arguments.");
         return;
     }
 
     if (objArgs.Length > 2) {
-        WScript.StdOut.WriteLine("Too many arguments.");
+        out.WriteLine("Too many arguments.");
         return;
     }
 
@@ -340,26 +289,70 @@ MJH.Main = function() {
     out.WriteLine();
 
     if (objArgs.Length <= 1) {
-        objFolder = objFSO.GetFolder(".");
+        out.WriteLine("using solution folder root");
+        objRootFolder = objFSO.GetFolder(".");
 
     } else {
         out.Write("arg[1]: ");
         out.WriteLine(objArgs(1));
 
         if (!objFSO.FolderExists(objArgs(1))) {
-            WScript.StdOut.WriteLine("Folder does not exist.");
+            out.WriteLine("root folder does not exist");
             return;
         }
 
-        objFolder = objFSO.GetFolder(objArgs(1));
+        objRootFolder = objFSO.GetFolder(objArgs(1));
     }
 
     out.Write("root: ");
-    out.WriteLine(objFolder.Path);
+    out.WriteLine(objRootFolder.Path);
+    out.WriteLine();
 
     function process(strName) {
-        var strPath = objFSO.BuildPath(objFolder.Path, strName);
-        MJH.ProcessFolder(strPath, objVersion);
+        var strPath = objFSO.BuildPath(objRootFolder.Path, strName);
+        var objFolder, objFiles, objFile, e;
+        var bFound;
+        var re;
+
+        out.Write("project folder: ");
+        out.WriteLine(strPath);
+
+        if (!objFSO.FolderExists(strPath)) {
+            out.WriteLine("project folder does not exist");
+            return;
+        }
+
+        objFolder = objFSO.GetFolder(strPath);
+        re = new RegExp(strName + "\\.rc", "i");
+
+        objFiles = objFolder.Files;
+        e = new Enumerator(objFiles);
+
+        while (!e.atEnd()) {
+            objFile = e.item();
+
+            if (re.test(objFile.Name)) {
+                bFound = true;
+                break;
+            }
+
+            e.moveNext();
+        }
+
+        if (!bFound) {
+            out.WriteLine("resource file not found");
+            return;
+        }
+
+        //out.WriteLine("found resource file:");
+        out.Write("path: ");
+        out.WriteLine(objFile.Path);
+        out.Write("name: ");
+        out.WriteLine(objFile.Name);
+        out.WriteLine();
+
+        MJH.SetVersion(objFile, objVersion);
+        out.WriteLine();
     }
 
     process("makewebm");
