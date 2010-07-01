@@ -53,13 +53,13 @@ MJH.SetVersion = function (objFile, objVersion) {
             strLine =
                 RegExp["$`"] +
                 "FILEVERSION " +
-                objVersion.major +
+                objVersion.toMajor(major) +
                 "," +
-                objVersion.minor +
+                objVersion.toMinor(minor) +
                 "," +
-                objVersion.revision +
+                objVersion.toRevision(revision) +
                 "," +
-                objVersion.build;
+                objVersion.toBuild(build);
 
             out.Write("new:");
             out.WriteLine(strLine);
@@ -102,13 +102,13 @@ MJH.SetVersion = function (objFile, objVersion) {
             strLine =
                 RegExp["$`"] +
                 "PRODUCTVERSION " +
-                objVersion.major +
+                objVersion.toMajor(major) +
                 "," +
-                objVersion.minor +
+                objVersion.toMinor(minor) +
                 "," +
-                objVersion.revision +
+                objVersion.toRevision(revision) +
                 "," +
-                objVersion.build;
+                objVersion.toBuild(build);
 
             out.Write("new:");
             out.WriteLine(strLine);
@@ -149,13 +149,13 @@ MJH.SetVersion = function (objFile, objVersion) {
             strLine =
                 RegExp["$`"] +
                 "VALUE \"FileVersion\", \"" +
-                objVersion.major +
+                objVersion.toMajor(major) +
                 ", " +
-                objVersion.minor +
+                objVersion.toMinor(minor) +
                 ", " +
-                objVersion.revision +
+                objVersion.toRevision(revision) +
                 ", " +
-                objVersion.build +
+                objVersion.toBuild(build) +
                 "\"";
 
             out.Write("new:");
@@ -196,13 +196,13 @@ MJH.SetVersion = function (objFile, objVersion) {
             strLine =
                 RegExp["$`"] +
                 "VALUE \"ProductVersion\", \"" +
-                objVersion.major +
+                objVersion.toMajor(major) +
                 ", " +
-                objVersion.minor +
+                objVersion.toMinor(minor) +
                 ", " +
-                objVersion.revision +
+                objVersion.toRevision(revision) +
                 ", " +
-                objVersion.build +
+                objVersion.toBuild(build) +
                 "\"";
 
             out.Write("new:");
@@ -266,27 +266,69 @@ MJH.Main = function() {
     out.Write("arg[0]: ");
     out.WriteLine(objArgs(0));
 
-    if (!objArgs(0).match(/(\d+)\.(\d+)\.(\d+)\.(\d+)/)) {
+    if (!objArgs(0).match(/(\+?\d+)\.(\+?\d+)\.(\+?\d+)\.(\+?\d+)/)) {
         out.WriteLine("bad version value");
         return;
     }
 
-    objVersion = {
-        major : RegExp.$1,
-        minor : RegExp.$2,
-        revision : RegExp.$3,
-        build : RegExp.$4 };
+    objVersion = function (major, minor, revision, build) {
+        out.Write("version: major=");
+        out.Write(minor);
+        out.Write(" minor=");
+        out.Write(minor);
+        out.Write(" revision=");
+        out.Write(revision);
+        out.Write(" build=");
+        out.Write(build);
+        out.WriteLine();
+        out.WriteLine();
 
-    out.Write("version: major=");
-    out.Write(objVersion.major);
-    out.Write(" minor=");
-    out.Write(objVersion.minor);
-    out.Write(" revision=");
-    out.Write(objVersion.revision);
-    out.Write(" build=");
-    out.Write(objVersion.build);
-    out.WriteLine();
-    out.WriteLine();
+        function transform(str, pat) {
+            var strnum, patnum, result;
+
+            //out.Write("transform: str=");
+            //out.Write(str);
+            //out.Write(" pat=");
+            //out.Write(pat);
+            //out.WriteLine();
+
+            if (pat.charAt(0) !== "+") {
+                return pat;
+            }
+
+            strnum = parseInt(str, 10);
+            patnum = parseInt(pat.slice(1), 10);
+            result = strnum + patnum;
+            return result.toString();
+        }
+
+        return {
+            toMajor : function (str) {
+                //out.Write("toMajor: str=");
+                //out.WriteLine(str);
+
+                return transform(str, major);
+            },
+            toMinor : function (str) {
+                //out.Write("toMinor: str=");
+                //out.WriteLine(str);
+
+                return transform(str, minor);
+            },
+            toRevision : function (str) {
+                //out.Write("toRevision: str=");
+                //out.WriteLine(str);
+
+                return transform(str, revision);
+            },
+            toBuild : function (str) {
+                //out.Write("toBuild: str=");
+                //out.WriteLine(str);
+
+                return transform(str, build);
+            }
+        };
+    }(RegExp.$1, RegExp.$2, RegExp.$3, RegExp.$4);
 
     if (objArgs.Length <= 1) {
         out.WriteLine("using solution folder root");
