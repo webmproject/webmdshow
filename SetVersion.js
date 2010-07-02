@@ -1,6 +1,6 @@
 var MJH = {};
 
-MJH.SetVersion = function (objFile, objVersion, bReadOnly) {
+MJH.SetVersion = function (objFile, objVersion, intReadOnly) {
     var out = WScript.StdOut;
     var objText  = objFile.OpenAsTextStream(1);  //read-only for now
     var strLines = [];   //array of lines of text
@@ -45,25 +45,26 @@ MJH.SetVersion = function (objFile, objVersion, bReadOnly) {
             }
 
             bFileVersion = true;
-            //out.WriteLine("FILEVERSION found");
 
             out.Write("old:");
             out.WriteLine(strLine);
 
-            strLine =
-                RegExp["$`"] +
-                "FILEVERSION " +
-                objVersion.toMajor(major) +
-                "," +
-                objVersion.toMinor(minor) +
-                "," +
-                objVersion.toRevision(revision) +
-                "," +
-                objVersion.toBuild(build);
+            if (intReadOnly >= 0) {
+                strLine =
+                    RegExp["$`"] +
+                    "FILEVERSION " +
+                    objVersion.toMajor(major) +
+                    "," +
+                    objVersion.toMinor(minor) +
+                    "," +
+                    objVersion.toRevision(revision) +
+                    "," +
+                    objVersion.toBuild(build);
 
-            out.Write("new:");
-            out.WriteLine(strLine);
-            out.WriteLine();
+                out.Write("new:");
+                out.WriteLine(strLine);
+                out.WriteLine();
+            }
 
         } else if (strLine.match(/PRODUCTVERSION\s+(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$/)) {
             if (major === undefined) {
@@ -94,25 +95,26 @@ MJH.SetVersion = function (objFile, objVersion, bReadOnly) {
             }
 
             bProductVersion = true;
-            //out.WriteLine("PRODUCTVERSION found");
 
             out.Write("old:");
             out.WriteLine(strLine);
 
-            strLine =
-                RegExp["$`"] +
-                "PRODUCTVERSION " +
-                objVersion.toMajor(major) +
-                "," +
-                objVersion.toMinor(minor) +
-                "," +
-                objVersion.toRevision(revision) +
-                "," +
-                objVersion.toBuild(build);
+            if (intReadOnly >= 0) {
+                strLine =
+                    RegExp["$`"] +
+                    "PRODUCTVERSION " +
+                    objVersion.toMajor(major) +
+                    "," +
+                    objVersion.toMinor(minor) +
+                    "," +
+                    objVersion.toRevision(revision) +
+                    "," +
+                    objVersion.toBuild(build);
 
-            out.Write("new:");
-            out.WriteLine(strLine);
-            out.WriteLine();
+                out.Write("new:");
+                out.WriteLine(strLine);
+                out.WriteLine();
+            }
 
         } else if (strLine.match(/VALUE\s+\"FileVersion\"\s*,\s*\"\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\"\s*$/)) {
             if (major === undefined) {
@@ -141,26 +143,27 @@ MJH.SetVersion = function (objFile, objVersion, bReadOnly) {
             }
 
             bFileInfo = true;
-            //out.WriteLine("\"FileVersion\" info found");
 
             out.Write("old:");
             out.WriteLine(strLine);
 
-            strLine =
-                RegExp["$`"] +
-                "VALUE \"FileVersion\", \"" +
-                objVersion.toMajor(major) +
-                ", " +
-                objVersion.toMinor(minor) +
-                ", " +
-                objVersion.toRevision(revision) +
-                ", " +
-                objVersion.toBuild(build) +
-                "\"";
+            if (intReadOnly >= 0) {
+                strLine =
+                    RegExp["$`"] +
+                    "VALUE \"FileVersion\", \"" +
+                    objVersion.toMajor(major) +
+                    ", " +
+                    objVersion.toMinor(minor) +
+                    ", " +
+                    objVersion.toRevision(revision) +
+                    ", " +
+                    objVersion.toBuild(build) +
+                    "\"";
 
-            out.Write("new:");
-            out.WriteLine(strLine);
-            out.WriteLine();
+                out.Write("new:");
+                out.WriteLine(strLine);
+                out.WriteLine();
+            }
 
         } else if (strLine.match(/VALUE\s+\"ProductVersion\"\s*,\s*\"\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\"\s*$/)) {
             if (major === undefined) {
@@ -189,25 +192,27 @@ MJH.SetVersion = function (objFile, objVersion, bReadOnly) {
             }
 
             bProductInfo = true;
-            //out.WriteLine("\"ProductVersion\" info found");
+
             out.Write("old:");
             out.WriteLine(strLine);
 
-            strLine =
-                RegExp["$`"] +
-                "VALUE \"ProductVersion\", \"" +
-                objVersion.toMajor(major) +
-                ", " +
-                objVersion.toMinor(minor) +
-                ", " +
-                objVersion.toRevision(revision) +
-                ", " +
-                objVersion.toBuild(build) +
-                "\"";
+            if (intReadOnly >= 0) {
+                strLine =
+                    RegExp["$`"] +
+                    "VALUE \"ProductVersion\", \"" +
+                    objVersion.toMajor(major) +
+                    ", " +
+                    objVersion.toMinor(minor) +
+                    ", " +
+                    objVersion.toRevision(revision) +
+                    ", " +
+                    objVersion.toBuild(build) +
+                    "\"";
 
-            out.Write("new:");
-            out.WriteLine(strLine);
-            out.WriteLine();
+                out.Write("new:");
+                out.WriteLine(strLine);
+                out.WriteLine();
+            }
 
         }
 
@@ -236,7 +241,11 @@ MJH.SetVersion = function (objFile, objVersion, bReadOnly) {
         return;
     }
 
-    if (bReadOnly) {
+    if (intReadOnly < 0) {
+        return;
+    }
+
+    if (intReadOnly === 0) {
         out.WriteLine("No changes made (file was opened for reading only).");
         return;
     }
@@ -261,66 +270,65 @@ MJH.Main = function() {
     var objArgs = WScript.Arguments;
     var objRootFolder;
     var objVersion;
-    var intReadWrite = 0;  //read-only by default
-
-    if (objArgs.Length <= 0) {
-        out.WriteLine("Too few arguments.");
-        return;
-    }
+    var intReadWrite = -1;  //read-only by default
 
     if (objArgs.Length > 2) {
         out.WriteLine("Too many arguments.");
         return;
     }
 
-    out.Write("arg[0]: ");
-    out.WriteLine(objArgs(0));
+    if (objArgs.Length >= 1) {
+        out.Write("arg[0]: ");
+        out.WriteLine(objArgs(0));
 
-    if (!objArgs(0).match(/(\+?\d+)\.(\+?\d+)\.(\+?\d+)\.(\+?\d+)/)) {
-        out.WriteLine("bad version value");
-        return;
-    }
-
-    objVersion = function (major, minor, revision, build) {
-        out.Write("version: major=");
-        out.Write(minor);
-        out.Write(" minor=");
-        out.Write(minor);
-        out.Write(" revision=");
-        out.Write(revision);
-        out.Write(" build=");
-        out.Write(build);
-        out.WriteLine();
-        out.WriteLine();
-
-        function transform(str, pat) {
-            var strnum, patnum, result;
-
-            if (pat.charAt(0) !== "+") {
-                return pat;
-            }
-
-            strnum = parseInt(str, 10);
-            patnum = parseInt(pat.slice(1), 10);
-            result = strnum + patnum;
-            return result.toString();
+        if (!objArgs(0).match(/(\+?\d+)\.(\+?\d+)\.(\+?\d+)\.(\+?\d+)/)) {
+            out.WriteLine("bad version value");
+            return;
         }
 
-        return {
-            toMajor : function (str) {
-                return transform(str, major);
-            },
-            toMinor : function (str) {
-                return transform(str, minor);
-            },
-            toRevision : function (str) {
-                return transform(str, revision);
-            },
-            toBuild : function (str) {
-                return transform(str, build);
+        objVersion = function (major, minor, revision, build) {
+            out.Write("version: major=");
+            out.Write(minor);
+            out.Write(" minor=");
+            out.Write(minor);
+            out.Write(" revision=");
+            out.Write(revision);
+            out.Write(" build=");
+            out.Write(build);
+            out.WriteLine();
+            out.WriteLine();
+
+            function transform(str, pat) {
+                var strnum, patnum, result;
+
+                if (pat.charAt(0) !== "+") {
+                    return pat;
+                }
+
+                strnum = parseInt(str, 10);
+                patnum = parseInt(pat.slice(1), 10);
+                result = strnum + patnum;
+                return result.toString();
             }
-        };
-    }(RegExp.$1, RegExp.$2, RegExp.$3, RegExp.$4);
+
+            return {
+                toMajor : function (str) {
+                    return transform(str, major);
+                },
+                toMinor : function (str) {
+                    return transform(str, minor);
+                },
+                toRevision : function (str) {
+                    return transform(str, revision);
+                },
+                toBuild : function (str) {
+                    return transform(str, build);
+                }
+            };
+        }(RegExp.$1, RegExp.$2, RegExp.$3, RegExp.$4);
+
+        intReadWrite = 0;
+    }
 
     if (objArgs.Length >= 2) {
         out.Write("arg[1]: ");
@@ -377,7 +385,7 @@ MJH.Main = function() {
         out.WriteLine(objFile.Name);
         out.WriteLine();
 
-        MJH.SetVersion(objFile, objVersion, Boolean(intReadWrite === 0));
+        MJH.SetVersion(objFile, objVersion, intReadWrite);
         out.WriteLine();
     }
 
