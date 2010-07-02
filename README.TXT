@@ -1,5 +1,5 @@
 WebM Project DirectShow Filters
-v0.9.8.0 - 2010/06/08
+v0.9.9.0 - 2010/07/02
 http://www.webmproject.org/
 mailto:matthewjheaney@google.com
 
