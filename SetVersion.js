@@ -1,6 +1,6 @@
 var MJH = {};
 
-MJH.SetVersion = function (objFile, objVersion) {
+MJH.SetVersion = function (objFile, objVersion, bReadOnly) {
     var out = WScript.StdOut;
     var objText  = objFile.OpenAsTextStream(1);  //read-only for now
     var strLines = [];   //array of lines of text
@@ -236,13 +236,22 @@ MJH.SetVersion = function (objFile, objVersion) {
         return;
     }
 
-//    objText = objFile.OpenAsTextStream(2);  //2 = for writing
-//
-//    for (idx = 0; idx < strLines.length; ++idx) {
-//        objText.WriteLine(strLines[idx]);
-//    }
-//
-//    objText.Close();
+    if (bReadOnly) {
+        out.WriteLine("No changes made (file was opened for reading only).");
+        return;
+    }
+
+    out.WriteLine("Opening file for writing.");
+
+    objText = objFile.OpenAsTextStream(2);  //2 = for writing
+
+    for (idx = 0; idx < strLines.length; ++idx) {
+        objText.WriteLine(strLines[idx]);
+    }
+
+    objText.Close();
+
+    out.WriteLine("Changes were made to file.");
 };
 
 
@@ -252,6 +261,7 @@ MJH.Main = function() {
     var objArgs = WScript.Arguments;
     var objRootFolder;
     var objVersion;
+    var intReadWrite = 0;  //read-only by default
 
     if (objArgs.Length <= 0) {
         out.WriteLine("Too few arguments.");
@@ -286,12 +296,6 @@ MJH.Main = function() {
         function transform(str, pat) {
             var strnum, patnum, result;
 
-            //out.Write("transform: str=");
-            //out.Write(str);
-            //out.Write(" pat=");
-            //out.Write(pat);
-            //out.WriteLine();
-
             if (pat.charAt(0) !== "+") {
                 return pat;
             }
@@ -304,49 +308,44 @@ MJH.Main = function() {
 
         return {
             toMajor : function (str) {
-                //out.Write("toMajor: str=");
-                //out.WriteLine(str);
-
                 return transform(str, major);
             },
             toMinor : function (str) {
-                //out.Write("toMinor: str=");
-                //out.WriteLine(str);
-
                 return transform(str, minor);
             },
             toRevision : function (str) {
-                //out.Write("toRevision: str=");
-                //out.WriteLine(str);
-
                 return transform(str, revision);
             },
             toBuild : function (str) {
-                //out.Write("toBuild: str=");
-                //out.WriteLine(str);
-
                 return transform(str, build);
             }
         };
     }(RegExp.$1, RegExp.$2, RegExp.$3, RegExp.$4);
 
-    if (objArgs.Length <= 1) {
-        out.WriteLine("using solution folder root");
-        objRootFolder = objFSO.GetFolder(".");
-
-    } else {
+    if (objArgs.Length >= 2) {
         out.Write("arg[1]: ");
         out.WriteLine(objArgs(1));
 
-        if (!objFSO.FolderExists(objArgs(1))) {
-            out.WriteLine("root folder does not exist");
+        intReadWrite = parseInt(objArgs(1), 10);
+
+        if (isNaN(intReadWrite)) {
+            out.WriteLine("read-write flag has bad syntax");
             return;
         }
 
-        objRootFolder = objFSO.GetFolder(objArgs(1));
+        if (intReadWrite < 0) {
+            out.WriteLine("read-write flag is out-of-range (too small)");
+            return;
+        }
+
+        if (intReadWrite > 1) {
+            out.WriteLine("read-write flag is out-of-range (too large)");
+            return;
+        }
     }
 
-    out.Write("root: ");
+    objRootFolder = objFSO.GetFolder(".");
+    out.Write("solution folder: ");
     out.WriteLine(objRootFolder.Path);
     out.WriteLine();
 
@@ -372,14 +371,13 @@ MJH.Main = function() {
 
         objFile = objFSO.GetFile(strPath);
 
-        //out.WriteLine("found resource file:");
         out.Write("path: ");
         out.WriteLine(objFile.Path);
         out.Write("name: ");
         out.WriteLine(objFile.Name);
         out.WriteLine();
 
-        MJH.SetVersion(objFile, objVersion);
+        MJH.SetVersion(objFile, objVersion, Boolean(intReadWrite === 0));
         out.WriteLine();
     }
 
