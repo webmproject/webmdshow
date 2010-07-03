@@ -521,6 +521,8 @@ public:
 
     bool EOS() const;
 
+    __int64 GetSize() const;  //total size of cluster
+
     //TimeCode (unscaled) and Time (ns) of the cluster itself:
     __int64 GetTimeCode();  //absolute, but not scaled
     __int64 GetTime();      //absolute, and scaled (nanosecond units)
@@ -580,7 +582,7 @@ protected:
 
 public:
     __int64 m_pos;
-    __int64 m_size;
+    __int64 m_size;  //size of payload
 
 private:
     __int64 m_timecode;
@@ -634,6 +636,7 @@ public:
     ULONG GetCount() const;
 
     Cluster* GetNext(const Cluster*);
+    Cluster* GetPrevious(const Cluster*);
 
     Cluster* GetCluster(__int64 time_nanoseconds);
 

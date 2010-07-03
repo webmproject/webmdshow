@@ -1905,6 +1905,28 @@ Cluster* Segment::GetNext(const Cluster* pCurr)
 }
 
 
+Cluster* Segment::GetPrevious(const Cluster* pCurr)
+{
+    assert(pCurr);
+
+    Cluster::clusters_t& cc = m_clusters;
+    assert(!cc.empty());
+
+    Cluster::index_t idx = pCurr->m_index;
+    assert(idx < cc.size());
+    assert(cc[idx] == pCurr);
+
+    if (idx == 0)
+        return 0;  //no previous cluster
+
+    Cluster* const pPrev = cc[--idx];
+    assert(pPrev);
+    assert(pPrev->m_index == idx);
+
+    return pPrev;
+}
+
+
 Cluster* Segment::GetCluster(__int64 time_ns)
 {
     if (m_clusters.empty())
@@ -3166,6 +3188,39 @@ bool Cluster::EOS() const
 }
 
 
+__int64 Cluster::GetSize() const
+{
+    IMkvFile* const pFile = m_pSegment->m_pFile;
+
+    const __int64 pos_ = m_pSegment->m_start + _abs64(m_pos);
+    __int64 pos = pos_;
+
+    long len;
+
+    const __int64 id = ReadUInt(pFile, pos, len);
+    id;
+    assert(id >= 0);
+    assert(id == 0x0F43B675);  //Cluster ID
+
+    pos += len;  //consume id
+
+    const __int64 size = ReadUInt(pFile, pos, len);
+    assert(size > 0);
+    assert((m_size < 0) || (m_size == size));
+
+    pos += len;  //consume size
+
+    //pos now points to start of payload
+
+    pos += size;  //consume payload
+
+    //pos now points to end of payload (stop pos)
+
+    const __int64 result = pos - pos_;
+    return result;
+}
+
+
 void Cluster::LoadBlockEntries()
 {
     if (!m_entries.empty())
@@ -3208,6 +3263,7 @@ void Cluster::LoadBlockEntries()
     const __int64 stop = pos + m_size;
     __int64 timecode = -1;  //of cluster itself
     __int64 off = -1;
+    __int64 prev_size = -1;
 
     while (pos < stop)
     {
@@ -3222,6 +3278,19 @@ void Cluster::LoadBlockEntries()
         {
             assert(m_pos >= 0);
             assert(off == m_pos);
+        }
+        else if (Match(pFile, pos, 0x2B, prev_size))
+        {
+            Cluster* const pPrev = m_pSegment->GetPrevious(this);
+
+            if (pPrev == 0)
+                assert(prev_size == 0);
+            else
+            {
+                const __int64 prev_size_ = pPrev->GetSize();
+                prev_size_;
+                assert(prev_size_ == prev_size);
+            }
         }
         else
         {

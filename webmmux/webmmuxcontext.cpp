@@ -1054,6 +1054,8 @@ void Context::CreateNewCluster(
 
     clusters_t& cc = m_clusters;
 
+    const Cluster* const pPrevCluster = cc.empty() ? 0 : &cc.back();
+
     cc.push_back(Cluster());
     Cluster& c = cc.back();
 
@@ -1096,6 +1098,16 @@ void Context::CreateNewCluster(
     m_file.WriteID1(0xA7);        //Position ID
     m_file.Write1UInt(8);         //payload size is 8 bytes
     m_file.Serialize8UInt(off);   //payload
+
+    if (pPrevCluster)
+    {
+        const __int64 size = c.m_pos - pPrevCluster->m_pos;
+        assert(size > 0);
+
+        m_file.WriteID1(0xAB);        //PrevSize ID
+        m_file.Write1UInt(8);         //payload size is 8 bytes
+        m_file.Serialize8UInt(size);  //payload
+    }
 
     ULONG cFrames = 0;
 
@@ -1214,6 +1226,8 @@ void Context::CreateNewClusterAudioOnly()
     clusters_t& cc = m_clusters;
     assert(cc.empty() || (af_first_time > cc.back().m_timecode));
 
+    const Cluster* const pPrevCluster = cc.empty() ? 0 : &cc.back();
+
     cc.push_back(Cluster());
     Cluster& c = cc.back();
 
@@ -1238,6 +1252,16 @@ void Context::CreateNewClusterAudioOnly()
     m_file.WriteID1(0xA7);        //Position ID
     m_file.Write1UInt(8);         //payload size is 8 bytes
     m_file.Serialize8UInt(off);   //payload
+
+    if (pPrevCluster)
+    {
+        const __int64 size = c.m_pos - pPrevCluster->m_pos;
+        assert(size > 0);
+
+        m_file.WriteID1(0xAB);        //PrevSize ID
+        m_file.Write1UInt(8);         //payload size is 8 bytes
+        m_file.Serialize8UInt(size);  //payload
+    }
 
     ULONG cFrames = 0;   //TODO: must write cues for audio
 
