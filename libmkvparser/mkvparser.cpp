@@ -3276,11 +3276,14 @@ void Cluster::LoadBlockEntries()
         }
         else if (Match(pFile, pos, 0x27, off))
         {
+#ifdef _DEBUG
             assert(m_pos >= 0);
             assert(off == m_pos);
+#endif
         }
         else if (Match(pFile, pos, 0x2B, prev_size))
         {
+#ifdef _DEBUG
             Cluster* const pPrev = m_pSegment->GetPrevious(this);
 
             if (pPrev == 0)
@@ -3291,6 +3294,7 @@ void Cluster::LoadBlockEntries()
                 prev_size_;
                 assert(prev_size_ == prev_size);
             }
+#endif
         }
         else
         {
