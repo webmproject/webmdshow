@@ -1090,6 +1090,13 @@ void Context::CreateNewCluster(
     m_file.Write1UInt(4);
     m_file.Serialize4UInt(c.m_timecode);
 
+    const __int64 off = c.m_pos - m_segment_pos - 12;
+    assert(off >= 0);
+
+    m_file.WriteID1(0xA7);        //Position ID
+    m_file.Write1UInt(8);         //payload size is 8 bytes
+    m_file.Serialize8UInt(off);   //payload
+
     ULONG cFrames = 0;
 
     StreamVideo::frames_t& rframes = m_pVideo->GetKeyFrames();
@@ -1224,6 +1231,13 @@ void Context::CreateNewClusterAudioOnly()
     m_file.WriteID1(0xE7);
     m_file.Write1UInt(4);
     m_file.Serialize4UInt(c.m_timecode);
+
+    const __int64 off = c.m_pos - m_segment_pos - 12;
+    assert(off >= 0);
+
+    m_file.WriteID1(0xA7);        //Position ID
+    m_file.Write1UInt(8);         //payload size is 8 bytes
+    m_file.Serialize8UInt(off);   //payload
 
     ULONG cFrames = 0;   //TODO: must write cues for audio
 

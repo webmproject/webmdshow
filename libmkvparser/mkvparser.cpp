@@ -3207,6 +3207,7 @@ void Cluster::LoadBlockEntries()
 
     const __int64 stop = pos + m_size;
     __int64 timecode = -1;  //of cluster itself
+    __int64 off = -1;
 
     while (pos < stop)
     {
@@ -3216,6 +3217,11 @@ void Cluster::LoadBlockEntries()
                 assert(timecode == m_timecode);
             else
                 m_timecode = timecode;
+        }
+        else if (Match(pFile, pos, 0x27, off))
+        {
+            assert(m_pos >= 0);
+            assert(off == m_pos);
         }
         else
         {
