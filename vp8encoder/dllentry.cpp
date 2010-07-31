@@ -97,6 +97,11 @@ STDAPI DllUnregisterServer()
                     0,
                     CLSID_VP8Encoder);
 
+    hr = pMapper->UnregisterFilter(
+                    &CLSID_VideoCompressorCategory,
+                    0,
+                    CLSID_VP8Encoder);
+
     //TODO
     //assert(SUCCEEDED(hr));
 
@@ -229,5 +234,17 @@ STDAPI DllRegisterServer()
             0,
             &filter);
 
-    return hr;
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = pMapper->RegisterFilter(
+            CLSID_VP8Encoder,
+            friendlyname,
+            0,
+            &CLSID_VideoCompressorCategory,
+            0,
+            &filter);
+
+    assert(SUCCEEDED(hr));  //TODO
+
+    return S_OK;
 }
