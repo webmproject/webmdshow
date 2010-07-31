@@ -27,7 +27,9 @@ using std::wstring;
 namespace VP8EncoderLib
 {
 
-HRESULT CreateInstance(
+extern const CLSID CLSID_PropPage;
+
+HRESULT CreateFilter(
     IClassFactory* pClassFactory,
     IUnknown* pOuter,
     const IID& iid,
@@ -181,6 +183,10 @@ HRESULT Filter::CNondelegating::QueryInterface(
     else if (iid == __uuidof(IVP8Encoder))
     {
         pUnk = static_cast<IVP8Encoder*>(m_pFilter);
+    }
+    else if (iid == __uuidof(ISpecifyPropertyPages))
+    {
+        pUnk = static_cast<ISpecifyPropertyPages*>(m_pFilter);
     }
     else
     {
@@ -1736,6 +1742,31 @@ VP8PassMode Filter::GetPassMode() const
     return static_cast<VP8PassMode>(m);
 }
 
+
+HRESULT Filter::GetPages(CAUUID* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    CAUUID& s = *p;
+
+    void* const pv = CoTaskMemAlloc(sizeof(GUID));
+
+    if (pv == 0)
+    {
+        s.cElems = 0;
+        s.pElems = 0;
+
+        return E_OUTOFMEMORY;
+    }
+
+    s.cElems = 1;
+    s.pElems = static_cast<GUID*>(pv);
+
+    s.pElems[0] = CLSID_PropPage;
+
+    return S_OK;
+}
 
 
 }  //end namespace VP8EncoderLib

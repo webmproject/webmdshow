@@ -21,9 +21,10 @@ namespace VP8EncoderLib
 class Filter : public IBaseFilter,
                public IVP8Encoder,
                public IPersistStream,
+               public ISpecifyPropertyPages,
                public CLockable
 {
-    friend HRESULT CreateInstance(
+    friend HRESULT CreateFilter(
             IClassFactory*,
             IUnknown*,
             const IID&,
@@ -145,12 +146,16 @@ public:
     HRESULT STDMETHODCALLTYPE SetForceKeyframe();
     HRESULT STDMETHODCALLTYPE ClearForceKeyframe();
 
-    ///IPersistStream
+    //IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
     HRESULT STDMETHODCALLTYPE Load(IStream*);
     HRESULT STDMETHODCALLTYPE Save(IStream*, BOOL);
     HRESULT STDMETHODCALLTYPE GetSizeMax(ULARGE_INTEGER*);
+
+    //ISpecifyPropertyPages interface:
+
+    HRESULT STDMETHODCALLTYPE GetPages(CAUUID*);
 
 private:
     class CNondelegating : public IUnknown

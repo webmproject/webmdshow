@@ -21,16 +21,25 @@ static ULONG s_cLock;
 
 namespace VP8EncoderLib
 {
-    HRESULT CreateInstance(
+    HRESULT CreateFilter(
             IClassFactory*,
             IUnknown*,
             const IID&,
             void**);
 
+    HRESULT CreatePropPage(
+            IClassFactory*,
+            IUnknown*,
+            const IID&,
+            void**);
+
+    extern const CLSID CLSID_PropPage;
+
 }  //end namespace VP8EncoderLib
 
 
-static CFactory s_factory(&s_cLock, &VP8EncoderLib::CreateInstance);
+static CFactory s_filter_factory(&s_cLock, &VP8EncoderLib::CreateFilter);
+static CFactory s_proppage_factory(&s_cLock, &VP8EncoderLib::CreatePropPage);
 
 
 BOOL APIENTRY DllMain(
@@ -38,19 +47,19 @@ BOOL APIENTRY DllMain(
     DWORD  dwReason,
     LPVOID)
 {
-   switch (dwReason)
-   {
-       case DLL_PROCESS_ATTACH:
+    switch (dwReason)
+    {
+        case DLL_PROCESS_ATTACH:
         {
             g_hModule = hModule;
-           break;
+            break;
         }
-       case DLL_THREAD_ATTACH:
-       case DLL_THREAD_DETACH:
-       case DLL_PROCESS_DETACH:
-       default:
-          break;
-   }
+        case DLL_THREAD_ATTACH:
+        case DLL_THREAD_DETACH:
+        case DLL_PROCESS_DETACH:
+        default:
+           break;
+    }
 
     return TRUE;
 }
@@ -69,7 +78,10 @@ STDAPI DllGetClassObject(
     void** ppv)
 {
     if (clsid == CLSID_VP8Encoder)
-        return s_factory.QueryInterface(iid, ppv);
+        return s_filter_factory.QueryInterface(iid, ppv);
+
+    if (clsid == VP8EncoderLib::CLSID_PropPage)
+        return s_proppage_factory.QueryInterface(iid, ppv);
 
     return CLASS_E_CLASSNOTAVAILABLE;
 }
@@ -89,6 +101,7 @@ STDAPI DllUnregisterServer()
     //assert(SUCCEEDED(hr));
 
     hr = ComReg::UnRegisterCoclass(CLSID_VP8Encoder);
+    hr = ComReg::UnRegisterCoclass(VP8EncoderLib::CLSID_PropPage);
 
     std::wstring filename_;
 
@@ -132,12 +145,27 @@ STDAPI DllRegisterServer()
             filename,
             L"WebM.VP8Encoder",
             L"WebM.VP8Encoder.1",
-            false,  //not insertable
-            false,  //not a control
+            false,                 //not insertable
+            false,                 //not a control
+            ComReg::kBoth,         //DShow filters must support "both"
+            LIBID_VP8EncoderLib,   //typelib
+            0,                     //no version specified
+            0);                    //no toolbox bitmap
+
+    assert(SUCCEEDED(hr));   //TODO
+
+    hr = ComReg::RegisterCoclass(
+            VP8EncoderLib::CLSID_PropPage,
+            L"WebM VP8 Encoder Property Page",
+            filename,
+            0,              //no version independent progid
+            0,              //no progid
+            false,          //not insertable
+            false,          //not a control
             ComReg::kBoth,  //DShow filters must support "both"
-            LIBID_VP8EncoderLib,     //typelib
-            0,    //no version specified
-            0);   //no toolbox bitmap
+            GUID_NULL,      //typelib
+            0,              //no version specified
+            0);             //no toolbox bitmap
 
     assert(SUCCEEDED(hr));   //TODO
 
