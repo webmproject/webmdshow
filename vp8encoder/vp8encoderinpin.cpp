@@ -1093,13 +1093,6 @@ void Inpin::SetConfig()
     switch (src.pass_mode)
     {
         default:
-            //TODO: resolve whether to do this here,
-            //or in OnStart directly.  The problem we have is
-            //if you want to adjust one value while started
-            //(e.g. target bitrate), but you want to leave the
-            //existing value of g_pass alone.  We need something
-            //that says "this value hasn't been set yet".
-
             break;
 
         case kPassModeOnePass:
@@ -1207,8 +1200,6 @@ void Inpin::SetConfig()
 
     if (src.keyframe_max_interval >= 0)
         tgt.kf_max_dist = src.keyframe_max_interval;
-
-    //TODO: more params here
 }
 
 
