@@ -251,7 +251,7 @@ void Outpin::OnInpinConnect()
     const LONG ww = bmihIn.biWidth;
     assert(ww > 0);
 
-    const LONG hh = bmihIn.biHeight;
+    const LONG hh = labs(bmihIn.biHeight);
     assert(hh > 0);
 
     //TODO: does this really need to be a conditional expr?

@@ -526,7 +526,7 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (bmih.biWidth % 2)  //TODO
         return S_FALSE;
 
-    if (bmih.biHeight <= 0)
+    if (bmih.biHeight == 0)
         return S_FALSE;
 
     if (bmih.biHeight % 2)  //TODO
@@ -624,7 +624,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     assert(w > 0);
     assert((w % 2) == 0);  //TODO
 
-    const LONG h = bmih.biHeight;
+    const LONG h = labs(bmih.biHeight);
     assert(h > 0);
     assert((h % 2) == 0);  //TODO
 
@@ -1003,7 +1003,7 @@ HRESULT Inpin::Start()
     assert(w > 0);
     assert((w % 2) == 0);  //TODO
 
-    const LONG h = bmih.biHeight;
+    const LONG h = labs(bmih.biHeight);
     assert(h > 0);
     assert((h % 2) == 0);  //TODO
 
