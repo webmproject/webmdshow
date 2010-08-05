@@ -58,8 +58,89 @@ private:
     static DWORD SetText(HWND, int, const std::wstring&);
     DWORD GetText(int, std::wstring&) const;
 
+    typedef HRESULT (STDMETHODCALLTYPE IVP8Encoder::* pfnGetValue)(int*);
+
+    HRESULT GetIntValue(
+                HWND,
+                pfnGetValue,
+                int code,
+                const wchar_t*);
+
+    typedef HRESULT (STDMETHODCALLTYPE IVP8Encoder::* pfnSetValue)(int);
+
+    HRESULT SetIntValue(
+                pfnSetValue,
+                int code,
+                const wchar_t*);
+
     HRESULT GetDeadline(HWND);
     HRESULT SetDeadline();
+
+    HRESULT GetThreadCount(HWND);
+    HRESULT SetThreadCount();
+
+    HRESULT GetErrorResilient(HWND);
+    HRESULT SetErrorResilient();
+
+    HRESULT GetDropframeThreshold(HWND);
+    HRESULT SetDropframeThreshold();
+
+    HRESULT GetResizeAllowed(HWND);
+    HRESULT SetResizeAllowed();
+
+    HRESULT GetResizeUpThreshold(HWND);
+    HRESULT SetResizeUpThreshold();
+
+    HRESULT GetResizeDownThreshold(HWND);
+    HRESULT SetResizeDownThreshold();
+
+    HRESULT GetEndUsage(HWND);
+    HRESULT SetEndUsage();
+
+    HRESULT GetLagInFrames(HWND);
+    HRESULT SetLagInFrames();
+
+    HRESULT GetTokenPartitions(HWND);
+    HRESULT SetTokenPartitions();
+
+    HRESULT GetTargetBitrate(HWND);
+    HRESULT SetTargetBitrate();
+
+    HRESULT GetMinQuantizer(HWND);
+    HRESULT SetMinQuantizer();
+
+    HRESULT GetMaxQuantizer(HWND);
+    HRESULT SetMaxQuantizer();
+
+    HRESULT GetUndershootPct(HWND);
+    HRESULT SetUndershootPct();
+
+    HRESULT GetOvershootPct(HWND);
+    HRESULT SetOvershootPct();
+
+    HRESULT GetDecoderBufferSize(HWND);
+    HRESULT SetDecoderBufferSize();
+
+    HRESULT GetDecoderBufferInitialSize(HWND);
+    HRESULT SetDecoderBufferInitialSize();
+
+    HRESULT GetDecoderBufferOptimalSize(HWND);
+    HRESULT SetDecoderBufferOptimalSize();
+
+    HRESULT GetKeyframeMode(HWND);
+    HRESULT SetKeyframeMode();
+
+    HRESULT GetKeyframeMinInterval(HWND);
+    HRESULT SetKeyframeMinInterval();
+
+    HRESULT GetKeyframeMaxInterval(HWND);
+    HRESULT SetKeyframeMaxInterval();
+
+    void Initialize(HWND);
+    void InitializeEndUsage(HWND);
+    void InitializeKeyframeMode(HWND);
+
+    HRESULT ResetSettings();
 
 };
 

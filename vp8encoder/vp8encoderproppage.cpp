@@ -6,6 +6,7 @@
 #include <new>
 #include <cassert>
 #include <sstream>
+#include <windowsx.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -22,7 +23,7 @@ extern HMODULE g_hModule;
 namespace VP8EncoderLib
 {
 
-extern const CLSID CLSID_PropPage = { /* ED311102-5211-11DF-94AF-0026B977EEAA */
+extern const CLSID CLSID_PropPage = { //ED311102-5211-11DF-94AF-0026B977EEAA
     0xED311102,
     0x5211,
     0x11DF,
@@ -185,13 +186,74 @@ HRESULT PropPage::Activate(HWND hWndParent, LPCRECT prc, BOOL /* fModal */ )
         return HRESULT_FROM_WIN32(e);
     }
 
-    GetDeadline(hWnd);
+    InitializeEndUsage(hWnd);
+    InitializeKeyframeMode(hWnd);
+    Initialize(hWnd);
 
     m_hWnd = hWnd;
 
     Move(prc);
     return Show(SW_SHOWNORMAL);
 }
+
+
+void PropPage::InitializeEndUsage(HWND hWnd)
+{
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_END_USAGE);
+    assert(hCtrl);
+
+    int idx = ComboBox_AddString(hCtrl, L"");
+    assert(idx == 0);
+
+    idx = ComboBox_AddString(hCtrl, L"VBR");
+    assert(idx == 1);
+
+    idx = ComboBox_AddString(hCtrl, L"CBR");
+    assert(idx == 2);
+}
+
+
+void PropPage::InitializeKeyframeMode(HWND hWnd)
+{
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_KEYFRAME_MODE);
+    assert(hCtrl);
+
+    int idx = ComboBox_AddString(hCtrl, L"");
+    assert(idx == 0);
+
+    idx = ComboBox_AddString(hCtrl, L"Disabled");
+    assert(idx == 1);
+
+    idx = ComboBox_AddString(hCtrl, L"Auto");
+    assert(idx == 2);
+}
+
+
+void PropPage::Initialize(HWND hWnd)
+{
+    GetDeadline(hWnd);
+    GetThreadCount(hWnd);
+    GetErrorResilient(hWnd);
+    GetDropframeThreshold(hWnd);
+    GetResizeAllowed(hWnd);
+    GetResizeUpThreshold(hWnd);
+    GetResizeDownThreshold(hWnd);
+    GetEndUsage(hWnd);
+    GetLagInFrames(hWnd);
+    GetTokenPartitions(hWnd);
+    GetTargetBitrate(hWnd);
+    GetMinQuantizer(hWnd);
+    GetMaxQuantizer(hWnd);
+    GetUndershootPct(hWnd);
+    GetOvershootPct(hWnd);
+    GetDecoderBufferSize(hWnd);
+    GetDecoderBufferInitialSize(hWnd);
+    GetDecoderBufferOptimalSize(hWnd);
+    GetKeyframeMode(hWnd);
+    GetKeyframeMinInterval(hWnd);
+    GetKeyframeMaxInterval(hWnd);
+}
+
 
 
 HRESULT PropPage::Deactivate()
@@ -397,10 +459,27 @@ HRESULT PropPage::Apply()
     if (!m_bDirty)
         return S_OK;
 
-    HRESULT hr = SetDeadline();
-
-    if (hr != S_OK)
-        return hr;
+    SetDeadline();
+    SetThreadCount();
+    SetErrorResilient();
+    SetDropframeThreshold();
+    SetResizeAllowed();
+    SetResizeUpThreshold();
+    SetResizeDownThreshold();
+    SetEndUsage();
+    SetLagInFrames();
+    SetTokenPartitions();
+    SetTargetBitrate();
+    SetMinQuantizer();
+    SetMaxQuantizer();
+    SetUndershootPct();
+    SetOvershootPct();
+    SetDecoderBufferSize();
+    SetDecoderBufferInitialSize();
+    SetDecoderBufferOptimalSize();
+    SetKeyframeMode();
+    SetKeyframeMinInterval();
+    SetKeyframeMaxInterval();
 
     m_bDirty = false;
 
@@ -492,23 +571,95 @@ INT_PTR PropPage::OnCommand(WPARAM wParam, LPARAM)
     //#define EN_VSCROLL          0x0602
 
     wodbgstream os;
+    os << "OnCommand: code=0x" << hex << code << dec << " id=" << id << endl;
 
-    //os << "OnCommand: code=0x" << hex << code << dec << " id=" << id << endl;
-    //
+    //#define CBN_ERRSPACE        (-1)
+    //#define CBN_SELCHANGE       1
+    //#define CBN_DBLCLK          2
+    //#define CBN_SETFOCUS        3
+    //#define CBN_KILLFOCUS       4
+    //#define CBN_EDITCHANGE      5
+    //#define CBN_EDITUPDATE      6
+    //#define CBN_DROPDOWN        7
+    //#define CBN_CLOSEUP         8
+    //#define CBN_SELENDOK        9
+    //#define CBN_SELENDCANCEL    10
+
     //if (code == EN_CHANGE)
     //    os << "EN_CHANGE" << endl;
 
-    if (code == EN_CHANGE)
+    //#define BN_CLICKED          0
+    //#define BN_PAINT            1
+    //#define BN_HILITE           2
+    //#define BN_UNHILITE         3
+    //#define BN_DISABLE          4
+    //#define BN_DOUBLECLICKED    5
+    //#if(WINVER >= 0x0400)
+    //#define BN_PUSHED           BN_HILITE
+    //#define BN_UNPUSHED         BN_UNHILITE
+    //#define BN_DBLCLK           BN_DOUBLECLICKED
+    //#define BN_SETFOCUS         6
+    //#define BN_KILLFOCUS        7
+
+    switch (code)
     {
-        os << "OnCommand: code=EN_CHANGE; id=" << id << endl;
+        case CBN_SELCHANGE:
+        case EN_CHANGE:
+            os << "OnCommand: code=0x" << hex << code << dec
+               << " id=" << id
+               << " CHANGE"
+               << endl;
 
-        m_bDirty = true;
+            m_bDirty = true;
 
-        if (m_pSite)
-            m_pSite->OnStatusChange(PROPPAGESTATUS_DIRTY);
+            if (m_pSite)
+                m_pSite->OnStatusChange(PROPPAGESTATUS_DIRTY);
+
+            return TRUE;
+
+        case BN_CLICKED:
+            if (id != IDC_RESET_SETTINGS)
+                return FALSE;
+
+            ResetSettings();
+            return TRUE;
+
+        default:
+            return FALSE;
+    }
+}
+
+
+HRESULT PropPage::ResetSettings()
+{
+    assert(m_pVP8);
+
+    HRESULT hr = m_pVP8->ResetSettings();
+
+    if (FAILED(hr))
+    {
+        MessageBox(
+            m_hWnd,
+            L"Unable to reset settings.",
+            L"Error",
+            MB_OK);
+
+        return hr;
     }
 
-    return FALSE;
+    const HWND hWnd = m_hWnd;
+    m_hWnd = 0;
+
+    Initialize(hWnd);
+
+    m_hWnd = hWnd;
+
+    m_bDirty = false;
+
+    if (m_pSite)
+        m_pSite->OnStatusChange(PROPPAGESTATUS_CLEAN);
+
+    return S_OK;
 }
 
 
@@ -590,19 +741,94 @@ DWORD PropPage::GetText(int id, std::wstring& str) const
 }
 
 
-HRESULT PropPage::GetDeadline(HWND hWnd)
+
+
+HRESULT PropPage::SetIntValue(
+    pfnSetValue SetValue,
+    int code,
+    const wchar_t* name)
+{
+    wstring text;
+
+    const DWORD e = GetText(code, text);
+
+    if (e)
+    {
+        wstring msg = L"Unable to get ";
+        msg += name;
+        msg += L" value from edit control.";
+
+        MessageBox(m_hWnd, msg.c_str(), L"Error", MB_OK);
+        return S_FALSE;
+    }
+
+    //TODO: we could interpret empty text to mean "set to default value",
+    //which is exact what it means when the dialog box is first initialized.
+    if (text.empty())
+        return S_OK;
+
+    wistringstream is(text);
+
+    int val;
+
+    if (!(is >> val) || !is.eof())
+    {
+        wstring msg = L"Bad ";
+        msg += name;
+        msg += L" value.";
+
+        MessageBox(
+            m_hWnd,
+            msg.c_str(),
+            L"Error",
+            MB_OK | MB_ICONEXCLAMATION);
+
+        return S_FALSE;
+    }
+
+    //As above, we could interpret this to mean "set to default".
+    if (val < 0)  //treat as nonce values
+        return S_OK;
+
+    assert(m_pVP8);
+
+    HRESULT hr = (m_pVP8->*SetValue)(val);
+
+    if (FAILED(hr))
+    {
+        wstring msg = L"Unable to set ";
+        msg += name;
+        msg += L" value on filter.";
+
+        MessageBox(m_hWnd, msg.c_str(), L"Error", MB_OK);
+        return S_FALSE;
+    }
+
+    return S_OK;
+}
+
+
+HRESULT PropPage::GetIntValue(
+    HWND hWnd,
+    pfnGetValue GetValue,
+    int code,
+    const wchar_t* name)
 {
     int val;
 
     assert(m_pVP8);
 
-    HRESULT hr = m_pVP8->GetDeadline(&val);
+    HRESULT hr = (m_pVP8->*GetValue)(&val);
 
     if (FAILED(hr))
     {
+        wstring text = L"Unable to get ";
+        text += name;
+        text += L" value from filter.";
+
         MessageBox(
             m_hWnd,
-            L"Unable to get deadline value from filter.",
+            text.c_str(),
             L"Error",
             MB_OK);
 
@@ -611,19 +837,21 @@ HRESULT PropPage::GetDeadline(HWND hWnd)
 
     wostringstream os;
 
-    if (val < 0)
-        os << kDeadlineGoodQuality;
-    else
+    if (val >= 0)
         os << val;
 
-    const DWORD e = SetText(hWnd, IDC_DEADLINE, os.str());
+    const DWORD e = SetText(hWnd, code, os.str());
 
     if (e == 0)
         return S_OK;
 
+    wstring text = L"Unable to set value for ";
+    text += name;
+    text += L" edit control.";
+
     MessageBox(
         hWnd,
-        L"Unable to set value for deadline edit control.",
+        text.c_str(),
         L"Error",
         MB_OK);
 
@@ -631,53 +859,565 @@ HRESULT PropPage::GetDeadline(HWND hWnd)
 }
 
 
+HRESULT PropPage::GetDeadline(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetDeadline,
+            IDC_DEADLINE,
+            L"deadline");
+}
+
+
 HRESULT PropPage::SetDeadline()
 {
-    wstring text;
+    return SetIntValue(
+            &IVP8Encoder::SetDeadline,
+            IDC_DEADLINE,
+            L"deadline");
+}
 
-    const DWORD e = GetText(IDC_DEADLINE, text);
 
-    if (e)
-    {
-        MessageBox(m_hWnd, L"Unable to get deadline value.", L"Error", MB_OK);
-        return S_FALSE;
-    }
+HRESULT PropPage::GetThreadCount(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetThreadCount,
+            IDC_THREADCOUNT,
+            L"thread count");
+}
 
-    if (text.empty())
-        return S_OK;
 
-    //TODO: must handle case "default", or "good", etc
+HRESULT PropPage::SetThreadCount()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetThreadCount,
+            IDC_THREADCOUNT,
+            L"thread count");
+}
 
-    wistringstream is(text);
 
-    int val;
+HRESULT PropPage::SetErrorResilient()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetErrorResilient,
+            IDC_ERROR_RESILIENT,
+            L"error resilient");
+}
 
-    if (!(is >> val) || !is.eof())
-    {
-        MessageBox(
-            m_hWnd,
-            L"Bad deadline value.",
-            L"Error",
-            //MB_RETRYCANCEL | MB_ICONEXCLAMATION | MB_DEFBUTTON1);
-            MB_OK | MB_ICONEXCLAMATION);
 
-        return S_FALSE;
-    }
+HRESULT PropPage::GetErrorResilient(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetErrorResilient,
+            IDC_ERROR_RESILIENT,
+            L"error resilient");
+}
 
-    if (val < 0)  //treat as nonce values
-        return S_OK;
+
+HRESULT PropPage::SetDropframeThreshold()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetDropframeThreshold,
+            IDC_DROPFRAME_THRESHOLD,
+            L"dropframe threshold");
+}
+
+
+HRESULT PropPage::GetDropframeThreshold(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetDropframeThreshold,
+            IDC_DROPFRAME_THRESHOLD,
+            L"dropframe threshold");
+}
+
+
+HRESULT PropPage::SetResizeAllowed()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetResizeAllowed,
+            IDC_RESIZE_ALLOWED,
+            L"resize allowed");
+}
+
+
+HRESULT PropPage::GetResizeAllowed(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetResizeAllowed,
+            IDC_RESIZE_ALLOWED,
+            L"resize allowed");
+}
+
+
+HRESULT PropPage::SetResizeUpThreshold()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetResizeUpThreshold,
+            IDC_RESIZE_UP_THRESHOLD,
+            L"resize up threshold");
+}
+
+
+HRESULT PropPage::GetResizeUpThreshold(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetResizeUpThreshold,
+            IDC_RESIZE_UP_THRESHOLD,
+            L"resize up threshold");
+}
+
+
+HRESULT PropPage::SetResizeDownThreshold()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetResizeDownThreshold,
+            IDC_RESIZE_DOWN_THRESHOLD,
+            L"resize down threshold");
+}
+
+
+HRESULT PropPage::GetResizeDownThreshold(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetResizeDownThreshold,
+            IDC_RESIZE_DOWN_THRESHOLD,
+            L"resize down threshold");
+}
+
+
+HRESULT PropPage::GetEndUsage(HWND hWnd)
+{
+    VP8EndUsage val;
 
     assert(m_pVP8);
-
-    HRESULT hr = m_pVP8->SetDeadline(val);
+    HRESULT hr = m_pVP8->GetEndUsage(&val);
 
     if (FAILED(hr))
     {
-        MessageBox(m_hWnd, L"Unable to set deadline value.", L"Error", MB_OK);
+        MessageBox(
+            m_hWnd,
+            L"Unable to get end usage value from filter.",
+            L"Error",
+            MB_OK);
+
+        return hr;
+    }
+
+    int idx;
+
+    switch (val)
+    {
+        case kEndUsageDefault:
+        default:
+            idx = 0;
+            break;
+
+        case kEndUsageVBR:
+            idx = 1;
+            break;
+
+        case kEndUsageCBR:
+            idx = 2;
+            break;
+    }
+
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_END_USAGE);
+    assert(hCtrl);
+
+    const int result = ComboBox_SetCurSel(hCtrl, idx);
+
+    if (result >= 0)
+        return S_OK;
+
+    MessageBox(
+        hWnd,
+        L"Unable to set value for end usage combo box.",
+        L"Error",
+        MB_OK);
+
+    return S_OK;
+}
+
+
+HRESULT PropPage::SetEndUsage()
+{
+    const HWND hCtrl = GetDlgItem(m_hWnd, IDC_END_USAGE);
+    assert(hCtrl);
+
+    const int idx = ComboBox_GetCurSel(hCtrl);
+    assert(idx >= 0);
+    assert(idx <= 2);
+
+    VP8EndUsage val;
+
+    switch (idx)
+    {
+        case 0:
+        default:
+            //val = kEndUsageDefault;
+            //break;
+            return S_OK;
+
+        case 1:
+            val = kEndUsageVBR;
+            break;
+
+        case 2:
+            val = kEndUsageCBR;
+            break;
+    }
+
+    assert(m_pVP8);
+
+    HRESULT hr = m_pVP8->SetEndUsage(val);
+
+    if (FAILED(hr))
+    {
+        MessageBox(
+            m_hWnd,
+            L"Unable to set end usage value on filter.",
+            L"Error",
+            MB_OK);
+
         return S_FALSE;
     }
 
     return S_OK;
+}
+
+
+HRESULT PropPage::GetLagInFrames(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetLagInFrames,
+            IDC_LAG_IN_FRAMES,
+            L"lag in frames");
+}
+
+
+HRESULT PropPage::SetLagInFrames()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetLagInFrames,
+            IDC_LAG_IN_FRAMES,
+            L"lag in frames");
+}
+
+
+HRESULT PropPage::GetTokenPartitions(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetTokenPartitions,
+            IDC_TOKEN_PARTITIONS,
+            L"token partitions");
+}
+
+
+HRESULT PropPage::SetTokenPartitions()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetTokenPartitions,
+            IDC_TOKEN_PARTITIONS,
+            L"token partitions");
+}
+
+
+HRESULT PropPage::GetTargetBitrate(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetTargetBitrate,
+            IDC_TARGET_BITRATE,
+            L"target bitrate");
+}
+
+
+HRESULT PropPage::SetTargetBitrate()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetTargetBitrate,
+            IDC_TARGET_BITRATE,
+            L"target bitrate");
+}
+
+
+HRESULT PropPage::GetMinQuantizer(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetMinQuantizer,
+            IDC_MIN_QUANTIZER,
+            L"min quantizer");
+}
+
+
+HRESULT PropPage::SetMinQuantizer()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetMinQuantizer,
+            IDC_MIN_QUANTIZER,
+            L"min quantizer");
+}
+
+
+HRESULT PropPage::GetMaxQuantizer(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetMaxQuantizer,
+            IDC_MAX_QUANTIZER,
+            L"min quantizer");
+}
+
+
+HRESULT PropPage::SetMaxQuantizer()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetMaxQuantizer,
+            IDC_MAX_QUANTIZER,
+            L"max quantizer");
+}
+
+
+HRESULT PropPage::GetUndershootPct(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetUndershootPct,
+            IDC_UNDERSHOOT_PCT,
+            L"undershoot pct");
+}
+
+
+HRESULT PropPage::SetUndershootPct()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetUndershootPct,
+            IDC_UNDERSHOOT_PCT,
+            L"undershoot pct");
+}
+
+
+HRESULT PropPage::GetOvershootPct(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetOvershootPct,
+            IDC_OVERSHOOT_PCT,
+            L"overshoot pct");
+}
+
+
+HRESULT PropPage::SetOvershootPct()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetOvershootPct,
+            IDC_OVERSHOOT_PCT,
+            L"overshoot pct");
+}
+
+
+HRESULT PropPage::GetDecoderBufferSize(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetDecoderBufferSize,
+            IDC_DECODER_BUFFER_SIZE,
+            L"decoder buffer size");
+}
+
+
+HRESULT PropPage::SetDecoderBufferSize()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetDecoderBufferSize,
+            IDC_DECODER_BUFFER_SIZE,
+            L"decoder buffer size");
+}
+
+
+HRESULT PropPage::GetDecoderBufferInitialSize(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetDecoderBufferInitialSize,
+            IDC_DECODER_BUFFER_INITIAL_SIZE,
+            L"decoder buffer initial size");
+}
+
+
+HRESULT PropPage::SetDecoderBufferInitialSize()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetDecoderBufferInitialSize,
+            IDC_DECODER_BUFFER_INITIAL_SIZE,
+            L"decoder buffer initial size");
+}
+
+
+HRESULT PropPage::GetDecoderBufferOptimalSize(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetDecoderBufferOptimalSize,
+            IDC_DECODER_BUFFER_OPTIMAL_SIZE,
+            L"decoder buffer optimal size");
+}
+
+
+HRESULT PropPage::SetDecoderBufferOptimalSize()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetDecoderBufferOptimalSize,
+            IDC_DECODER_BUFFER_OPTIMAL_SIZE,
+            L"decoder buffer optimal size");
+}
+
+
+HRESULT PropPage::GetKeyframeMode(HWND hWnd)
+{
+    VP8KeyframeMode val;
+
+    assert(m_pVP8);
+    HRESULT hr = m_pVP8->GetKeyframeMode(&val);
+
+    if (FAILED(hr))
+    {
+        MessageBox(
+            m_hWnd,
+            L"Unable to get keyframe mode value from filter.",
+            L"Error",
+            MB_OK);
+
+        return hr;
+    }
+
+    int idx;
+
+    switch (val)
+    {
+        case kKeyframeModeDefault:
+        default:
+            idx = 0;
+            break;
+
+        case kKeyframeModeDisabled:
+            idx = 1;
+            break;
+
+        case kKeyframeModeAuto:
+            idx = 2;
+            break;
+    }
+
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_KEYFRAME_MODE);
+    assert(hCtrl);
+
+    const int result = ComboBox_SetCurSel(hCtrl, idx);
+
+    if (result >= 0)
+        return S_OK;
+
+    MessageBox(
+        hWnd,
+        L"Unable to set value for keyframe mode combo box.",
+        L"Error",
+        MB_OK);
+
+    return S_OK;
+}
+
+
+HRESULT PropPage::SetKeyframeMode()
+{
+    const HWND hCtrl = GetDlgItem(m_hWnd, IDC_KEYFRAME_MODE);
+    assert(hCtrl);
+
+    const int idx = ComboBox_GetCurSel(hCtrl);
+    assert(idx >= 0);
+    assert(idx <= 2);
+
+    VP8KeyframeMode val;
+
+    switch (idx)
+    {
+        case 0:
+        default:
+            //val = kKeyframeModeDefault;
+            //break;
+            return S_OK;
+
+        case 1:
+            val = kKeyframeModeDisabled;
+            break;
+
+        case 2:
+            val = kKeyframeModeAuto;
+            break;
+    }
+
+    assert(m_pVP8);
+    HRESULT hr = m_pVP8->SetKeyframeMode(val);
+
+    if (FAILED(hr))
+    {
+        MessageBox(
+            m_hWnd,
+            L"Unable to set keyframe mode on filter.",
+            L"Error",
+            MB_OK);
+
+        return S_FALSE;
+    }
+
+    return S_OK;
+}
+
+
+HRESULT PropPage::GetKeyframeMinInterval(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetKeyframeMinInterval,
+            IDC_KEYFRAME_MIN_INTERVAL,
+            L"keyframe min interval");
+}
+
+
+HRESULT PropPage::SetKeyframeMinInterval()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetKeyframeMinInterval,
+            IDC_KEYFRAME_MIN_INTERVAL,
+            L"keyframe min interval");
+}
+
+
+HRESULT PropPage::GetKeyframeMaxInterval(HWND hWnd)
+{
+    return GetIntValue(
+            hWnd,
+            &IVP8Encoder::GetKeyframeMaxInterval,
+            IDC_KEYFRAME_MAX_INTERVAL,
+            L"keyframe max interval");
+}
+
+
+HRESULT PropPage::SetKeyframeMaxInterval()
+{
+    return SetIntValue(
+            &IVP8Encoder::SetKeyframeMaxInterval,
+            IDC_KEYFRAME_MAX_INTERVAL,
+            L"keyframe max interval");
 }
 
 
