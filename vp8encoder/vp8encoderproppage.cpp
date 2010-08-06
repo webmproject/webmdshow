@@ -164,8 +164,10 @@ HRESULT PropPage::SetPageSite(IPropertyPageSite* pSite)
 
 HRESULT PropPage::Activate(HWND hWndParent, LPCRECT prc, BOOL /* fModal */ )
 {
+#if 0 //def _DEBUG
     wodbgstream os;
     os << "activate" << endl;
+#endif
 
     if (m_pVP8 == 0)  //SetObjects hasn't been called yet
         return E_UNEXPECTED;
@@ -258,8 +260,10 @@ void PropPage::Initialize(HWND hWnd)
 
 HRESULT PropPage::Deactivate()
 {
+#if 0
     wodbgstream os;
     os << "deactivate" << endl;
+#endif
 
     if (m_hWnd == 0)
         return E_UNEXPECTED;
@@ -286,8 +290,10 @@ HRESULT PropPage::Deactivate()
 
 HRESULT PropPage::GetPageInfo(PROPPAGEINFO* pInfo)
 {
+#if 0
     wodbgstream os;
     os << "getpageinfo" << endl;
+#endif
 
     assert(m_hWnd == 0);
 
@@ -438,8 +444,10 @@ HRESULT PropPage::Move(LPCRECT prc)
 
 HRESULT PropPage::IsPageDirty()
 {
+#if 0
     wodbgstream os;
     os << "ispagedirty" << endl;
+#endif
 
     return m_bDirty ? S_OK : S_FALSE;
 }
@@ -447,8 +455,10 @@ HRESULT PropPage::IsPageDirty()
 
 HRESULT PropPage::Apply()
 {
+#if 0
     wodbgstream os;
     os << "apply" << endl;
+#endif
 
     if (m_pVP8 == 0)
         return E_UNEXPECTED;
@@ -570,8 +580,10 @@ INT_PTR PropPage::OnCommand(WPARAM wParam, LPARAM)
     //#define EN_HSCROLL          0x0601
     //#define EN_VSCROLL          0x0602
 
+#if 0
     wodbgstream os;
     os << "OnCommand: code=0x" << hex << code << dec << " id=" << id << endl;
+#endif
 
     //#define CBN_ERRSPACE        (-1)
     //#define CBN_SELCHANGE       1
@@ -605,10 +617,12 @@ INT_PTR PropPage::OnCommand(WPARAM wParam, LPARAM)
     {
         case CBN_SELCHANGE:
         case EN_CHANGE:
+#if 0 //def _DEBUG
             os << "OnCommand: code=0x" << hex << code << dec
                << " id=" << id
                << " CHANGE"
                << endl;
+#endif
 
             m_bDirty = true;
 

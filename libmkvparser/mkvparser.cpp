@@ -2112,6 +2112,8 @@ bool Segment::SearchCues(
     assert(pLastCluster->m_pos);
 
     const __int64 last_pos = _abs64(pLastCluster->m_pos);
+    last_pos;
+    
     const __int64 last_ns = pLastCluster->GetTime();
 
     __int64 time_ns;
