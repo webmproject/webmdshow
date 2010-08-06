@@ -24,8 +24,10 @@
 #define IDC_KEYFRAME_MODE               1019
 #define IDC_KEYFRAME_MIN_INTERVAL       1020
 #define IDC_KEYFRAME_MAX_INTERVAL       1021
-#define IDC_BUTTON1                     1022
-#define IDC_RESET_SETTINGS              1022
+#define IDC_RESET                       1022
+#define IDC_RESET_SETTINGS2             1023
+#define IDC_CLEAR                       1023
+#define IDC_RELOAD                      1024
 
 // Next default values for new objects
 // 

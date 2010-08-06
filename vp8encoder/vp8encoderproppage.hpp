@@ -56,6 +56,7 @@ private:
     INT_PTR OnCommand(WPARAM, LPARAM);
 
     static DWORD SetText(HWND, int, const std::wstring&);
+    static DWORD SetText(HWND, int);
     DWORD GetText(int, std::wstring&) const;
 
     typedef HRESULT (STDMETHODCALLTYPE IVP8Encoder::* pfnGetValue)(int*);
@@ -140,7 +141,9 @@ private:
     void InitializeEndUsage(HWND);
     void InitializeKeyframeMode(HWND);
 
-    HRESULT ResetSettings();
+    HRESULT Clear();
+    HRESULT Reload();
+    HRESULT Reset();
 
 };
 

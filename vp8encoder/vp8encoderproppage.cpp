@@ -632,11 +632,25 @@ INT_PTR PropPage::OnCommand(WPARAM wParam, LPARAM)
             return TRUE;
 
         case BN_CLICKED:
-            if (id != IDC_RESET_SETTINGS)
-                return FALSE;
+            if (id == IDC_CLEAR)
+            {
+                Clear();
+                return TRUE;
+            }
 
-            ResetSettings();
-            return TRUE;
+            if (id == IDC_RELOAD)
+            {
+                Reload();
+                return TRUE;
+            }
+
+            if (id == IDC_RESET)
+            {
+                Reset();
+                return TRUE;
+            }
+
+            return FALSE;
 
         default:
             return FALSE;
@@ -644,7 +658,61 @@ INT_PTR PropPage::OnCommand(WPARAM wParam, LPARAM)
 }
 
 
-HRESULT PropPage::ResetSettings()
+HRESULT PropPage::Clear()
+{
+    const HWND hWnd = m_hWnd;
+    m_hWnd = 0;
+
+    SetText(hWnd, IDC_DEADLINE);
+    SetText(hWnd, IDC_THREADCOUNT);
+    SetText(hWnd, IDC_ERROR_RESILIENT);
+    SetText(hWnd, IDC_DROPFRAME_THRESHOLD);
+    ComboBox_SetCurSel(GetDlgItem(hWnd, IDC_END_USAGE), 0);
+    SetText(hWnd, IDC_LAG_IN_FRAMES);
+    SetText(hWnd, IDC_TOKEN_PARTITIONS);
+    SetText(hWnd, IDC_TARGET_BITRATE);
+    SetText(hWnd, IDC_MIN_QUANTIZER);
+    SetText(hWnd, IDC_MAX_QUANTIZER);
+    SetText(hWnd, IDC_UNDERSHOOT_PCT);
+    SetText(hWnd, IDC_OVERSHOOT_PCT);
+    SetText(hWnd, IDC_RESIZE_ALLOWED);
+    SetText(hWnd, IDC_RESIZE_UP_THRESHOLD);
+    SetText(hWnd, IDC_RESIZE_DOWN_THRESHOLD);
+    SetText(hWnd, IDC_DECODER_BUFFER_SIZE);
+    SetText(hWnd, IDC_DECODER_BUFFER_INITIAL_SIZE);
+    SetText(hWnd, IDC_DECODER_BUFFER_OPTIMAL_SIZE);
+    ComboBox_SetCurSel(GetDlgItem(hWnd, IDC_KEYFRAME_MODE), 0);
+    SetText(hWnd, IDC_KEYFRAME_MIN_INTERVAL);
+    SetText(hWnd, IDC_KEYFRAME_MAX_INTERVAL);
+
+    m_hWnd = hWnd;
+    m_bDirty = false;
+
+    if (m_pSite)
+        m_pSite->OnStatusChange(PROPPAGESTATUS_CLEAN);
+
+    return S_OK;
+}
+
+
+HRESULT PropPage::Reload()
+{
+    const HWND hWnd = m_hWnd;
+    m_hWnd = 0;
+
+    Initialize(hWnd);
+
+    m_hWnd = hWnd;
+    m_bDirty = false;
+
+    if (m_pSite)
+        m_pSite->OnStatusChange(PROPPAGESTATUS_CLEAN);
+
+    return S_OK;
+}
+
+
+HRESULT PropPage::Reset()
 {
     assert(m_pVP8);
 
@@ -667,13 +735,23 @@ HRESULT PropPage::ResetSettings()
     Initialize(hWnd);
 
     m_hWnd = hWnd;
-
     m_bDirty = false;
 
     if (m_pSite)
         m_pSite->OnStatusChange(PROPPAGESTATUS_CLEAN);
 
     return S_OK;
+}
+
+
+DWORD PropPage::SetText(HWND hWnd, int id)
+{
+    const BOOL b = ::SetDlgItemText(hWnd, id, 0);
+
+    if (b)
+        return 0;  //SUCCESS
+
+    return GetLastError();
 }
 
 
