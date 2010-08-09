@@ -1059,23 +1059,47 @@ void Inpin::Stop()
 }
 
 
-HRESULT Inpin::OnApplySettings()
+HRESULT Inpin::OnApplySettings(std::wstring& msg)
 {
     SetConfig();
 
     const vpx_codec_err_t err = vpx_codec_enc_config_set(&m_ctx, &m_cfg);
 
-    if (err != VPX_CODEC_OK)
+    if (err == VPX_CODEC_OK)
     {
-#ifdef _DEBUG
-        const char* str = vpx_codec_error_detail(&m_ctx);
-        str;
-#endif
-
-        return E_FAIL;
+        msg.clear();
+        return S_OK;
     }
 
-    return S_OK;
+    const char* const str = vpx_codec_error_detail(&m_ctx);
+
+    const int cch = MultiByteToWideChar(
+                        CP_UTF8,
+                        0,  //TODO: MB_ERR_INVALID_CHARS
+                        str,
+                        -1,  //include NUL terminator in result
+                        0,
+                        0);  //request length
+
+    assert(cch > 0);
+
+    const size_t cb = cch * sizeof(wchar_t);
+    wchar_t* const wstr = (wchar_t*)_alloca(cb);
+
+    const int cch2 = MultiByteToWideChar(
+                        CP_UTF8,
+                        0,  //TODO: MB_ERR_INVALID_CHARS
+                        str,
+                        -1,
+                        wstr,
+                        cch);
+
+    cch2;
+    assert(cch2 > 0);
+    assert(cch2 == cch);
+
+    msg.assign(wstr);
+    return E_FAIL;
 }
 
 

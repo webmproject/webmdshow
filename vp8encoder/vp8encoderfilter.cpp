@@ -569,7 +569,9 @@ HRESULT Filter::ApplySettings()
     if (m_state == State_Stopped)
         return S_FALSE;
 
-    return m_inpin.OnApplySettings();
+    wstring msg;
+
+    return m_inpin.OnApplySettings(msg);
 }
 
 

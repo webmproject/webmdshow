@@ -493,6 +493,14 @@ HRESULT PropPage::Apply()
 
     m_bDirty = false;
 
+    const HRESULT hr = m_pVP8->ApplySettings();
+
+    if (FAILED(hr))
+    {
+        MessageBox(m_hWnd, L"ApplySettings failed.", L"Error", MB_OK);
+        return S_OK;  //?
+    }
+
     return S_OK;
 }
 

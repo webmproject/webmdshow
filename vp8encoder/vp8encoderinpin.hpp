@@ -83,7 +83,7 @@ public:
     HRESULT Start();  //from stopped to running/paused
     void Stop();      //from running/paused to stopped
 
-    HRESULT OnApplySettings();
+    HRESULT OnApplySettings(std::wstring&);
 
 protected:
     //HRESULT GetName(PIN_INFO&) const;
