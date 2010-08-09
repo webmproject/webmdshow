@@ -1,5 +1,5 @@
 WebM Project DirectShow Filters
-v0.9.9.0 - 2010/07/02
+v0.9.10.0 - 2010/08/09
 http://www.webmproject.org/
 mailto:matthewjheaney@google.com
 
@@ -304,7 +304,7 @@ Authoring WebM Files On Windows Using DirectShow
    among the delivery artifacts (it's in the IDL folder of the source
    tree) for a full description of each configuration parameter.
 
-Miscellaneous
+VP8 Encoder Filter Notes
 
    The VP8 encoder filter (as with the VP8 encoder library) only accepts
    YUV formats as input.  If you have a file or capture device with
@@ -316,3 +316,39 @@ Miscellaneous
    "all RGB" or "all supported" both seem to work), and then an instance
    of that filter will be created automatically when RGB-to-YUV conversion
    is required.
+
+   The VP8 encoder also has a property page, so if you're using GraphEdit
+   or similar you can modify encoder settings that way.  It works as follows.
+   The filter has a settings cache.  When you make a change to a settings
+   value (via the IVP8Encoder interface), this actually changes the value in
+   the cache. If the graph is stopped, then the settings are applied only
+   later (and automatically), during the transition from stopped to paused or
+   running. If the graph is not stopped (and you're using the IDL interface
+   directly), then you must apply the settings by calling
+   IVP8Encoder::ApplySettings. The only settings that are actually applied
+   are those settings that have a value that is not "out-of-band", which
+   typically means equal or greater than 0.  For settings that haven't been
+   set (the cached setting still has its default out-of-band value, -1), then
+   the encoder uses the default supplied by the vpx encoder library itself.
+   
+   When the property page is first loaded, it queries the cache and displays
+   any non-default settings.  Edit controls and combo boxes for settings
+   that have a default value are left blank.  When you click on the OK or
+   Apply buttons, the property page modifies the cache settings that
+   correspond to controls with non-empty values.
+
+   The Clear button on the property page dialog window simply clears
+   all of the edit controls.  If you were to Apply the values on the
+   page in this state it would have no effect, because there are no controls
+   with non-empty values.  This is useful if you want to selectively change
+   a value without disturbing values that already exist in the cache.
+
+   The Reload button re-initializes the controls on the dialog window, the
+   same as if the property page had been dismissed via the Cancel button
+   and then immediately re-created.  This is useful if you've made changes
+   to the dialog but decide to throw the values away and start over.
+
+   The Reset button calls IVP8Encoder::ResetSettings to re-initialize
+   all of the settings in the cache to their default (out-of-band) values,
+   and sets the controls to empty values.  This has the effect of throwing
+   away settings in the cache and starting over.
