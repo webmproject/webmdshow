@@ -364,6 +364,14 @@
 			RelativePath=".\vp8encoderpin.hpp"
 			>
 		</File>
+		<File
+			RelativePath=".\vp8encoderproppage.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\vp8encoderproppage.hpp"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
