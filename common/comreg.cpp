@@ -123,7 +123,10 @@ HRESULT ComReg::UnRegisterCustomFileType(
 {
     Registry::Key parent, key;
 
-    LONG e = parent.open(HKEY_CLASSES_ROOT, L"Media Type\\Extensions", KEY_ALL_ACCESS);
+    LONG e = parent.open(
+                HKEY_CLASSES_ROOT,
+                L"Media Type\\Extensions",
+                KEY_ALL_ACCESS);
 
     if (e == ERROR_FILE_NOT_FOUND)  //weird
         return S_FALSE;
@@ -555,7 +558,8 @@ HRESULT ComReg::UnRegisterCoclass(const GUID& clsid)
 
     const wstring clsid_keyname = wstring(L"CLSID\\") + clsid_str;
 
-    Registry::Key clsid_key(HKEY_CLASSES_ROOT, clsid_keyname); //TODO: , KEY_QUERY_VALUE | KEY_SET_VALUE);
+    Registry::Key clsid_key(HKEY_CLASSES_ROOT, clsid_keyname);
+    //TODO: KEY_QUERY_VALUE | KEY_SET_VALUE);
 
     if (!clsid_key.is_open())
         return S_OK;
@@ -706,6 +710,93 @@ HRESULT ComReg::GetTypeLibAttr(
 
     pTypeLib->Release();
     pTypeLib = 0;
+
+    return S_OK;
+}
+
+
+HRESULT ComReg::RegisterByteStreamHandler(
+    const wchar_t* ext,
+    const GUID& clsid,
+    const wchar_t* friendly_name)
+{
+    Registry::Key parent, key;
+
+    LONG e = parent.open(
+                HKEY_LOCAL_MACHINE,
+                L"Software\\Microsoft"
+                  L"\\Windows Media Foundation\\ByteStreamHandlers",
+                KEY_CREATE_SUB_KEY);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    e = key.create<wchar_t>(parent, ext, 0, 0, KEY_SET_VALUE, 0);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    wchar_t buf[guid_buflen];
+
+    int n = StringFromGUID2(clsid, buf, guid_buflen);
+    assert(n == guid_buflen);
+
+    e = key.set(buf, friendly_name);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    return S_OK;
+}
+
+
+HRESULT ComReg::UnRegisterByteStreamHandler(
+    const wchar_t* ext,
+    const GUID& clsid)
+{
+    Registry::Key parent, key;
+
+    LONG e = parent.open(
+                HKEY_LOCAL_MACHINE,
+                L"Software\\Microsoft"
+                  L"\\Windows Media Foundation\\ByteStreamHandlers",
+                KEY_ALL_ACCESS);
+
+    if (e == ERROR_FILE_NOT_FOUND)  //weird
+        return S_FALSE;
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    e = key.open(parent, ext, KEY_ALL_ACCESS);
+
+    if (e == ERROR_FILE_NOT_FOUND)  //normal
+        return S_FALSE;  //not an error if key does not already exist
+
+    if (e)  //indicates a deeper problem
+        return HRESULT_FROM_WIN32(e);
+
+    wchar_t clsidstr[guid_buflen];  //name
+
+    const int n = StringFromGUID2(clsid, clsidstr, guid_buflen);
+    assert(n == guid_buflen);
+
+    wstring value;
+
+    e = key.query(clsidstr, value);
+
+    if (e == ERROR_FILE_NOT_FOUND)
+        return S_FALSE;
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    key.close();
+
+    e = Registry::DeleteKey(parent, ext);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
 
     return S_OK;
 }
