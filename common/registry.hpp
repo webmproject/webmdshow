@@ -32,11 +32,13 @@ namespace Registry
 
         Key();
 
+        //open
         template<typename char_t>
-        Key(HKEY, const char_t*, REGSAM = KEY_QUERY_VALUE);  //open
+        Key(HKEY, const char_t*, REGSAM = KEY_QUERY_VALUE);
 
+        //open
         template<typename char_t>
-        Key(HKEY, const std::basic_string<char_t>&, REGSAM = KEY_QUERY_VALUE);  //open
+        Key(HKEY, const std::basic_string<char_t>&, REGSAM = KEY_QUERY_VALUE);
 
         //template<typename char_t>
         //Key(const create_t&, const char_t*);  //create
@@ -52,7 +54,10 @@ namespace Registry
         LONG open(HKEY, const char_t*, REGSAM = KEY_QUERY_VALUE);
 
         template<typename char_t>
-        LONG open(HKEY, const std::basic_string<char_t>&, REGSAM = KEY_QUERY_VALUE);
+        LONG open(
+                HKEY,
+                const std::basic_string<char_t>&,
+                REGSAM = KEY_QUERY_VALUE);
 
         template<typename char_t>
         LONG create(
@@ -90,22 +95,32 @@ namespace Registry
         }
 
         template<typename char_t>
-        LONG query(const char_t*, std::basic_string<char_t>&, DWORD = REG_SZ) const;
+        LONG query(
+                const char_t*,
+                std::basic_string<char_t>&,
+                DWORD = REG_SZ) const;
 
         template<typename char_t>
-        inline bool operator()(const char_t* val, std::basic_string<char_t>& buf, DWORD t = REG_SZ) const
+        inline bool operator()(
+            const char_t* val,
+            std::basic_string<char_t>& buf,
+            DWORD t = REG_SZ) const
         {
             return (query<char_t>(val, buf, t) == ERROR_SUCCESS);
         }
 
         template<typename char_t>
-        inline LONG query(std::basic_string<char_t>& buf, DWORD t = REG_SZ) const
+        inline LONG query(
+            std::basic_string<char_t>& buf,
+            DWORD t = REG_SZ) const
         {
             return query<char_t>((const char_t*)0, buf, t);
         }
 
         template<typename char_t>
-        inline bool operator()(std::basic_string<char_t>& buf, DWORD t = REG_SZ) const
+        inline bool operator()(
+            std::basic_string<char_t>& buf,
+            DWORD t = REG_SZ) const
         {
             return (query<char_t>(buf, t) == ERROR_SUCCESS);
         }
@@ -216,8 +231,8 @@ namespace Registry
             HKEY& hh,
             DWORD* dw)
     {
-	    return RegCreateKeyExA(h, k, 0, t, opts, sam, p, &hh, dw);
-	}
+        return RegCreateKeyExA(h, k, 0, t, opts, sam, p, &hh, dw);
+    }
 
     template<>
     inline LONG CreateKey(
@@ -230,21 +245,31 @@ namespace Registry
             HKEY& hh,
             DWORD* dw)
     {
-	    return RegCreateKeyExW(h, k, 0, t, opts, sam, p, &hh, dw);
-	}
+        return RegCreateKeyExW(h, k, 0, t, opts, sam, p, &hh, dw);
+    }
 
 
     template<typename char_t>
     LONG QueryValue(HKEY, const char_t*, DWORD&, BYTE*, DWORD&);
 
     template<>
-    inline LONG QueryValue(HKEY h, const char* n, DWORD& t, BYTE* p, DWORD& cb)
+    inline LONG QueryValue(
+        HKEY h,
+        const char* n,
+        DWORD& t,
+        BYTE* p,
+        DWORD& cb)
     {
         return RegQueryValueExA(h, n, 0, &t, p, &cb);
     }
 
     template<>
-    inline LONG QueryValue(HKEY h, const wchar_t* n, DWORD& t, BYTE* p, DWORD& cb)
+    inline LONG QueryValue(
+        HKEY h,
+        const wchar_t* n,
+        DWORD& t,
+        BYTE* p,
+        DWORD& cb)
     {
         return RegQueryValueExW(h, n, 0, &t, p, &cb);
     }
@@ -254,16 +279,26 @@ namespace Registry
     LONG SetValue(HKEY, const char_t*, DWORD, const BYTE*, DWORD);
 
     template<>
-    inline LONG SetValue(HKEY h, const char* n, DWORD t, const BYTE* p, DWORD cb)
+    inline LONG SetValue(
+        HKEY h,
+        const char* n,
+        DWORD t,
+        const BYTE* p,
+        DWORD cb)
     {
-	    return RegSetValueExA(h, n, 0, t, p, cb);
-	}
+        return RegSetValueExA(h, n, 0, t, p, cb);
+    }
 
     template<>
-    inline LONG SetValue(HKEY h, const wchar_t* n, DWORD t, const BYTE* p, DWORD cb)
+    inline LONG SetValue(
+        HKEY h,
+        const wchar_t* n,
+        DWORD t,
+        const BYTE* p,
+        DWORD cb)
     {
-	    return RegSetValueExW(h, n, 0, t, p, cb);
-	}
+        return RegSetValueExW(h, n, 0, t, p, cb);
+    }
 
     template<typename char_t>
     LONG DeleteKey(HKEY, const char_t*);
@@ -404,10 +439,10 @@ inline LONG Registry::Key::create(
 {
     close();
 
-	return CreateKey<char_t>(
-	        h,
-	        k,
-	        0, //class (object type)
+    return CreateKey<char_t>(
+            h,
+            k,
+            0, //class (object type)
             REG_OPTION_NON_VOLATILE,  //options
             KEY_ALL_ACCESS,           //samDesired
             0,                        //security attributes
@@ -443,7 +478,7 @@ inline LONG Registry::Key::create(
     SECURITY_ATTRIBUTES* const security_attributes =
         const_cast<SECURITY_ATTRIBUTES*>(const_security_attributes);
 
-	return CreateKey<char_t>(
+    return CreateKey<char_t>(
             hKey,
             subkey,
             object_type,
@@ -594,7 +629,7 @@ inline LONG Registry::Key::set(
     const BYTE* const p = reinterpret_cast<const BYTE*>(&value);
     const DWORD cb = sizeof value;
 
-	return SetValue<char_t>(m_hKey, name, type, p, cb);
+    return SetValue<char_t>(m_hKey, name, type, p, cb);
 }
 
 
@@ -607,7 +642,7 @@ inline LONG Registry::Key::set(
     const BYTE* const p = reinterpret_cast<const BYTE*>(val);
     const size_t cb = val ? strlen(val) + 1 : 0;
 
-	return SetValue<char>(m_hKey, name, type, p, DWORD(cb));
+    return SetValue<char>(m_hKey, name, type, p, DWORD(cb));
 }
 
 
@@ -622,7 +657,7 @@ inline LONG Registry::Key::set(
     const size_t len = val ? wcslen(val) + 1 : 0;
     const size_t cb = len * sizeof(wchar_t);
 
-	return SetValue<wchar_t>(m_hKey, name, type, p, DWORD(cb));
+    return SetValue<wchar_t>(m_hKey, name, type, p, DWORD(cb));
 }
 
 
@@ -635,7 +670,7 @@ inline LONG Registry::Key::setn(
 {
     const BYTE* const p = reinterpret_cast<const BYTE*>(val);
 
-	return SetValue<char>(m_hKey, name, type, p, cb);
+    return SetValue<char>(m_hKey, name, type, p, cb);
 }
 
 
@@ -649,5 +684,5 @@ inline LONG Registry::Key::setn(
     const BYTE* const p = reinterpret_cast<const BYTE*>(val);
     const DWORD cb = length_including_null * sizeof(wchar_t);
 
-	return SetValue<wchar_t>(m_hKey, name, type, p, cb);
+    return SetValue<wchar_t>(m_hKey, name, type, p, cb);
 }

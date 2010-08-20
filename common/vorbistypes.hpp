@@ -12,12 +12,12 @@ namespace VorbisTypes
 {
     struct VORBISFORMAT  //xiph.org
     {
-	    DWORD vorbisVersion;
-	    DWORD samplesPerSec;
-	    DWORD minBitsPerSec;
-	    DWORD avgBitsPerSec;
-	    DWORD maxBitsPerSec;
-	    BYTE numChannels;
+        DWORD vorbisVersion;
+        DWORD samplesPerSec;
+        DWORD minBitsPerSec;
+        DWORD avgBitsPerSec;
+        DWORD maxBitsPerSec;
+        BYTE numChannels;
     };
 
     struct VORBISFORMAT2  //matroska.org
