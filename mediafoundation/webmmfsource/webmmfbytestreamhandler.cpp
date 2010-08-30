@@ -137,10 +137,13 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
 
     IMFMediaSourcePtr pSource;
 
+    //TODO: pass pByteStream as arg to Open, not CreateSource
     HRESULT hr = CreateSource(pByteStream, &pSource);
 
     if (FAILED(hr))
         return hr;
+        
+    //TODO: init parser lib
 
     IMFAsyncResult* pResult;
 
