@@ -330,7 +330,7 @@ VP8 Encoder Filter Notes
    typically means equal or greater than 0.  For settings that haven't been
    set (the cached setting still has its default out-of-band value, -1), then
    the encoder uses the default supplied by the vpx encoder library itself.
-   
+
    When the property page is first loaded, it queries the cache and displays
    any non-default settings.  Edit controls and combo boxes for settings
    that have a default value are left blank.  When you click on the OK or

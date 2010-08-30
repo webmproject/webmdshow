@@ -187,6 +187,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\common\clockable.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\clockable.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\common\comreg.cpp"
 				>
 			</File>

@@ -3,7 +3,8 @@
 namespace WebmMfSourceLib
 {
 
-class WebmMfSource : public IMFMediaSource
+class WebmMfSource : public IMFMediaSource,
+                     public CLockable
 {
 #if 0
     friend HRESULT CreateSource(
@@ -71,6 +72,8 @@ private:
 
     IMFByteStream* const m_pByteStream;
     LONG m_cRef;
+    bool m_bShutdown;    
+    IMFMediaEventQueue* m_pEvents;
 
 };
 
