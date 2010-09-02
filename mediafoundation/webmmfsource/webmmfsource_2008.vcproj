@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\..\libwebm"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;WEBMMFSOURCE_EXPORTS"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -65,6 +65,7 @@
 				OutputFile="$(OutDir)\webmmfsource.dll"
 				LinkIncremental="2"
 				GenerateManifest="false"
+				ModuleDefinitionFile="webmmfsource.def"
 				GenerateDebugInformation="true"
 				SubSystem="0"
 				TargetMachine="1"
@@ -137,6 +138,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
+				ModuleDefinitionFile="webmmfsource.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -219,6 +221,26 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="libwebm"
+			>
+			<File
+				RelativePath="..\..\..\libwebm\mkvparser.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\libwebm\mkvparser.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\mkvreader.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\mkvreader.hpp"
+				>
+			</File>
+		</Filter>
 		<File
 			RelativePath=".\dllentry.cpp"
 			>
@@ -237,6 +259,30 @@
 		</File>
 		<File
 			RelativePath=".\webmmfsource.hpp"
+			>
+		</File>
+		<File
+			RelativePath=".\webmmfstream.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\webmmfstream.hpp"
+			>
+		</File>
+		<File
+			RelativePath=".\webmmfstreamaudio.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\webmmfstreamaudio.hpp"
+			>
+		</File>
+		<File
+			RelativePath=".\webmmfstreamvideo.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\webmmfstreamvideo.hpp"
 			>
 		</File>
 	</Files>
