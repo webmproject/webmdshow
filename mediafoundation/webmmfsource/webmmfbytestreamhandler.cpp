@@ -142,7 +142,7 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
 
     if (FAILED(hr))
         return hr;
-        
+
     //TODO: init parser lib
 
     IMFAsyncResult* pResult;
