@@ -19,16 +19,11 @@ public:
 
     static HRESULT CreateStream(
                     WebmMfSource*,
-                    mkvparser::Track*,
+                    mkvparser::AudioTrack*,
                     WebmMfStreamAudio*&);
-
-    mkvparser::AudioTrack* const m_pTrack;
-
-    //HRESULT STDMETHODCALLTYPE RequestSample(IUnknown*);
 
 protected:
 
-    mkvparser::AudioTrack* GetTrack();
     HRESULT OnPopulateSample(const mkvparser::BlockEntry*, IMFSample*);
 
 };

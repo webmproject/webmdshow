@@ -85,6 +85,7 @@ private:
     MkvReader m_file;
     LONG m_cRef;
     IMFMediaEventQueue* m_pEvents;
+    IMFPresentationDescriptor* m_pDesc;
 
     typedef std::vector<WebmMfStream*> streams_t;
     streams_t m_streams;
@@ -96,6 +97,9 @@ public:
 
     bool m_bShutdown;
     mkvparser::Segment* m_pSegment;
+
+    enum State { kStateStopped, kStatePaused, kStateStarted };
+    State m_state;
 
 };
 

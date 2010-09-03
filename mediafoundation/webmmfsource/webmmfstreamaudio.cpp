@@ -20,14 +20,11 @@ namespace WebmMfSourceLib
 
 HRESULT WebmMfStreamAudio::CreateStream(
     WebmMfSource* pSource,
-    mkvparser::Track* pTrack_,
+    mkvparser::AudioTrack* pTrack,
     WebmMfStreamAudio*& pStream)
 {
-    using mkvparser::AudioTrack;
-
-    AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);
     assert(pTrack);
-    assert(pTrack->GetType() == 2);
+    assert(pTrack->GetType() == 2);  //audio
 
     const char* const codec = pTrack->GetCodecId();
     assert(codec);
@@ -180,6 +177,20 @@ HRESULT WebmMfStreamAudio::CreateStream(
     assert(pStream);  //TODO
 
     return pStream ? S_OK : E_OUTOFMEMORY;
+}
+
+
+WebmMfStreamAudio::WebmMfStreamAudio(
+    WebmMfSource* pSource,
+    IMFStreamDescriptor* pDesc,
+    mkvparser::AudioTrack* pTrack) :
+    WebmMfStream(pSource, pDesc, pTrack)
+{
+}
+
+
+WebmMfStreamAudio::~WebmMfStreamAudio()
+{
 }
 
 

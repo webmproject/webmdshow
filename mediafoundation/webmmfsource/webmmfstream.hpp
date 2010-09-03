@@ -12,7 +12,7 @@ class WebmMfStream : public IMFMediaStream
 
 protected:
 
-    WebmMfStream(WebmMfSource*, IMFStreamDescriptor*);
+    WebmMfStream(WebmMfSource*, IMFStreamDescriptor*, mkvparser::Track*);
     virtual ~WebmMfStream();
 
 public:
@@ -49,15 +49,16 @@ public:
     HRESULT STDMETHODCALLTYPE GetStreamDescriptor(IMFStreamDescriptor**);
     HRESULT STDMETHODCALLTYPE RequestSample(IUnknown*);
 
-protected:
+    WebmMfSource* const m_pSource;
+    IMFStreamDescriptor* const m_pDesc;
+    mkvparser::Track* const m_pTrack;
 
-    virtual mkvparser::Track* GetTrack() = 0;
+protected:
 
     virtual HRESULT OnPopulateSample(
                         const mkvparser::BlockEntry*,
                         IMFSample*) = 0;
 
-    WebmMfSource* const m_pSource;
     mkvparser::Cluster* m_pBaseCluster;
     const mkvparser::BlockEntry* m_pCurr;
     const mkvparser::BlockEntry* m_pStop;
@@ -68,7 +69,6 @@ private:
     HRESULT Preload();
     HRESULT PopulateSample(IMFSample*);
 
-    IMFStreamDescriptor* const m_pDesc;
     IMFMediaEventQueue* m_pEvents;
 
 };
