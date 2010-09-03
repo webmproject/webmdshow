@@ -4,6 +4,7 @@
 //#include <mferror.h>
 #include "webmmfbytestreamhandler.hpp"
 #include <new>
+#include <cassert>
 #ifndef _INC_COMDEF
 #include <comdef.h>
 #endif
@@ -12,6 +13,9 @@ _COM_SMARTPTR_TYPEDEF(IMFMediaSource, __uuidof(IMFMediaSource));
 
 namespace WebmMfSourceLib
 {
+
+//See webmmfsource.cpp:
+HRESULT CreateSource(IMFByteStream*, IMFMediaSource**);
 
 
 HRESULT CreateHandler(
@@ -132,8 +136,6 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
 
     if (pCallback == 0)
         return E_INVALIDARG;
-
-    extern HRESULT CreateSource(IMFByteStream*, IMFMediaSource**);
 
     IMFMediaSourcePtr pSource;
 

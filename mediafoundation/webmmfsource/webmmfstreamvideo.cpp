@@ -17,12 +17,9 @@ namespace WebmMfSourceLib
 
 HRESULT WebmMfStreamVideo::CreateStream(
     WebmMfSource* pSource,
-    mkvparser::Track* pTrack_,
+    mkvparser::VideoTrack* pTrack,
     WebmMfStreamVideo*& pStream)
 {
-    using mkvparser::VideoTrack;
-
-    VideoTrack* const pTrack = static_cast<VideoTrack*>(pTrack_);
     assert(pTrack);
     assert(pTrack->GetType() == 1);
 
@@ -109,6 +106,20 @@ HRESULT WebmMfStreamVideo::CreateStream(
     pStream = new (std::nothrow) WebmMfStreamVideo(pSource, pDesc, pTrack);
 
     return pStream ? S_OK : E_OUTOFMEMORY;
+}
+
+
+WebmMfStreamVideo::WebmMfStreamVideo(
+    WebmMfSource* pSource,
+    IMFStreamDescriptor* pDesc,
+    mkvparser::VideoTrack* pTrack) :
+    WebmMfStream(pSource, pDesc, pTrack)
+{
+}
+
+
+WebmMfStreamVideo::~WebmMfStreamVideo()
+{
 }
 
 

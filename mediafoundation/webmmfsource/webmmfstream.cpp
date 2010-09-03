@@ -15,9 +15,11 @@ namespace WebmMfSourceLib
 
 WebmMfStream::WebmMfStream(
     WebmMfSource* pSource,
-    IMFStreamDescriptor* pDesc) :
+    IMFStreamDescriptor* pDesc,
+    mkvparser::Track* pTrack) :
     m_pSource(pSource),
     m_pDesc(pDesc),
+    m_pTrack(pTrack),
     m_pBaseCluster(0),
     m_pCurr(0),
     m_pStop(0),
@@ -250,28 +252,13 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
         //else
         //  deliver sample
 
-        //TODO: this is the non-paused case:
-        //hr = QueueEventWithIUnknown(this, MEMediaSample, S_OK, pSample);
-        //assert(SUCCEEDED(hr));  //TODO
-
-        PROPVARIANT prop;
-
-        prop.vt = VT_UNKNOWN;
-        prop.punkVal = pSample;
-        //TODO: addref here?
-
-        //hr = QueueEvent(MEMediaSample, GUID_NULL, S_OK, &prop);
-        //assert(SUCCEEDED(hr));
-
-        hr = m_pEvents->QueueEventParamVar(
+        hr = m_pEvents->QueueEventParamUnk(
                 MEMediaSample,
                 GUID_NULL,
                 S_OK,
-                &prop);
+                pSample);
 
         assert(SUCCEEDED(hr));
-
-        //TODO: clear prop var?
 
         //if eos
         //  m_bEOS = true;
@@ -293,9 +280,7 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
 HRESULT WebmMfStream::Preload()
 {
-    mkvparser::Track* const pTrack = GetTrack();
-
-    mkvparser::Segment* const pSegment = pTrack->m_pSegment;
+    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
 
     mkvparser::Cluster* pCluster;
     LONGLONG pos;
@@ -319,11 +304,9 @@ HRESULT WebmMfStream::Preload()
 
 HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 {
-    mkvparser::Track* const pTrack = GetTrack();
-
     if (m_pCurr == 0)
     {
-        const long result = pTrack->GetFirst(m_pCurr);
+        const long result = m_pTrack->GetFirst(m_pCurr);
 
         if (result == mkvparser::E_BUFFER_NOT_FULL)
             return result;  //try again later
@@ -351,7 +334,7 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
         //for which we could then test.
         //END TODO.
 
-        m_pBaseCluster = pTrack->m_pSegment->GetFirst();
+        m_pBaseCluster = m_pTrack->m_pSegment->GetFirst();
         assert(m_pBaseCluster);
     }
 
@@ -367,7 +350,7 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 
     const mkvparser::BlockEntry* pNextBlock;
 
-    const long result = pTrack->GetNext(m_pCurr, pNextBlock);
+    const long result = m_pTrack->GetNext(m_pCurr, pNextBlock);
 
     if (result == mkvparser::E_BUFFER_NOT_FULL)
         return VFW_E_BUFFER_UNDERFLOW;
