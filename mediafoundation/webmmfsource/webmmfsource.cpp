@@ -24,50 +24,20 @@ _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
 namespace WebmMfSourceLib
 {
 
-#if 0
 HRESULT CreateSource(
     IClassFactory* pClassFactory,
-    IUnknown* pOuter,
-    const IID& iid,
-    void** ppv)
+    IMFByteStream* pByteStream,
+    IMFMediaSource** ppResult)
 {
-    if (ppv == 0)
-        return E_POINTER;
-
-    *ppv = 0;
-
-#if 0
-    if ((pOuter != 0) && (iid != __uuidof(IUnknown)))
-        return E_INVALIDARG;
-#else
-    if (pOuter)
-        return CLASS_E_NOAGGREGATION;
-#endif
-
-    WebmMfSource* const p = new (std::nothrow) WebmMfSource(pClassFactory);
-
-    if (p == 0)
-        return E_OUTOFMEMORY;
-
-    IUnknown* const pUnk = p;
-
-    const HRESULT hr = pUnk->QueryInterface(iid, ppv);
-
-    const ULONG cRef = pUnk->Release();
-    cRef;
-
-    return hr;
-}
-#else
-HRESULT CreateSource(IMFByteStream* pByteStream, IMFMediaSource** ppResult)
-{
+    assert(pClassFactory);
     assert(pByteStream);
     assert(ppResult);
 
     IMFMediaSource*& pResult = *ppResult;
     pResult = 0;
 
-    WebmMfSource* const p = new (std::nothrow) WebmMfSource(pByteStream);
+    WebmMfSource* const p =
+        new (std::nothrow) WebmMfSource(pClassFactory, pByteStream);
 
     if (p == 0)
         return E_OUTOFMEMORY;
@@ -84,10 +54,12 @@ HRESULT CreateSource(IMFByteStream* pByteStream, IMFMediaSource** ppResult)
 
     return hr;
 }
-#endif
 
 
-WebmMfSource::WebmMfSource(IMFByteStream* pByteStream) :
+WebmMfSource::WebmMfSource(
+    IClassFactory* pClassFactory,
+    IMFByteStream* pByteStream) :
+    m_pClassFactory(pClassFactory),
     m_file(pByteStream),
     m_cRef(1),
     m_bShutdown(false),
@@ -95,11 +67,10 @@ WebmMfSource::WebmMfSource(IMFByteStream* pByteStream) :
     m_pDesc(0),
     m_state(kStateStopped)
 {
-    //TODO: this seems odd: we lock the server when creating the handler,
-    //but don't when creating an actual source object.  Do we need to
-    //also lock the server when creating a source object?
+    HRESULT hr = m_pClassFactory->LockServer(TRUE);
+    assert(SUCCEEDED(hr));
 
-    HRESULT hr = CLockable::Init();
+    hr = CLockable::Init();
     assert(SUCCEEDED(hr));  //TODO
 
     hr = MFCreateEventQueue(&m_pEvents);
@@ -119,6 +90,9 @@ WebmMfSource::~WebmMfSource()
         n;
         assert(n == 0);
     }
+
+    const HRESULT hr = m_pClassFactory->LockServer(FALSE);
+    assert(SUCCEEDED(hr));
 }
 
 

@@ -15,7 +15,7 @@ namespace WebmMfSourceLib
 {
 
 //See webmmfsource.cpp:
-HRESULT CreateSource(IMFByteStream*, IMFMediaSource**);
+HRESULT CreateSource(IClassFactory*, IMFByteStream*, IMFMediaSource**);
 
 
 HRESULT CreateHandler(
@@ -59,17 +59,15 @@ WebmMfByteStreamHandler::WebmMfByteStreamHandler(
     m_pClassFactory(pClassFactory),
     m_cRef(1)
 {
-    //TODO: this seems odd: we lock the server when creating the handler,
-    //but don't when creating an actual source object.  Do we need to
-    //also lock the server when creating a source object?
-
-    m_pClassFactory->LockServer(TRUE);
+    const HRESULT hr = m_pClassFactory->LockServer(TRUE);
+    assert(SUCCEEDED(hr));
 }
 
 
 WebmMfByteStreamHandler::~WebmMfByteStreamHandler()
 {
-    m_pClassFactory->LockServer(FALSE);
+    const HRESULT hr = m_pClassFactory->LockServer(FALSE);
+    assert(SUCCEEDED(hr));
 }
 
 
@@ -144,7 +142,7 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     IMFMediaSourcePtr pSource;
 
     //TODO: pass pByteStream as arg to Open, not CreateSource
-    HRESULT hr = CreateSource(pByteStream, &pSource);
+    HRESULT hr = CreateSource(m_pClassFactory, pByteStream, &pSource);
 
     if (FAILED(hr))
         return hr;
