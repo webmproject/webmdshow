@@ -47,7 +47,7 @@ private:
     explicit WebmMfByteStreamHandler(IClassFactory*);
     virtual ~WebmMfByteStreamHandler();
 
-    IClassFactory* m_pClassFactory;
+    IClassFactory* const m_pClassFactory;
     LONG m_cRef;
 
 };

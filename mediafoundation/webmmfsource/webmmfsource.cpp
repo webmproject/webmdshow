@@ -95,6 +95,10 @@ WebmMfSource::WebmMfSource(IMFByteStream* pByteStream) :
     m_pDesc(0),
     m_state(kStateStopped)
 {
+    //TODO: this seems odd: we lock the server when creating the handler,
+    //but don't when creating an actual source object.  Do we need to
+    //also lock the server when creating a source object?
+
     HRESULT hr = CLockable::Init();
     assert(SUCCEEDED(hr));  //TODO
 
@@ -303,15 +307,22 @@ HRESULT WebmMfSource::Load()
         assert(dv.back() != 0);
     }
 
-    const DWORD n = static_cast<DWORD>(dv.size());
+    DWORD n = static_cast<DWORD>(dv.size());
     assert(n);
 
     hr = MFCreatePresentationDescriptor(n, &dv[0], &m_pDesc);
     assert(SUCCEEDED(hr));
     assert(m_pDesc);
 
-    //TODO: must select stream(s)?
-    //must create a handler?
+    hr = m_pDesc->GetStreamDescriptorCount(&n);
+    assert(SUCCEEDED(hr));
+    assert(n == static_cast<DWORD>(dv.size()));
+
+    for (DWORD idx = 0; idx < n; ++idx)
+    {
+        hr = m_pDesc->SelectStream(idx);
+        assert(SUCCEEDED(hr));
+    }
 
     const LONGLONG duration_ns = m_pSegment->GetDuration();
     assert(duration_ns >= 0);
@@ -553,6 +564,11 @@ HRESULT WebmMfSource::Start(
         default:
             return MF_E_UNSUPPORTED_TIME_FORMAT;
     }
+
+    //Writing a Custom Media Source:
+    //http://msdn.microsoft.com/en-us/library/ms700134(v=VS.85).aspx
+    //
+
 
     DWORD count;
 

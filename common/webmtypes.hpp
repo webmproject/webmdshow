@@ -21,4 +21,7 @@ namespace WebmTypes
 
     extern const CLSID CLSID_WebmMfSource;  //Media Foundation
     extern const CLSID CLSID_WebmMfByteStreamHandler;
+
+    extern const CLSID CLSID_WebmMfVp8Dec;  //Media Foundation
+
 }
