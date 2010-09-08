@@ -13,15 +13,10 @@ class WebmMfStream;
 class WebmMfSource : public IMFMediaSource,
                      public CLockable
 {
-#if 0
     friend HRESULT CreateSource(
-            IClassFactory*,
-            IUnknown*,
-            const IID&,
-            void**);
-#else
-    friend HRESULT CreateSource(IMFByteStream*, IMFMediaSource**);
-#endif
+        IClassFactory*,
+        IMFByteStream*,
+        IMFMediaSource**);
 
     WebmMfSource(const WebmMfSource&);
     WebmMfSource& operator=(const WebmMfSource&);
@@ -76,12 +71,12 @@ private:
 
     static std::wstring ConvertFromUTF8(const char*);
 
-    explicit WebmMfSource(IMFByteStream*);
+    WebmMfSource(IClassFactory*, IMFByteStream*);
     virtual ~WebmMfSource();
 
     HRESULT Load();
 
-    //IMFByteStream* const m_pByteStream;
+    IClassFactory* const m_pClassFactory;
     MkvReader m_file;
     LONG m_cRef;
     IMFMediaEventQueue* m_pEvents;
