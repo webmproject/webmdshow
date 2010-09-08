@@ -11,7 +11,7 @@
 #include "webmtypes.hpp"
 #include <cassert>
 #include <comdef.h>
-#include <uuids.h>
+//#include <uuids.h>
 
 HMODULE g_hModule;
 static ULONG s_cLock;

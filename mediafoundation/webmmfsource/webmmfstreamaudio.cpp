@@ -11,6 +11,7 @@
 
 _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
 _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
+_COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, __uuidof(IMFMediaTypeHandler));
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 
 
@@ -172,6 +173,15 @@ HRESULT WebmMfStreamAudio::CreateStream(
     hr = MFCreateStreamDescriptor(id, 1, mtv, &pDesc);
     assert(SUCCEEDED(hr));
     assert(pDesc);
+
+    IMFMediaTypeHandlerPtr ph;
+
+    hr = pDesc->GetMediaTypeHandler(&ph);
+    assert(SUCCEEDED(hr));
+    assert(ph);
+
+    hr = ph->SetCurrentMediaType(pmt);
+    assert(SUCCEEDED(hr));
 
     pStream = new (std::nothrow) WebmMfStreamAudio(pSource, pDesc, pTrack);
     assert(pStream);  //TODO

@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfsource_2008", "webmmfsource\webmmfsource_2008.vcproj", "{9A43AE3B-13E0-4871-B08C-C20E5D72A323}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfvp8dec_2008", "webmmfvp8dec\webmmfvp8dec_2008.vcproj", "{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -13,6 +15,10 @@ Global
 		{9A43AE3B-13E0-4871-B08C-C20E5D72A323}.Debug|Win32.Build.0 = Debug|Win32
 		{9A43AE3B-13E0-4871-B08C-C20E5D72A323}.Release|Win32.ActiveCfg = Release|Win32
 		{9A43AE3B-13E0-4871-B08C-C20E5D72A323}.Release|Win32.Build.0 = Release|Win32
+		{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}.Debug|Win32.Build.0 = Debug|Win32
+		{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}.Release|Win32.ActiveCfg = Release|Win32
+		{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

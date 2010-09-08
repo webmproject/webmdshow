@@ -59,6 +59,10 @@ WebmMfByteStreamHandler::WebmMfByteStreamHandler(
     m_pClassFactory(pClassFactory),
     m_cRef(1)
 {
+    //TODO: this seems odd: we lock the server when creating the handler,
+    //but don't when creating an actual source object.  Do we need to
+    //also lock the server when creating a source object?
+
     m_pClassFactory->LockServer(TRUE);
 }
 
