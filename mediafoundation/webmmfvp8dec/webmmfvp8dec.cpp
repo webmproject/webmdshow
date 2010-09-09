@@ -72,6 +72,8 @@ WebmMfVp8Dec::~WebmMfVp8Dec()
         n;
         assert(n == 0);
 
+        m_pInputMediaType = 0;
+
         const vpx_codec_err_t e = vpx_codec_destroy(&m_ctx);
         e;
         assert(e == VPX_CODEC_OK);
@@ -82,6 +84,8 @@ WebmMfVp8Dec::~WebmMfVp8Dec()
         const ULONG n = m_pOutputMediaType->Release();
         n;
         assert(n == 0);
+
+        m_pOutputMediaType = 0;
     }
 
     HRESULT hr = m_pClassFactory->LockServer(FALSE);
@@ -435,7 +439,14 @@ HRESULT WebmMfVp8Dec::GetOutputAvailableType(
 
     IMFMediaType*& pmt = *pp;
 
-    HRESULT hr = MFCreateMediaType(&pmt);
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    hr = MFCreateMediaType(&pmt);
     assert(SUCCEEDED(hr));
     assert(pmt);
 
@@ -461,8 +472,50 @@ HRESULT WebmMfVp8Dec::GetOutputAvailableType(
     hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
     assert(SUCCEEDED(hr));
 
-    //TODO: I assume these will be affected by the characteristics
-    //of the input stream, when it is actually connected.
+    if (m_pInputMediaType == 0)
+        return S_OK;
+
+    FrameRate r;
+
+    hr = MFGetAttributeRatio(
+            m_pInputMediaType,
+            MF_MT_FRAME_RATE,
+            &r.numerator,
+            &r.denominator);
+
+    if (SUCCEEDED(hr))
+    {
+        assert(r.denominator);
+        assert(r.numerator);
+
+        hr = MFSetAttributeRatio(
+                pmt,
+                MF_MT_FRAME_RATE,
+                r.numerator,
+                r.denominator);
+
+        assert(SUCCEEDED(hr));
+    }
+
+    FrameSize s;
+
+    hr = MFGetAttributeSize(
+            m_pInputMediaType,
+            MF_MT_FRAME_SIZE,
+            &s.width,
+            &s.height);
+
+    assert(SUCCEEDED(hr));
+    assert(s.width);
+    assert(s.height);
+
+    hr = MFSetAttributeSize(
+            pmt,
+            MF_MT_FRAME_SIZE,
+            s.width,
+            s.height);
+
+    assert(SUCCEEDED(hr));
 
     return S_OK;
 }
@@ -476,6 +529,13 @@ HRESULT WebmMfVp8Dec::SetInputType(
     if (dwInputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
     if (pmt == 0)
     {
         //TODO: disallow this case while we're playing?
@@ -486,17 +546,32 @@ HRESULT WebmMfVp8Dec::SetInputType(
             n;
             assert(n == 0);
 
+            m_pInputMediaType = 0;
+
             const vpx_codec_err_t e = vpx_codec_destroy(&m_ctx);
             e;
             assert(e == VPX_CODEC_OK);
         }
 
+        if (m_pOutputMediaType)
+        {
+            const ULONG n = m_pOutputMediaType->Release();
+            n;
+            assert(n == 0);
+
+            m_pOutputMediaType = 0;
+        }
+
         return S_OK;
     }
 
+    //TODO: handle the case when already have an input media type
+    //or output media type, or are already playing.  I don't
+    //think we can change media types while we're playing.
+
     GUID g;
 
-    HRESULT hr = pmt->GetMajorType(&g);
+    hr = pmt->GetMajorType(&g);
 
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
@@ -523,15 +598,16 @@ HRESULT WebmMfVp8Dec::SetInputType(
             &r.numerator,
             &r.denominator);
 
-    //TODO: for a decoder, we can liberalize this
     if (FAILED(hr))
-        return MF_E_INVALIDMEDIATYPE;
+        r.numerator = 0;  //means "not set"
+    else
+    {
+        if (r.denominator == 0)
+            return MF_E_INVALIDMEDIATYPE;
 
-    if (r.denominator == 0)
-        return MF_E_INVALIDMEDIATYPE;
-
-    if (r.numerator == 0)
-        return MF_E_INVALIDMEDIATYPE;
+        if (r.numerator == 0)
+            return MF_E_INVALIDMEDIATYPE;
+    }
 
     FrameSize s;
 
@@ -541,7 +617,6 @@ HRESULT WebmMfVp8Dec::SetInputType(
             &s.width,
             &s.height);
 
-    //TODO: for a decoder, we can liberalize this
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
 
@@ -598,6 +673,47 @@ HRESULT WebmMfVp8Dec::SetInputType(
 
     //const HRESULT hr = OnApplyPostProcessing();
 
+    //TODO: resolve this
+    assert(m_pOutputMediaType == 0);
+
+    //TODO:
+    //We could update the preferred ("available") output media types,
+    //now that we know the frame rate and frame size, etc.
+
+    hr = MFCreateMediaType(&m_pOutputMediaType);
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_YV12);
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
+    assert(SUCCEEDED(hr));  //TODO
+
+    if (r.numerator)  //means "has been set"
+    {
+        hr = MFSetAttributeRatio(
+                m_pOutputMediaType,
+                MF_MT_FRAME_RATE,
+                r.numerator,
+                r.denominator);
+
+        assert(SUCCEEDED(hr));  //TODO
+    }
+
+    hr = MFSetAttributeSize(
+            m_pOutputMediaType,
+            MF_MT_FRAME_SIZE,
+            s.width,
+            s.height);
+
+    assert(SUCCEEDED(hr));  //TODO
+
     return S_OK;
 }
 
@@ -610,6 +726,13 @@ HRESULT WebmMfVp8Dec::SetOutputType(
     if (dwOutputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
     if (pmt == 0)
     {
         //TODO: disallow this case while we're playing?
@@ -619,14 +742,19 @@ HRESULT WebmMfVp8Dec::SetOutputType(
             const ULONG n = m_pOutputMediaType->Release();
             n;
             assert(n == 0);
+
+            m_pOutputMediaType = 0;
         }
 
         return S_OK;
     }
 
+    if (m_pInputMediaType == 0)
+        return MF_E_TRANSFORM_TYPE_NOT_SET;
+
     GUID g;
 
-    HRESULT hr = pmt->GetMajorType(&g);
+    hr = pmt->GetMajorType(&g);
 
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
@@ -642,6 +770,8 @@ HRESULT WebmMfVp8Dec::SetOutputType(
     if ((g != MFVideoFormat_YV12) &&
         (g != MFVideoFormat_IYUV))
     {
+        //TODO: add I420 support
+
         return MF_E_INVALIDMEDIATYPE;
     }
 
@@ -661,23 +791,21 @@ HRESULT WebmMfVp8Dec::SetOutputType(
 
     if (SUCCEEDED(hr))
     {
-        if (r_out.denominator == 0)
-            return MF_E_INVALIDMEDIATYPE;
+        FrameRate r_in;
 
-        if (r_out.numerator == 0)
-            return MF_E_INVALIDMEDIATYPE;
+        hr = MFGetAttributeRatio(
+                m_pInputMediaType,
+                MF_MT_FRAME_RATE,
+                &r_in.numerator,
+                &r_in.denominator);
 
-        if (m_pInputMediaType)
+        if (SUCCEEDED(hr))
         {
-            FrameRate r_in;
+            if (r_out.denominator == 0)
+                return MF_E_INVALIDMEDIATYPE;
 
-            hr = MFGetAttributeRatio(
-                    pmt,
-                    MF_MT_FRAME_RATE,
-                    &r_in.numerator,
-                    &r_in.denominator);
-
-            assert(SUCCEEDED(hr));
+            if (r_out.numerator == 0)
+                return MF_E_INVALIDMEDIATYPE;
 
             const UINT64 n_in = r_in.numerator;
             const UINT64 d_in = r_in.denominator;
@@ -711,24 +839,21 @@ HRESULT WebmMfVp8Dec::SetOutputType(
         if (s_out.height == 0)
             return MF_E_INVALIDMEDIATYPE;
 
-        if (m_pInputMediaType)
-        {
-            FrameSize s_in;
+        FrameSize s_in;
 
-            hr = MFGetAttributeSize(
-                    pmt,
-                    MF_MT_FRAME_SIZE,
-                    &s_in.width,
-                    &s_in.height);
+        hr = MFGetAttributeSize(
+                m_pInputMediaType,
+                MF_MT_FRAME_SIZE,
+                &s_in.width,
+                &s_in.height);
 
-            assert(SUCCEEDED(hr));
+        assert(SUCCEEDED(hr));
 
-            if (s_out.width != s_in.width)
-                return MF_E_INVALIDMEDIATYPE;
+        if (s_out.width != s_in.width)
+            return MF_E_INVALIDMEDIATYPE;
 
-            if (s_out.height != s_in.height)
-                return MF_E_INVALIDMEDIATYPE;
-        }
+        if (s_out.height != s_in.height)
+            return MF_E_INVALIDMEDIATYPE;
     }
 
     if (dwFlags & MFT_SET_TYPE_TEST_ONLY)
