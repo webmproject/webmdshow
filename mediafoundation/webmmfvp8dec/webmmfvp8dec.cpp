@@ -1,9 +1,20 @@
+#pragma warning(disable:4505)  //unreferenced local function removed
+#include "clockable.hpp"
+#include <mfidl.h>
+#include "vpx_decoder.h"
+#include "vp8dx.h"
+#include <list>
 #include "webmmfvp8dec.hpp"
 #include "webmtypes.hpp"
 #include <mfapi.h>
 #include <mferror.h>
+#include <comdef.h>
 #include <cassert>
 #include <new>
+
+_COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
+_COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
+
 
 namespace WebmMfVp8DecLib
 {
@@ -60,6 +71,10 @@ WebmMfVp8Dec::~WebmMfVp8Dec()
         const ULONG n = m_pInputMediaType->Release();
         n;
         assert(n == 0);
+
+        const vpx_codec_err_t e = vpx_codec_destroy(&m_ctx);
+        e;
+        assert(e == VPX_CODEC_OK);
     }
 
     if (m_pOutputMediaType)
@@ -206,10 +221,11 @@ HRESULT WebmMfVp8Dec::GetInputStreamInfo(
     //DWORD cbMaxLookahead;
     //DWORD cbAlignment;
 
-    info.hnsMaxLatency = 0;  //?
+    info.cbMaxLookahead = 0;
+    info.hnsMaxLatency = 0;
     //TODO: does lag-in-frames matter here?
-
-    info.dwFlags = 0;  //TODO
+    //See "_MFT_INPUT_STREAM_INFO_FLAGS Enumeration" for more info:
+    //http://msdn.microsoft.com/en-us/library/ms703975%28v=VS.85%29.aspx
 
     //enum _MFT_INPUT_STREAM_INFO_FLAGS
     // { MFT_INPUT_STREAM_WHOLE_SAMPLES = 0x1,
@@ -222,10 +238,11 @@ HRESULT WebmMfVp8Dec::GetInputStreamInfo(
     // MFT_INPUT_STREAM_PROCESSES_IN_PLACE = 0x800
     // };
 
-    info.cbSize = 0;  //input size is variable
+    info.dwFlags = MFT_INPUT_STREAM_WHOLE_SAMPLES |
+                   MFT_INPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER;
+                   //MFT_INPUT_STREAM_DOES_NOT_ADDREF;
 
-    info.cbMaxLookahead = 0;  //TODO
-
+    info.cbSize = 0;       //input size is variable
     info.cbAlignment = 0;  //no specific alignment requirements
 
     return S_OK;
@@ -242,11 +259,14 @@ HRESULT WebmMfVp8Dec::GetOutputStreamInfo(
     if (dwOutputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
-    MFT_OUTPUT_STREAM_INFO& info = *pStreamInfo;
+    Lock lock;
 
-    //DWORD dwFlags;
-    //DWORD cbSize;
-    //DWORD cbAlignment;
+    const HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    MFT_OUTPUT_STREAM_INFO& info = *pStreamInfo;
 
     //enum _MFT_OUTPUT_STREAM_INFO_FLAGS
     //  {   MFT_OUTPUT_STREAM_WHOLE_SAMPLES = 0x1,
@@ -262,17 +282,53 @@ HRESULT WebmMfVp8Dec::GetOutputStreamInfo(
 
     //see Decoder sample in the SDK
     //decoder.cpp
-    //MFT_OUTPUT_STREAM_WHOLE_SAMPLES |
-    //MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER |
-    //MFT_OUTPUT_STREAM_FIXED_SAMPLE_SIZE ;
 
-    info.dwFlags = 0;  //TODO
+    //The API says that the only flag that is meaningful prior to SetOutputType
+    //is the OPTIONAL flag.  We need the frame dimensions, and the stride,
+    //in order to calculte the cbSize value.
 
-    info.cbSize = 0;  //TODO
+    info.dwFlags = MFT_OUTPUT_STREAM_WHOLE_SAMPLES |
+                   MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER |
+                   MFT_OUTPUT_STREAM_FIXED_SAMPLE_SIZE;
 
-    info.cbAlignment = 0;  //TODO
+    FrameSize size;
+
+    info.cbSize = GetOutputBufferSize(size);
+    info.cbAlignment = 0;
 
     return S_OK;
+}
+
+
+DWORD WebmMfVp8Dec::GetOutputBufferSize(FrameSize& s) const
+{
+    //MFT was already locked by caller
+
+    //TODO: for now, assume width and height are specified
+    //via the input media type.
+
+    if (m_pInputMediaType == 0)
+        return 0;
+
+    HRESULT hr = MFGetAttributeSize(
+                    m_pInputMediaType,
+                    MF_MT_FRAME_SIZE,
+                    &s.width,
+                    &s.height);
+
+    assert(SUCCEEDED(hr));
+
+    const DWORD w = s.width;
+    assert(w);
+
+    const DWORD h = s.height;
+    assert(h);
+
+    const DWORD cb = w*h + 2*(((w+1)/2)*((h+1)/2));
+
+    //TODO: this result does not account for stride
+
+    return cb;
 }
 
 
@@ -429,6 +485,10 @@ HRESULT WebmMfVp8Dec::SetInputType(
             const ULONG n = m_pInputMediaType->Release();
             n;
             assert(n == 0);
+
+            const vpx_codec_err_t e = vpx_codec_destroy(&m_ctx);
+            e;
+            assert(e == VPX_CODEC_OK);
         }
 
         return S_OK;
@@ -463,6 +523,7 @@ HRESULT WebmMfVp8Dec::SetInputType(
             &r.numerator,
             &r.denominator);
 
+    //TODO: for a decoder, we can liberalize this
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
 
@@ -480,6 +541,7 @@ HRESULT WebmMfVp8Dec::SetInputType(
             &s.width,
             &s.height);
 
+    //TODO: for a decoder, we can liberalize this
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
 
@@ -498,6 +560,10 @@ HRESULT WebmMfVp8Dec::SetInputType(
     {
         hr = m_pInputMediaType->DeleteAllItems();
         assert(SUCCEEDED(hr));
+
+        const vpx_codec_err_t e = vpx_codec_destroy(&m_ctx);
+        e;
+        assert(e == VPX_CODEC_OK);
     }
     else
     {
@@ -512,7 +578,25 @@ HRESULT WebmMfVp8Dec::SetInputType(
     if (FAILED(hr))
         return hr;
 
-    //TODO: do something
+    //TODO: should this really be done here?
+
+    vpx_codec_iface_t& vp8 = vpx_codec_vp8_dx_algo;
+
+    const int flags = 0;  //TODO: VPX_CODEC_USE_POSTPROC;
+
+    const vpx_codec_err_t err = vpx_codec_dec_init(
+                                    &m_ctx,
+                                    &vp8,
+                                    0,
+                                    flags);
+
+    if (err == VPX_CODEC_MEM_ERROR)
+        return E_OUTOFMEMORY;
+
+    if (err != VPX_CODEC_OK)
+        return E_FAIL;
+
+    //const HRESULT hr = OnApplyPostProcessing();
 
     return S_OK;
 }
@@ -722,7 +806,9 @@ HRESULT WebmMfVp8Dec::GetOutputCurrentType(
     if (FAILED(hr))
         return hr;
 
-    if (m_pOutputMediaType == 0)
+    //TODO: synthesize from input media type?
+
+    if (m_pOutputMediaType == 0)  //TODO: liberalize?
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     IMFMediaType*& p = *pp;
@@ -760,16 +846,23 @@ HRESULT WebmMfVp8Dec::GetInputStatus(
 
     DWORD& dwFlags = *pdwFlags;
 
-    //TODO: just say yes for now
-    dwFlags = MFT_INPUT_STATUS_ACCEPT_DATA;
+#if 0
+    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
+
+    dwFlags = (f == 0) ? MFT_INPUT_STATUS_ACCEPT_DATA : 0;
+#else
+    dwFlags = MFT_INPUT_STATUS_ACCEPT_DATA;  //because we always queue
+#endif
 
     return S_OK;
 }
 
 
-HRESULT WebmMfVp8Dec::GetOutputStatus(
-    DWORD* pdwFlags)
+HRESULT WebmMfVp8Dec::GetOutputStatus(DWORD*)
 {
+#if 1
+    return E_NOTIMPL;
+#else
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -787,14 +880,16 @@ HRESULT WebmMfVp8Dec::GetOutputStatus(
 
     DWORD& dwFlags = *pdwFlags;
 
-    //TODO: just say yes for now
-    dwFlags = MFT_OUTPUT_STATUS_SAMPLE_READY;
+    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
+
+    dwFlags = f ? MFT_OUTPUT_STATUS_SAMPLE_READY : 0;
 
     //TODO: alternatively, we could return E_NOTIMPL, which
     //forces client to call ProcessOutput to determine whether
     //a sample is ready.
 
     return S_OK;
+#endif
 }
 
 
@@ -830,6 +925,50 @@ HRESULT WebmMfVp8Dec::ProcessInput(
     IMFSample* pSample,
     DWORD)
 {
+    if (dwInputStreamID != 0)
+        return MF_E_INVALIDSTREAMNUMBER;
+
+    if (pSample == 0)
+        return E_INVALIDARG;
+
+    DWORD count;
+
+    HRESULT hr = pSample->GetBufferCount(&count);
+    assert(SUCCEEDED(hr));
+
+    if (count == 0)
+        return S_OK;  //TODO: is this an error?
+
+    if (count > 1)
+        return E_INVALIDARG;
+
+    //TODO: check duration
+    //TODO: check timestamp
+
+    Lock lock;
+
+    hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pInputMediaType == 0)
+        return MF_E_TRANSFORM_TYPE_NOT_SET;
+
+    //TODO: resolve this
+    //if (m_pOutputMediaType == 0)  //TODO:
+    //    return MF_E_TRANSFORM_TYPE_NOT_SET;
+
+#if 0
+    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
+
+    if (f)
+        return MF_E_NOTACCEPTING;
+#endif
+
+    pSample->AddRef();
+    m_samples.push_back(pSample);
+
     return S_OK;  //TODO!
 }
 
@@ -840,8 +979,315 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     MFT_OUTPUT_DATA_BUFFER* pOutputSamples,
     DWORD* pdwStatus)
 {
-    return S_OK;  //TODO!
+    if (pdwStatus)
+        *pdwStatus = 0;
+
+    if (dwFlags)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pInputMediaType == 0)
+        return MF_E_TRANSFORM_TYPE_NOT_SET;
+
+#if _DEBUG
+    {
+        vpx_codec_iter_t iter = 0;
+        vpx_image_t* f = vpx_codec_get_frame(&m_ctx, &iter);
+        assert(f == 0);
+    }
+#endif
+
+    if (m_samples.empty())
+        return MF_E_TRANSFORM_NEED_MORE_INPUT;
+
+    if (cOutputBufferCount == 0)
+        return E_INVALIDARG;
+
+    if (pOutputSamples == 0)
+        return E_INVALIDARG;
+
+    //TODO: check if cOutputSamples > 1 ?
+
+    MFT_OUTPUT_DATA_BUFFER& data = pOutputSamples[0];
+
+    //data.dwStreamID should equal 0, but we ignore it
+
+    IMFSample* const pSample_out = data.pSample;
+
+    if (pSample_out == 0)
+        return E_INVALIDARG;
+
+    DWORD count;
+
+    hr = pSample_out->GetBufferCount(&count);
+
+    if (SUCCEEDED(hr) && (count != 1))
+        return E_INVALIDARG;
+
+    IMFMediaBufferPtr buf_out;
+
+    hr = pSample_out->GetBufferByIndex(0, &buf_out);
+
+    if (FAILED(hr) || !bool(buf_out))
+        return E_INVALIDARG;
+
+    IMFSample* const pSample_in = m_samples.front();
+    assert(pSample_in);
+
+    m_samples.pop_front();
+
+    IMFMediaBufferPtr buf_in;
+
+    hr = pSample_in->GetBufferByIndex(0, &buf_in);
+    assert(SUCCEEDED(hr));
+    assert(buf_in);
+
+    BYTE* ptr;
+    DWORD len;
+
+    hr = buf_in->Lock(&ptr, 0, &len);
+    assert(SUCCEEDED(hr));
+    assert(ptr);
+    assert(len);
+
+    const vpx_codec_err_t e = vpx_codec_decode(&m_ctx, ptr, len, 0, 0);
+    assert(e == VPX_CODEC_OK);  //TODO
+
+    hr = buf_in->Unlock();
+    assert(SUCCEEDED(hr));
+
+    assert(m_pOutputMediaType);
+
+    GUID subtype;
+
+    hr = m_pOutputMediaType->GetGUID(MF_MT_SUBTYPE, &subtype);
+    assert(SUCCEEDED(hr));
+    assert((subtype == MFVideoFormat_YV12) || (subtype == MFVideoFormat_IYUV));
+
+    //TODO:
+    //MFVideoFormat_I420
+
+    const DWORD fcc = subtype.Data1;
+
+    FrameSize frame_size;
+
+    const DWORD cbFrameLen = GetOutputBufferSize(frame_size);
+    assert(cbFrameLen > 0);
+
+    //The sequence of querying for the output buffer is described on
+    //the page "Uncompressed Video Buffers".
+    //http://msdn.microsoft.com/en-us/library/aa473821%28v=VS.85%29.aspx
+
+    IMF2DBuffer* buf2d_out;
+
+    hr = buf_out->QueryInterface(&buf2d_out);
+
+    if (SUCCEEDED(hr))
+    {
+        assert(buf2d_out);
+
+        LONG stride_out;
+
+        hr = buf2d_out->Lock2D(&ptr, &stride_out);
+        assert(SUCCEEDED(hr));
+        assert(ptr);
+        assert(stride_out > 0);  //top-down DIBs are positive, right?
+
+        hr = GetFrame(ptr, stride_out, subtype);
+        assert(SUCCEEDED(hr));
+
+        //TODO: set output buffer length?
+
+        hr = buf2d_out->Unlock2D();
+        assert(SUCCEEDED(hr));
+
+        buf2d_out->Release();
+        buf2d_out = 0;
+    }
+    else
+    {
+        DWORD cbMaxLen;
+
+        hr = buf_out->Lock(&ptr, &cbMaxLen, 0);
+        assert(SUCCEEDED(hr));
+        assert(ptr);
+
+        assert(cbMaxLen >= cbFrameLen);
+
+        //TODO: verify stride of output buffer
+        //The page "Uncompressed Video Buffers" here:
+        //http://msdn.microsoft.com/en-us/library/aa473821%28v=VS.85%29.aspx
+        //explains how to calculate the "minimum stride":
+        //  MF_MT_DEFAULT_STRIDE
+        //  or, MFGetStrideForBitmapInfoHader
+        //  or, calculate it yourself
+
+        INT32 stride_out;
+
+        hr = pSample_out->GetUINT32(
+                MF_MT_DEFAULT_STRIDE,
+                (UINT32*)&stride_out);
+
+        if (SUCCEEDED(hr) && (stride_out != 0))
+            assert(stride_out > 0);
+        else
+        {
+            const DWORD w = frame_size.width;
+            LONG stride_out_;
+
+            hr = MFGetStrideForBitmapInfoHeader(fcc, w, &stride_out_);
+
+            if (SUCCEEDED(hr) && (stride_out_ != 0))
+            {
+                assert(stride_out_ > 0);
+                stride_out = stride_out_;
+            }
+            else
+            {
+                assert((w % 2) == 0);  //TODO
+                stride_out = w;  //TODO: is this correct???
+            }
+        }
+
+        hr = GetFrame(ptr, stride_out, subtype);
+        assert(SUCCEEDED(hr));
+
+        hr = buf_out->SetCurrentLength(cbFrameLen);
+        assert(SUCCEEDED(hr));
+
+        hr = buf_out->Unlock();
+        assert(SUCCEEDED(hr));
+    }
+
+    LONGLONG t;
+
+    hr = pSample_in->GetSampleTime(&t);
+
+    if (SUCCEEDED(hr))
+    {
+        assert(t >= 0);
+
+        hr = pSample_out->SetSampleTime(t);
+        assert(SUCCEEDED(hr));
+    }
+
+    hr = pSample_in->GetSampleDuration(&t);
+
+    if (SUCCEEDED(hr))
+    {
+        assert(t >= 0);  //TODO: move this into predicate?
+
+        hr = pSample_out->SetSampleDuration(t);
+        assert(SUCCEEDED(hr));
+    }
+
+    pSample_in->Release();
+
+    return S_OK;
 }
+
+
+HRESULT WebmMfVp8Dec::GetFrame(
+    BYTE* pOutBuf,
+    ULONG strideOut,
+    const GUID& subtype)
+{
+    assert(pOutBuf);
+    assert(strideOut);
+    assert((strideOut % 2) == 0);  //TODO: resolve this issue
+
+    vpx_codec_iter_t iter = 0;
+
+    const vpx_image_t* f = vpx_codec_get_frame(&m_ctx, &iter);
+    assert(f);  //TODO: this will fail if alt-ref frame ("invisible")
+
+    //Y
+
+    const BYTE* pInY = f->planes[PLANE_Y];
+    assert(pInY);
+
+    unsigned int wIn = f->d_w;
+    unsigned int hIn = f->d_h;
+
+    BYTE* pOut = pOutBuf;
+
+    const int strideInY = f->stride[PLANE_Y];
+
+    for (unsigned int y = 0; y < hIn; ++y)
+    {
+        memcpy(pOut, pInY, wIn);
+        pInY += strideInY;
+        pOut += strideOut;
+    }
+
+    strideOut /= 2;
+
+    wIn = (wIn + 1) / 2;
+    hIn = (hIn + 1) / 2;
+
+    const BYTE* pInV = f->planes[PLANE_V];
+    assert(pInV);
+
+    const int strideInV = f->stride[PLANE_V];
+
+    const BYTE* pInU = f->planes[PLANE_U];
+    assert(pInU);
+
+    const int strideInU = f->stride[PLANE_U];
+
+    if (subtype == MFVideoFormat_YV12)
+    {
+        //V
+
+        for (unsigned int y = 0; y < hIn; ++y)
+        {
+            memcpy(pOut, pInV, wIn);
+            pInV += strideInV;
+            pOut += strideOut;
+        }
+
+        //U
+
+        for (unsigned int y = 0; y < hIn; ++y)
+        {
+            memcpy(pOut, pInU, wIn);
+            pInU += strideInU;
+            pOut += strideOut;
+        }
+    }
+    else
+    {
+        //U
+
+        for (unsigned int y = 0; y < hIn; ++y)
+        {
+            memcpy(pOut, pInU, wIn);
+            pInU += strideInU;
+            pOut += strideOut;
+        }
+
+        //V
+
+        for (unsigned int y = 0; y < hIn; ++y)
+        {
+            memcpy(pOut, pInV, wIn);
+            pInV += strideInV;
+            pOut += strideOut;
+        }
+    }
+
+    f = vpx_codec_get_frame(&m_ctx, &iter);
+    assert(f == 0);
+
+    return S_OK;
+}
+
 
 
 }  //end namespace WebmMfVp8DecLib

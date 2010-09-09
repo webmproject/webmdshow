@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common; $(SolutionDir)..\vp8_sdk\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;WEBMMFVP8DEC_EXPORTS"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -61,9 +61,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mfuuid.lib mfplat.lib"
+				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmtd.lib"
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="$(SolutionDir)..\vp8_sdk\lib\Win32"
 				GenerateManifest="false"
 				ModuleDefinitionFile="webmmfvp8dec.def"
 				GenerateDebugInformation="true"
@@ -94,8 +95,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -119,12 +120,13 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common; $(SolutionDir)..\vp8_sdk\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMMFVP8DEC_EXPORTS"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				WarningLevel="3"
-				DebugInformationFormat="3"
+				WarningLevel="4"
+				DebugInformationFormat="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -137,6 +139,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmt.lib"
 				LinkIncremental="1"
 				ModuleDefinitionFile="webmmfvp8dec.def"
 				GenerateDebugInformation="true"
