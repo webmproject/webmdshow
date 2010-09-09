@@ -1,11 +1,10 @@
 #pragma once
-#include <mfidl.h>
-#include "clockable.hpp"
 
 namespace WebmMfVp8DecLib
 {
 
 class WebmMfVp8Dec : public IMFTransform,
+                     //TODO: public IVP8PostProcessing,
                      public CLockable
 {
     friend HRESULT CreateDecoder(
@@ -138,6 +137,15 @@ private:
 
     IMFMediaType* m_pInputMediaType;
     IMFMediaType* m_pOutputMediaType;
+
+    typedef std::list<IMFSample*> samples_t;
+    samples_t m_samples;
+
+    vpx_codec_ctx_t m_ctx;
+    //vpx_codec_iter_t m_iter;
+
+    DWORD GetOutputBufferSize(FrameSize&) const;
+    HRESULT GetFrame(BYTE*, ULONG, const GUID&);
 
 };
 
