@@ -17,6 +17,10 @@ MkvReader::MkvReader(IMFByteStream* pStream) : m_pStream(pStream)
     assert(dw & MFBYTESTREAM_IS_SEEKABLE);
     //TODO: check whether local, etc
     //TODO: could also check this earlier, in byte stream handler
+
+    //TODO: check MFBYTESTREAM_IS_REMOTE
+    //TODO: check MFBYTESTREAM_HAS_SLOW_SEEK
+    //TODO: check MFBYTESTREAM_IS_PARTIALLY_DOWNLOADED
 #endif
 }
 
@@ -60,23 +64,27 @@ int MkvReader::Length(long long* total, long long* avail)
     if (avail == 0)
         return -1;
 
-    QWORD curr;
-
-    HRESULT hr = m_pStream->GetCurrentPosition(&curr);
-
-    if (FAILED(hr))
-        return -1;
-
-    *avail = curr;
-
     QWORD len;
 
-    hr = m_pStream->GetLength(&len);
+    HRESULT hr = m_pStream->GetLength(&len);
 
     if (FAILED(hr))
         return -1;
 
     *total = len;
+
+#if 0  //TODO: resolve this
+    QWORD curr;
+
+    hr = m_pStream->GetCurrentPosition(&curr);
+
+    if (FAILED(hr))
+        return -1;
+
+    *avail = curr;
+#else
+    *avail = len;
+#endif
 
     return 0;
 }

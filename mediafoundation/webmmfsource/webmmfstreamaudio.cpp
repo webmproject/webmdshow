@@ -80,13 +80,18 @@ HRESULT WebmMfStreamAudio::CreateStream(
     assert(SUCCEEDED(hr));
 
     const __int64 bits_per_sample_ = pTrack->GetBitDepth();
-    assert(bits_per_sample_ > 0);
-    assert((bits_per_sample_ % 8) == 0);
+    UINT32 bits_per_sample;
 
-    const UINT32 bits_per_sample = static_cast<UINT32>(bits_per_sample_);
+    if (bits_per_sample_ <= 0)
+        bits_per_sample = 0;
+    else
+    {
+        assert((bits_per_sample_ % 8) == 0);
+        bits_per_sample = static_cast<UINT32>(bits_per_sample_);
 
-    hr = pmt->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, bits_per_sample);
-    assert(SUCCEEDED(hr));
+        hr = pmt->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, bits_per_sample);
+        assert(SUCCEEDED(hr));
+    }
 
     size_t cp_size;
     const BYTE* const cp = pTrack->GetCodecPrivate(cp_size);
