@@ -13,6 +13,7 @@
 #include <memory>
 #include <malloc.h>
 #include <cmath>
+#include <utility>  //std::make_pair
 
 using std::wstring;
 
@@ -60,11 +61,9 @@ WebmMfSource::WebmMfSource(
     IClassFactory* pClassFactory,
     IMFByteStream* pByteStream) :
     m_pClassFactory(pClassFactory),
-    m_file(pByteStream),
     m_cRef(1),
-    m_bShutdown(false),
+    m_file(pByteStream),
     m_pSegment(0),
-    m_pDesc(0),
     m_state(kStateStopped)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
@@ -81,15 +80,15 @@ WebmMfSource::WebmMfSource(
 
 WebmMfSource::~WebmMfSource()
 {
-    assert(m_bShutdown);
-    assert(m_pEvents == 0);
-
-    if (m_pDesc)
+    if (m_pEvents)
     {
-        const ULONG n = m_pDesc->Release();
+        const ULONG n = m_pEvents->Release();
         n;
         assert(n == 0);
     }
+
+    //TODO: clear stream descriptors
+    //TODO: clear streams
 
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
@@ -227,84 +226,51 @@ HRESULT WebmMfSource::Load()
     const mkvparser::Tracks* const pTracks = pSegment->GetTracks();
 
     if (pTracks == 0)
-        return S_FALSE;
+        return VFW_E_INVALID_FILE_FORMAT;
 
+    assert(m_stream_descriptors.empty());
     assert(m_streams.empty());
 
-    const unsigned long nTracks = pTracks->GetTracksCount();
+    const ULONG nTracks = pTracks->GetTracksCount();
 
-    for (unsigned long idx = 0; idx < nTracks; ++idx)
+    for (ULONG idx = 0; idx < nTracks; ++idx)
     {
         mkvparser::Track* const pTrack = pTracks->GetTrackByIndex(idx);
 
         if (pTrack == 0)
             continue;
 
-        const long long type = pTrack->GetType();
+        const LONGLONG type = pTrack->GetType();
+
+        IMFStreamDescriptor* pDesc;
 
         if (type == 1)  //video
-            CreateVideoStream(pTrack);
+        {
+            hr = WebmMfStreamVideo::CreateStreamDescriptor(pTrack, pDesc);
 
+            if (hr != S_OK)
+                continue;
+        }
         else if (type == 2)  //audio
-            CreateAudioStream(pTrack);
+        {
+            hr = WebmMfStreamAudio::CreateStreamDescriptor(pTrack, pDesc);
+
+            if (hr != S_OK)
+                continue;
+        }
+        else
+            continue;
+
+        assert(pDesc);
+        m_stream_descriptors.push_back(pDesc);
     }
 
-    if (m_streams.empty())
+    if (m_stream_descriptors.empty())
         return VFW_E_INVALID_FILE_FORMAT;
 
     m_pSegment = pSegment.release();
     //TODO: m_pSeekBase = 0;
     //TODO: m_seekTime = kNoSeek;
-
-    assert(m_pDesc == 0);
-
-    //http://msdn.microsoft.com/en-us/library/ms698990(v=VS.85).aspx
-    //MFCreateStreamDescriptor
-
-    //http://msdn.microsoft.com/en-us/library/ms695404(VS.85).aspx
-    //MFCreatePresentationDescriptor
-
-    typedef std::vector<IMFStreamDescriptor*> dv_t;
-    dv_t dv;
-
-    typedef streams_t::const_iterator iter_t;
-
-    iter_t i = m_streams.begin();
-    const iter_t j = m_streams.end();
-
-    while (i != j)
-    {
-        WebmMfStream* const pStream = *i++;
-        assert(pStream);
-
-        dv.push_back(pStream->m_pDesc);
-        assert(dv.back() != 0);
-    }
-
-    DWORD n = static_cast<DWORD>(dv.size());
-    assert(n);
-
-    hr = MFCreatePresentationDescriptor(n, &dv[0], &m_pDesc);
-    assert(SUCCEEDED(hr));
-    assert(m_pDesc);
-
-    hr = m_pDesc->GetStreamDescriptorCount(&n);
-    assert(SUCCEEDED(hr));
-    assert(n == static_cast<DWORD>(dv.size()));
-
-    for (DWORD idx = 0; idx < n; ++idx)
-    {
-        hr = m_pDesc->SelectStream(idx);
-        assert(SUCCEEDED(hr));
-    }
-
-    const LONGLONG duration_ns = m_pSegment->GetDuration();
-    assert(duration_ns >= 0);
-
-    const UINT64 duration = duration_ns / 100;
-
-    hr = m_pDesc->SetUINT64(MF_PD_DURATION, duration);
-    assert(SUCCEEDED(hr));
 
     return S_OK;
 }
@@ -341,6 +307,7 @@ std::wstring WebmMfSource::ConvertFromUTF8(const char* str)
 }
 
 
+
 HRESULT WebmMfSource::GetEvent(
     DWORD dwFlags,
     IMFMediaEvent** ppEvent)
@@ -352,11 +319,10 @@ HRESULT WebmMfSource::GetEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
     const IMFMediaEventQueuePtr pEvents(m_pEvents);
-    assert(pEvents);
 
     hr = lock.Release();
     assert(SUCCEEDED(hr));
@@ -376,10 +342,8 @@ HRESULT WebmMfSource::BeginGetEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
-
-    assert(m_pEvents);
 
     return m_pEvents->BeginGetEvent(pCallback, pState);
 }
@@ -397,10 +361,8 @@ HRESULT WebmMfSource::EndGetEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
-
-    assert(m_pEvents);
 
     return m_pEvents->EndGetEvent(pResult, ppEvent);
 }
@@ -419,10 +381,8 @@ HRESULT WebmMfSource::QueueEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
-
-    assert(m_pEvents);
 
     return m_pEvents->QueueEventParamVar(t, g, hrStatus, pValue);
 }
@@ -440,7 +400,7 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
     DWORD& dw = *pdw;
@@ -454,6 +414,11 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
 //   MFMEDIASOURCE_HAS_MULTIPLE_PRESENTATIONS = 0x10,
 //   MFMEDIASOURCE_CAN_SKIPFORWARD = 0x20,
 //   MFMEDIASOURCE_CAN_SKIPBACKWARD = 0x40
+
+    //TODO: these characteristics might be influenced by whether
+    //this is a local file or a network download.  Also, depending
+    //on how smart we are about parsing, on whether we have parsed
+    //the entire file yet.
 
     dw = MFMEDIASOURCE_CAN_PAUSE |
          MFMEDIASOURCE_CAN_SEEK;
@@ -478,23 +443,64 @@ HRESULT WebmMfSource::CreatePresentationDescriptor(
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
-    assert(m_pDesc);
-    return m_pDesc->Clone(&pDesc);
+    //http://msdn.microsoft.com/en-us/library/ms698990(v=VS.85).aspx
+    //MFCreateStreamDescriptor
+
+    //http://msdn.microsoft.com/en-us/library/ms695404(VS.85).aspx
+    //MFCreatePresentationDescriptor
+
+    stream_descriptors_t& sdv = m_stream_descriptors;
+    assert(!sdv.empty());
+
+    const DWORD cSD = static_cast<DWORD>(sdv.size());
+    IMFStreamDescriptor** const apSD = &sdv[0];
+
+    hr = MFCreatePresentationDescriptor(cSD, apSD, &pDesc);
+    assert(SUCCEEDED(hr));
+    assert(pDesc);
+
+#if 0  //TODO: resolve this pending answer from MS
+    hr = m_pDesc->GetStreamDescriptorCount(&n);
+    assert(SUCCEEDED(hr));
+    assert(n == static_cast<DWORD>(dv.size()));
+
+    for (DWORD idx = 0; idx < n; ++idx)
+    {
+        hr = m_pDesc->SelectStream(idx);
+        assert(SUCCEEDED(hr));
+    }
+#endif
+
+    const LONGLONG duration_ns = m_pSegment->GetDuration();
+    assert(duration_ns >= 0);  //TODO
+
+    const UINT64 duration = duration_ns / 100;
+
+    hr = pDesc->SetUINT64(MF_PD_DURATION, duration);
+    assert(SUCCEEDED(hr));  //TODO
+
+    return S_OK;
 }
 
 
 HRESULT WebmMfSource::Start(
     IMFPresentationDescriptor* pDesc,
     const GUID* pTimeFormat,
-    const PROPVARIANT* pStartPos)
+    const PROPVARIANT* pPos)
 {
-    if (pDesc == 0) //TODO: liberalize this case?
+    //Writing a Custom Media Source:
+    //http://msdn.microsoft.com/en-us/library/ms700134(v=VS.85).aspx
+
+    //IMFMediaSource::Start Method
+    //http://msdn.microsoft.com/en-us/library/ms694101%28v=VS.85%29.aspx
+
+    if (pDesc == 0)
         return E_INVALIDARG;
 
-    if (pStartPos == 0)
+    if (pPos == 0)  //TODO: interpret this same as VT_EMPTY?
         return E_INVALIDARG;
 
     if ((pTimeFormat != 0) && (*pTimeFormat != GUID_NULL))
@@ -507,47 +513,84 @@ HRESULT WebmMfSource::Start(
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
-    //TODO: vet caller's presentation descriptor:
-    //if invalid then return MF_E_INVALID_PRESENTATION
-    pDesc;
-
-    const PROPVARIANT& start_pos = *pStartPos;
-
-    //This can be called in any state: yikes!
+    const PROPVARIANT& pos = *pPos;
 
     LONGLONG time;
 
-    switch (start_pos.vt)
+    switch (pos.vt)
     {
         case VT_I8:
-            time = start_pos.hVal.QuadPart;
-            //TODO: vet time value
+            time = pos.hVal.QuadPart;  //TODO: vet time value
+
+            if (time < 0)  //TODO: reject request as invalid?
+                time = 0;
+
             break;
 
         case VT_EMPTY:
-            if (m_state == kStateStopped)
-                time = 0;
-            else
-                time = -1;  //interpret as "curr pos"
-
+            //TODO: behavior depends on answers we get from MS
+            time = -1;  //restart from current pos
             break;
 
         default:
             return MF_E_UNSUPPORTED_TIME_FORMAT;
     }
 
-    //Writing a Custom Media Source:
-    //http://msdn.microsoft.com/en-us/library/ms700134(v=VS.85).aspx
-    //
+    //TODO: vet caller's presentation descriptor:
+    //if invalid then return MF_E_INVALID_PRESENTATION
+    pDesc;
 
+    //for each stream desc in pres desc
+    //  if stream desc is selected
+    //     if stream object does NOT exist already
+    //        create stream object
+    //        source sends MENewStream event
+    //        stream object is born with started state
+    //        TODO: WHAT TIME DO WE USE IF VT_EMPTY?
+    //     else if stream object DOES exist
+    //        source sends MEUpdatedStream event
+    //        if prev state was stopped then
+    //          source sends MESourceStarted event
+    //        else if prev state was started or paused then
+    //          if start pos is "use curr time" (VT_EMPTY) then
+    //            source sends MESourceStarted event
+    //            stream sends MEStreamStarted event
+    //          else if start pos is "use new time" then
+    //            source sends MESourceSeeked event
+    //            stream sends MEStreamSeeked
+    //          endif
+    //        endif
+    //        stream object is transitioned to started state
+    //     endif
+    //  else if stream desc is NOT selected
+    //     if stream object does NOT exist already
+    //        nothing special we need to do here
+    //     else if stream object DOES exist
+    //        TODO: NEED HELP FROM MS FOR THIS CASE
+    //        FOR NOW STOP STREAM
+    //     endif
+    //  endif
+    //endfor
+    //
+    //FOR NOW ASSUME THAT THE DESC NAMES ALL STREAMS
+    //IN THE MEDIA.  TODO: NEED HELP FROM MS FOR THIS CASE.
+
+    //TODO:
+    //  if start fails asynchronously (after method returns S_OK) then
+    //     source sends MESourceStarted event with failure code
+    //  else if start fails synchronously then
+    //     return error code, and do not raise any events
+    //  endif
 
     DWORD count;
 
     hr = pDesc->GetStreamDescriptorCount(&count);
     assert(SUCCEEDED(hr));
+
+#if 0
 
     for (DWORD index = 0; index < count; ++index)
     {
@@ -629,6 +672,70 @@ HRESULT WebmMfSource::Start(
     //  else we DID queue a Started/Seeked event
     //     then queue an MEError event
 
+#else
+
+    typedef streams_t::iterator iter_t;
+
+    for (DWORD index = 0; index < count; ++index)
+    {
+        BOOL bSelected;
+        IMFStreamDescriptorPtr pSD;
+
+        hr = pDesc->GetStreamDescriptorByIndex(index, &bSelected, &pSD);
+        assert(SUCCEEDED(hr));
+        assert(pSD);
+
+        DWORD id;
+
+        hr = pSD->GetStreamIdentifier(&id);
+        assert(SUCCEEDED(hr));
+
+        const mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
+        assert(pTracks);
+
+        mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
+        assert(pTrack);
+        assert(pTrack->GetNumber() == id);
+
+        const iter_t iter = m_streams.find(id);
+        const iter_t iter_end = m_streams.end();
+
+        if (!bSelected)
+        {
+            if (iter != iter_end)  //already exists
+            {
+                WebmMfStream* const pStream = iter->second;
+                assert(pStream);
+                assert(pStream->m_pTrack == pTrack);
+
+                //TODO: WE NEED MS TO TELL US WHAT TO DO HERE
+                //FOR NOW INTERPRET "NOT SELECTED" TO MEAN "STOP"
+
+                hr = pStream->Stop();
+                assert(SUCCEEDED(hr));
+            }
+
+            continue;
+        }
+
+        if (iter == iter_end)  //does NOT exist already
+        {
+            hr = CreateStream(pSD, pTrack, time);
+            assert(SUCCEEDED(hr));
+        }
+        else  //stream DOES exist
+        {
+            WebmMfStream* const pStream = iter->second;
+            assert(pStream);
+            assert(pStream->m_pTrack == pTrack);
+
+            hr = UpdateStream(pSD, pStream, time);
+            assert(SUCCEEDED(hr));
+        }
+    }
+
+#endif
+
     return S_OK;
 }
 
@@ -642,7 +749,7 @@ HRESULT WebmMfSource::Stop()
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
     m_state = kStateStopped;
@@ -654,12 +761,12 @@ HRESULT WebmMfSource::Stop()
 
     while (i != j)
     {
-        WebmMfStream* const pStream = *i++;
+        const streams_t::value_type& v = *i++;
+
+        WebmMfStream* const pStream = v.second;
         assert(pStream);
 
-        //TODO: flush enqueued samples in stream(s)
-
-        hr = pStream->QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
+        hr = pStream->Stop();
         assert(SUCCEEDED(hr));
     }
 
@@ -668,6 +775,7 @@ HRESULT WebmMfSource::Stop()
 
     return S_OK;
 }
+
 
 
 HRESULT WebmMfSource::Pause()
@@ -679,14 +787,11 @@ HRESULT WebmMfSource::Pause()
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
-    if (m_state == kStateStopped)  //must be started
+    if (m_state != kStateStarted)
         return MF_E_INVALID_STATE_TRANSITION;
-
-    if (m_state == kStatePaused)  //TODO: reject this case too?
-        return S_FALSE;  //?
 
     m_state = kStatePaused;
 
@@ -697,10 +802,12 @@ HRESULT WebmMfSource::Pause()
 
     while (i != j)
     {
-        WebmMfStream* const pStream = *i++;
+        const streams_t::value_type& v = *i++;
+
+        WebmMfStream* const pStream = v.second;
         assert(pStream);
 
-        hr = pStream->QueueEvent(MEStreamPaused, GUID_NULL, S_OK, 0);
+        hr = pStream->Pause();
         assert(SUCCEEDED(hr));
     }
 
@@ -720,20 +827,23 @@ HRESULT WebmMfSource::Shutdown()
     if (FAILED(hr))
         return hr;
 
-    if (m_bShutdown)
-        return S_FALSE;  //TODO: return MF_E_SHUTDOWN?
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
 
-    typedef streams_t::const_iterator iter_t;
+    typedef streams_t::iterator iter_t;
 
     iter_t i = m_streams.begin();
     const iter_t j = m_streams.end();
 
     while (i != j)
     {
-        WebmMfStream* const pStream = *i++;
+        WebmMfStream* const pStream = i->second;
         assert(pStream);
 
-        pStream;  //TODO: tell stream to shut down
+        m_streams.erase(i++);
+
+        const ULONG n = pStream->Shutdown();
+        n;
     }
 
     hr = m_pEvents->Shutdown();
@@ -745,44 +855,91 @@ HRESULT WebmMfSource::Shutdown()
 
     m_pEvents = 0;
 
-    m_bShutdown = true;
     return S_OK;
 }
 
 
-void WebmMfSource::CreateVideoStream(mkvparser::Track* pTrack)
+HRESULT WebmMfSource::CreateStream(
+    IMFStreamDescriptor* pSD,
+    mkvparser::Track* pTrack,
+    LONGLONG time)
 {
+    assert(pSD);
     assert(pTrack);
-    assert(pTrack->GetType() == 1);  //video
 
-    using mkvparser::VideoTrack;
-    VideoTrack* const pVT = static_cast<VideoTrack*>(pTrack);
+    WebmMfStream* pStream;
+    const LONGLONG type = pTrack->GetType();
 
-    WebmMfStreamVideo* pStream;
+    if (type == 1)  //video
+    {
+        const HRESULT hr = WebmMfStreamVideo::CreateStream(
+                            m_pClassFactory,
+                            pSD,
+                            this,
+                            pTrack,
+                            time,
+                            pStream);
 
-    const HRESULT hr = WebmMfStreamVideo::CreateStream(this, pVT, pStream);
-    assert(hr == S_OK);
-    assert(pStream);
+        assert(SUCCEEDED(hr));  //TODO
+        assert(pStream);
+    }
+    else
+    {
+        assert(type == 2);  //audio
 
-    m_streams.push_back(pStream);
+        const HRESULT hr = WebmMfStreamAudio::CreateStream(
+                            m_pClassFactory,
+                            pSD,
+                            this,
+                            pTrack,
+                            time,
+                            pStream);
+
+        assert(SUCCEEDED(hr));  //TODO
+        assert(pStream);
+    }
+
+    const ULONG id = pTrack->GetNumber();
+
+    typedef streams_t::iterator iter_t;
+    typedef std::pair<iter_t, bool> status_t;
+
+    const status_t status = m_streams.insert(std::make_pair(id, pStream));
+    assert(status.second);  //new insertion
+    assert(status.first->first == id);
+    assert(status.first->second == pStream);
+
+    HRESULT hr = m_pEvents->QueueEventParamUnk(
+                    MENewStream,
+                    GUID_NULL,
+                    S_OK,
+                    pStream);
+
+    assert(SUCCEEDED(hr));
+
+    return S_OK;
 }
 
 
-void WebmMfSource::CreateAudioStream(mkvparser::Track* pTrack)
+HRESULT WebmMfSource::UpdateStream(
+    IMFStreamDescriptor* pDesc,
+    WebmMfStream* pStream,
+    LONGLONG time)
 {
-    assert(pTrack);
-    assert(pTrack->GetType() == 2);  //audio
-
-    using mkvparser::AudioTrack;
-    AudioTrack* const pAT = static_cast<AudioTrack*>(pTrack);
-
-    WebmMfStreamAudio* pStream;
-
-    const HRESULT hr = WebmMfStreamAudio::CreateStream(this, pAT, pStream);
-    assert(hr == S_OK);
+    assert(pDesc);
     assert(pStream);
 
-    m_streams.push_back(pStream);
+    //TODO: more stuff here
+
+    HRESULT hr = m_pEvents->QueueEventParamUnk(
+                    MEUpdatedStream,
+                    GUID_NULL,
+                    S_OK,
+                    pStream);
+
+    assert(SUCCEEDED(hr));
+
+    return S_OK;
 }
 
 
