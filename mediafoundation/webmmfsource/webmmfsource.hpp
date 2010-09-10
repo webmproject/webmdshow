@@ -3,6 +3,7 @@
 #include "clockable.hpp"
 #include "mkvreader.hpp"
 #include <vector>
+#include <map>
 #include <string>
 
 namespace WebmMfSourceLib
@@ -77,20 +78,21 @@ private:
     HRESULT Load();
 
     IClassFactory* const m_pClassFactory;
-    MkvReader m_file;
     LONG m_cRef;
+    MkvReader m_file;
     IMFMediaEventQueue* m_pEvents;
-    IMFPresentationDescriptor* m_pDesc;
 
-    typedef std::vector<WebmMfStream*> streams_t;
+    typedef std::vector<IMFStreamDescriptor*> stream_descriptors_t;
+    stream_descriptors_t m_stream_descriptors;
+
+    typedef std::map<ULONG, WebmMfStream*> streams_t;
     streams_t m_streams;
 
-    void CreateVideoStream(mkvparser::Track*);
-    void CreateAudioStream(mkvparser::Track*);
+    HRESULT CreateStream(IMFStreamDescriptor*, mkvparser::Track*, LONGLONG);
+    HRESULT UpdateStream(IMFStreamDescriptor*, WebmMfStream*, LONGLONG);
 
 public:
 
-    bool m_bShutdown;
     mkvparser::Segment* m_pSegment;
 
     enum State { kStateStopped, kStatePaused, kStateStarted };

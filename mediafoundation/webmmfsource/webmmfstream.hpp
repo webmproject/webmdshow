@@ -12,7 +12,12 @@ class WebmMfStream : public IMFMediaStream
 
 protected:
 
-    WebmMfStream(WebmMfSource*, IMFStreamDescriptor*, mkvparser::Track*);
+    WebmMfStream(
+        IClassFactory*,
+        WebmMfSource*,
+        IMFStreamDescriptor*,
+        mkvparser::Track*);
+
     virtual ~WebmMfStream();
 
 public:
@@ -49,7 +54,16 @@ public:
     HRESULT STDMETHODCALLTYPE GetStreamDescriptor(IMFStreamDescriptor**);
     HRESULT STDMETHODCALLTYPE RequestSample(IUnknown*);
 
+    //Local methods and properties
+
+    HRESULT Stop();
+    HRESULT Pause();
+    ULONG Shutdown();
+
+    IClassFactory* const m_pClassFactory;
+    LONG m_cRef;
     WebmMfSource* const m_pSource;
+    WebmMfSource::State m_state;
     IMFStreamDescriptor* const m_pDesc;
     mkvparser::Track* const m_pTrack;
 

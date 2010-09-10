@@ -14,10 +14,14 @@ namespace WebmMfSourceLib
 {
 
 WebmMfStream::WebmMfStream(
+    IClassFactory* pClassFactory,
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     mkvparser::Track* pTrack) :
+    m_pClassFactory(pClassFactory),
+    m_cRef(1),
     m_pSource(pSource),
+    m_state(WebmMfSource::kStateStarted),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
     m_pBaseCluster(0),
@@ -25,10 +29,13 @@ WebmMfStream::WebmMfStream(
     m_pStop(0),
     m_bDiscontinuity(true)
 {
-    const ULONG n = m_pDesc->AddRef();
-    n;
+    HRESULT hr = m_pClassFactory->LockServer(TRUE);
+    assert(SUCCEEDED(hr));
 
-    HRESULT hr = MFCreateEventQueue(&m_pEvents);
+    m_pSource->AddRef();  //TODO: here?
+    m_pDesc->AddRef();
+
+    hr = MFCreateEventQueue(&m_pEvents);
     assert(SUCCEEDED(hr));
     assert(m_pEvents);
 }
@@ -36,8 +43,17 @@ WebmMfStream::WebmMfStream(
 
 WebmMfStream::~WebmMfStream()
 {
+    assert(m_pEvents == 0);
+
     const ULONG n = m_pDesc->Release();
     n;
+
+    //We must do this sooner, in Shutdown.
+    //n = m_pSource->Release();
+    //assert(n >= 1);
+
+    const HRESULT hr = m_pClassFactory->LockServer(FALSE);
+    assert(SUCCEEDED(hr));
 }
 
 HRESULT WebmMfStream::QueryInterface(const IID& iid, void** ppv)
@@ -72,13 +88,17 @@ HRESULT WebmMfStream::QueryInterface(const IID& iid, void** ppv)
 
 ULONG WebmMfStream::AddRef()
 {
-    return m_pSource->AddRef();
+    return InterlockedIncrement(&m_cRef);
 }
 
 
 ULONG WebmMfStream::Release()
 {
-    return m_pSource->Release();
+    if (LONG n = InterlockedDecrement(&m_cRef))
+        return n;
+
+    delete this;
+    return 0;
 }
 
 
@@ -93,11 +113,10 @@ HRESULT WebmMfStream::GetEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_pSource->m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
     const IMFMediaEventQueuePtr pEvents(m_pEvents);
-    assert(pEvents);
 
     hr = lock.Release();
     assert(SUCCEEDED(hr));
@@ -117,10 +136,8 @@ HRESULT WebmMfStream::BeginGetEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_pSource->m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
-
-    assert(m_pEvents);
 
     return m_pEvents->BeginGetEvent(pCallback, pState);
 }
@@ -137,10 +154,8 @@ HRESULT WebmMfStream::EndGetEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_pSource->m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
-
-    assert(m_pEvents);
 
     return m_pEvents->EndGetEvent(pResult, ppEvent);
 }
@@ -159,10 +174,8 @@ HRESULT WebmMfStream::QueueEvent(
     if (FAILED(hr))
         return hr;
 
-    if (m_pSource->m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
-
-    assert(m_pEvents);
 
     return m_pEvents->QueueEventParamVar(t, g, hrStatus, pValue);
 }
@@ -170,21 +183,17 @@ HRESULT WebmMfStream::QueueEvent(
 
 HRESULT WebmMfStream::GetMediaSource(IMFMediaSource** pp)
 {
-#if 0
-    if (pp == 0)
-        return E_POINTER;
+    WebmMfSource::Lock lock;
 
-    IMFMediaSource*& p = *pp;
+    HRESULT hr = lock.Seize(m_pSource);
 
-    p = m_pSource;
-    p->AddRef();
+    if (FAILED(hr))
+        return hr;
 
-    return S_OK;
-#else
-    //TODO: check for shutdown?
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
 
     return m_pSource->IUnknown::QueryInterface(pp);
-#endif
 }
 
 
@@ -193,7 +202,15 @@ HRESULT WebmMfStream::GetStreamDescriptor(IMFStreamDescriptor** pp)
     if (pp == 0)
         return E_POINTER;
 
-    //TODO: check for shutdown?
+    WebmMfSource::Lock lock;
+
+    HRESULT hr = lock.Seize(m_pSource);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
 
     IMFStreamDescriptor*& p = *pp;
 
@@ -211,7 +228,7 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     HRESULT hr = lock.Seize(m_pSource);
     assert(SUCCEEDED(hr));  //TODO
 
-    if (m_pSource->m_bShutdown)
+    if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
     //TODO: check for EOS, and return MF_E_END_OF_STREAM
@@ -380,5 +397,45 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
     return S_OK;  //TODO
 }
 
+
+HRESULT WebmMfStream::Stop()
+{
+    if (m_state == WebmMfSource::kStateStopped)
+        return S_FALSE;
+
+    //TODO: flush enqueued samples in stream
+
+    const HRESULT hr = QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
+    assert(SUCCEEDED(hr));
+
+    m_state = WebmMfSource::kStateStopped;
+    return S_OK;
+}
+
+
+HRESULT WebmMfStream::Pause()
+{
+    if (m_state != WebmMfSource::kStateStarted)
+        return S_FALSE;
+
+    const HRESULT hr = QueueEvent(MEStreamPaused, GUID_NULL, S_OK, 0);
+    assert(SUCCEEDED(hr));
+
+    m_state = WebmMfSource::kStatePaused;
+    return S_OK;
+}
+
+
+ULONG WebmMfStream::Shutdown()
+{
+    assert(m_cRef > 0);  //source object's ref
+
+    const ULONG n = m_pSource->Release();
+    assert(n >= 1);
+
+    //TODO: anything to do here?
+
+    return Release();
+}
 
 }  //end namespace WebmMfSource

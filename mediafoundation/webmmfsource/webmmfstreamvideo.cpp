@@ -16,19 +16,24 @@ _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 namespace WebmMfSourceLib
 {
 
-HRESULT WebmMfStreamVideo::CreateStream(
-    WebmMfSource* pSource,
-    mkvparser::VideoTrack* pTrack,
-    WebmMfStreamVideo*& pStream)
+HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
+    mkvparser::Track* pTrack_,
+    IMFStreamDescriptor*& pDesc)
 {
-    assert(pTrack);
-    assert(pTrack->GetType() == 1);
+    assert(pTrack_);
+    assert(pTrack_->GetType() == 1);
+
+    using mkvparser::VideoTrack;
+    VideoTrack* const pTrack = static_cast<VideoTrack*>(pTrack_);
 
     const char* const codec = pTrack->GetCodecId();
     assert(codec);
 
     if (_stricmp(codec, "V_VP8") != 0)  //weird
-        return S_FALSE;
+    {
+        pDesc = 0;
+        return E_FAIL;
+    }
 
     const DWORD id = pTrack->GetNumber();
 
@@ -98,8 +103,6 @@ HRESULT WebmMfStreamVideo::CreateStream(
 
     IMFMediaType* mtv[1] = { pmt };
 
-    IMFStreamDescriptorPtr pDesc;
-
     hr = MFCreateStreamDescriptor(id, 1, mtv, &pDesc);
     assert(SUCCEEDED(hr));
     assert(pDesc);
@@ -113,17 +116,39 @@ HRESULT WebmMfStreamVideo::CreateStream(
     hr = ph->SetCurrentMediaType(pmt);
     assert(SUCCEEDED(hr));
 
-    pStream = new (std::nothrow) WebmMfStreamVideo(pSource, pDesc, pTrack);
+    return S_OK;
+}
+
+
+HRESULT WebmMfStreamVideo::CreateStream(
+    IClassFactory* pCF,
+    IMFStreamDescriptor* pSD,
+    WebmMfSource* pSource,
+    mkvparser::Track* pTrack_,
+    LONGLONG time,
+    WebmMfStream*& pStream)
+{
+    assert(pTrack_);
+    assert(pTrack_->GetType() == 1);
+
+    using mkvparser::VideoTrack;
+    VideoTrack* const pTrack = static_cast<VideoTrack*>(pTrack_);
+
+    pStream = new (std::nothrow) WebmMfStreamVideo(pCF, pSource, pSD, pTrack);
+    assert(pStream);  //TODO
+
+    //TODO: handle time
 
     return pStream ? S_OK : E_OUTOFMEMORY;
 }
 
 
 WebmMfStreamVideo::WebmMfStreamVideo(
+    IClassFactory* pClassFactory,
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     mkvparser::VideoTrack* pTrack) :
-    WebmMfStream(pSource, pDesc, pTrack)
+    WebmMfStream(pClassFactory, pSource, pDesc, pTrack)
 {
 }
 

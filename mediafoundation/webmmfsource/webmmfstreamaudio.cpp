@@ -19,19 +19,24 @@ namespace WebmMfSourceLib
 {
 
 
-HRESULT WebmMfStreamAudio::CreateStream(
-    WebmMfSource* pSource,
-    mkvparser::AudioTrack* pTrack,
-    WebmMfStreamAudio*& pStream)
+HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
+    mkvparser::Track* pTrack_,
+    IMFStreamDescriptor*& pDesc)
 {
-    assert(pTrack);
-    assert(pTrack->GetType() == 2);  //audio
+    assert(pTrack_);
+    assert(pTrack_->GetType() == 2);  //audio
+
+    using mkvparser::AudioTrack;
+    AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);
 
     const char* const codec = pTrack->GetCodecId();
     assert(codec);
 
     if (_stricmp(codec, "A_VORBIS") != 0)  //weird
-        return S_FALSE;
+    {
+        pDesc = 0;
+        return E_FAIL;
+    }
 
     const DWORD id = pTrack->GetNumber();
 
@@ -173,8 +178,6 @@ HRESULT WebmMfStreamAudio::CreateStream(
 
     IMFMediaType* mtv[1] = { pmt };
 
-    IMFStreamDescriptorPtr pDesc;
-
     hr = MFCreateStreamDescriptor(id, 1, mtv, &pDesc);
     assert(SUCCEEDED(hr));
     assert(pDesc);
@@ -188,18 +191,39 @@ HRESULT WebmMfStreamAudio::CreateStream(
     hr = ph->SetCurrentMediaType(pmt);
     assert(SUCCEEDED(hr));
 
-    pStream = new (std::nothrow) WebmMfStreamAudio(pSource, pDesc, pTrack);
+    return S_OK;
+}
+
+
+HRESULT WebmMfStreamAudio::CreateStream(
+    IClassFactory* pCF,
+    IMFStreamDescriptor* pSD,
+    WebmMfSource* pSource,
+    mkvparser::Track* pTrack_,
+    LONGLONG time,
+    WebmMfStream*& pStream)
+{
+    assert(pTrack_);
+    assert(pTrack_->GetType() == 1);
+
+    using mkvparser::AudioTrack;
+    AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);
+
+    pStream = new (std::nothrow) WebmMfStreamAudio(pCF, pSource, pSD, pTrack);
     assert(pStream);  //TODO
+
+    //TODO: handle time
 
     return pStream ? S_OK : E_OUTOFMEMORY;
 }
 
 
 WebmMfStreamAudio::WebmMfStreamAudio(
+    IClassFactory* pClassFactory,
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     mkvparser::AudioTrack* pTrack) :
-    WebmMfStream(pSource, pDesc, pTrack)
+    WebmMfStream(pClassFactory, pSource, pDesc, pTrack)
 {
 }
 

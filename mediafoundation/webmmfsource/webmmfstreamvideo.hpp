@@ -7,6 +7,7 @@ namespace WebmMfSourceLib
 class WebmMfStreamVideo : public WebmMfStream
 {
     WebmMfStreamVideo(
+        IClassFactory*,
         WebmMfSource*,
         IMFStreamDescriptor*,
         mkvparser::VideoTrack*);
@@ -18,10 +19,17 @@ class WebmMfStreamVideo : public WebmMfStream
 
 public:
 
+    static HRESULT CreateStreamDescriptor(
+                    mkvparser::Track*,
+                    IMFStreamDescriptor*&);
+
     static HRESULT CreateStream(
+                    IClassFactory*,
+                    IMFStreamDescriptor*,
                     WebmMfSource*,
-                    mkvparser::VideoTrack*,
-                    WebmMfStreamVideo*&);
+                    mkvparser::Track*,
+                    LONGLONG time,
+                    WebmMfStream*&);
 
 protected:
 
