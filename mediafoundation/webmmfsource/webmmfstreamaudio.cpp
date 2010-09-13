@@ -196,7 +196,6 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
 
 
 HRESULT WebmMfStreamAudio::CreateStream(
-    IClassFactory* pCF,
     IMFStreamDescriptor* pSD,
     WebmMfSource* pSource,
     mkvparser::Track* pTrack_,
@@ -209,7 +208,7 @@ HRESULT WebmMfStreamAudio::CreateStream(
     using mkvparser::AudioTrack;
     AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);
 
-    pStream = new (std::nothrow) WebmMfStreamAudio(pCF, pSource, pSD, pTrack);
+    pStream = new (std::nothrow) WebmMfStreamAudio(pSource, pSD, pTrack);
     assert(pStream);  //TODO
 
     //TODO: handle time
@@ -219,11 +218,10 @@ HRESULT WebmMfStreamAudio::CreateStream(
 
 
 WebmMfStreamAudio::WebmMfStreamAudio(
-    IClassFactory* pClassFactory,
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     mkvparser::AudioTrack* pTrack) :
-    WebmMfStream(pClassFactory, pSource, pDesc, pTrack)
+    WebmMfStream(pSource, pDesc, pTrack)
 {
 }
 
