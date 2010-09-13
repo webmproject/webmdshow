@@ -14,28 +14,21 @@ namespace WebmMfSourceLib
 {
 
 WebmMfStream::WebmMfStream(
-    IClassFactory* pClassFactory,
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     mkvparser::Track* pTrack) :
-    m_pClassFactory(pClassFactory),
-    m_cRef(1),
     m_pSource(pSource),
-    m_state(WebmMfSource::kStateStarted),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
     m_pBaseCluster(0),
     m_pCurr(0),
     m_pStop(0),
-    m_bDiscontinuity(true)
+    m_bDiscontinuity(true),
+    m_bSelected(true)
 {
-    HRESULT hr = m_pClassFactory->LockServer(TRUE);
-    assert(SUCCEEDED(hr));
-
-    m_pSource->AddRef();  //TODO: here?
     m_pDesc->AddRef();
 
-    hr = MFCreateEventQueue(&m_pEvents);
+    const HRESULT hr = MFCreateEventQueue(&m_pEvents);
     assert(SUCCEEDED(hr));
     assert(m_pEvents);
 }
@@ -43,17 +36,17 @@ WebmMfStream::WebmMfStream(
 
 WebmMfStream::~WebmMfStream()
 {
-    assert(m_pEvents == 0);
+    if (m_pEvents)
+    {
+        const ULONG n = m_pEvents->Release();
+        n;
+        assert(n == 0);
+
+        m_pEvents = 0;
+    }
 
     const ULONG n = m_pDesc->Release();
     n;
-
-    //We must do this sooner, in Shutdown.
-    //n = m_pSource->Release();
-    //assert(n >= 1);
-
-    const HRESULT hr = m_pClassFactory->LockServer(FALSE);
-    assert(SUCCEEDED(hr));
 }
 
 HRESULT WebmMfStream::QueryInterface(const IID& iid, void** ppv)
@@ -88,17 +81,13 @@ HRESULT WebmMfStream::QueryInterface(const IID& iid, void** ppv)
 
 ULONG WebmMfStream::AddRef()
 {
-    return InterlockedIncrement(&m_cRef);
+    return m_pSource->AddRef();
 }
 
 
 ULONG WebmMfStream::Release()
 {
-    if (LONG n = InterlockedDecrement(&m_cRef))
-        return n;
-
-    delete this;
-    return 0;
+    return m_pSource->Release();
 }
 
 
@@ -400,42 +389,45 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 
 HRESULT WebmMfStream::Stop()
 {
-    if (m_state == WebmMfSource::kStateStopped)
-        return S_FALSE;
+    //TODO: check whether selected
 
     //TODO: flush enqueued samples in stream
 
     const HRESULT hr = QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
 
-    m_state = WebmMfSource::kStateStopped;
     return S_OK;
 }
 
 
 HRESULT WebmMfStream::Pause()
 {
-    if (m_state != WebmMfSource::kStateStarted)
-        return S_FALSE;
+    //TODO: check whether selected
 
     const HRESULT hr = QueueEvent(MEStreamPaused, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
 
-    m_state = WebmMfSource::kStatePaused;
     return S_OK;
 }
 
 
-ULONG WebmMfStream::Shutdown()
+HRESULT WebmMfStream::Shutdown()
 {
-    assert(m_cRef > 0);  //source object's ref
+    if (m_pEvents == 0)
+        return S_FALSE;
 
-    const ULONG n = m_pSource->Release();
-    assert(n >= 1);
+    //TODO: Send EOS?
 
-    //TODO: anything to do here?
+    const HRESULT hr = m_pEvents->Shutdown();
+    assert(SUCCEEDED(hr));
 
-    return Release();
+    const ULONG n = m_pEvents->Release();
+    n;
+    assert(n == 0);
+
+    m_pEvents = 0;
+
+    return S_OK;
 }
 
 }  //end namespace WebmMfSource

@@ -19,7 +19,7 @@ using std::wstring;
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaEventQueue, __uuidof(IMFMediaEventQueue));
 _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
-//_COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
+_COM_SMARTPTR_TYPEDEF(IMFMediaEvent, __uuidof(IMFMediaEvent));
 
 
 namespace WebmMfSourceLib
@@ -87,8 +87,31 @@ WebmMfSource::~WebmMfSource()
         assert(n == 0);
     }
 
-    //TODO: clear stream descriptors
-    //TODO: clear streams
+    while (!m_stream_descriptors.empty())
+    {
+        IMFStreamDescriptor* const pSD = m_stream_descriptors.back();
+        assert(pSD);
+
+        m_stream_descriptors.pop_back();
+
+        const ULONG n = pSD->Release();
+        n;
+    }
+
+    typedef streams_t::iterator iter_t;
+
+    iter_t iter = m_streams.begin();
+    const iter_t iter_end = m_streams.end();
+
+    while (iter != iter_end)
+    {
+        WebmMfStream* const pStream = iter->second;
+        assert(pStream);
+
+        m_streams.erase(iter++);
+
+        delete pStream;
+    }
 
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
@@ -523,7 +546,7 @@ HRESULT WebmMfSource::Start(
     switch (pos.vt)
     {
         case VT_I8:
-            time = pos.hVal.QuadPart;  //TODO: vet time value
+            time = pos.hVal.QuadPart;
 
             if (time < 0)  //TODO: reject request as invalid?
                 time = 0;
@@ -531,8 +554,7 @@ HRESULT WebmMfSource::Start(
             break;
 
         case VT_EMPTY:
-            //TODO: behavior depends on answers we get from MS
-            time = -1;  //restart from current pos
+            time = -1;
             break;
 
         default:
@@ -543,6 +565,7 @@ HRESULT WebmMfSource::Start(
     //if invalid then return MF_E_INVALID_PRESENTATION
     pDesc;
 
+    //THIS IS WRONG:
     //for each stream desc in pres desc
     //  if stream desc is selected
     //     if stream object does NOT exist already
@@ -578,6 +601,61 @@ HRESULT WebmMfSource::Start(
     //FOR NOW ASSUME THAT THE DESC NAMES ALL STREAMS
     //IN THE MEDIA.  TODO: NEED HELP FROM MS FOR THIS CASE.
 
+    //I THINK THIS IS CORRECT:
+
+    //if prev state was stopped then
+    //    source sends MESourceStarted event
+    //else if prev state was started or paused then
+    //    if start pos is "use curr time" (VT_EMPTY) then
+    //        source sends MESourceStarted event
+    //    else if start pos is "use new time" then
+    //        source sends MESourceSeeked event
+    //    endif
+    //endif
+
+    //for each stream desc in pres desc
+    //  if stream desc is selected
+    //     if stream object does NOT exist already
+    //        create stream object
+    //        source sends MENewStream event
+    //        stream object is born with selected state
+    //        TODO: WHAT TIME DO WE USE IF VT_EMPTY?
+    //        WavSource.cpp says:
+    //          if new time then
+    //            t = new time
+    //          else if VT_EMPTY then
+    //            if state = stopped then
+    //              t = 0
+    //            else
+    //              t = curr
+    //            endif
+    //          endif
+    //     else if stream object DOES exist
+    //        set it to selected
+    //        source sends MEUpdatedStream event
+    //        if prev state was stopped then
+    //           time is reset back to 0
+    //        else if prev state was started or paused then
+    //          if start pos is "use curr time" (VT_EMPTY) then
+    //            source sends MESourceStarted event
+    //            stream sends MEStreamStarted event
+    //          else if start pos is "use new time" then
+    //            source sends MESourceSeeked event
+    //            stream sends MEStreamSeeked
+    //          endif
+    //        endif
+    //     endif
+    //  else if stream desc is NOT selected
+    //     if stream object does NOT exist already
+    //        nothing special we need to do here
+    //     else if stream object DOES exist
+    //        set it to unselected
+    //        later, if RequestSample is called, return error
+    //     endif
+    //  endif
+    //endfor
+
+
     //TODO:
     //  if start fails asynchronously (after method returns S_OK) then
     //     source sends MESourceStarted event with failure code
@@ -589,61 +667,6 @@ HRESULT WebmMfSource::Start(
 
     hr = pDesc->GetStreamDescriptorCount(&count);
     assert(SUCCEEDED(hr));
-
-#if 0
-
-    for (DWORD index = 0; index < count; ++index)
-    {
-        BOOL bSelected;
-        IMFStreamDescriptorPtr pSD;
-
-        hr = pDesc->GetStreamDescriptorByIndex(index, &bSelected, &pSD);
-        assert(SUCCEEDED(hr));
-        assert(pSD);
-
-        if (!bSelected)
-            continue;
-
-        DWORD id;
-
-        hr = pSD->GetStreamIdentifier(&id);
-        assert(SUCCEEDED(hr));
-
-        typedef streams_t::const_iterator iter_t;
-
-        iter_t i = m_streams.begin();
-        const iter_t j = m_streams.end();
-
-        while (i != j)
-        {
-            WebmMfStream* const pStream = *i++;
-            assert(pStream);
-
-            const DWORD num = pStream->m_pTrack->GetNumber();
-
-            if (num != id)
-                continue;
-
-            //TODO: set stream pos before queueing stream event, or after?
-
-            hr = m_pEvents->QueueEventParamUnk(
-                    MEUpdatedStream,   //TODO: handle MENewStream
-                    GUID_NULL,
-                    S_OK,
-                    pStream);
-
-            assert(SUCCEEDED(hr));
-
-            //TODO: it's not clear whether streams "exist" when the
-            //source object is stopped.  When we transition to stopped,
-            //does that mean streams should be destroyed?
-
-            //TODO: set pos of stream
-            //Do this after queueing stream event, or before?
-
-            break;
-        }
-    }
 
     //TODO:
     //if this is a seek
@@ -666,15 +689,66 @@ HRESULT WebmMfSource::Start(
     //  endif
     //endfor
 
-    //if there was an error
-    //  if we did NOT queue a MESourceStarted/MESourceSeeked event
-    //     then it's OK to simply return an error from Start
-    //  else we DID queue a Started/Seeked event
-    //     then queue an MEError event
+    if (m_state == kStateStopped)
+    {
+        PROPVARIANT var;
+        PropVariantInit(&var);
 
-#else
+        var.vt = VT_I8;
+        var.hVal.QuadPart = (time < 0) ? 0 : time;
 
-    typedef streams_t::iterator iter_t;
+        hr = m_pEvents->QueueEventParamVar(
+                MESourceStarted,
+                GUID_NULL,
+                S_OK,
+                &var);
+
+        assert(SUCCEEDED(hr));
+    }
+    else if (time >= 0)  //seek
+    {
+        PROPVARIANT var;
+        PropVariantInit(&var);
+
+        var.vt = VT_I8;
+        var.hVal.QuadPart = time;
+
+        hr = m_pEvents->QueueEventParamVar(
+                MESourceSeeked,
+                GUID_NULL,
+                S_OK,
+                &var);
+
+        assert(SUCCEEDED(hr));
+    }
+    else //re-start
+    {
+        PROPVARIANT var;
+        PropVariantInit(&var);
+
+        var.vt = VT_I8;
+        var.hVal.QuadPart = 0;  //TODO: need curr time from stream
+
+        IMFMediaEventPtr pEvent;
+
+        hr = MFCreateMediaEvent(
+                MESourceStarted,
+                GUID_NULL,
+                S_OK,
+                &var,
+                &pEvent);
+
+        assert(SUCCEEDED(hr));
+        assert(pEvent);
+
+        const UINT64 val = var.hVal.QuadPart;
+
+        hr = pEvent->SetUINT64(MF_EVENT_SOURCE_ACTUAL_START, val);
+        assert(SUCCEEDED(hr));
+
+        hr = m_pEvents->QueueEvent(pEvent);
+        assert(SUCCEEDED(hr));
+    }
 
     for (DWORD index = 0; index < count; ++index)
     {
@@ -697,6 +771,8 @@ HRESULT WebmMfSource::Start(
         assert(pTrack);
         assert(pTrack->GetNumber() == id);
 
+        typedef streams_t::iterator iter_t;
+
         const iter_t iter = m_streams.find(id);
         const iter_t iter_end = m_streams.end();
 
@@ -708,15 +784,13 @@ HRESULT WebmMfSource::Start(
                 assert(pStream);
                 assert(pStream->m_pTrack == pTrack);
 
-                //TODO: WE NEED MS TO TELL US WHAT TO DO HERE
-                //FOR NOW INTERPRET "NOT SELECTED" TO MEAN "STOP"
-
-                hr = pStream->Stop();
-                assert(SUCCEEDED(hr));
+                pStream->m_bSelected = false;
             }
 
             continue;
         }
+
+        //selected
 
         if (iter == iter_end)  //does NOT exist already
         {
@@ -734,7 +808,14 @@ HRESULT WebmMfSource::Start(
         }
     }
 
-#endif
+    m_state = kStateStarted;
+
+    //TODO
+    //if there was an error
+    //  if we did NOT queue a MESourceStarted/MESourceSeeked event
+    //     then it's OK to simply return an error from Start
+    //  else we DID queue a Started/Seeked event
+    //     then queue an MEError event
 
     return S_OK;
 }
@@ -862,10 +943,19 @@ HRESULT WebmMfSource::Shutdown()
 HRESULT WebmMfSource::CreateStream(
     IMFStreamDescriptor* pSD,
     mkvparser::Track* pTrack,
-    LONGLONG time)
+    LONGLONG time_)  //what was requested (could be VT_EMPTY)
 {
     assert(pSD);
     assert(pTrack);
+
+    LONGLONG time;
+
+    if (time_ >= 0)  //seek
+        time = time_;
+    else if (m_state == kStateStopped)
+        time = 0;
+    else
+        time = 0;  //TODO: need "curr posn" here
 
     WebmMfStream* pStream;
     const LONGLONG type = pTrack->GetType();
@@ -873,7 +963,6 @@ HRESULT WebmMfSource::CreateStream(
     if (type == 1)  //video
     {
         const HRESULT hr = WebmMfStreamVideo::CreateStream(
-                            m_pClassFactory,
                             pSD,
                             this,
                             pTrack,
@@ -882,13 +971,13 @@ HRESULT WebmMfSource::CreateStream(
 
         assert(SUCCEEDED(hr));  //TODO
         assert(pStream);
+        assert(pStream->m_bSelected);
     }
     else
     {
         assert(type == 2);  //audio
 
         const HRESULT hr = WebmMfStreamAudio::CreateStream(
-                            m_pClassFactory,
                             pSD,
                             this,
                             pTrack,
@@ -897,6 +986,7 @@ HRESULT WebmMfSource::CreateStream(
 
         assert(SUCCEEDED(hr));  //TODO
         assert(pStream);
+        assert(pStream->m_bSelected);
     }
 
     const ULONG id = pTrack->GetNumber();
@@ -924,12 +1014,23 @@ HRESULT WebmMfSource::CreateStream(
 HRESULT WebmMfSource::UpdateStream(
     IMFStreamDescriptor* pDesc,
     WebmMfStream* pStream,
-    LONGLONG time)
+    LONGLONG time_)
 {
     assert(pDesc);
     assert(pStream);
 
-    //TODO: more stuff here
+    pStream->m_bSelected = true;
+
+    LONGLONG time;
+
+    if (time_ >= 0)  //seek
+        time = time_;
+    else if (m_state == kStateStopped)
+        time = 0;
+    else
+        time = 0;  //TODO: need "curr posn" here
+
+    //set pos of stream
 
     HRESULT hr = m_pEvents->QueueEventParamUnk(
                     MEUpdatedStream,
@@ -938,6 +1039,32 @@ HRESULT WebmMfSource::UpdateStream(
                     pStream);
 
     assert(SUCCEEDED(hr));
+
+    PROPVARIANT var;
+    PropVariantInit(&var);
+
+    var.vt = VT_I8;
+    var.hVal.QuadPart = time;
+
+    if (m_state == kStateStopped)
+    {
+        __noop;  //time was reset back to 0
+        //TODO: no event is sent here?
+    }
+    else if (time_ >= 0)  //seek
+    {
+        hr = pStream->QueueEvent(MEStreamSeeked, GUID_NULL, S_OK, &var);
+        assert(SUCCEEDED(hr));
+
+        //TODO: flush
+    }
+    else //re-start
+    {
+        hr = pStream->QueueEvent(MEStreamStarted, GUID_NULL, S_OK, &var);
+        assert(SUCCEEDED(hr));
+
+        //TODO: deliver queued samples
+    }
 
     return S_OK;
 }

@@ -121,7 +121,6 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
 
 
 HRESULT WebmMfStreamVideo::CreateStream(
-    IClassFactory* pCF,
     IMFStreamDescriptor* pSD,
     WebmMfSource* pSource,
     mkvparser::Track* pTrack_,
@@ -134,7 +133,7 @@ HRESULT WebmMfStreamVideo::CreateStream(
     using mkvparser::VideoTrack;
     VideoTrack* const pTrack = static_cast<VideoTrack*>(pTrack_);
 
-    pStream = new (std::nothrow) WebmMfStreamVideo(pCF, pSource, pSD, pTrack);
+    pStream = new (std::nothrow) WebmMfStreamVideo(pSource, pSD, pTrack);
     assert(pStream);  //TODO
 
     //TODO: handle time
@@ -144,11 +143,10 @@ HRESULT WebmMfStreamVideo::CreateStream(
 
 
 WebmMfStreamVideo::WebmMfStreamVideo(
-    IClassFactory* pClassFactory,
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     mkvparser::VideoTrack* pTrack) :
-    WebmMfStream(pClassFactory, pSource, pDesc, pTrack)
+    WebmMfStream(pSource, pDesc, pTrack)
 {
 }
 

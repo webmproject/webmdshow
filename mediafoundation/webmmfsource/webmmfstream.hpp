@@ -13,14 +13,13 @@ class WebmMfStream : public IMFMediaStream
 protected:
 
     WebmMfStream(
-        IClassFactory*,
         WebmMfSource*,
         IMFStreamDescriptor*,
         mkvparser::Track*);
 
-    virtual ~WebmMfStream();
-
 public:
+
+    virtual ~WebmMfStream();
 
     //IUnknown
 
@@ -58,14 +57,12 @@ public:
 
     HRESULT Stop();
     HRESULT Pause();
-    ULONG Shutdown();
+    HRESULT Shutdown();
 
-    IClassFactory* const m_pClassFactory;
-    LONG m_cRef;
     WebmMfSource* const m_pSource;
-    WebmMfSource::State m_state;
     IMFStreamDescriptor* const m_pDesc;
     mkvparser::Track* const m_pTrack;
+    bool m_bSelected;
 
 protected:
 
@@ -75,7 +72,7 @@ protected:
 
     mkvparser::Cluster* m_pBaseCluster;
     const mkvparser::BlockEntry* m_pCurr;
-    const mkvparser::BlockEntry* m_pStop;
+    const mkvparser::BlockEntry* m_pStop;  //TODO: need this in MF?
     bool m_bDiscontinuity;
 
 private:

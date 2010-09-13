@@ -6,7 +6,6 @@ namespace WebmMfSourceLib
 class WebmMfStreamAudio : public WebmMfStream
 {
     WebmMfStreamAudio(
-        IClassFactory*,
         WebmMfSource*,
         IMFStreamDescriptor*,
         mkvparser::AudioTrack*);
@@ -23,7 +22,6 @@ public:
                     IMFStreamDescriptor*&);
 
     static HRESULT CreateStream(
-                    IClassFactory*,
                     IMFStreamDescriptor*,
                     WebmMfSource*,
                     mkvparser::Track*,
