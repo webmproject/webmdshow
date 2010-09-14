@@ -55,6 +55,16 @@ public:
 
     //Local methods and properties
 
+    //virtual HRESULT Seek(LONGLONG) = 0;
+    HRESULT GetCurrTime(LONGLONG&) const;
+
+    HRESULT Unselect();
+    HRESULT Select(LONGLONG);
+
+    HRESULT Start();
+    HRESULT Seek();
+    HRESULT Restart();
+
     HRESULT Stop();
     HRESULT Pause();
     HRESULT Shutdown();

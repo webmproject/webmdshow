@@ -25,8 +25,9 @@ public:
                     IMFStreamDescriptor*,
                     WebmMfSource*,
                     mkvparser::Track*,
-                    LONGLONG time,
                     WebmMfStream*&);
+
+    HRESULT Seek(LONGLONG);
 
 protected:
 

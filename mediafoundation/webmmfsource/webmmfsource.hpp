@@ -88,8 +88,17 @@ private:
     typedef std::map<ULONG, WebmMfStream*> streams_t;
     streams_t m_streams;
 
-    HRESULT CreateStream(IMFStreamDescriptor*, mkvparser::Track*, LONGLONG);
+    HRESULT NewStream(IMFStreamDescriptor*, mkvparser::Track*, LONGLONG);
     HRESULT UpdateStream(IMFStreamDescriptor*, WebmMfStream*, LONGLONG);
+
+    void GetTime(
+        IMFPresentationDescriptor*,
+        const PROPVARIANT& request,
+        PROPVARIANT& actual) const;
+
+    HRESULT StartStreams();
+    HRESULT SeekStreams();
+    HRESULT RestartStreams();
 
 public:
 

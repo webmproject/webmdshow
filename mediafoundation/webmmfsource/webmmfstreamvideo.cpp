@@ -124,7 +124,6 @@ HRESULT WebmMfStreamVideo::CreateStream(
     IMFStreamDescriptor* pSD,
     WebmMfSource* pSource,
     mkvparser::Track* pTrack_,
-    LONGLONG time,
     WebmMfStream*& pStream)
 {
     assert(pTrack_);

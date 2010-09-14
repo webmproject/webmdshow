@@ -199,11 +199,10 @@ HRESULT WebmMfStreamAudio::CreateStream(
     IMFStreamDescriptor* pSD,
     WebmMfSource* pSource,
     mkvparser::Track* pTrack_,
-    LONGLONG time,
     WebmMfStream*& pStream)
 {
     assert(pTrack_);
-    assert(pTrack_->GetType() == 1);
+    assert(pTrack_->GetType() == 2);
 
     using mkvparser::AudioTrack;
     AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);

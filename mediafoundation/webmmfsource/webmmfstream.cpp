@@ -430,4 +430,94 @@ HRESULT WebmMfStream::Shutdown()
     return S_OK;
 }
 
+
+HRESULT WebmMfStream::Unselect()
+{
+    m_bSelected = false;
+
+    //release any pending resources (pending samples, etc)
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfStream::Start()
+{
+    if (!m_bSelected)
+        return S_FALSE;
+
+    PROPVARIANT var;
+    //TODO: set var to start time
+
+    assert(m_pEvents);
+
+    const HRESULT hr = m_pEvents->QueueEventParamVar(
+                        MEStreamStarted,
+                        GUID_NULL,
+                        S_OK,
+                        &var);
+
+    assert(SUCCEEDED(hr));
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfStream::Seek()
+{
+    if (!m_bSelected)
+        return S_FALSE;
+
+    PROPVARIANT var;
+    //TODO: set var to start time
+
+    //TODO: flush any pending events
+
+    assert(m_pEvents);
+
+    const HRESULT hr = m_pEvents->QueueEventParamVar(
+                        MEStreamSeeked,
+                        GUID_NULL,
+                        S_OK,
+                        &var);
+
+    assert(SUCCEEDED(hr));
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfStream::Restart()
+{
+    if (!m_bSelected)
+        return S_FALSE;
+
+    PROPVARIANT var;
+    //TODO: set var to (re)start time
+    //TODO: PENDING ANSWER FROM MS REQ'D: DO WE SEND VT_EMPTY HERE?
+
+    assert(m_pEvents);
+
+    const HRESULT hr = m_pEvents->QueueEventParamVar(
+                        MEStreamStarted,
+                        GUID_NULL,
+                        S_OK,
+                        &var);
+
+    assert(SUCCEEDED(hr));
+
+    //TODO: deliver queued samples
+    //TODO: we is the var.time here: the start time of the queue samples, or
+    //some other time?
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfStream::GetCurrTime(LONGLONG& time) const
+{
+    return E_NOTIMPL;  //TODO!
+}
+
+
 }  //end namespace WebmMfSource
