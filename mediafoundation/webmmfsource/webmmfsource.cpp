@@ -727,10 +727,6 @@ HRESULT WebmMfSource::Start(
                 assert(pStream);
                 assert(pStream->m_pTrack == pTrack);
 
-                //TODO:
-                //if stream was previously selected, the flush
-                //(which means release any resources its holding)
-
                 pStream->Unselect();
             }
 
@@ -768,7 +764,7 @@ HRESULT WebmMfSource::Start(
 
         assert(SUCCEEDED(hr));
 
-        hr = StartStreams();
+        hr = StartStreams(var);
         assert(SUCCEEDED(hr));
     }
     else if (pPos->vt == VT_I8)  //seek
@@ -781,7 +777,7 @@ HRESULT WebmMfSource::Start(
 
         assert(SUCCEEDED(hr));
 
-        hr = SeekStreams();
+        hr = SeekStreams(var);
         assert(SUCCEEDED(hr));
     }
     else //re-start
@@ -925,8 +921,8 @@ HRESULT WebmMfSource::Shutdown()
 
         m_streams.erase(i++);
 
-        const ULONG n = pStream->Shutdown();
-        n;
+        hr = pStream->Shutdown();
+        assert(SUCCEEDED(hr));
     }
 
     hr = m_pEvents->Shutdown();
@@ -1138,8 +1134,12 @@ void WebmMfSource::GetTime(
             assert(pStream);
 
             LONGLONG curr_time;
+            //TODO: media time or presentation time?
+            //If this a seek, then the presentation time is
+            //the difference between the seek base and the
+            //current block's media time.
 
-            hr = pStream->GetCurrTime(curr_time);
+            hr = pStream->GetCurrMediaTime(curr_time);
             assert(SUCCEEDED(hr));
             assert(curr_time >= 0);
 
@@ -1169,9 +1169,9 @@ void WebmMfSource::GetTime(
         WebmMfStream* const pStream = value.second;
         assert(pStream);
 
-        LONGLONG curr_time;
+        LONGLONG curr_time;  //TODO: see my comments above
 
-        hr = pStream->GetCurrTime(curr_time);
+        hr = pStream->GetCurrMediaTime(curr_time);
         assert(SUCCEEDED(hr));
         assert(curr_time >= 0);
 
@@ -1183,7 +1183,7 @@ void WebmMfSource::GetTime(
 }
 
 
-HRESULT WebmMfSource::StartStreams()
+HRESULT WebmMfSource::StartStreams(const PROPVARIANT& var)
 {
     typedef streams_t::iterator iter_t;
 
@@ -1197,7 +1197,7 @@ HRESULT WebmMfSource::StartStreams()
         WebmMfStream* const pStream = value.second;
         assert(pStream);
 
-        const HRESULT hr = pStream->Start();
+        const HRESULT hr = pStream->Start(var);
         assert(SUCCEEDED(hr));
     }
 
@@ -1205,7 +1205,7 @@ HRESULT WebmMfSource::StartStreams()
 }
 
 
-HRESULT WebmMfSource::SeekStreams()
+HRESULT WebmMfSource::SeekStreams(const PROPVARIANT& var)
 {
     typedef streams_t::iterator iter_t;
 
@@ -1219,7 +1219,7 @@ HRESULT WebmMfSource::SeekStreams()
         WebmMfStream* const pStream = value.second;
         assert(pStream);
 
-        const HRESULT hr = pStream->Seek();
+        const HRESULT hr = pStream->Seek(var);
         assert(SUCCEEDED(hr));
     }
 

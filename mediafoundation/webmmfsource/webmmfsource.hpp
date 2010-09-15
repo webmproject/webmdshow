@@ -96,8 +96,8 @@ private:
         const PROPVARIANT& request,
         PROPVARIANT& actual) const;
 
-    HRESULT StartStreams();
-    HRESULT SeekStreams();
+    HRESULT StartStreams(const PROPVARIANT&);
+    HRESULT SeekStreams(const PROPVARIANT&);
     HRESULT RestartStreams();
 
 public:

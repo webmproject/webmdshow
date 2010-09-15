@@ -219,8 +219,13 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
+    if (!m_bSelected)
+        return MF_E_INVALIDREQUEST;
+
+    if (m_pSource->m_state == WebmMfSource::kStateStopped)
+        return MF_E_INVALIDREQUEST;
+
     //TODO: check for EOS, and return MF_E_END_OF_STREAM
-    //TODO: if source is STATE_STOPPED, then return MF_E_INVALIDREQUEST
 
     IMFSamplePtr pSample;
 
@@ -314,7 +319,7 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
         const long result = m_pTrack->GetFirst(m_pCurr);
 
         if (result == mkvparser::E_BUFFER_NOT_FULL)
-            return result;  //try again later
+            return VFW_E_BUFFER_UNDERFLOW;
 
         assert(result >= 0);
         assert(m_pCurr);
@@ -372,7 +377,7 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
         hr = pSample->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
         assert(SUCCEEDED(hr));
 
-        m_bDiscontinuity = false;
+        m_bDiscontinuity = false;  //TODO: must set back to true during a seek
     }
 
     return S_OK;  //TODO
@@ -381,7 +386,8 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 
 HRESULT WebmMfStream::Stop()
 {
-    //TODO: check whether selected
+    if (!m_bSelected)
+        return S_FALSE;
 
     //TODO: flush enqueued samples in stream
 
@@ -394,7 +400,8 @@ HRESULT WebmMfStream::Stop()
 
 HRESULT WebmMfStream::Pause()
 {
-    //TODO: check whether selected
+    if (!m_bSelected)
+        return S_FALSE;
 
     const HRESULT hr = QueueEvent(MEStreamPaused, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
@@ -425,21 +432,22 @@ HRESULT WebmMfStream::Shutdown()
 
 HRESULT WebmMfStream::Unselect()
 {
-    m_bSelected = false;
+    //TODO:
+    //if stream was previously selected, the flush
+    //(which means release any resources its holding)
 
     //release any pending resources (pending samples, etc)
+
+    m_bSelected = false;
 
     return S_OK;
 }
 
 
-HRESULT WebmMfStream::Start()
+HRESULT WebmMfStream::Start(const PROPVARIANT& var)
 {
     if (!m_bSelected)
         return S_FALSE;
-
-    PROPVARIANT var;
-    //TODO: set var to start time
 
     assert(m_pEvents);
 
@@ -455,13 +463,10 @@ HRESULT WebmMfStream::Start()
 }
 
 
-HRESULT WebmMfStream::Seek()
+HRESULT WebmMfStream::Seek(const PROPVARIANT& var)
 {
     if (!m_bSelected)
         return S_FALSE;
-
-    PROPVARIANT var;
-    //TODO: set var to start time
 
     //TODO: flush any pending events
 
@@ -505,9 +510,27 @@ HRESULT WebmMfStream::Restart()
 }
 
 
-HRESULT WebmMfStream::GetCurrTime(LONGLONG& time) const
+HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 {
-    return E_NOTIMPL;  //TODO!
+    //source object already locked by caller
+
+    if (m_pCurr == 0)
+    {
+        reftime = 0;  //TODO: try to load the first cluster
+        return S_OK;
+    }
+
+    mkvparser::Cluster* const pCurrCluster = m_pCurr->GetCluster();
+    assert(pCurrCluster);
+
+    const mkvparser::Block* const pCurrBlock = m_pCurr->GetBlock();
+    assert(pCurrBlock);
+
+    const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(curr_ns >= 0);
+
+    reftime = curr_ns / 100;
+    return S_OK;
 }
 
 

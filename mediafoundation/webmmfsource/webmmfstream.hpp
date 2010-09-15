@@ -56,13 +56,13 @@ public:
     //Local methods and properties
 
     //virtual HRESULT Seek(LONGLONG) = 0;
-    HRESULT GetCurrTime(LONGLONG&) const;
+    HRESULT GetCurrMediaTime(LONGLONG&) const;  //not presentation time!
 
     HRESULT Unselect();
     HRESULT Select(LONGLONG);
 
-    HRESULT Start();
-    HRESULT Seek();
+    HRESULT Start(const PROPVARIANT& time);
+    HRESULT Seek(const PROPVARIANT& time);
     HRESULT Restart();
 
     HRESULT Stop();
