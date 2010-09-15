@@ -1120,14 +1120,6 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     if (m_pInputMediaType == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
-#if _DEBUG
-    {
-        vpx_codec_iter_t iter = 0;
-        vpx_image_t* f = vpx_codec_get_frame(&m_ctx, &iter);
-        assert(f == 0);
-    }
-#endif
-
     if (m_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
