@@ -35,6 +35,8 @@ WebmMfStream::WebmMfStream(
 
 WebmMfStream::~WebmMfStream()
 {
+    PurgeSamples();
+
     if (m_pEvents)
     {
         const ULONG n = m_pEvents->Release();
@@ -257,10 +259,11 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
             assert(SUCCEEDED(hr));
         }
 
-        //if source.state = paused then
-        //  queue sample in sample queue
-        //else
-        //  deliver sample
+        if (m_pSource->m_state == WebmMfSource::kStatePaused)
+        {
+            m_samples.push_back(pSample.Detach());
+            return S_OK;
+        }
 
         hr = m_pEvents->QueueEventParamUnk(
                 MEMediaSample,
@@ -281,10 +284,11 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
     assert(hr == S_FALSE);  //EOS
 
+    //TODO: handle EOS
     //queue event MEEndOfPresentation?
     //return MF_E_END_OF_STREAM?
 
-    return S_OK;  //TODO: handle EOS
+    return S_OK;
 }
 
 
@@ -384,12 +388,48 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 }
 
 
+void WebmMfStream::PurgeSamples()
+{
+    while (!m_samples.empty())
+    {
+        IMFSample* const pSample = m_samples.front();
+        assert(pSample);
+
+        m_samples.pop_front();
+
+        pSample->Release();
+    }
+}
+
+
+void WebmMfStream::DeliverSamples()
+{
+    while (!m_samples.empty())
+    {
+        IMFSample* const pSample = m_samples.front();
+        assert(pSample);
+
+        m_samples.pop_front();
+
+        const HRESULT hr = m_pEvents->QueueEventParamUnk(
+                            MEMediaSample,
+                            GUID_NULL,
+                            S_OK,
+                            pSample);
+
+        assert(SUCCEEDED(hr));
+
+        pSample->Release();
+    }
+}
+
+
 HRESULT WebmMfStream::Stop()
 {
     if (!m_bSelected)
         return S_FALSE;
 
-    //TODO: flush enqueued samples in stream
+    PurgeSamples();
 
     const HRESULT hr = QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
@@ -415,6 +455,8 @@ HRESULT WebmMfStream::Shutdown()
     if (m_pEvents == 0)
         return S_FALSE;
 
+    PurgeSamples();
+
     //TODO: Send EOS?
 
     const HRESULT hr = m_pEvents->Shutdown();
@@ -432,11 +474,7 @@ HRESULT WebmMfStream::Shutdown()
 
 HRESULT WebmMfStream::Unselect()
 {
-    //TODO:
-    //if stream was previously selected, the flush
-    //(which means release any resources its holding)
-
-    //release any pending resources (pending samples, etc)
+    PurgeSamples();
 
     m_bSelected = false;
 
@@ -468,7 +506,7 @@ HRESULT WebmMfStream::Seek(const PROPVARIANT& var)
     if (!m_bSelected)
         return S_FALSE;
 
-    //TODO: flush any pending events
+    PurgeSamples();
 
     assert(m_pEvents);
 
@@ -504,7 +542,7 @@ HRESULT WebmMfStream::Restart()
 
     assert(SUCCEEDED(hr));
 
-    //TODO: deliver queued samples
+    DeliverSamples();
 
     return S_OK;
 }

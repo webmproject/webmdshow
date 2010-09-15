@@ -1,4 +1,5 @@
 #pragma once
+#include <list>
 
 namespace WebmMfSourceLib
 {
@@ -90,6 +91,12 @@ private:
     HRESULT PopulateSample(IMFSample*);
 
     IMFMediaEventQueue* m_pEvents;
+
+    typedef std::list<IMFSample*> samples_t;
+    samples_t m_samples;
+
+    void PurgeSamples();
+    void DeliverSamples();
 
 };
 
