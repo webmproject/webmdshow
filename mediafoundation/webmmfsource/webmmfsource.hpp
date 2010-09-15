@@ -100,12 +100,16 @@ private:
     HRESULT SeekStreams(const PROPVARIANT&);
     HRESULT RestartStreams();
 
+    ULONG m_cEOS;
+
 public:
 
     mkvparser::Segment* m_pSegment;
 
     enum State { kStateStopped, kStatePaused, kStateStarted };
     State m_state;
+
+    void NotifyEOS();
 
 };
 

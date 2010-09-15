@@ -59,8 +59,9 @@ public:
     //virtual HRESULT Seek(LONGLONG) = 0;
     HRESULT GetCurrMediaTime(LONGLONG&) const;  //not presentation time!
 
-    HRESULT Unselect();
     HRESULT Select(LONGLONG);
+    HRESULT Unselect();
+    bool IsSelected() const;
 
     HRESULT Start(const PROPVARIANT& time);
     HRESULT Seek(const PROPVARIANT& time);
@@ -73,7 +74,6 @@ public:
     WebmMfSource* const m_pSource;
     IMFStreamDescriptor* const m_pDesc;
     mkvparser::Track* const m_pTrack;
-    bool m_bSelected;
 
 protected:
 
@@ -94,6 +94,9 @@ private:
 
     typedef std::list<IMFSample*> samples_t;
     samples_t m_samples;
+
+    bool m_bSelected;
+    bool m_bEOS;  //indicates whether we have posted EOS event
 
     void PurgeSamples();
     void DeliverSamples();

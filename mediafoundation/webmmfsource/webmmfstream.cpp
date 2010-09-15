@@ -23,7 +23,8 @@ WebmMfStream::WebmMfStream(
     m_pBaseCluster(0),
     m_pCurr(0),
     m_bDiscontinuity(true),
-    m_bSelected(true)
+    m_bSelected(true),
+    m_bEOS(false)
 {
     m_pDesc->AddRef();
 
@@ -227,8 +228,6 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     if (m_pSource->m_state == WebmMfSource::kStateStopped)
         return MF_E_INVALIDREQUEST;
 
-    //TODO: check for EOS, and return MF_E_END_OF_STREAM
-
     IMFSamplePtr pSample;
 
     hr = MFCreateSample(&pSample);
@@ -272,23 +271,21 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
                 pSample);
 
         assert(SUCCEEDED(hr));
-
-        //if eos
-        //  m_bEOS = true;
-        //  hr = QueueEvent(MEEndOfStream, GUID_NULL, S_OK, 0);
-
-        //TODO: handle EOS here?
-
         return S_OK;
     }
 
     assert(hr == S_FALSE);  //EOS
 
-    //TODO: handle EOS
-    //queue event MEEndOfPresentation?
-    //return MF_E_END_OF_STREAM?
+    if (m_bEOS)  //sent event already
+        return MF_E_END_OF_STREAM;
 
-    return S_OK;
+    hr = m_pEvents->QueueEventParamVar(MEEndOfStream, GUID_NULL, S_OK, 0);
+    assert(SUCCEEDED(hr));
+
+    m_bEOS = true;
+    m_pSource->NotifyEOS();
+
+    return S_OK;  //TODO: MF_E_END_OF_STREAM instead?
 }
 
 
@@ -457,8 +454,6 @@ HRESULT WebmMfStream::Shutdown()
 
     PurgeSamples();
 
-    //TODO: Send EOS?
-
     const HRESULT hr = m_pEvents->Shutdown();
     assert(SUCCEEDED(hr));
 
@@ -467,6 +462,19 @@ HRESULT WebmMfStream::Shutdown()
     assert(n == 0);
 
     m_pEvents = 0;
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfStream::Select(LONGLONG time)
+{
+    assert(m_samples.empty());
+
+    m_bSelected = true;
+    m_bEOS = false;
+
+    //TODO: set curr pos of this updated stream
 
     return S_OK;
 }
@@ -482,12 +490,19 @@ HRESULT WebmMfStream::Unselect()
 }
 
 
+bool WebmMfStream::IsSelected() const
+{
+    return m_bSelected;
+}
+
+
 HRESULT WebmMfStream::Start(const PROPVARIANT& var)
 {
     if (!m_bSelected)
         return S_FALSE;
 
     assert(m_pEvents);
+    assert(m_samples.empty());
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEStreamStarted,

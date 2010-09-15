@@ -64,7 +64,8 @@ WebmMfSource::WebmMfSource(
     m_cRef(1),
     m_file(pByteStream),
     m_pSegment(0),
-    m_state(kStateStopped)
+    m_state(kStateStopped),
+    m_cEOS(0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -960,7 +961,7 @@ HRESULT WebmMfSource::NewStream(
 
         assert(SUCCEEDED(hr));  //TODO
         assert(pStream);
-        assert(pStream->m_bSelected);
+        assert(pStream->IsSelected());
     }
     else
     {
@@ -974,7 +975,7 @@ HRESULT WebmMfSource::NewStream(
 
         assert(SUCCEEDED(hr));  //TODO
         assert(pStream);
-        assert(pStream->m_bSelected);
+        assert(pStream->IsSelected());
     }
 
     const ULONG id = pTrack->GetNumber();
@@ -1010,9 +1011,7 @@ HRESULT WebmMfSource::UpdateStream(
     assert(pStream);
     assert(time >= 0);
 
-    pStream->m_bSelected = true;
-
-    //TODO: set curr pos of this updated stream
+    pStream->Select(time);
 
     HRESULT hr = m_pEvents->QueueEventParamUnk(
                     MEUpdatedStream,
@@ -1068,7 +1067,7 @@ void WebmMfSource::GetTime(
         WebmMfStream* const pStream = iter->second;
         assert(pStream);
 
-        if (!pStream->m_bSelected)
+        if (!pStream->IsSelected())
             continue;
 
         already_selected.insert(value);
@@ -1190,6 +1189,8 @@ HRESULT WebmMfSource::StartStreams(const PROPVARIANT& var)
     iter_t iter = m_streams.begin();
     const iter_t iter_end = m_streams.end();
 
+    m_cEOS = 0;
+
     while (iter != iter_end)
     {
         const streams_t::value_type& value = *iter++;
@@ -1199,6 +1200,9 @@ HRESULT WebmMfSource::StartStreams(const PROPVARIANT& var)
 
         const HRESULT hr = pStream->Start(var);
         assert(SUCCEEDED(hr));
+
+        if (pStream->IsSelected())
+            ++m_cEOS;
     }
 
     return S_OK;
@@ -1246,6 +1250,27 @@ HRESULT WebmMfSource::RestartStreams()
     }
 
     return S_OK;
+}
+
+
+void WebmMfSource::NotifyEOS()
+{
+    assert(m_cEOS > 0);
+
+    --m_cEOS;
+
+    if (m_cEOS == 0)
+    {
+        assert(m_pEvents);
+
+        const HRESULT hr = m_pEvents->QueueEventParamVar(
+                            MEEndOfPresentation,
+                            GUID_NULL,
+                            S_OK,
+                            0);
+
+        assert(SUCCEEDED(hr));
+    }
 }
 
 }  //end namespace WebmMfSource
