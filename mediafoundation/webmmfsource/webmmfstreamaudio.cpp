@@ -238,7 +238,6 @@ HRESULT WebmMfStreamAudio::OnPopulateSample(
     assert(m_pBaseCluster);
     assert(!m_pBaseCluster->EOS());
     assert(m_pCurr);
-    assert(m_pCurr != m_pStop);
     assert(!m_pCurr->EOS());
 
     const mkvparser::Block* const pCurrBlock = m_pCurr->GetBlock();

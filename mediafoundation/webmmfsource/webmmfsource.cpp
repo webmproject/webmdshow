@@ -786,13 +786,15 @@ HRESULT WebmMfSource::Start(
     }
     else //re-start
     {
+        assert(pPos->vt == VT_EMPTY);
+
         IMFMediaEventPtr pEvent;
 
         hr = MFCreateMediaEvent(
                 MESourceStarted,
                 GUID_NULL,
                 S_OK,
-                pPos, //TODO: pass var here?
+                pPos,
                 &pEvent);
 
         assert(SUCCEEDED(hr));
@@ -1024,44 +1026,6 @@ HRESULT WebmMfSource::UpdateStream(
 
     assert(SUCCEEDED(hr));
 
-#if 0
-
-    PROPVARIANT var;
-    PropVariantInit(&var);
-
-    var.vt = VT_I8;
-    var.hVal.QuadPart = time;
-
-    //TODO: verify these tests
-
-    if (m_state == kStateStopped)
-    {
-        __noop;  //time was reset back to 0
-        //TODO: no event is sent here?
-
-        //I think an MESourceXXX event must be paired with an MFStreamXXX
-        //event for each selected stream.  We send an MESourceStarted event
-        //when the prev state is kStopped, so we should do the same here,
-        //and send an MEStreamStarted.  Either use the time (when VT_I8)
-        //or use t=0 (when VT_EMPTY).
-    }
-    else if (time_ >= 0)  //seek
-    {
-        hr = pStream->QueueEvent(MEStreamSeeked, GUID_NULL, S_OK, &var);
-        assert(SUCCEEDED(hr));
-
-        //TODO: flush
-    }
-    else //re-start
-    {
-        hr = pStream->QueueEvent(MEStreamStarted, GUID_NULL, S_OK, &var);
-        assert(SUCCEEDED(hr));
-
-        //TODO: deliver queued samples
-    }
-
-#endif
-
     return S_OK;
 }
 
@@ -1283,12 +1247,5 @@ HRESULT WebmMfSource::RestartStreams()
 
     return S_OK;
 }
-
-#if 0
-
-    }
-
-#endif
-
 
 }  //end namespace WebmMfSource

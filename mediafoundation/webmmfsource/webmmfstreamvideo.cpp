@@ -163,7 +163,6 @@ HRESULT WebmMfStreamVideo::OnPopulateSample(
     assert(m_pBaseCluster);
     assert(!m_pBaseCluster->EOS());
     assert(m_pCurr);
-    assert(m_pCurr != m_pStop);
     assert(!m_pCurr->EOS());
 
     //assert((pNextEntry == 0) ||
@@ -176,11 +175,6 @@ HRESULT WebmMfStreamVideo::OnPopulateSample(
 
     mkvparser::Cluster* const pCurrCluster = m_pCurr->GetCluster();
     assert(pCurrCluster);
-
-    assert((m_pStop == 0) ||
-           m_pStop->EOS() ||
-           (m_pStop->GetBlock()->GetTimeCode(m_pStop->GetCluster()) >
-             pCurrBlock->GetTimeCode(pCurrCluster)));
 
     const LONGLONG basetime_ns = m_pBaseCluster->GetFirstTime();
     assert(basetime_ns >= 0);

@@ -82,7 +82,6 @@ protected:
 
     mkvparser::Cluster* m_pBaseCluster;
     const mkvparser::BlockEntry* m_pCurr;
-    const mkvparser::BlockEntry* m_pStop;  //TODO: need this in MF?
     bool m_bDiscontinuity;
 
 private:

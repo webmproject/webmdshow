@@ -22,7 +22,6 @@ WebmMfStream::WebmMfStream(
     m_pTrack(pTrack),
     m_pBaseCluster(0),
     m_pCurr(0),
-    m_pStop(0),
     m_bDiscontinuity(true),
     m_bSelected(true)
 {
@@ -344,15 +343,8 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
         assert(m_pBaseCluster);
     }
 
-    if (m_pStop == 0)  //intepreted to mean "play until end"
-    {
-        if (m_pCurr->EOS())
-            return S_FALSE;  //send EOS downstream
-    }
-    else if (m_pCurr == m_pStop)
-    {
-        return S_FALSE;  //EOS
-    }
+    if (m_pCurr->EOS())
+        return S_FALSE;  //no more samples: send EOS downstream
 
     const mkvparser::BlockEntry* pNextBlock;
 
@@ -493,8 +485,9 @@ HRESULT WebmMfStream::Restart()
         return S_FALSE;
 
     PROPVARIANT var;
-    //TODO: set var to (re)start time
-    //TODO: PENDING ANSWER FROM MS REQ'D: DO WE SEND VT_EMPTY HERE?
+    PropVariantInit(&var);
+
+    var.vt = VT_EMPTY;  //restarts always report VT_EMPTY
 
     assert(m_pEvents);
 
@@ -507,8 +500,6 @@ HRESULT WebmMfStream::Restart()
     assert(SUCCEEDED(hr));
 
     //TODO: deliver queued samples
-    //TODO: we is the var.time here: the start time of the queue samples, or
-    //some other time?
 
     return S_OK;
 }
