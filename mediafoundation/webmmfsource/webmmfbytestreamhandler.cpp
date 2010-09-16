@@ -177,7 +177,11 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     if (FAILED(hr))
         return hr;
 
+    assert(pResult);
+
     hr = MFInvokeCallback(pResult);
+
+    pResult->Release();
 
     return hr;
 }

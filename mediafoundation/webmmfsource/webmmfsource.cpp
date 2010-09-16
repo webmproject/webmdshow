@@ -604,6 +604,11 @@ HRESULT WebmMfSource::Start(
     const GUID* pTimeFormat,
     const PROPVARIANT* pPos)
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Start" << endl;
+#endif
+
     //Writing a Custom Media Source:
     //http://msdn.microsoft.com/en-us/library/ms700134(v=VS.85).aspx
 
@@ -911,6 +916,11 @@ HRESULT WebmMfSource::Start(
 
 HRESULT WebmMfSource::Stop()
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Stop" << endl;
+#endif
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -949,6 +959,11 @@ HRESULT WebmMfSource::Stop()
 
 HRESULT WebmMfSource::Pause()
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Pause" << endl;
+#endif
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -989,6 +1004,11 @@ HRESULT WebmMfSource::Pause()
 
 HRESULT WebmMfSource::Shutdown()
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Shutdown" << endl;
+#endif
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
