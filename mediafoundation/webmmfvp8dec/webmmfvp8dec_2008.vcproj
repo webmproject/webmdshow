@@ -142,6 +142,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmt.lib"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="$(SolutionDir)..\vp8_sdk\lib\Win32"
 				ModuleDefinitionFile="webmmfvp8dec.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
