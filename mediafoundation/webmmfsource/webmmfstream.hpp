@@ -60,7 +60,7 @@ public:
     HRESULT GetCurrMediaTime(LONGLONG&) const;  //not presentation time!
 
     HRESULT Select(LONGLONG);
-    HRESULT Unselect();
+    HRESULT Deselect();
     bool IsSelected() const;
 
     HRESULT Start(const PROPVARIANT& time);
@@ -100,6 +100,7 @@ private:
 
     void PurgeSamples();
     void DeliverSamples();
+    void SetCurrPos(LONGLONG);
 
 };
 

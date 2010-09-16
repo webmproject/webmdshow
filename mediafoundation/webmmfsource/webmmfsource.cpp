@@ -822,7 +822,7 @@ HRESULT WebmMfSource::Start(
                 assert(pStream);
                 assert(pStream->m_pTrack == pTrack);
 
-                pStream->Unselect();
+                pStream->Deselect();
             }
 
             continue;
@@ -1070,7 +1070,7 @@ HRESULT WebmMfSource::NewStream(
 
         assert(SUCCEEDED(hr));  //TODO
         assert(pStream);
-        assert(pStream->IsSelected());
+        //assert(pStream->IsSelected());
     }
     else
     {
@@ -1084,7 +1084,7 @@ HRESULT WebmMfSource::NewStream(
 
         assert(SUCCEEDED(hr));  //TODO
         assert(pStream);
-        assert(pStream->IsSelected());
+        //assert(pStream->IsSelected());
     }
 
     const ULONG id = pTrack->GetNumber();
@@ -1097,7 +1097,7 @@ HRESULT WebmMfSource::NewStream(
     assert(status.first->first == id);
     assert(status.first->second == pStream);
 
-    //TODO: set curr pos of this new stream
+    pStream->Select(time);
 
     HRESULT hr = m_pEvents->QueueEventParamUnk(
                     MENewStream,

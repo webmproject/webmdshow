@@ -474,13 +474,13 @@ HRESULT WebmMfStream::Select(LONGLONG time)
     m_bSelected = true;
     m_bEOS = false;
 
-    //TODO: set curr pos of this updated stream
+    SetCurrPos(time);
 
     return S_OK;
 }
 
 
-HRESULT WebmMfStream::Unselect()
+HRESULT WebmMfStream::Deselect()
 {
     PurgeSamples();
 
@@ -501,8 +501,8 @@ HRESULT WebmMfStream::Start(const PROPVARIANT& var)
     if (!m_bSelected)
         return S_FALSE;
 
-    assert(m_pEvents);
     assert(m_samples.empty());
+    assert(m_pEvents);
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEStreamStarted,
@@ -584,6 +584,95 @@ HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 
     reftime = curr_ns / 100;
     return S_OK;
+}
+
+
+void WebmMfStream::SetCurrPos(LONGLONG reftime)
+{
+    //TODO:  we need to implement preloading of clusters,
+    //by using cues element to find the cluster containing
+    //the seek time.
+
+    //TODO: we must also ensure that we have the same base
+    //cluster for all streams
+
+    //TODO: do we even need a base cluster anymore?  Does
+    //the pipline handle this for us?
+
+    const LONGLONG time_ns = reftime * 100;
+
+    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+
+    const __int64 duration_ns = pSegment->GetDuration();
+    assert(duration_ns >= 0);
+
+    mkvparser::Cluster* pBase;
+
+    if (pSegment->GetCount() == 0)
+    {
+        if (pSegment->Unparsed() <= 0)
+        {
+            pBase = &pSegment->m_eos;
+            m_pCurr = m_pTrack->GetEOS();
+        }
+        else
+        {
+            pBase = 0;
+            m_pCurr = 0;  //lazy init later when we have data
+        }
+    }
+    else if (time_ns <= 0)
+    {
+        pBase = 0;
+        m_pCurr = 0;  //lazy init later
+    }
+    else if (time_ns >= duration_ns)
+    {
+        pBase = &pSegment->m_eos;
+        m_pCurr = m_pTrack->GetEOS();
+    }
+    else
+    {
+#if 0 //def _DEBUG
+        odbgstream os;
+        os << "mkvparserstream[track="
+           << m_pTrack->GetNumber()
+           << "]::SetCurrPos: tCurr_ns="
+           << tCurr_ns
+           << endl;
+#endif
+
+        pSegment->GetCluster(time_ns, m_pTrack, pBase, m_pCurr);
+        assert(pBase);
+        assert(!pBase->EOS());
+        assert(m_pCurr);
+
+#if 0 //def _DEBUG
+        os << "mkvparserstream[track="
+           << m_pTrack->GetNumber()
+           << "]::SetCurrPos(cont'd): tCurr_ns="
+           << tCurr_ns
+           << " m_pCurr=";
+
+        if (m_pCurr->EOS())
+            os << "EOS";
+        else
+        {
+            const Block* const pBlock = m_pCurr->GetBlock();
+            assert(pBlock);
+
+            os << pBlock->GetTime(m_pCurr->GetCluster());
+        }
+
+        os << endl;
+#endif
+    }
+
+    m_pBaseCluster = pBase;
+    m_bDiscontinuity = true;
+
+    //TODO: resolve issue of base cluster: how does MF handle seek times?
+    //return pBase;
 }
 
 
