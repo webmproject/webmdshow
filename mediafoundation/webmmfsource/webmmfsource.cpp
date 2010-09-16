@@ -14,6 +14,10 @@
 #include <malloc.h>
 #include <cmath>
 #include <utility>  //std::make_pair
+#ifdef _DEBUG
+#include "odbgstream.hpp"
+using std::endl;
+#endif
 
 using std::wstring;
 
@@ -76,11 +80,21 @@ WebmMfSource::WebmMfSource(
     hr = MFCreateEventQueue(&m_pEvents);
     assert(SUCCEEDED(hr));
     assert(m_pEvents);
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource: ctor" << endl;
+#endif
 }
 
 
 WebmMfSource::~WebmMfSource()
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource: dtor" << endl;
+#endif
+
     if (m_pEvents)
     {
         const ULONG n = m_pEvents->Release();
@@ -157,13 +171,27 @@ HRESULT WebmMfSource::QueryInterface(
 
 ULONG WebmMfSource::AddRef()
 {
-    return InterlockedIncrement(&m_cRef);
+    const LONG n = InterlockedIncrement(&m_cRef);
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::AddRef: n=" << n << endl;
+#endif
+
+    return n;
 }
 
 
 ULONG WebmMfSource::Release()
 {
-    if (LONG n = InterlockedDecrement(&m_cRef))
+    const LONG n = InterlockedDecrement(&m_cRef);
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Release: n=" << n << endl;
+#endif
+
+    if (n)
         return n;
 
     delete this;
@@ -173,6 +201,11 @@ ULONG WebmMfSource::Release()
 
 HRESULT WebmMfSource::Load()
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Load" << endl;
+#endif
+
     long long result, pos;
 
     mkvparser::EBMLHeader h;
@@ -274,6 +307,9 @@ HRESULT WebmMfSource::Load()
 
             if (hr != S_OK)
                 continue;
+
+            assert(pDesc);
+            m_stream_descriptors.push_back(pDesc);
         }
         else if (type == 2)  //audio
         {
@@ -281,12 +317,10 @@ HRESULT WebmMfSource::Load()
 
             if (hr != S_OK)
                 continue;
-        }
-        else
-            continue;
 
-        assert(pDesc);
-        m_stream_descriptors.push_back(pDesc);
+            assert(pDesc);
+            m_stream_descriptors.push_back(pDesc);
+        }
     }
 
     if (m_stream_descriptors.empty())
@@ -486,17 +520,72 @@ HRESULT WebmMfSource::CreatePresentationDescriptor(
     assert(SUCCEEDED(hr));
     assert(pDesc);
 
-#if 0  //TODO: resolve this pending answer from MS
-    hr = m_pDesc->GetStreamDescriptorCount(&n);
-    assert(SUCCEEDED(hr));
-    assert(n == static_cast<DWORD>(dv.size()));
+#ifdef _DEBUG
+    DWORD dwCount;
 
-    for (DWORD idx = 0; idx < n; ++idx)
-    {
-        hr = m_pDesc->SelectStream(idx);
-        assert(SUCCEEDED(hr));
-    }
+    hr = pDesc->GetStreamDescriptorCount(&dwCount);
+    assert(SUCCEEDED(hr));
+    assert(dwCount == cSD);
 #endif
+
+    mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
+    assert(pTracks);
+
+    bool have_video = false;
+    bool have_audio = false;
+
+    for (DWORD idx = 0; idx < cSD; ++idx)
+    {
+        BOOL fSelected;
+        IMFStreamDescriptorPtr pSD;
+
+        hr = pDesc->GetStreamDescriptorByIndex(idx, &fSelected, &pSD);
+        assert(SUCCEEDED(hr));
+        assert(pSD);
+
+        DWORD id;
+
+        hr = pSD->GetStreamIdentifier(&id);
+        assert(SUCCEEDED(hr));
+
+        const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
+        assert(pTrack);
+
+        const LONGLONG type = pTrack->GetType();
+
+        if (type == 1)  //video
+        {
+            if (have_video)
+            {
+                hr = pDesc->DeselectStream(idx);
+                assert(SUCCEEDED(hr));
+            }
+            else
+            {
+                hr = pDesc->SelectStream(idx);
+                assert(SUCCEEDED(hr));
+
+                have_video = true;
+            }
+        }
+        else
+        {
+            assert(type == 2);  //audio
+
+            if (have_audio)
+            {
+                hr = pDesc->DeselectStream(idx);
+                assert(SUCCEEDED(hr));
+            }
+            else
+            {
+                hr = pDesc->SelectStream(idx);
+                assert(SUCCEEDED(hr));
+
+                have_audio = true;
+            }
+        }
+    }
 
     const LONGLONG duration_ns = m_pSegment->GetDuration();
     assert(duration_ns >= 0);  //TODO

@@ -8,6 +8,10 @@
 #ifndef _INC_COMDEF
 #include <comdef.h>
 #endif
+#ifdef _DEBUG
+#include "odbgstream.hpp"
+using std::endl;
+#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaSource, __uuidof(IMFMediaSource));
 
@@ -61,11 +65,21 @@ WebmMfByteStreamHandler::WebmMfByteStreamHandler(
 {
     const HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfByteStreamHandler: ctor" << endl;
+#endif
 }
 
 
 WebmMfByteStreamHandler::~WebmMfByteStreamHandler()
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfByteStreamHandler: dtor" << endl;
+#endif
+
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
 }
@@ -130,6 +144,13 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
 {
     pURL;  //?
 
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfByteStreamHandler::BeginCreateObject: url="
+       << (pURL ? pURL : L"<NONE>")
+       << endl;
+#endif
+
     if (ppUnkCancelCookie)
         *ppUnkCancelCookie = 0;
 
@@ -167,6 +188,11 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
     MF_OBJECT_TYPE* pObjectType,
     IUnknown** ppObject)
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfByteStreamHandler::EndCreateObject (begin)" << endl;
+#endif
+
     if (ppObject == 0)
         return E_POINTER;
 
@@ -182,31 +208,37 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
     if (pResult == 0)
         return E_INVALIDARG;
 
-    HRESULT hr = pResult->GetObject(&pObject);
+    IUnknownPtr pUnk;
+
+    HRESULT hr = pResult->GetObject(&pUnk);
 
     if (FAILED(hr))
         return hr;
 
-    assert(pObject);
+    assert(pUnk);
 
-    IMFMediaSource* pSource;
-
-    hr = pObject->QueryInterface(&pSource);
+    hr = pUnk->QueryInterface(__uuidof(IMFMediaSource), (void**)&pObject);
 
     if (FAILED(hr))
         return hr;
-
-    const ULONG n = pSource->Release();
-    n;
-    assert(n);
 
     type = MF_OBJECT_MEDIASOURCE;
+
+#ifdef _DEBUG
+    os << L"WebmMfByteStreamHandler::EndCreateObject (end)" << endl;
+#endif
+
     return S_OK;
 }
 
 
 HRESULT WebmMfByteStreamHandler::CancelObjectCreation(IUnknown*)
 {
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfByteStreamHandler::CancelObjectCreation" << endl;
+#endif
+
     return E_NOTIMPL;
 }
 
