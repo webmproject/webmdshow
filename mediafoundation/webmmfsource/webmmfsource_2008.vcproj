@@ -121,7 +121,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\..\libwebm"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMMFSOURCE_EXPORTS"
+				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;WEBMMFSOURCE_EXPORTS"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -186,7 +186,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\webmmfsource_2008.rc"
+				RelativePath=".\webmmfsource.rc"
 				>
 			</File>
 		</Filter>

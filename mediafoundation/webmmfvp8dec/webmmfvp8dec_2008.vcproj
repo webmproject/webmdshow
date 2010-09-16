@@ -122,7 +122,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="$(SolutionDir)..\common; $(SolutionDir)..\vp8_sdk\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMMFVP8DEC_EXPORTS"
+				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;WEBMMFVP8DEC_EXPORTS"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -188,7 +188,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\webmmfvp8dec_2008.rc"
+				RelativePath=".\webmmfvp8dec.rc"
 				>
 			</File>
 		</Filter>
