@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by webmmfsource_2008.rc
+// Used by webmmfsource.rc
 
 // Next default values for new objects
 // 
