@@ -33,6 +33,7 @@ CmdLine::CmdLine() :
     m_script(false),
     m_verbose(false),
     m_require_audio(false),
+    m_no_audio(false),
     m_deadline(-1),
     m_target_bitrate(-1),
     m_min_quantizer(-1),
@@ -381,7 +382,8 @@ int CmdLine::ParseShort(wchar_t** i)
                 if (_wcsnicmp(arg, L"output", len) != 0)
                 {
                     wcout << L"Unknown switch: " << *i
-                          << L"\nUse -o or --output to specify output filename."
+                          << L"\nUse -o or --output "
+                          << L"to specify output filename."
                           << endl;
 
                     return -1;  //error
@@ -434,7 +436,8 @@ int CmdLine::ParseShort(wchar_t** i)
                 else
                 {
                     wcout << L"Unknown switch: " << *i
-                          << L"\nIf help info was desired, specify the -h or --help switches."
+                          << L"\nIf help info was desired, "
+                          << L"specify the -h or --help switches."
                           << endl;
 
                     return -1;
@@ -453,7 +456,8 @@ int CmdLine::ParseShort(wchar_t** i)
                 if (_wcsnicmp(arg, L"usage", len) != 0)
                 {
                     wcout << L"Unknown switch: " << *i
-                          << L"\nIf usage info was desired, specify the -u or --usage switches."
+                          << L"\nIf usage info was desired, "
+                          << L"specify the -u or --usage switches."
                           << endl;
 
                     return -1;
@@ -472,7 +476,8 @@ int CmdLine::ParseShort(wchar_t** i)
                 if (_wcsnicmp(arg, L"list", len) != 0)
                 {
                     wcout << L"Unknown switch: " << *i
-                          << L"\nIf list info was desired, specify the -l or --list switches."
+                          << L"\nIf list info was desired, "
+                          << L"specify the -l or --list switches."
                           << endl;
 
                     return -1;  //error
@@ -635,6 +640,18 @@ int CmdLine::ParseLongPost(
         }
 
         m_list = true;
+        return 1;
+    }
+
+    if (_wcsnicmp(arg, L"no-audio", len) == 0)
+    {
+        if (has_value)
+        {
+            wcout << "The no-audio switch does not accept a value." << endl;
+            return -1;  //error
+        }
+
+        m_no_audio = true;
         return 1;
     }
 
@@ -1251,6 +1268,12 @@ bool CmdLine::GetRequireAudio() const
 }
 
 
+bool CmdLine::GetNoAudio() const
+{
+    return m_no_audio;
+}
+
+
 int CmdLine::GetDeadline() const
 {
     return m_deadline;
@@ -1445,6 +1468,7 @@ void CmdLine::PrintUsage() const
           << L"  --min-quantizer                 min (best quality) quantizer\n"
           << L"  --max-quantizer                 max (worst quality) quantizer\n"
           << L"  --require-audio                 quit if no audio encoder available\n"
+          << L"  --no-audio                      do not render audio (if present)\n"
           << L"  --resize-allowed                spatial resampling\n"
           << L"  --resize-up-threshold           spatial resampling up threshold\n"
           << L"  --resize-down-threshold         spatial resampling down threshold\n"
@@ -1548,8 +1572,10 @@ void CmdLine::ListArgs() const
     else
         wcout << m_save_graph_file_ptr << L'\n';
 
-    wcout << L"script-mode: " << boolalpha << m_script << L'\n';
-    wcout << L"verbose    : " << boolalpha << m_verbose << L'\n';
+    wcout << L"script-mode  : " << boolalpha << m_script << L'\n';
+    wcout << L"verbose      : " << boolalpha << m_verbose << L'\n';
+    wcout << L"require-audio: " << boolalpha << m_require_audio << L'\n';
+    wcout << L"no-audio     : " << boolalpha << m_no_audio << L'\n';
 
     if (m_deadline >= 0)
     {

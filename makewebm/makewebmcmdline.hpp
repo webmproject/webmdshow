@@ -28,6 +28,7 @@ public:
     bool GetList() const;
     bool GetVerbose() const;
     bool GetRequireAudio() const;
+    bool GetNoAudio() const;
     int GetDeadline() const;
     int GetTargetBitrate() const;
     int GetMinQuantizer() const;
@@ -68,6 +69,7 @@ private:
     std::wstring m_synthesized_output;
     const wchar_t* m_output;
     bool m_require_audio;
+    bool m_no_audio;
 
     bool m_script;
     bool m_verbose;

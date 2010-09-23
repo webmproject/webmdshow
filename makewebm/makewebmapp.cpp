@@ -552,7 +552,7 @@ int App::CreateMuxerGraph(
                 &App::DumpVideoMediaType);
     }
 
-    if (pDemuxOutpinAudio)
+    if ((pDemuxOutpinAudio != 0) && !m_cmdline.GetNoAudio())
     {
         const IPinPtr pMuxInpinAudio(FindInpinAudio(pMux));
         assert(bool(pMuxInpinAudio));
