@@ -260,6 +260,8 @@ HRESULT WebmMfSource::Load()
 
     std::auto_ptr<mkvparser::Segment> pSegment(p);
 
+    //TODO: this does big-band loading, which is not what we
+    //want.  Load clusters incrementally.
     HRESULT hr = pSegment->Load();
 
     if (FAILED(hr))
@@ -1087,7 +1089,8 @@ HRESULT WebmMfSource::NewStream(
         //assert(pStream->IsSelected());
     }
 
-    const ULONG id = pTrack->GetNumber();
+    const LONGLONG id_ = pTrack->GetNumber();
+    const ULONG id = static_cast<ULONG>(id_);
 
     typedef streams_t::iterator iter_t;
     typedef std::pair<iter_t, bool> status_t;

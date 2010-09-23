@@ -35,7 +35,8 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
         return E_FAIL;
     }
 
-    const DWORD id = pTrack->GetNumber();
+    const LONGLONG id_ = pTrack->GetNumber();
+    const DWORD id = static_cast<DWORD>(id_);
 
     IMFMediaTypePtr pmt;
 
