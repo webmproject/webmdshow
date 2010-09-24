@@ -107,7 +107,7 @@ STDAPI DllRegisterServer()
             WebmTypes::CLSID_WebmMfVp8Dec,
             friendly_name,
             filename,
-            L"Webm.MfVp8Dec",
+            L"Webm.MfVp8Dec",  //TODO: do we really need ProgIDs?
             L"Webm.MfVp8Dec.1",
             false,  //not insertable
             false,  //not a control
@@ -122,7 +122,7 @@ STDAPI DllRegisterServer()
     enum { cInputTypes = 1 };
     MFT_REGISTER_TYPE_INFO pInputTypes[cInputTypes] =
     {
-        { MFMediaType_Video, WebmTypes::MEDIASUBTYPE_WEBM }
+        { MFMediaType_Video, WebmTypes::MEDIASUBTYPE_VP80 }
     };
 
     enum { cOutputTypes = 2 };
