@@ -81,7 +81,10 @@ protected:
                         const mkvparser::BlockEntry*,
                         IMFSample*) = 0;
 
-    mkvparser::Cluster* m_pBaseCluster;
+    //TODO: determine this during Start, and pass as
+    //param to stream; we don't need to cache it anymore.
+    //mkvparser::Cluster* m_pBaseCluster;
+
     const mkvparser::BlockEntry* m_pCurr;
     bool m_bDiscontinuity;
 

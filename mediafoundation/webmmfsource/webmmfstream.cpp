@@ -20,7 +20,7 @@ WebmMfStream::WebmMfStream(
     m_pSource(pSource),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
-    m_pBaseCluster(0),
+    //m_pBaseCluster(0),
     m_pCurr(0),
     m_bDiscontinuity(true),
     m_bSelected(true),
@@ -345,8 +345,9 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
         //for which we could then test.
         //END TODO.
 
-        m_pBaseCluster = m_pTrack->m_pSegment->GetFirst();
-        assert(m_pBaseCluster);
+        //TODO: determine this value during Start
+        //m_pBaseCluster = m_pTrack->m_pSegment->GetFirst();
+        //assert(m_pBaseCluster);
     }
 
     if (m_pCurr->EOS())
@@ -668,7 +669,10 @@ void WebmMfStream::SetCurrPos(LONGLONG reftime)
 #endif
     }
 
-    m_pBaseCluster = pBase;
+    //TODO: pass out to caller (Start), and then pass back to each
+    //stream when seeking
+    //m_pBaseCluster = pBase;
+
     m_bDiscontinuity = true;
 
     //TODO: resolve issue of base cluster: how does MF handle seek times?

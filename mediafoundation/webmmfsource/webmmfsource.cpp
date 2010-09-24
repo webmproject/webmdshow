@@ -260,7 +260,7 @@ HRESULT WebmMfSource::Load()
 
     std::auto_ptr<mkvparser::Segment> pSegment(p);
 
-    //TODO: this does big-band loading, which is not what we
+    //TODO: this does big-bang loading, which is not what we
     //want.  Load clusters incrementally.
     HRESULT hr = pSegment->Load();
 

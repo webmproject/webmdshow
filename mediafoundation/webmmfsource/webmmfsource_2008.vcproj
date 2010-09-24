@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfuuid.lib mfplat.lib "
+				AdditionalDependencies="mf.lib mfuuid.lib mfplat.lib"
 				OutputFile="$(OutDir)\webmmfsource.dll"
 				LinkIncremental="2"
 				GenerateManifest="false"

@@ -236,8 +236,11 @@ HRESULT WebmMfStreamAudio::OnPopulateSample(
     IMFSample* pSample)
 {
     assert(pSample);
-    assert(m_pBaseCluster);
-    assert(!m_pBaseCluster->EOS());
+
+    //TODO:
+    //assert(m_pBaseCluster);
+    //assert(!m_pBaseCluster->EOS());
+
     assert(m_pCurr);
     assert(!m_pCurr->EOS());
 
@@ -252,10 +255,11 @@ HRESULT WebmMfStreamAudio::OnPopulateSample(
     assert(curr_ns >= 0);
     //assert((start_ns % 100) == 0);
 
-    const __int64 basetime_ns = m_pBaseCluster->GetFirstTime();
-    assert(basetime_ns >= 0);
-    //assert((basetime_ns % 100) == 0);
-    assert(curr_ns >= basetime_ns);
+    //TODO:
+    //const __int64 basetime_ns = m_pBaseCluster->GetFirstTime();
+    //assert(basetime_ns >= 0);
+    ////assert((basetime_ns % 100) == 0);
+    //assert(curr_ns >= basetime_ns);
 
     const long cbBuffer = pCurrBlock->GetSize();
     assert(cbBuffer >= 0);
@@ -298,7 +302,8 @@ HRESULT WebmMfStreamAudio::OnPopulateSample(
     hr = pSample->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
     assert(SUCCEEDED(hr));
 
-    const LONGLONG sample_time = (curr_ns - basetime_ns) / 100;
+    //const LONGLONG sample_time = (curr_ns - basetime_ns) / 100;
+    const LONGLONG sample_time = curr_ns / 100;
 
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
