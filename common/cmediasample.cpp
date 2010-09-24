@@ -40,9 +40,10 @@ HRESULT CMediaSample::Factory::CreateSample(
 
     assert(pSample->m_cRef == 0);
 
-    //We don't bother to Initialize here.  The purpose of CreateSample is simply
-    //to create a new sample object to add to allocator's pool, during Commit.
-    //The sample will get propertly initialized later, during GetBuffer.
+    //We don't bother to Initialize here.  The purpose of CreateSample is
+    //simply to create a new sample object to add to allocator's pool,
+    //during Commit.  The sample will get propertly initialized later,
+    //during GetBuffer.
 
     pResult = pSample;
 

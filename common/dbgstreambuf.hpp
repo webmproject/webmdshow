@@ -26,7 +26,7 @@ protected:
     std::streamsize ppos() const;
     void ppos(std::streamsize);
 
-	int_type overflow(int_type c);
+    int_type overflow(int_type c);
 
     std::streamsize xsputn(const elem_t*, std::streamsize);
 
@@ -301,7 +301,8 @@ inline int basic_dbgstreambuf<elem_t, traits_t>::sync()
 
 
 //template<typename elem_t, typename traits_t>
-//inline void basic_dbgstreambuf<elem_t, traits_t>::resize(std::basic_string<TCHAR>::size_type n)
+//inline void basic_dbgstreambuf<elem_t, traits_t>::resize(
+//   std::basic_string<TCHAR>::size_type n)
 //{
 //    m_buf.resize(n);
 //

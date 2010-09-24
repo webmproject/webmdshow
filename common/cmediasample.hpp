@@ -111,7 +111,7 @@ private:
     __int64 m_stop_time;
     __int64 m_media_start_time;
     __int64 m_media_stop_time;
-    long m_actual_data_length;  //what portion of allocated memory holds actual data
+    long m_actual_data_length;  //allocated memory holding actual data
 
     BYTE* m_buf;
     long m_buflen;  //how much memory was allocated

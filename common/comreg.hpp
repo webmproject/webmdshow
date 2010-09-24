@@ -73,6 +73,7 @@ namespace ComReg
 
     //Media Foundation
 
+#if (_WIN32_WINNT >= 0x0601)
     HRESULT RegisterByteStreamHandler(
         const wchar_t* ext,
         const GUID& clsid,
@@ -81,4 +82,5 @@ namespace ComReg
     HRESULT UnRegisterByteStreamHandler(
         const wchar_t* ext,
         const GUID& clsid);
+#endif
 }

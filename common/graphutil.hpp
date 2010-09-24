@@ -44,7 +44,12 @@ namespace GraphUtil
     _COM_SMARTPTR_TYPEDEF(IMediaEventSink, __uuidof(IMediaEventSink));
 
     IPinPtr FindPin(IBaseFilter*, PIN_DIRECTION);
-    IPinPtr FindPin(IBaseFilter*, PIN_DIRECTION, const GUID& majortype, const GUID* subtype = 0);
+    IPinPtr FindPin(
+        IBaseFilter*,
+        PIN_DIRECTION,
+        const GUID& majortype,
+        const GUID* subtype = 0);
+
     IPinPtr FindOutpin(IBaseFilter*);
     IPinPtr FindInpin(IBaseFilter*);
     IPinPtr FindOutpinVideo(IBaseFilter*);

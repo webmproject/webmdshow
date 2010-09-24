@@ -11,6 +11,10 @@
 #include <malloc.h>
 #include <cassert>
 #include <sstream>
+//#if (_WIN32_WINNT >= 0x0601)
+//#include <sfc.h>
+//#pragma comment(lib, "sfc")
+//#endif
 
 using std::wstring;
 using std::wostringstream;
@@ -715,30 +719,61 @@ HRESULT ComReg::GetTypeLibAttr(
 }
 
 
+#if (_WIN32_WINNT >= 0x0601)
 HRESULT ComReg::RegisterByteStreamHandler(
     const wchar_t* ext,
     const GUID& clsid,
     const wchar_t* friendly_name)
 {
-    Registry::Key parent, key;
+    const wchar_t parent_subkey[] =
+        L"Software\\Microsoft\\Windows Media Foundation\\ByteStreamHandlers";
+
+#if 0
+    const BOOL bProtected = SfcIsKeyProtected(
+                                HKEY_LOCAL_MACHINE,
+                                parent_subkey,
+                                0);
+
+    if (bProtected)
+        return E_ACCESSDENIED;
+
+    Registry::Key parent;
 
     LONG e = parent.open(
                 HKEY_LOCAL_MACHINE,
-                L"Software\\Microsoft"
-                  L"\\Windows Media Foundation\\ByteStreamHandlers",
-                KEY_CREATE_SUB_KEY);
+                parent_subkey,
+                KEY_WRITE);  //KEY_CREATE_SUB_KEY?
 
     if (e)
         return HRESULT_FROM_WIN32(e);
+
+    Registry::Key key;
 
     e = key.create<wchar_t>(parent, ext, 0, 0, KEY_SET_VALUE, 0);
 
     if (e)
         return HRESULT_FROM_WIN32(e);
+#else
+    const wstring subkey = wstring(parent_subkey) + L"\\" + ext;
+
+    Registry::Key key;
+
+    LONG e = key.create<wchar_t>(
+                HKEY_LOCAL_MACHINE,
+                subkey.c_str(),
+                0,
+                0,
+                KEY_WRITE,
+                0);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+#endif
 
     wchar_t buf[guid_buflen];
 
-    int n = StringFromGUID2(clsid, buf, guid_buflen);
+    const int n = StringFromGUID2(clsid, buf, guid_buflen);
+    n;
     assert(n == guid_buflen);
 
     e = key.set(buf, friendly_name);
@@ -800,3 +835,4 @@ HRESULT ComReg::UnRegisterByteStreamHandler(
 
     return S_OK;
 }
+#endif
