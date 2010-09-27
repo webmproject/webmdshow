@@ -1169,20 +1169,22 @@ void WebmMfSource::GetTime(
 
     typedef streams_t::const_iterator iter_t;
 
-    iter_t iter = m_streams.begin();
-    iter_t iter_end = m_streams.end();
-
-    while (iter != iter_end)
     {
-        const streams_t::value_type& value = *iter++;
+        iter_t iter = m_streams.begin();
+        const iter_t iter_end = m_streams.end();
 
-        WebmMfStream* const pStream = iter->second;
-        assert(pStream);
+        while (iter != iter_end)
+        {
+            const streams_t::value_type& value = *iter++;
 
-        if (!pStream->IsSelected())
-            continue;
+            WebmMfStream* const pStream = value.second;
+            assert(pStream);
 
-        already_selected.insert(value);
+            if (!pStream->IsSelected())
+                continue;
+
+            already_selected.insert(value);
+        }
     }
 
     streams_t newly_selected;
@@ -1216,9 +1218,9 @@ void WebmMfSource::GetTime(
         assert(pTrack);
         assert(pTrack->GetNumber() == id);
 
-        iter = already_selected.find(id);
+        const iter_t iter = already_selected.find(id);
 
-        if (iter != iter_end)  //already selected
+        if (iter != already_selected.end())  //already selected
         {
             WebmMfStream* const pStream = iter->second;
             assert(pStream);
@@ -1232,8 +1234,8 @@ void WebmMfSource::GetTime(
     {
         //We're supposed to use the minimum timestamp
 
-        iter = newly_selected.begin();
-        iter_end = newly_selected.end();
+        iter_t iter = newly_selected.begin();
+        const iter_t iter_end = newly_selected.end();
 
         LONGLONG min_time = -1;
 
@@ -1268,8 +1270,8 @@ void WebmMfSource::GetTime(
     //whatever.  Let's just use the smallest time from what was selected
     //previously.
 
-    iter = already_selected.begin();
-    iter_end = already_selected.end();
+    iter_t iter = already_selected.begin();
+    const iter_t iter_end = already_selected.end();
 
     LONGLONG min_time = -1;
 
