@@ -226,7 +226,7 @@ HRESULT WebmMfVp8Dec::GetInputStreamInfo(
     //DWORD cbAlignment;
 
     info.cbMaxLookahead = 0;
-    info.hnsMaxLatency = 0;
+    info.hnsMaxLatency = 0;  //TODO: Is 0 correct?
     //TODO: does lag-in-frames matter here?
     //See "_MFT_INPUT_STREAM_INFO_FLAGS Enumeration" for more info:
     //http://msdn.microsoft.com/en-us/library/ms703975%28v=VS.85%29.aspx
@@ -623,10 +623,13 @@ HRESULT WebmMfVp8Dec::SetInputType(
     if (s.width == 0)
         return MF_E_INVALIDMEDIATYPE;
 
-    //TODO: check whether width is odd
+    if (s.width % 2)  //TODO
+        return MF_E_INVALIDMEDIATYPE;
 
     if (s.height == 0)
         return MF_E_INVALIDMEDIATYPE;
+
+    //TODO: do we need to check for odd height too?
 
     if (dwFlags & MFT_SET_TYPE_TEST_ONLY)
         return S_OK;
@@ -673,9 +676,18 @@ HRESULT WebmMfVp8Dec::SetInputType(
 
     //const HRESULT hr = OnApplyPostProcessing();
 
-    //TODO: resolve this
-    assert(m_pOutputMediaType == 0);
+    if (m_pOutputMediaType)
+    {
+        //TODO: Is this the correct behavior?
 
+        const ULONG n = m_pOutputMediaType->Release();
+        n;
+        assert(n == 0);
+
+        m_pOutputMediaType = 0;
+    }
+
+#if 0
     //TODO:
     //We could update the preferred ("available") output media types,
     //now that we know the frame rate and frame size, etc.
@@ -713,6 +725,7 @@ HRESULT WebmMfVp8Dec::SetInputType(
             s.height);
 
     assert(SUCCEEDED(hr));  //TODO
+#endif
 
     return S_OK;
 }
@@ -971,13 +984,7 @@ HRESULT WebmMfVp8Dec::GetInputStatus(
 
     DWORD& dwFlags = *pdwFlags;
 
-#if 0
-    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
-
-    dwFlags = (f == 0) ? MFT_INPUT_STATUS_ACCEPT_DATA : 0;
-#else
     dwFlags = MFT_INPUT_STATUS_ACCEPT_DATA;  //because we always queue
-#endif
 
     return S_OK;
 }
@@ -1080,21 +1087,13 @@ HRESULT WebmMfVp8Dec::ProcessInput(
     if (m_pInputMediaType == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
-    //TODO: resolve this
-    //if (m_pOutputMediaType == 0)  //TODO:
-    //    return MF_E_TRANSFORM_TYPE_NOT_SET;
-
-#if 0
-    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
-
-    if (f)
-        return MF_E_NOTACCEPTING;
-#endif
+    if (m_pOutputMediaType == 0)  //TODO: need this check?
+        return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     pSample->AddRef();
     m_samples.push_back(pSample);
 
-    return S_OK;  //TODO!
+    return S_OK;
 }
 
 
@@ -1118,6 +1117,9 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
         return hr;
 
     if (m_pInputMediaType == 0)
+        return MF_E_TRANSFORM_TYPE_NOT_SET;
+
+    if (m_pOutputMediaType == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     if (m_samples.empty())
@@ -1178,8 +1180,6 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
     hr = buf_in->Unlock();
     assert(SUCCEEDED(hr));
-
-    assert(m_pOutputMediaType);
 
     GUID subtype;
 
