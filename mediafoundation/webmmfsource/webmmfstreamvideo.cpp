@@ -5,6 +5,7 @@
 #include <mfapi.h>
 #include <mferror.h>
 #include <cassert>
+#include <limits>
 #include <cmath>
 #include <comdef.h>
 
@@ -56,19 +57,19 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
     hr = pmt->SetUINT32(MF_MT_COMPRESSED, TRUE);
     assert(SUCCEEDED(hr));
 
-    const double r = pTrack->GetFrameRate();
+    const double frame_rate = pTrack->GetFrameRate();
 
-    if (r > 0)
+    if ((frame_rate > 0) && (frame_rate <= std::numeric_limits<UINT32>::max()))
     {
         UINT32 numer;
         UINT32 denom = 1;
 
         for (;;)
         {
-            const double rr = r * denom;
+            const double r = frame_rate * denom;
 
             double int_part;
-            const double frac_part = modf(rr, &int_part);
+            const double frac_part = modf(r, &int_part);
 
             //I think the 0 test is valid (because 0 is a model number), but
             //if not, then you can cast it to a integer and compare that way.
@@ -76,7 +77,9 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
             //http://www.cygnus-software.com/papers/comparingfloats/
             //  Comparing%20floating%20point%20numbers.htm
 
-            if ((frac_part == 0) || (denom == 1000000000))
+            if ((frac_part == 0) ||
+                (denom == 1000000000) ||
+                ((10 * int_part) > std::numeric_limits<UINT32>::max()))
             {
                 numer = static_cast<UINT32>(int_part);
                 break;
