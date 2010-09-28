@@ -834,7 +834,7 @@ HRESULT WebmMfSource::Start(
 
         if (iter == iter_end)  //does NOT exist already
         {
-            hr = NewStream(pSD, pTrack, time);
+            hr = NewStream(pSD, pTrack /* , time */ );
             assert(SUCCEEDED(hr));
         }
         else  //stream DOES exist
@@ -843,7 +843,7 @@ HRESULT WebmMfSource::Start(
             assert(pStream);
             assert(pStream->m_pTrack == pTrack);
 
-            hr = UpdateStream(pSD, pStream, time);
+            hr = UpdateStream(pSD, pStream /* , time */ );
             assert(SUCCEEDED(hr));
         }
     }
@@ -1052,12 +1052,12 @@ HRESULT WebmMfSource::Shutdown()
 
 HRESULT WebmMfSource::NewStream(
     IMFStreamDescriptor* pSD,
-    mkvparser::Track* pTrack,
-    LONGLONG time)
+    mkvparser::Track* pTrack
+    /* LONGLONG time */ )
 {
     assert(pSD);
     assert(pTrack);
-    assert(time >= 0);
+    //assert(time >= 0);
 
     WebmMfStream* pStream;
     const LONGLONG type = pTrack->GetType();
@@ -1100,7 +1100,7 @@ HRESULT WebmMfSource::NewStream(
     assert(status.first->first == id);
     assert(status.first->second == pStream);
 
-    pStream->Select(time);
+    pStream->Select( /* time */ );
 
     HRESULT hr = m_pEvents->QueueEventParamUnk(
                     MENewStream,
@@ -1116,14 +1116,14 @@ HRESULT WebmMfSource::NewStream(
 
 HRESULT WebmMfSource::UpdateStream(
     IMFStreamDescriptor* pDesc,
-    WebmMfStream* pStream,
-    LONGLONG time)
+    WebmMfStream* pStream
+    /* LONGLONG time */ )
 {
     assert(pDesc);
     assert(pStream);
-    assert(time >= 0);
+    //assert(time >= 0);
 
-    pStream->Select(time);
+    pStream->Select( /* time */ );
 
     HRESULT hr = m_pEvents->QueueEventParamUnk(
                     MEUpdatedStream,
@@ -1296,6 +1296,317 @@ void WebmMfSource::GetTime(
 }
 
 
+#if 0
+void WebmMfStream::SetCurrPos(LONGLONG reftime)
+{
+    //TODO:  we need to implement preloading of clusters,
+    //by using cues element to find the cluster containing
+    //the seek time.
+
+    //TODO: we must also ensure that we have the same base
+    //cluster for all streams
+
+    //TODO: do we even need a base cluster anymore?  Does
+    //the pipline handle this for us?
+
+    const LONGLONG time_ns = reftime * 100;
+
+    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+
+    const __int64 duration_ns = pSegment->GetDuration();
+    assert(duration_ns >= 0);
+
+    mkvparser::Cluster* pBase;
+
+    if (pSegment->GetCount() == 0)
+    {
+        if (pSegment->Unparsed() <= 0)
+        {
+            pBase = &pSegment->m_eos;
+            m_pCurr = m_pTrack->GetEOS();
+        }
+        else
+        {
+            pBase = 0;
+            m_pCurr = 0;  //lazy init later when we have data
+        }
+    }
+    else if (time_ns <= 0)
+    {
+        pBase = 0;
+        m_pCurr = 0;  //lazy init later
+    }
+    else if (time_ns >= duration_ns)
+    {
+        pBase = &pSegment->m_eos;
+        m_pCurr = m_pTrack->GetEOS();
+    }
+    else
+    {
+#if 0 //def _DEBUG
+        odbgstream os;
+        os << "mkvparserstream[track="
+           << m_pTrack->GetNumber()
+           << "]::SetCurrPos: tCurr_ns="
+           << tCurr_ns
+           << endl;
+#endif
+
+        pSegment->GetCluster(time_ns, m_pTrack, pBase, m_pCurr);
+        assert(pBase);
+        assert(!pBase->EOS());
+        assert(m_pCurr);
+
+#if 0 //def _DEBUG
+        os << "mkvparserstream[track="
+           << m_pTrack->GetNumber()
+           << "]::SetCurrPos(cont'd): tCurr_ns="
+           << tCurr_ns
+           << " m_pCurr=";
+
+        if (m_pCurr->EOS())
+            os << "EOS";
+        else
+        {
+            const Block* const pBlock = m_pCurr->GetBlock();
+            assert(pBlock);
+
+            os << pBlock->GetTime(m_pCurr->GetCluster());
+        }
+
+        os << endl;
+#endif
+    }
+
+    //TODO: pass out to caller (Start), and then pass back to each
+    //stream when seeking
+    //m_pBaseCluster = pBase;
+
+    m_bDiscontinuity = true;
+
+    //TODO: resolve issue of base cluster: how does MF handle seek times?
+    //return pBase;
+}
+#endif
+
+
+#if 0
+void WebmMfStream::GetBaseCluster(
+    LONGLONG reftime,
+    mkvparser::Cluster*& pBase)
+{
+    //TODO:  we need to implement preloading of clusters,
+    //by using cues element to find the cluster containing
+    //the seek time.
+
+    //TODO: we must also ensure that we have the same base
+    //cluster for all streams
+
+    //TODO: do we even need a base cluster anymore?  Does
+    //the pipline handle this for us?
+
+    const LONGLONG time_ns = reftime * 100;
+
+    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+
+    const __int64 duration_ns = pSegment->GetDuration();
+    assert(duration_ns >= 0);
+
+    if (pSegment->GetCount() == 0)
+    {
+        if (pSegment->Unparsed() <= 0)
+        {
+            pBase = &pSegment->m_eos;
+            m_pCurr = m_pTrack->GetEOS();
+        }
+        else
+        {
+            pBase = 0;
+            m_pCurr = 0;  //lazy init later when we have data
+        }
+    }
+    else if (time_ns <= 0)
+    {
+        pBase = 0;
+        m_pCurr = 0;  //lazy init later
+    }
+    else if (time_ns >= duration_ns)
+    {
+        pBase = &pSegment->m_eos;
+        m_pCurr = m_pTrack->GetEOS();
+    }
+    else
+    {
+#if 0 //def _DEBUG
+        odbgstream os;
+        os << "mkvparserstream[track="
+           << m_pTrack->GetNumber()
+           << "]::SetCurrPos: tCurr_ns="
+           << tCurr_ns
+           << endl;
+#endif
+
+        pSegment->GetCluster(time_ns, m_pTrack, pBase, m_pCurr);
+        assert(pBase);
+        assert(!pBase->EOS());
+        assert(m_pCurr);
+
+#if 0 //def _DEBUG
+        os << "mkvparserstream[track="
+           << m_pTrack->GetNumber()
+           << "]::SetCurrPos(cont'd): tCurr_ns="
+           << tCurr_ns
+           << " m_pCurr=";
+
+        if (m_pCurr->EOS())
+            os << "EOS";
+        else
+        {
+            const Block* const pBlock = m_pCurr->GetBlock();
+            assert(pBlock);
+
+            os << pBlock->GetTime(m_pCurr->GetCluster());
+        }
+
+        os << endl;
+#endif
+    }
+
+    //TODO: pass out to caller (Start), and then pass back to each
+    //stream when seeking
+    //m_pBaseCluster = pBase;
+
+    m_bDiscontinuity = true;
+
+    //TODO: resolve issue of base cluster: how does MF handle seek times?
+    //return pBase;
+}
+#endif
+
+
+void WebmMfSource::Seek(
+    const PROPVARIANT& var,
+    HRESULT (WebmMfStream::*pfn)(
+        const PROPVARIANT&,
+        mkvparser::Cluster*,
+        const mkvparser::BlockEntry*))
+{
+    assert(var.vt == VT_I8);
+
+    const LONGLONG reftime = var.hVal.QuadPart;
+    assert(reftime >= 0);
+
+    const LONGLONG time_ns = reftime * 100;
+
+    //get cluster that has this time
+    //TODO: to implement this:
+    //if there's a video stream,
+    //  find the cluster associated with the keyframe
+    //we'll have to do this for each video stream (that is selected)
+    //designate one of the video streams as "distinguished"
+    //  i suppose the best approach is to use the earliest video block
+    //  as the distinguished cluster, so that you have audio for all of
+    //  the video immediately (were it otherwise, meaning that the audio
+    //  was sync'd to a later keyframe, then there would be gap between
+    //  the earliest keyframe and the start of the audio).
+    //for each audio stream
+    //  find the audio block for this time on the distinguished cluster
+    //if there are no video streams, then find the earliest audio,
+    // and use its cluster as the distinguished cluster from which all
+    // other audio seeks are based.
+
+    struct VideoStream
+    {
+        WebmMfStreamVideo* pStream;
+        mkvparser::Cluster* pCluster;
+        const mkvparser::BlockEntry* pBlockEntry;
+    };
+
+    typedef std::vector<VideoStream> vs_t;
+
+    vs_t vs;
+    vs.reserve(m_streams.size());
+
+    LONG base = -1;
+
+    typedef std::vector<WebmMfStreamAudio*> as_t;
+    as_t as;
+
+    typedef streams_t::iterator iter_t;
+
+    iter_t iter = m_streams.begin();
+    const iter_t iter_end = m_streams.end();
+
+    while (iter != iter_end)
+    {
+        const streams_t::value_type& value = *iter++;
+
+        WebmMfStream* const pStream = value.second;
+        assert(pStream);
+
+        if (!pStream->IsSelected())
+            continue;
+
+        mkvparser::Track* const pTrack = pStream->m_pTrack;
+        const LONGLONG type = pTrack->GetType();
+
+        if (type == 2)  //audio
+        {
+            typedef WebmMfStreamAudio AS;
+            AS* const s = static_cast<AS*>(pStream);
+
+            as.push_back(s);
+            continue;
+        }
+
+        assert(type == 1);  //video
+
+        const vs_t::size_type idx = vs.size();
+
+        vs.push_back(VideoStream());
+        VideoStream& s = vs.back();
+
+        s.pStream = static_cast<WebmMfStreamVideo*>(pStream);
+
+        m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
+        assert(s.pCluster);
+
+        if (s.pCluster->EOS())
+            continue;
+
+        if (base < 0)
+            base = idx;
+        else
+        {
+            mkvparser::Cluster* const pBaseCluster = vs[base].pCluster;
+
+            if (s.pCluster->GetTime() < pBaseCluster->GetTime())
+                base = idx;
+        }
+    }
+
+    const vs_t::size_type nvs = vs.size();
+
+    for (vs_t::size_type idx = 0; idx < nvs; ++idx)
+    {
+        const VideoStream& s = vs[idx];
+        (s.pStream->*pfn)(var, s.pCluster, s.pBlockEntry);
+    }
+
+    mkvparser::Cluster* pBaseCluster;
+
+    if (base >= 0)
+        pBaseCluster = vs[base].pCluster;
+    else
+        pBaseCluster = m_pSegment->GetCluster(time_ns);
+
+    const as_t::size_type nas = as.size();
+
+    for (as_t::size_type idx = 0; idx < nas; ++idx)
+        (as[idx]->*pfn)(var, pBaseCluster, 0);
+}
+
+
 HRESULT WebmMfSource::StartStreams(const PROPVARIANT& var)
 {
     typedef streams_t::iterator iter_t;
@@ -1312,35 +1623,18 @@ HRESULT WebmMfSource::StartStreams(const PROPVARIANT& var)
         WebmMfStream* const pStream = value.second;
         assert(pStream);
 
-        const HRESULT hr = pStream->Start(var);
-        assert(SUCCEEDED(hr));
-
         if (pStream->IsSelected())
-            ++m_cEOS;
+            ++m_cEOS;  //to send event when all streams send EOS
     }
 
+    Seek(var, &WebmMfStream::Start);
     return S_OK;
 }
 
 
 HRESULT WebmMfSource::SeekStreams(const PROPVARIANT& var)
 {
-    typedef streams_t::iterator iter_t;
-
-    iter_t iter = m_streams.begin();
-    const iter_t iter_end = m_streams.end();
-
-    while (iter != iter_end)
-    {
-        const streams_t::value_type& value = *iter++;
-
-        WebmMfStream* const pStream = value.second;
-        assert(pStream);
-
-        const HRESULT hr = pStream->Seek(var);
-        assert(SUCCEEDED(hr));
-    }
-
+    Seek(var, &WebmMfStream::Seek);
     return S_OK;
 }
 

@@ -88,17 +88,27 @@ private:
     typedef std::map<ULONG, WebmMfStream*> streams_t;
     streams_t m_streams;
 
-    HRESULT NewStream(IMFStreamDescriptor*, mkvparser::Track*, LONGLONG);
-    HRESULT UpdateStream(IMFStreamDescriptor*, WebmMfStream*, LONGLONG);
+    HRESULT NewStream(IMFStreamDescriptor*, mkvparser::Track*);
+    HRESULT UpdateStream(IMFStreamDescriptor*, WebmMfStream*);
 
     void GetTime(
         IMFPresentationDescriptor*,
         const PROPVARIANT& request,
         PROPVARIANT& actual) const;
 
+    void WebmMfSource::Seek(
+        const PROPVARIANT& var,
+        HRESULT (WebmMfStream::*pfn)(
+            const PROPVARIANT&,
+            mkvparser::Cluster*,
+            const mkvparser::BlockEntry*));
+
     HRESULT StartStreams(const PROPVARIANT&);
     HRESULT SeekStreams(const PROPVARIANT&);
     HRESULT RestartStreams();
+
+    //void GetBaseCluster(LONGLONG, mkvparser::Cluster*&);
+    //void SetCurrPos(LONGLONG);
 
     ULONG m_cEOS;
 

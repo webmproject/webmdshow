@@ -59,12 +59,20 @@ public:
     //virtual HRESULT Seek(LONGLONG) = 0;
     HRESULT GetCurrMediaTime(LONGLONG&) const;  //not presentation time!
 
-    HRESULT Select(LONGLONG);
+    HRESULT Select();
     HRESULT Deselect();
     bool IsSelected() const;
 
-    HRESULT Start(const PROPVARIANT& time);
-    HRESULT Seek(const PROPVARIANT& time);
+    HRESULT Start(
+        const PROPVARIANT& time,
+        mkvparser::Cluster*,
+        const mkvparser::BlockEntry*);
+
+    HRESULT Seek(
+        const PROPVARIANT& time,
+        mkvparser::Cluster*,
+        const mkvparser::BlockEntry*);
+
     HRESULT Restart();
 
     HRESULT Stop();
@@ -103,7 +111,6 @@ private:
 
     void PurgeSamples();
     void DeliverSamples();
-    void SetCurrPos(LONGLONG);
 
 };
 
