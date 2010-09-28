@@ -8,3 +8,9 @@ URL: http://xiph.org/downloads/
 libvorbis
 Version: 1.3.1
 URL: http://xiph.org/downloads/
+
+Build instructions:
+
+The libogg and libvorbis distributions noted above include visual studio 2008 
+solution files.  Use the provided script to build the libraries used by the 
+webmdshow MediaFoundation objects.
