@@ -180,7 +180,8 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
         traits_t::copy(pptr(), str, n);
 #endif
 
-        pbump(n);
+        const int off = static_cast<int>(n);
+        pbump(off);
 
         return n;
     }
@@ -209,7 +210,8 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
         traits_t::copy(pptr(), str, n);
 #endif
 
-        pbump(n);
+        const int off = static_cast<int>(n);
+        pbump(off);
 
         return n;
     }
@@ -242,7 +244,8 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
         traits_t::copy(pptr(), str, len);
 #endif
 
-        pbump(len);
+        const int off = static_cast<int>(len);
+        pbump(off);
 
         str += len;
         nn -= len;
@@ -266,7 +269,8 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
             traits_t::copy(pbase(), str, nn);
 #endif
 
-            pbump(nn);
+            const int off = static_cast<int>(nn);
+            pbump(off);
 
             return n;
         }
@@ -277,7 +281,8 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
         traits_t::copy(pbase(), str, oldlen);
 #endif
 
-        pbump(oldlen);
+        const int off = static_cast<int>(oldlen);
+        pbump(off);
 
         str += oldlen;
         nn -= oldlen;
