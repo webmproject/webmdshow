@@ -577,7 +577,7 @@ HRESULT ComReg::UnRegisterCoclass(const GUID& clsid)
         if (subkey(val))
         {
             const DWORD dw = Registry::SHDeleteKey(HKEY_CLASSES_ROOT, val);
-            assert(dw == ERROR_SUCCESS);
+            assert((dw == ERROR_SUCCESS) || (dw == ERROR_FILE_NOT_FOUND));
             dw;
 
             //TODO: delete subkey from clsid_key
@@ -593,7 +593,7 @@ HRESULT ComReg::UnRegisterCoclass(const GUID& clsid)
         if (subkey(val))
         {
             const DWORD dw = Registry::SHDeleteKey(HKEY_CLASSES_ROOT, val);
-            assert(dw == ERROR_SUCCESS);
+            assert((dw == ERROR_SUCCESS) || (dw == ERROR_FILE_NOT_FOUND));
             dw;
 
             //TODO: delete subkey
@@ -605,7 +605,7 @@ HRESULT ComReg::UnRegisterCoclass(const GUID& clsid)
     clsid_key.close();
 
     const DWORD dw = Registry::SHDeleteKey(HKEY_CLASSES_ROOT, clsid_keyname);
-    assert(dw == ERROR_SUCCESS);
+    assert((dw == ERROR_SUCCESS) || (dw == ERROR_FILE_NOT_FOUND));
     dw;
 
     return S_OK;
