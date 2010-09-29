@@ -17,7 +17,7 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration
-			Name="Debug|Win32"
+			Name="Debug_x86|Win32"
 			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(ConfigurationName)"
 			IntermediateDirectory="$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="2"
@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common; $(SolutionDir)..\vp8_sdk\include"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common; $(SolutionDir)..\third_party\libvpx"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;WEBMMFVP8DEC_EXPORTS"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -65,7 +65,7 @@
 				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmtd.lib"
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="$(SolutionDir)..\vp8_sdk\lib\Win32"
+				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\libvpx\x86\debug"
 				GenerateManifest="false"
 				ModuleDefinitionFile="webmmfvp8dec.def"
 				GenerateDebugInformation="true"
@@ -95,7 +95,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release|Win32"
+			Name="Release_x86|Win32"
 			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(ConfigurationName)"
 			IntermediateDirectory="$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="2"
@@ -121,7 +121,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common; $(SolutionDir)..\vp8_sdk\include"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\libvpx"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;WEBMMFVP8DEC_EXPORTS"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -143,7 +143,7 @@
 				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmt.lib"
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(SolutionDir)..\vp8_sdk\lib\Win32"
+				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\libvpx\x86\release"
 				GenerateManifest="false"
 				ModuleDefinitionFile="webmmfvp8dec.def"
 				GenerateDebugInformation="false"
