@@ -174,7 +174,8 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
     hr = pmt->SetGUID(MF_MT_AM_FORMAT_TYPE, VorbisTypes::FORMAT_Vorbis2);
     assert(SUCCEEDED(hr));
 
-    hr = pmt->SetBlob(MF_MT_USER_DATA, pb, cb);
+    const UINT32 cbBufSize = static_cast<UINT32>(cb);
+    hr = pmt->SetBlob(MF_MT_USER_DATA, pb, cbBufSize);
     assert(SUCCEEDED(hr));
 
     IMFMediaType* mtv[1] = { pmt };

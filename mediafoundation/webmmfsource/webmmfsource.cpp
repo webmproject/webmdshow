@@ -1575,13 +1575,13 @@ void WebmMfSource::Seek(
             continue;
 
         if (base < 0)
-            base = idx;
+            base = static_cast<LONG>(idx);
         else
         {
             mkvparser::Cluster* const pBaseCluster = vs[base].pCluster;
 
             if (s.pCluster->GetTime() < pBaseCluster->GetTime())
-                base = idx;
+                base = static_cast<LONG>(idx);
         }
     }
 
