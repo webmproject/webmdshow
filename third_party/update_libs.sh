@@ -10,6 +10,9 @@
 # 3. (Optional) run mintty.exe once Cygwin.bat finishes.
 #    - this provides a fully functional terminal
 
+# xiph config vars
+# TODO(tomfinegan): rename some of these vars to distinguish them from
+#                   the libvpx vars
 build_config_array=(debug\|win32 debug\|x64 release\|win32 release\|x64)
 libvorbis_url=\
 "http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.1.tar.gz"
@@ -19,7 +22,17 @@ patches_dir="patches"
 devenv_outdir_array=(win32/debug x64/debug win32/release x64/release)
 install_dir_array=(x86/debug x64/debug x86/release x64/release)
 
+# libvpx stuff
+libvpx_dir="libvpx.git"
+libvpx_remote="git://review.webmproject.org/libvpx"
+libvpx_tag="v0.9.2"
+libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
+
+# the following string vars disable their respective builds if non-empty
+# TODO(tomfinegan): need to hook the disable_* flags up w/getopt
 disable_xiph_builds="" # disables ogg and vorbis builds
+disable_libvpx_build=""
+
 function die() {
   if [[ -n "$1" ]]; then
     echo "ERROR> ($1) exiting!"
@@ -126,8 +139,103 @@ ${target_dir}/${install_dir_array[$lib_index]}/
   done
 }
 
+function clone_libvpx_and_checkout_tag() {
+  local clone_dir="$1"
+  if [[ -z "$clone_dir" ]]; then
+    die "clone_libvpx_and_checkout_tag: no clone_dir specified [arg1 empty]"
+  fi
+  local git_remote="$2"
+  if [[ -z "$git_remote" ]]; then
+    die "clone_libvpx_and_checkout_tag: no git_remote specified [arg2 empty]"
+  fi
+  local git_tag="$3"
+  if [[ -z "$git_tag" ]]; then
+    die "clone_libvpx_and_checkout_tag: no git_tag specified [arg3 empty]"
+  fi
+  # create a temp directory and clone into a child of the temp dir
+  local tmp_path=$(mktemp -d)
+  if [[ ! -d "${tmp_path}" ]]; then
+    die "clone_libvpx_and_checkout_tag: temp dir creation failed [tmp_path does not exist]"
+  fi
+  # clone the repo-- quietly, otherwise a line of git output lingers in
+  # stdout and breaks the attempt to echo the full path to the clone.
+  # Some weird issue w/sync in cygwin maybe...
+  git clone -q "${git_remote}" "${tmp_path}/${clone_dir}"
+  if [[ ! -d "${tmp_path}/${clone_dir}" ]]; then
+    die "clone_libvpx_and_checkout_tag: clone failed [directory does not exist]"
+  fi
+  cd "${tmp_path}/${clone_dir}"
+  # checkout the specified tag
+  git checkout -q "${git_tag}"
+  # echo the clone path so the next bit of script can do something with it
+  #echo "tmp_path=$tmp_path"
+  #echo "clone_dir=$clone_dir"
+  sync # flush git output from stdout (this doesn't work... perhaps I'm
+       # "doing it wrong")
+  echo "${tmp_path}/${clone_dir}"
+}
 
+function build_libvpx() {
+  local clone_dir="$1"
+  if [[ -z "$clone_dir" ]]; then
+    die "build_libvpx: clone_dir not specified [arg1 empty]"
+  fi
+  # already confirmed temp dir and clone exist earlier
+  local olddir="$(pwd)"
+  cd "${clone_dir}"
+  #echo "num_entries=${#libvpx_target_array[@]}"
+  #echo "entries=${libvpx_target_array[@]}"
+  for config in ${libvpx_target_array[@]}; do
+    #echo "config=$config"
+    mkdir -p "${config}"
+    cd "${config}"
+    ../configure --target=${config} --disable-examples --enable-static-msvcrt \
+--disable-install-docs
+    make clean
+    make
+    # "installs" the includes within INSTALL/include/vpx, which are copied
+    # to webmdshow.git/third_party/libvpx/vpx by |install_libvpx_files|
+    DIST_DIR=./INSTALL make install
+    cd -
+  done
+  cd "${olddir}"
+}
 
+function install_libvpx_files() {
+  local clone_dir="$1"
+  if [[ -z "$clone_dir" ]]; then
+    die "install_libvpx_files: clone_dir not specified [arg1 empty]"
+  fi
+  local targets_array=(${libvpx_target_array[@]})
+  for (( target_num=0; target_num < "${#targets_array[@]}"; target_num++ )); do
+    # vs2k8 drops libs in win32/x64 subdirs of the configuration dir when
+    # configured for those targets, which differs from x86/x86_64 as w/in
+    # the actual libvpx target names-- just grab the first four chars in
+    # current target to avoid the issue...
+    local target="${targets_array[${target_num}]}"
+    local lib_src_subdir="${target:0:4}"
+    local lib_dest_subdir="${target:0:3}"
+    # and replace w/the proper build subdir
+    if [[ "${lib_src_subdir}" == "x86-" ]]; then
+      lib_src_subdir="Win32"
+    elif [[ "${lib_src_subdir}" == "x86_" ]]; then
+      lib_src_subdir="x64"
+      lib_dest_subdir="${lib_src_subdir}"
+    else
+      die "install_libvpx_files: unexpected entry in target array substr\
+! [expected x86_ or x86-, got ${lib_src_subdir}]"
+    fi
+    #echo "pwd=$(pwd)"
+    local lib_build_path="${clone_dir}/${target}/${lib_src_subdir}/"
+    cp "${lib_build_path}Debug/vpxmtd.lib" "libvpx/${lib_dest_subdir}/debug/"
+    cp "${lib_build_path}/Release/vpxmt.lib" \
+"libvpx/${lib_dest_subdir}/release/"
+  done
+
+  # copy LICENSE and includes
+  cp "${clone_dir}/LICENSE" "libvpx/"
+  cp ${clone_dir}/${target}/INSTALL/include/vpx/*.h libvpx/vpx/
+}
 
 # Xiph stuff
 if [[ -z "${disable_xiph_builds}" ]]; then
@@ -151,4 +259,11 @@ if [[ -z "${disable_xiph_builds}" ]]; then
   rm -rf "${libogg_dir}" "${libvorbis_dir}" *.tar.gz libvorbis/vorbis/vorbis*.h
 fi
 
+# libvpx stuff
+if [[ -z "${disable_libvpx_build}" ]]; then
+  libvpx_full_path=$(clone_libvpx_and_checkout_tag "${libvpx_dir}" \
+"${libvpx_remote}" "${libvpx_tag}")
+  build_libvpx "${libvpx_full_path}"
+  install_libvpx_files "${libvpx_full_path}"
+fi
 
