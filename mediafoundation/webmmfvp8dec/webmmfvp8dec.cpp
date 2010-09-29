@@ -1,8 +1,8 @@
 #pragma warning(disable:4505)  //unreferenced local function removed
 #include "clockable.hpp"
 #include <mfidl.h>
-#include "vpx_decoder.h"
-#include "vp8dx.h"
+#include "vpx/vpx_decoder.h"
+#include "vpx/vp8dx.h"
 #include <list>
 #include "webmmfvp8dec.hpp"
 #include "webmtypes.hpp"
