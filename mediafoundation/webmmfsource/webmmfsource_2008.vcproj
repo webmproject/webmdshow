@@ -100,7 +100,8 @@
 			Name="Debug|x64"
 			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="1"
+			ConfigurationType="2"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -119,6 +120,14 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\..\libwebm"
+				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;_USRDLL;NOMINMAX"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="1"
+				BrowseInformation="1"
+				WarningLevel="4"
+				DebugInformationFormat="1"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -131,7 +140,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="mf.lib mfuuid.lib mfplat.lib"
+				OutputFile="$(OutDir)\webmmfsource.dll"
 				GenerateManifest="false"
+				ModuleDefinitionFile="webmmfsource.def"
 				GenerateDebugInformation="true"
 				TargetMachine="17"
 			/>
@@ -187,7 +199,7 @@
 				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\..\libwebm"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;NOMINMAX"
 				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
+				EnableFunctionLevelLinking="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="0"
@@ -240,7 +252,8 @@
 			Name="Release|x64"
 			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="1"
+			ConfigurationType="2"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -259,6 +272,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\..\libwebm"
+				PreprocessorDefinitions="WIN64;_WINDOWS;_USRDLL;NOMINMAX"
+				WarningLevel="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -271,7 +287,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="mf.lib mfuuid.lib mfplat.lib "
+				OutputFile="$(OutDir)\webmmfsource.dll"
+				LinkIncremental="1"
 				GenerateManifest="false"
+				ModuleDefinitionFile="webmmfsource.def"
 				TargetMachine="17"
 			/>
 			<Tool
