@@ -29,14 +29,15 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
     using mkvparser::AudioTrack;
     AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);
 
+    pDesc = 0;
+
     const char* const codec = pTrack->GetCodecId();
-    assert(codec);
+
+    if (codec == 0)  //weird
+        return E_FAIL;
 
     if (_stricmp(codec, "A_VORBIS") != 0)  //weird
-    {
-        pDesc = 0;
         return E_FAIL;
-    }
 
     const LONGLONG id_ = pTrack->GetNumber();
     const DWORD id = static_cast<DWORD>(id_);
@@ -61,7 +62,9 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
     assert(SUCCEEDED(hr));
 
     const __int64 channels_ = pTrack->GetChannels();
-    assert(channels_ > 0);
+
+    if (channels_ <= 0)  //weird
+        return E_FAIL;
 
     const UINT32 channels = static_cast<UINT32>(channels_);
 
@@ -69,7 +72,9 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
     assert(SUCCEEDED(hr));
 
     const double rate = pTrack->GetSamplingRate();
-    assert(rate > 0);
+
+    if (rate <= 0)
+        return E_FAIL;
 
     hr = pmt->SetDouble(MF_MT_AUDIO_FLOAT_SAMPLES_PER_SECOND, rate);
     assert(SUCCEEDED(hr));
@@ -100,9 +105,11 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
     }
 
     size_t cp_size;
+
     const BYTE* const cp = pTrack->GetCodecPrivate(cp_size);
-    assert(cp);
-    assert(cp_size);
+
+    if ((cp == 0) || (cp_size == 0))
+        return E_FAIL;
 
     const BYTE* const begin = cp;
     const BYTE* const end = begin + cp_size;
