@@ -5,6 +5,10 @@
 #include <cassert>
 #include <comdef.h>
 #include <vfwmsgs.h>
+#ifdef _DEBUG
+#include "odbgstream.hpp"
+using std::endl;
+#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaEventQueue, __uuidof(IMFMediaEventQueue));
 _COM_SMARTPTR_TYPEDEF(IMFSample, __uuidof(IMFSample));
@@ -514,6 +518,22 @@ HRESULT WebmMfStream::Start(
     else
         m_pCurr = pBaseCluster->GetEntry(m_pTrack);
 
+#ifdef _DEBUG
+    {
+        const LONGLONG ns = pBaseCluster->GetTime();
+
+        const mkvparser::Block* const pBlock = m_pCurr->GetBlock();
+        const LONGLONG ns2 = pBlock->GetTime(pBaseCluster);
+
+        wodbgstream os;
+        os << L"WebmMfStream::Start: cluster.ns=" << ns
+           << " cluster.secs=" << (double(ns) / 1000000000)
+           << " block.ns=" << ns2
+           << " block.secs=" << (double(ns2) / 1000000000)
+           << endl;
+    }
+#endif
+
     m_bDiscontinuity = true;
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
@@ -543,6 +563,22 @@ HRESULT WebmMfStream::Seek(
     else
         m_pCurr = pBaseCluster->GetEntry(m_pTrack);
 
+#ifdef _DEBUG
+    {
+        const LONGLONG ns = pBaseCluster->GetTime();
+
+        const mkvparser::Block* const pBlock = m_pCurr->GetBlock();
+        const LONGLONG ns2 = pBlock->GetTime(pBaseCluster);
+
+        wodbgstream os;
+        os << L"WebmMfStream::Seek: cluster.ns=" << ns
+           << " cluster.secs=" << (double(ns) / 1000000000)
+           << " block.ns=" << ns2
+           << " block.secs=" << (double(ns2) / 1000000000)
+           << endl;
+    }
+#endif
+
     m_bDiscontinuity = true;
 
     assert(m_pEvents);
@@ -563,6 +599,13 @@ HRESULT WebmMfStream::Restart()
 {
     if (!m_bSelected)
         return S_FALSE;
+
+#ifdef _DEBUG
+    {
+        wodbgstream os;
+        os << L"WebmMfStream::Restart" << endl;
+    }
+#endif
 
     PROPVARIANT var;
     PropVariantInit(&var);

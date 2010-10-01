@@ -173,10 +173,10 @@ ULONG WebmMfSource::AddRef()
 {
     const LONG n = InterlockedIncrement(&m_cRef);
 
-#ifdef _DEBUG
-    wodbgstream os;
-    os << L"WebmMfSource::AddRef: n=" << n << endl;
-#endif
+//#ifdef _DEBUG
+//    wodbgstream os;
+//    os << L"WebmMfSource::AddRef: n=" << n << endl;
+//#endif
 
     return n;
 }
@@ -186,10 +186,10 @@ ULONG WebmMfSource::Release()
 {
     const LONG n = InterlockedDecrement(&m_cRef);
 
-#ifdef _DEBUG
-    wodbgstream os;
-    os << L"WebmMfSource::Release: n=" << n << endl;
-#endif
+//#ifdef _DEBUG
+//    wodbgstream os;
+//    os << L"WebmMfSource::Release: n=" << n << endl;
+//#endif
 
     if (n)
         return n;
@@ -313,6 +313,7 @@ HRESULT WebmMfSource::Load()
             assert(pDesc);
             m_stream_descriptors.push_back(pDesc);
         }
+#if 0
         else if (type == 2)  //audio
         {
             hr = WebmMfStreamAudio::CreateStreamDescriptor(pTrack, pDesc);
@@ -323,6 +324,7 @@ HRESULT WebmMfSource::Load()
             assert(pDesc);
             m_stream_descriptors.push_back(pDesc);
         }
+#endif
     }
 
     if (m_stream_descriptors.empty())
@@ -608,7 +610,7 @@ HRESULT WebmMfSource::Start(
 {
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource::Start" << endl;
+    os << L"WebmMfSource::Start (begin)" << endl;
 #endif
 
     //Writing a Custom Media Source:
@@ -757,6 +759,12 @@ HRESULT WebmMfSource::Start(
 
     const LONGLONG time = var.hVal.QuadPart;
     assert(time >= 0);
+
+#ifdef _DEBUG
+    os << L"start reftime=" << time
+       << L" secs=" << (double(time) / 10000000)
+       << endl;
+#endif
 
     DWORD count;
 
@@ -911,6 +919,10 @@ HRESULT WebmMfSource::Start(
     //     then it's OK to simply return an error from Start
     //  else we DID queue a Started/Seeked event
     //     then queue an MEError event
+
+#ifdef _DEBUG
+    os << L"WebmMfSource::Start (end)" << endl;
+#endif
 
     return S_OK;
 }
@@ -1496,6 +1508,13 @@ void WebmMfSource::Seek(
     const LONGLONG reftime = var.hVal.QuadPart;
     assert(reftime >= 0);
 
+#ifdef _DEBUG
+    wodbgstream os;
+    os << "WebmMfSource::Seek: reftime=" << reftime
+       << " secs=" << (double(reftime) / 10000000)
+       << endl;
+#endif
+
     const LONGLONG time_ns = reftime * 100;
 
     //get cluster that has this time
@@ -1584,6 +1603,20 @@ void WebmMfSource::Seek(
                 base = static_cast<LONG>(idx);
         }
     }
+
+#ifdef _DEBUG
+    if (base >= 0)
+    {
+        mkvparser::Cluster* const pCluster = vs[base].pCluster;
+        const LONGLONG ns = pCluster->GetTime();
+
+        os << L"base cluster ns=" << ns
+           << " sec=" << (double(ns) / 1000000000)
+           << endl;
+    }
+    else
+        os << "no base cluster" << endl;
+#endif
 
     const vs_t::size_type nvs = vs.size();
 
