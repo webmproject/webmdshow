@@ -110,6 +110,10 @@ private:
 
     void SetConfig();
     vpx_codec_err_t SetTokenPartitions();
+    vpx_codec_err_t SetAutoAltRef();
+    vpx_codec_err_t SetARNRMaxFrames();
+    vpx_codec_err_t SetARNRStrength();
+    vpx_codec_err_t SetARNRType();
 
     BYTE* m_buf;
     size_t m_buflen;

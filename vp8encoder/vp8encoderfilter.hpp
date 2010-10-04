@@ -146,6 +146,18 @@ public:
     HRESULT STDMETHODCALLTYPE SetForceKeyframe();
     HRESULT STDMETHODCALLTYPE ClearForceKeyframe();
 
+    HRESULT STDMETHODCALLTYPE SetAutoAltRef(int);
+    HRESULT STDMETHODCALLTYPE GetAutoAltRef(int*);
+
+    HRESULT STDMETHODCALLTYPE SetARNRMaxFrames(int);
+    HRESULT STDMETHODCALLTYPE GetARNRMaxFrames(int*);
+
+    HRESULT STDMETHODCALLTYPE SetARNRStrength(int);
+    HRESULT STDMETHODCALLTYPE GetARNRStrength(int*);
+
+    HRESULT STDMETHODCALLTYPE SetARNRType(int);
+    HRESULT STDMETHODCALLTYPE GetARNRType(int*);
+
     //IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
@@ -228,6 +240,10 @@ public:
         int32_t two_pass_vbr_bias_pct;
         int32_t two_pass_vbr_minsection_pct;
         int32_t two_pass_vbr_maxsection_pct;
+        int32_t auto_alt_ref;
+        int32_t arnr_max_frames;
+        int32_t arnr_strength;
+        int32_t arnr_type;
 
         void Init();
     };

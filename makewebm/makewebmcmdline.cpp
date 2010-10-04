@@ -62,7 +62,11 @@ CmdLine::CmdLine() :
     m_two_pass_vbr_bias_pct(-1),
     m_two_pass_vbr_minsection_pct(-1),
     m_two_pass_vbr_maxsection_pct(-1),
-    m_save_graph_file_ptr(0)
+    m_save_graph_file_ptr(0),
+    m_auto_alt_ref(-1),
+    m_arnr_maxframes(-1),
+    m_arnr_strength(-1),
+    m_arnr_type(-1)
 {
 }
 
@@ -1258,6 +1262,26 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
+    status = ParseOpt(i, arg, len, L"auto-alt-ref", m_auto_alt_ref, 0, 1);
+
+    if (status)
+        return status;
+
+    status = ParseOpt(i, arg, len, L"arnr-maxframes", m_arnr_maxframes, 0, 15);
+
+    if (status)
+        return status;
+
+    status = ParseOpt(i, arg, len, L"arnr-strength", m_arnr_strength, 0, 6, 3);
+
+    if (status)
+        return status;
+
+    status = ParseOpt(i, arg, len, L"arnr-type", m_arnr_type, 1, 3);
+
+    if (status)
+        return status;
+
     wcout << "Unknown switch: " << *i
           << "\nUse /help or --help to get usage info."
           << endl;
@@ -1481,6 +1505,25 @@ int CmdLine::GetTwoPassVbrMaxsectionPct() const
     return m_two_pass_vbr_maxsection_pct;
 }
 
+int CmdLine::GetAutoAltRef() const
+{
+    return m_auto_alt_ref;
+}
+
+int CmdLine::GetARNRMaxFrames() const
+{
+    return m_arnr_maxframes;
+}
+
+int CmdLine::GetARNRStrength() const
+{
+    return m_arnr_strength;
+}
+
+int CmdLine::GetARNRType() const
+{
+    return m_arnr_type;
+}
 
 void CmdLine::PrintVersion() const
 {
@@ -1537,6 +1580,10 @@ void CmdLine::PrintUsage() const
           << L"  --two-pass-vbr-maxsection-pct   maximum bitrate\n"
           << L"  --undershoot-pct                percent of target bitrate for easier frames\n"
           << L"  --overshoot-pct                 percent of target bitrate for harder frames\n"
+          << L"  --auto-alt-ref                  encoder may create alternate reference frames\n"
+          << L"  --arnr-maxframes                max number of frames to use on filter\n"
+          << L"  --arnr-strength                 strength of filter\n"
+          << L"  --arnr-type                     type of filter\n"
           << L"  -l, --list                      print switch values, but do not run app\n"
           << L"  -v, --verbose                   print verbose list or usage info\n"
           << L"  -V, --version                   print version information\n"
@@ -1849,6 +1896,18 @@ void CmdLine::ListArgs() const
     else
         wcout << L"keyframe-max-interval: (determined from framerate)"
               << L'\n';
+
+    if (m_auto_alt_ref >= 0)
+        wcout << L"auto-alt-ref: " << m_auto_alt_ref << L'\n';
+
+    if (m_arnr_maxframes >= 0)
+        wcout << L"arnr-maxframes: " << m_arnr_maxframes << L'\n';
+
+    if (m_arnr_strength >= 0)
+        wcout << L"arnr-strength: " << m_arnr_strength << L'\n';
+
+    if (m_arnr_type >= 0)
+        wcout << L"arnr-type: " << m_arnr_type << L'\n';
 
     wcout << endl;
 }

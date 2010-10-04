@@ -141,6 +141,10 @@ void Filter::Config::Init()
     two_pass_vbr_bias_pct = -1;
     two_pass_vbr_minsection_pct = -1;
     two_pass_vbr_maxsection_pct = -1;
+    auto_alt_ref = -1;
+    arnr_max_frames = -1;
+    arnr_strength = -1;
+    arnr_type = -1;
 }
 
 
@@ -1579,6 +1583,157 @@ HRESULT Filter::ClearForceKeyframe()
     return S_OK;
 }
 
+HRESULT Filter::SetAutoAltRef(int val)
+{
+    if (val > 1)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+
+    m_cfg.auto_alt_ref = val;
+    m_bDirty = true;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetAutoAltRef(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *p = m_cfg.auto_alt_ref;
+    return S_OK;
+}
+
+HRESULT Filter::SetARNRMaxFrames(int val)
+{
+    if (val > 15)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+
+    m_cfg.arnr_max_frames = val;
+    m_bDirty = true;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetARNRMaxFrames(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *p = m_cfg.arnr_max_frames;
+    return S_OK;
+}
+
+HRESULT Filter::SetARNRStrength(int val)
+{
+    if (val > 6)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+
+    m_cfg.arnr_strength = val;
+    m_bDirty = true;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetARNRStrength(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *p = m_cfg.arnr_strength;
+    return S_OK;
+}
+
+HRESULT Filter::SetARNRType(int val)
+{
+    if (val > 3)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+
+    m_cfg.arnr_type = val;
+    m_bDirty = true;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetARNRType(int* p)
+{
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *p = m_cfg.arnr_type;
+    return S_OK;
+}
 
 HRESULT Filter::IsDirty()
 {

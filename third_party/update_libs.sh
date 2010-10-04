@@ -25,12 +25,12 @@ install_dir_array=(x86/debug x64/debug x86/release x64/release)
 # libvpx stuff
 libvpx_dir="libvpx.git"
 libvpx_remote="git://review.webmproject.org/libvpx"
-libvpx_tag="v0.9.2"
+libvpx_tag="bdf469c"
 libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
 
 # the following string vars disable their respective builds if non-empty
 # TODO(tomfinegan): need to hook the disable_* flags up w/getopt
-disable_xiph_builds="" # disables ogg and vorbis builds
+disable_xiph_builds="true" # disables ogg and vorbis builds
 disable_libvpx_build=""
 
 function die() {

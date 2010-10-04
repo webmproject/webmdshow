@@ -351,6 +351,47 @@ interface IVP8Encoder : IUnknown
     HRESULT SetForceKeyframe();
     HRESULT ClearForceKeyframe();
 
+    //Enable/disable Auto Alt Ref
+    //
+    //Enable the encoder to include an alternate reference frame.
+    //
+    // Note set auto alt ref to 0 (default) to disable auto alt ref.
+
+    HRESULT SetAutoAltRef([in] int AutoAltRef);
+    HRESULT GetAutoAltRef([out] int* pAutoAltRef);
+
+    //Alt Ref Filter Max Frames
+    //
+    //This is the maximum number of frames to run the temporal filter over.
+    //The number of frames has to be less than or equal to lag in frames.
+    //
+    //The range is [0, 15]. Zero is the default.
+
+    HRESULT SetARNRMaxFrames([in] int Frames);
+    HRESULT GetARNRMaxFrames([out] int* pFrames);
+
+    //Alt Ref Filter Strength
+    //
+    //This is the relative strength of the blur for the temporal filter.
+    //
+    //The range is [0, 6]. Zero is the weakest and six is the strongest. Three
+    //is the default.
+
+    HRESULT SetARNRStrength([in] int Strength);
+    HRESULT GetARNRStrength([out] int* pStrength);
+
+    //Alt Ref Filter Type
+    //
+    //This is the type of blur for the temporal filter.
+    //
+    //The range is [1, 3].
+    //Value 1 = a backward blur
+    //Value 2 = a forward blur
+    //Value 3 = a center blur (default)
+
+    HRESULT SetARNRType([in] int Type);
+    HRESULT GetARNRType([out] int* pType);
+
 }
 
 

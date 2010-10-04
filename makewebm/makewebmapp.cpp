@@ -2555,6 +2555,74 @@ HRESULT App::SetVP8Options(
         }
     }
 
+    const int auto_alt_ref = m_cmdline.GetAutoAltRef();
+
+    if (auto_alt_ref >= 0)
+    {
+        const HRESULT hr = pVP8->SetAutoAltRef(auto_alt_ref);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder auto alt ref.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
+    const int arnr_maxframes = m_cmdline.GetARNRMaxFrames();
+
+    if (arnr_maxframes >= 0)
+    {
+        const HRESULT hr = pVP8->SetARNRMaxFrames(arnr_maxframes);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder arnr maxframes.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
+    const int arnr_strength = m_cmdline.GetARNRStrength();
+
+    if (arnr_strength >= 0)
+    {
+        const HRESULT hr = pVP8->SetARNRStrength(arnr_strength);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder arnr strength.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
+    const int arnr_type = m_cmdline.GetARNRType();
+
+    if (arnr_type >= 0)
+    {
+        const HRESULT hr = pVP8->SetARNRType(arnr_type);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder arnr type.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
     const int dropframe_thresh = m_cmdline.GetDropframeThreshold();
 
     if (dropframe_thresh >= 0)
