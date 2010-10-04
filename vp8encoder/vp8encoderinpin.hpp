@@ -9,7 +9,7 @@
 #pragma once
 #include "vp8encoderpin.hpp"
 #include "graphutil.hpp"
-#include "vpx_encoder.h"
+#include "vpx/vpx_encoder.h"
 #include "ivp8sample.hpp"
 #include <list>
 

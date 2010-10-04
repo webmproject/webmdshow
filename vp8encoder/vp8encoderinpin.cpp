@@ -11,7 +11,7 @@
 #include "vp8encoderoutpin.hpp"
 #include "mediatypeutil.hpp"
 #include "webmtypes.hpp"
-#include "vp8cx.h"
+#include "vpx/vp8cx.h"
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <cassert>

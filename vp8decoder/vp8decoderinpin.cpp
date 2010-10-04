@@ -10,7 +10,7 @@
 #include "vp8decoderfilter.hpp"
 #include "vp8decoderoutpin.hpp"
 #include "mediatypeutil.hpp"
-#include "vp8dx.h"
+#include "vpx/vp8dx.h"
 #include "graphutil.hpp"
 #include "webmtypes.hpp"
 #include <vfwmsgs.h>

@@ -46,7 +46,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL;$(SolutionDir)vp8_sdk\include"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL;$(SolutionDir)third_party\libvpx"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;VP8DECODER_EXPORTS"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -70,7 +70,7 @@
 				AdditionalDependencies="strmiids.lib vpxmtd.lib"
 				OutputFile="$(SolutionDir)..\dll\webmdshow\$(ConfigurationName)\$(RootNameSpace).dll"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="$(SolutionDir)vp8_sdk\lib\Win32"
+				AdditionalLibraryDirectories="$(SolutionDir)third_party\libvpx\x86\debug"
 				GenerateManifest="false"
 				ModuleDefinitionFile="vp8decoder.def"
 				GenerateDebugInformation="true"
@@ -131,7 +131,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL;$(SolutionDir)vp8_sdk\include"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL;$(SolutionDir)third_party\libvpx"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;VP8DECODER_EXPORTS"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -153,7 +153,7 @@
 				AdditionalDependencies="strmiids.lib vpxmt.lib"
 				OutputFile="$(SolutionDir)..\dll\webmdshow\$(ConfigurationName)\$(RootNameSpace).dll"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(SolutionDir)vp8_sdk\lib\Win32"
+				AdditionalLibraryDirectories="$(SolutionDir)third_party\libvpx\x86\release"
 				GenerateManifest="false"
 				ModuleDefinitionFile="vp8decoder.def"
 				GenerateDebugInformation="true"
