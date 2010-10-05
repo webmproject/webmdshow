@@ -25,4 +25,5 @@ namespace WebmTypes
     extern const CLSID CLSID_WebmMfVp8Dec;  //Media Foundation
     extern const GUID WebMSample_Preroll;
 
+    extern const CLSID CLSID_WebmMfVorbisDec; //Media Foundation
 }
