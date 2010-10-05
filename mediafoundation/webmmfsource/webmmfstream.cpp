@@ -223,6 +223,9 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     HRESULT hr = lock.Seize(m_pSource);
     assert(SUCCEEDED(hr));  //TODO
 
+    odbgstream os;
+    os << "WebmMfStream::RequestSample" << endl;
+
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
@@ -245,8 +248,15 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
         if (hr != VFW_E_BUFFER_UNDERFLOW)
             break;
 
+#if 0
         hr = Preload();  //TODO: file-based read assumed
         assert(SUCCEEDED(hr));
+#else
+        mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+
+        const long status = pSegment->LoadCluster();
+        assert(status == 0);  //TODO
+#endif
     }
 
     if (hr == S_OK)  //have a sample
@@ -293,6 +303,7 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 }
 
 
+#if 0
 HRESULT WebmMfStream::Preload()
 {
     mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
@@ -315,6 +326,7 @@ HRESULT WebmMfStream::Preload()
 
     return bDone ? S_FALSE : S_OK;
 }
+#endif
 
 
 HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
@@ -519,10 +531,13 @@ HRESULT WebmMfStream::Start(
         m_pCurr = pBaseCluster->GetEntry(m_pTrack);
 
 #ifdef _DEBUG
+    if (!m_pCurr->EOS())
     {
         const LONGLONG ns = pBaseCluster->GetTime();
 
         const mkvparser::Block* const pBlock = m_pCurr->GetBlock();
+        assert(pBlock);
+
         const LONGLONG ns2 = pBlock->GetTime(pBaseCluster);
 
         wodbgstream os;
@@ -564,6 +579,7 @@ HRESULT WebmMfStream::Seek(
         m_pCurr = pBaseCluster->GetEntry(m_pTrack);
 
 #ifdef _DEBUG
+    if (!m_pCurr->EOS())
     {
         const LONGLONG ns = pBaseCluster->GetTime();
 
