@@ -266,7 +266,7 @@ HRESULT WebmMfSource::Load()
 
     HRESULT hr;
 
-#if 1
+#if 0
     //TODO: this does big-bang loading, which is not what we
     //want.  Load clusters incrementally.
     hr = pSegment->Load();
@@ -274,7 +274,7 @@ HRESULT WebmMfSource::Load()
     if (FAILED(hr))
         return hr;
 #else
-    long long status = pSegment->ParseHeaders();
+    const long long status = pSegment->ParseHeaders();
 
     if (status < 0)  //error
     {
@@ -286,16 +286,6 @@ HRESULT WebmMfSource::Load()
 
     if (status > 0) //too few bytes available
         return E_FAIL;  //TODO
-
-    //TODO: for now, load a single cluster, so a seek to t=0
-    //will work normally.  Once SearchCues is working, then
-    //this (pre)load should not be necessary anymore.
-
-    for (int i = 0; i < 10; ++i)
-    {
-        status = pSegment->LoadCluster();
-        assert(status == 0);  //TODO
-    }
 #endif
 
 #ifdef _DEBUG

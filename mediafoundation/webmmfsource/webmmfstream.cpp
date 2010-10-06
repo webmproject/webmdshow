@@ -223,8 +223,8 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     HRESULT hr = lock.Seize(m_pSource);
     assert(SUCCEEDED(hr));  //TODO
 
-    odbgstream os;
-    os << "WebmMfStream::RequestSample" << endl;
+    //odbgstream os;
+    //os << "WebmMfStream::RequestSample" << endl;
 
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
@@ -241,6 +241,7 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     assert(SUCCEEDED(hr));
     assert(pSample);
 
+#if 0
     for (;;)
     {
         hr = PopulateSample(pSample);
@@ -248,16 +249,21 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
         if (hr != VFW_E_BUFFER_UNDERFLOW)
             break;
 
-#if 0
         hr = Preload();  //TODO: file-based read assumed
         assert(SUCCEEDED(hr));
-#else
-        mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
-
-        const long status = pSegment->LoadCluster();
-        assert(status == 0);  //TODO
-#endif
     }
+#else
+    for (;;)
+    {
+        const long status = m_pTrack->m_pSegment->LoadCluster();
+        assert(status == 0);  //TODO
+
+        hr = PopulateSample(pSample);
+
+        if (hr != VFW_E_BUFFER_UNDERFLOW)
+            break;
+    }
+#endif
 
     if (hr == S_OK)  //have a sample
     {
