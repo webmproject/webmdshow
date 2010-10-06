@@ -83,7 +83,7 @@ WebmMfSource::WebmMfSource(
 
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource: ctor" << endl;
+    os << L"WebmMfSource: ctor; this=0x" << (const void*)this << endl;
 #endif
 }
 
@@ -92,7 +92,7 @@ WebmMfSource::~WebmMfSource()
 {
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource: dtor" << endl;
+    os << L"WebmMfSource: dtor; this=0x" << (const void*)this << endl;
 #endif
 
     if (m_pEvents)
@@ -173,10 +173,12 @@ ULONG WebmMfSource::AddRef()
 {
     const LONG n = InterlockedIncrement(&m_cRef);
 
-//#ifdef _DEBUG
-//    wodbgstream os;
-//    os << L"WebmMfSource::AddRef: n=" << n << endl;
-//#endif
+#if 0 //def _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::AddRef: n=" << n
+       << " this=0x" << (const void*)this
+       << endl;
+#endif
 
     return n;
 }
@@ -186,10 +188,12 @@ ULONG WebmMfSource::Release()
 {
     const LONG n = InterlockedDecrement(&m_cRef);
 
-//#ifdef _DEBUG
-//    wodbgstream os;
-//    os << L"WebmMfSource::Release: n=" << n << endl;
-//#endif
+#if 0  //def _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Release: n=" << n
+       << " this=0x" << (const void*)this
+       << endl;
+#endif
 
     if (n)
         return n;
@@ -260,12 +264,39 @@ HRESULT WebmMfSource::Load()
 
     std::auto_ptr<mkvparser::Segment> pSegment(p);
 
+    HRESULT hr;
+
+#if 1
     //TODO: this does big-bang loading, which is not what we
     //want.  Load clusters incrementally.
-    HRESULT hr = pSegment->Load();
+    hr = pSegment->Load();
 
     if (FAILED(hr))
         return hr;
+#else
+    long long status = pSegment->ParseHeaders();
+
+    if (status < 0)  //error
+    {
+        if (status == mkvparser::E_FILE_FORMAT_INVALID)
+            return VFW_E_INVALID_FILE_FORMAT;
+
+        return E_FAIL;  //TODO
+    }
+
+    if (status > 0) //too few bytes available
+        return E_FAIL;  //TODO
+
+    //TODO: for now, load a single cluster, so a seek to t=0
+    //will work normally.  Once SearchCues is working, then
+    //this (pre)load should not be necessary anymore.
+
+    for (int i = 0; i < 10; ++i)
+    {
+        status = pSegment->LoadCluster();
+        assert(status == 0);  //TODO
+    }
+#endif
 
 #ifdef _DEBUG
     if (const mkvparser::SegmentInfo* pInfo = pSegment->GetInfo())
@@ -1040,10 +1071,10 @@ HRESULT WebmMfSource::Shutdown()
 
     while (i != j)
     {
-        WebmMfStream* const pStream = i->second;
-        assert(pStream);
+        const streams_t::value_type& v = *i++;
 
-        m_streams.erase(i++);
+        WebmMfStream* const pStream = v.second;
+        assert(pStream);
 
         hr = pStream->Shutdown();
         assert(SUCCEEDED(hr));

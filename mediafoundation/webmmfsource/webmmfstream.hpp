@@ -98,7 +98,7 @@ protected:
 
 private:
 
-    HRESULT Preload();
+    //HRESULT Preload();
     HRESULT PopulateSample(IMFSample*);
 
     IMFMediaEventQueue* m_pEvents;
