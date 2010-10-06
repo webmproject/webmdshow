@@ -69,6 +69,7 @@ WebmMfSource::WebmMfSource(
     m_file(pByteStream),
     m_pSegment(0),
     m_state(kStateStopped),
+    m_preroll_ns(-1),
     m_cEOS(0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
@@ -1537,23 +1538,7 @@ void WebmMfSource::Seek(
 #endif
 
     const LONGLONG time_ns = reftime * 100;
-
-    //get cluster that has this time
-    //TODO: to implement this:
-    //if there's a video stream,
-    //  find the cluster associated with the keyframe
-    //we'll have to do this for each video stream (that is selected)
-    //designate one of the video streams as "distinguished"
-    //  i suppose the best approach is to use the earliest video block
-    //  as the distinguished cluster, so that you have audio for all of
-    //  the video immediately (were it otherwise, meaning that the audio
-    //  was sync'd to a later keyframe, then there would be gap between
-    //  the earliest keyframe and the start of the audio).
-    //for each audio stream
-    //  find the audio block for this time on the distinguished cluster
-    //if there are no video streams, then find the earliest audio,
-    // and use its cluster as the distinguished cluster from which all
-    // other audio seeks are based.
+    m_preroll_ns = time_ns;
 
     struct VideoStream
     {

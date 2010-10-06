@@ -8,6 +8,10 @@
 #include <limits>
 #include <cmath>
 #include <comdef.h>
+//#ifdef _DEBUG
+//#include "odbgstream.hpp"
+//using std::endl;
+//#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
 _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
@@ -234,13 +238,37 @@ HRESULT WebmMfStreamVideo::OnPopulateSample(
     }
 
     const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
-    //assert(curr_ns >= basetime_ns);
-
-    //const LONGLONG sample_time = (curr_ns - basetime_ns) / 100;
     const LONGLONG sample_time = curr_ns / 100;  //reftime units
 
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
+
+    const LONGLONG preroll_ns = m_pSource->m_preroll_ns;
+
+    if ((preroll_ns >= 0) && (curr_ns < preroll_ns))
+    {
+        //TODO: handle this for audio too
+
+        hr = pSample->SetUINT32(WebmTypes::WebMSample_Preroll, TRUE);
+        assert(SUCCEEDED(hr));
+
+        //odbgstream os;
+        //os << "WebmMfSource::WebmMfStreamVideo:"
+        //   << " sending PREROLL sample: preroll[sec]="
+        //   << (double(preroll_ns) / 1000000000)
+        //   << " curr[sec]="
+        //   << (double(curr_ns) / 1000000000)
+        //   << " cluster_idx=" << m_pCurr->GetCluster()->m_index;
+        //
+        //if (bKey)
+        //    os << " KEY";
+        //
+        //os << endl;
+    }
+
+    //TODO: list of attributes here:
+    //http://msdn.microsoft.com/en-us/library/dd317906%28v=VS.85%29.aspx
+    //http://msdn.microsoft.com/en-us/library/aa376629%28v=VS.85%29.aspx
 
     //TODO: we can better here: synthesize duration of last block
     //in stream from the duration of the stream

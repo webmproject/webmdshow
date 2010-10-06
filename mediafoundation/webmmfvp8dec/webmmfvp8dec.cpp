@@ -11,6 +11,10 @@
 #include <comdef.h>
 #include <cassert>
 #include <new>
+//#ifdef _DEBUG
+//#include "odbgstream.hpp"
+//using std::endl;
+//#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 _COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
@@ -1180,6 +1184,20 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
     hr = buf_in->Unlock();
     assert(SUCCEEDED(hr));
+
+    UINT32 bPreroll;
+
+    hr = pSample_in->GetUINT32(WebmTypes::WebMSample_Preroll, &bPreroll);
+
+    if (SUCCEEDED(hr) && (bPreroll != FALSE))
+    {
+        pSample_in->Release();
+
+        //odbgstream os;
+        //os << "WebmMfVp8Dec::ProcessOutput: received PREROLL flag" << endl;
+
+        return MF_E_TRANSFORM_NEED_MORE_INPUT;
+    }
 
     GUID subtype;
 

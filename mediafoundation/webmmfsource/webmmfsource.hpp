@@ -118,6 +118,7 @@ public:
 
     enum State { kStateStopped, kStatePaused, kStateStarted };
     State m_state;
+    LONGLONG m_preroll_ns;
 
     void NotifyEOS();
 

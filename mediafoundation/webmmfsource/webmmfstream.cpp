@@ -398,6 +398,9 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 
     if (m_bDiscontinuity)
     {
+        //TODO: resolve whether to set this for first of the preroll samples,
+        //or wait until last of preroll samples has been pushed downstream.
+
         hr = pSample->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
         assert(SUCCEEDED(hr));
 
