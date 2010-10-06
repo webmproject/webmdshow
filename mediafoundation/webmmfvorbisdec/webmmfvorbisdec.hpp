@@ -143,11 +143,18 @@ private:
     DWORD GetOutputBufferSize(FrameSize&) const;
     HRESULT GetFrame(BYTE*, ULONG, const GUID&);
 
+    HRESULT CreateVorbisDecoder(IMFMediaType* pmt);
+    void DestroyVorbisDecoder();
+    HRESULT NextOggPacket(BYTE* p_packet, DWORD packet_size);
+
     // vorbis members
     vorbis_info m_vorbis_info; // contains static bitstream settings
     vorbis_comment m_vorbis_comment; // contains user comments
     vorbis_dsp_state m_vorbis_state; // decoder state
     vorbis_block m_vorbis_block; // working space for packet->PCM decode
+
+    ogg_packet m_ogg_packet;
+    DWORD m_ogg_packet_count;
 };
 
 }  //end namespace WebmMfVorbisDecLib

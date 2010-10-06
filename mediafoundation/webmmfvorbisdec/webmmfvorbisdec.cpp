@@ -5,6 +5,7 @@
 #include "vorbis/codec.h"
 #include "webmmfvorbisdec.hpp"
 #include "webmtypes.hpp"
+#include "vorbistypes.hpp"
 #include <mfapi.h>
 #include <mferror.h>
 #include <comdef.h>
@@ -45,11 +46,6 @@ HRESULT CreateDecoder(
     const ULONG cRef = pUnk->Release();
     cRef;
 
-#if 1
-    vorbis_info vorb_info = {0};
-    vorbis_info_init(&vorb_info);
-#endif
-
     return hr;
 }
 
@@ -58,13 +54,20 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),
     m_pInputMediaType(0),
-    m_pOutputMediaType(0)
+    m_pOutputMediaType(0),
+    m_ogg_packet_count(0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
 
     hr = CLockable::Init();
     assert(SUCCEEDED(hr));
+
+    ::memset(&m_vorbis_info, 0, sizeof vorbis_info);
+    ::memset(&m_vorbis_comment, 0, sizeof vorbis_comment);
+    ::memset(&m_vorbis_state, 0, sizeof vorbis_dsp_state);
+    ::memset(&m_vorbis_block, 0, sizeof vorbis_block);
+    ::memset(&m_ogg_packet, 0, sizeof ogg_packet);
 }
 
 
@@ -78,11 +81,7 @@ WebmMfVorbisDec::~WebmMfVorbisDec()
 
         m_pInputMediaType = 0;
 
-        vorbis_block_clear(&m_vorbis_block);
-        vorbis_dsp_clear(&m_vorbis_state);
-        vorbis_comment_clear(&m_vorbis_comment);
-        vorbis_info_clear(&vi);  // note, from vorbis decoder sample: must be
-                                 // called last
+        DestroyVorbisDecoder();
     }
 
     if (m_pOutputMediaType)
@@ -533,9 +532,7 @@ HRESULT WebmMfVorbisDec::SetInputType(
 
             m_pInputMediaType = 0;
 
-            const vpx_codec_err_t e = vpx_codec_destroy(&m_ctx);
-            e;
-            assert(e == VPX_CODEC_OK);
+            DestroyVorbisDecoder();
         }
 
         if (m_pOutputMediaType)
@@ -561,7 +558,7 @@ HRESULT WebmMfVorbisDec::SetInputType(
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
 
-    if (g != MFMediaType_Video)
+    if (g != MFMediaType_Audio)
         return MF_E_INVALIDMEDIATYPE;
 
     hr = pmt->GetGUID(MF_MT_SUBTYPE, &g);
@@ -569,48 +566,38 @@ HRESULT WebmMfVorbisDec::SetInputType(
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
 
-    if (g != WebmTypes::MEDIASUBTYPE_VP80)
+    if (g != VorbisTypes::FORMAT_Vorbis2)
         return MF_E_INVALIDMEDIATYPE;
 
-    //hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
-    //assert(SUCCEEDED(hr));
-
-    FrameRate r;
-
-    hr = MFGetAttributeRatio(
-            pmt,
-            MF_MT_FRAME_RATE,
-            &r.numerator,
-            &r.denominator);
+    UINT32 channels;
+    hr = pmt->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &channels);
 
     if (FAILED(hr))
-        r.numerator = 0;  //means "not set"
-    else
-    {
-        if (r.denominator == 0)
-            return MF_E_INVALIDMEDIATYPE;
+      return hr;
 
-        if (r.numerator == 0)
-            return MF_E_INVALIDMEDIATYPE;
-    }
+    if (channels == 0)
+        return MF_E_INVALIDMEDIATYPE;
 
-    FrameSize s;
+    // checking both rate fields seems excessive...
+    double sample_rate;
 
-    hr = MFGetAttributeSize(
-            pmt,
-            MF_MT_FRAME_SIZE,
-            &s.width,
-            &s.height);
+    hr = pmt->GetDouble(MF_MT_AUDIO_FLOAT_SAMPLES_PER_SECOND, &sample_rate);
 
     if (FAILED(hr))
+      return hr;
+
+    if (sample_rate < 1)
         return MF_E_INVALIDMEDIATYPE;
 
-    if (s.width == 0)
-        return MF_E_INVALIDMEDIATYPE;
+    // but why not, check them both:
+    UINT32 int_rate;
 
-    //TODO: check whether width is odd
+    hr = pmt->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &int_rate);
 
-    if (s.height == 0)
+    if (FAILED(hr))
+      return hr;
+
+    if (int_rate < 1)
         return MF_E_INVALIDMEDIATYPE;
 
     if (dwFlags & MFT_SET_TYPE_TEST_ONLY)
@@ -621,9 +608,7 @@ HRESULT WebmMfVorbisDec::SetInputType(
         hr = m_pInputMediaType->DeleteAllItems();
         assert(SUCCEEDED(hr));
 
-        const vpx_codec_err_t e = vpx_codec_destroy(&m_ctx);
-        e;
-        assert(e == VPX_CODEC_OK);
+        DestroyVorbisDecoder();
     }
     else
     {
@@ -638,25 +623,10 @@ HRESULT WebmMfVorbisDec::SetInputType(
     if (FAILED(hr))
         return hr;
 
-    //TODO: should this really be done here?
+    hr = CreateVorbisDecoder(pmt);
 
-    vpx_codec_iface_t& vp8 = vpx_codec_vp8_dx_algo;
-
-    const int flags = 0;  //TODO: VPX_CODEC_USE_POSTPROC;
-
-    const vpx_codec_err_t err = vpx_codec_dec_init(
-                                    &m_ctx,
-                                    &vp8,
-                                    0,
-                                    flags);
-
-    if (err == VPX_CODEC_MEM_ERROR)
-        return E_OUTOFMEMORY;
-
-    if (err != VPX_CODEC_OK)
-        return E_FAIL;
-
-    //const HRESULT hr = OnApplyPostProcessing();
+    if (hr != S_OK)
+      return E_FAIL;
 
     //TODO: resolve this
     assert(m_pOutputMediaType == 0);
@@ -668,35 +638,16 @@ HRESULT WebmMfVorbisDec::SetInputType(
     hr = MFCreateMediaType(&m_pOutputMediaType);
     assert(SUCCEEDED(hr));  //TODO
 
-    hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+    hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
     assert(SUCCEEDED(hr));  //TODO
 
-    hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_YV12);
+    hr = pmt->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
     assert(SUCCEEDED(hr));  //TODO
 
     hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
     assert(SUCCEEDED(hr));  //TODO
 
     hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
-    assert(SUCCEEDED(hr));  //TODO
-
-    if (r.numerator)  //means "has been set"
-    {
-        hr = MFSetAttributeRatio(
-                m_pOutputMediaType,
-                MF_MT_FRAME_RATE,
-                r.numerator,
-                r.denominator);
-
-        assert(SUCCEEDED(hr));  //TODO
-    }
-
-    hr = MFSetAttributeSize(
-            m_pOutputMediaType,
-            MF_MT_FRAME_SIZE,
-            s.width,
-            s.height);
-
     assert(SUCCEEDED(hr));  //TODO
 
     return S_OK;
@@ -1065,17 +1016,6 @@ HRESULT WebmMfVorbisDec::ProcessInput(
     if (m_pInputMediaType == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
-    //TODO: resolve this
-    //if (m_pOutputMediaType == 0)  //TODO:
-    //    return MF_E_TRANSFORM_TYPE_NOT_SET;
-
-#if 0
-    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
-
-    if (f)
-        return MF_E_NOTACCEPTING;
-#endif
-
     pSample->AddRef();
     m_samples.push_back(pSample);
 
@@ -1390,6 +1330,92 @@ HRESULT WebmMfVorbisDec::GetFrame(
     return S_OK;
 }
 
+HRESULT WebmMfVorbisDec::NextOggPacket(BYTE* p_packet, DWORD packet_size)
+{
+    if (!p_packet || packet_size == 0)
+        return E_INVALIDARG;
 
+    m_ogg_packet.b_o_s = 0;
+    m_ogg_packet.bytes = packet_size;
+    m_ogg_packet.e_o_s = 0;
+    m_ogg_packet.granulepos = 0;
+    m_ogg_packet.packet = p_packet;
+    m_ogg_packet.packetno = m_ogg_packet_count++;
+
+    return S_OK;
+}
+
+HRESULT WebmMfVorbisDec::CreateVorbisDecoder(IMFMediaType* p_media_type)
+{
+    //
+    // p_media_type has already been used extensively in the caller
+    BYTE* p_format_blob = NULL;
+    UINT32 blob_size = 0;
+    status = p_media_type->GetAllocatedBlob(MF_MT_USER_DATA, p_format_blob,
+                                            &blob_size);
+    if (S_OK != status)
+      return MF_E_INVALIDMEDIATYPE;
+    if (NULL == p_format_blob)
+      return MF_E_INVALIDMEDIATYPE;
+
+    using VorbisTypes::VORBISFORMAT2;
+    if (0 == blob_size || sizeof VORBISFORMAT2 >= blob_size)
+      return MF_E_INVALIDMEDIATYPE;
+
+    const VORBISFORMAT2& vorbis_format =
+        *reinterpret_cast<VORBISFORMAT2*>(p_format_blob);
+
+    BYTE* p_headers[3];
+    p_headers[0] = p_format_blob + sizeof VORBISFORMAT2;
+    p_headers[1] = p_headers[0] + vorbis_format.headerSize[0];
+    p_headers[2] = p_headers[1] + vorbis_format.headerSize[1];
+
+    vorbis_info_init(&m_vorbis_info);
+    vorbis_comment_init(&m_vorbis_comment);
+
+    // feed the 3 setup headers into libvorbis
+    int vorbis_status = 0;
+    for (header_num = 0; header_num < 3; ++header_num)
+    {
+        // create an ogg packet in m_ogg_packet with current header for data
+        status = NextOggPacket(p_headers[header_num],
+                               vorbis_format.headerSize[header_num]);
+        if (FAILED(status))
+          return MF_E_INVALIDMEDIATYPE;
+        assert(m_ogg_packet.packetno == header_num);
+        int vorbis_status = vorbis_synthesis_headerin(&m_vorbis_info,
+                                                      &m_vorbis_comment,
+                                                      &m_ogg_packet);
+        if (vorbis_status < 0)
+          return MF_E_INVALIDMEDIATYPE;
+    }
+
+    // final init steps, setup decoder state and vorbis block structs
+    vorbis_status = vorbis_synthesis_init(&m_vorbis_state, &m_vorbis_info);
+    if (vorbis_status != 0)
+        return MF_E_INVALIDMEDIATYPE;
+
+    vorbis_status = vorbis_block_init(&m_vorbis_state, &m_vorbis_block);
+    if (vorbis_status != 0)
+        return MF_E_INVALIDMEDIATYPE;
+
+    return S_OK;
+}
+
+void WebmMfVorbisDec::DestroyVorbisDecoder()
+{
+    vorbis_block_clear(&m_vorbis_block);
+    vorbis_dsp_clear(&m_vorbis_state);
+    vorbis_comment_clear(&m_vorbis_comment);
+
+    // note, from vorbis decoder sample: vorbis_info_clear must be last call
+    vorbis_info_clear(&m_vorbis_info);
+
+    ::memset(&m_vorbis_info, 0, sizeof vorbis_info);
+    ::memset(&m_vorbis_comment, 0, sizeof vorbis_comment);
+    ::memset(&m_vorbis_state, 0, sizeof vorbis_dsp_state);
+    ::memset(&m_vorbis_block, 0, sizeof vorbis_block);
+    ::memset(&m_ogg_packet, 0, sizeof ogg_packet);
+}
 
 }  //end namespace WebmMfVorbisDecLib
