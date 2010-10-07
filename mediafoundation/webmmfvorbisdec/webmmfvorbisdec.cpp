@@ -1203,6 +1203,8 @@ HRESULT WebmMfVorbisDec::CreateVorbisDecoder(IMFMediaType* p_media_type)
                                     m_wave_format.nSamplesPerSec;
     m_wave_format.wFormatTag = WAVE_FORMAT_PCM;
 
+    assert(m_samples.empty() == true);
+
     return S_OK;
 }
 
@@ -1220,6 +1222,13 @@ void WebmMfVorbisDec::DestroyVorbisDecoder()
     ::memset(&m_vorbis_state, 0, sizeof vorbis_dsp_state);
     ::memset(&m_vorbis_block, 0, sizeof vorbis_block);
     ::memset(&m_ogg_packet, 0, sizeof ogg_packet);
+
+    while (m_samples.empty() == false)
+    {
+        IMFSample* p_mf_input_sample = m_samples.front();
+        m_samples.pop_front();
+        p_mf_input_sample->Release();
+    }
 }
 
 HRESULT WebmMfVorbisDec::ValidatePCMAudioType(IMFMediaType *pmt)
