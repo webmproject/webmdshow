@@ -365,6 +365,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\common\vorbistypes.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\vorbistypes.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\common\webmtypes.cpp"
 				>
 			</File>

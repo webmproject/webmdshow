@@ -134,11 +134,15 @@ private:
     IMFMediaType* m_pInputMediaType;
     IMFMediaType* m_pOutputMediaType;
 
+    typedef std::list<IMFSample*> samples_t;
+    samples_t m_samples;
+
     HRESULT CreateVorbisDecoder(IMFMediaType* pmt);
     void DestroyVorbisDecoder();
     HRESULT NextOggPacket(BYTE* p_packet, DWORD packet_size);
     HRESULT ValidatePCMAudioType(IMFMediaType *pmt);
     HRESULT CreateMediaBuffer(DWORD size, IMFMediaBuffer** pp_buffer);
+    HRESULT DecodeMediaSample(IMFSample* p_mf_input_sample);
 
     // vorbis members
     vorbis_info m_vorbis_info; // contains static bitstream settings
