@@ -70,7 +70,8 @@ WebmMfSource::WebmMfSource(
     m_pSegment(0),
     m_state(kStateStopped),
     m_preroll_ns(-1),
-    m_cEOS(0)
+    m_cEOS(0),
+    m_rate(1)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -145,7 +146,7 @@ HRESULT WebmMfSource::QueryInterface(
 
     if (iid == __uuidof(IUnknown))
     {
-        pUnk = this;  //must be nondelegating
+        pUnk = static_cast<IMFMediaSource*>(this);  //must be nondelegating
     }
     else if (iid == __uuidof(IMFMediaEventGenerator))
     {
@@ -154,6 +155,14 @@ HRESULT WebmMfSource::QueryInterface(
     else if (iid == __uuidof(IMFMediaSource))
     {
         pUnk = static_cast<IMFMediaSource*>(this);
+    }
+    else if (iid == __uuidof(IMFRateControl))
+    {
+        pUnk = static_cast<IMFRateControl*>(this);
+    }
+    else if (iid == __uuidof(IMFRateSupport))
+    {
+        pUnk = static_cast<IMFRateSupport*>(this);
     }
     else
     {
@@ -208,7 +217,7 @@ HRESULT WebmMfSource::Load()
 {
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource::Load" << endl;
+    os << L"WebmMfSource::Load (begin)" << endl;
 #endif
 
     long long result, pos;
@@ -275,7 +284,17 @@ HRESULT WebmMfSource::Load()
     if (FAILED(hr))
         return hr;
 #else
+#ifdef _DEBUG
+    os << L"WebmMfSource::Load: begin parsing webm file headers" << endl;
+#endif
+
     const long long status = pSegment->ParseHeaders();
+
+#ifdef _DEBUG
+    os << L"WebmMfSource::Load: end parsing webm file headers; status="
+       << status
+       << endl;
+#endif
 
     if (status < 0)  //error
     {
@@ -335,7 +354,7 @@ HRESULT WebmMfSource::Load()
             assert(pDesc);
             m_stream_descriptors.push_back(pDesc);
         }
-#if 0
+#if 0  //TODO
         else if (type == 2)  //audio
         {
             hr = WebmMfStreamAudio::CreateStreamDescriptor(pTrack, pDesc);
@@ -353,8 +372,10 @@ HRESULT WebmMfSource::Load()
         return VFW_E_INVALID_FILE_FORMAT;
 
     m_pSegment = pSegment.release();
-    //TODO: m_pSeekBase = 0;
-    //TODO: m_seekTime = kNoSeek;
+
+#ifdef _DEBUG
+    os << L"WebmMfSource::Load (end)" << endl;
+#endif
 
     return S_OK;
 }
@@ -1081,6 +1102,144 @@ HRESULT WebmMfSource::Shutdown()
     m_pEvents = 0;
 
     return S_OK;
+}
+
+
+HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
+
+    if (bThin)
+        return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (rate < 0)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    m_rate = rate;
+    return S_OK;
+}
+
+
+HRESULT WebmMfSource::GetRate(BOOL* pbThin, float* pRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
+
+    if (pbThin)
+        *pbThin = FALSE;  //TODO
+
+    if (pRate)  //return error when pRate ptr is NULL?
+        *pRate = m_rate;
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfSource::GetSlowestRate(
+    MFRATE_DIRECTION d,
+    BOOL bThin,
+    float* pRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
+
+    if (d == MFRATE_REVERSE)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    if (bThin)
+        return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (pRate == 0)
+        return E_POINTER;
+
+    float& r = *pRate;
+    r = 0;  //?
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfSource::GetFastestRate(
+    MFRATE_DIRECTION d,
+    BOOL bThin,
+    float* pRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
+
+    if (d == MFRATE_REVERSE)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    if (bThin)
+        return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (pRate == 0)
+        return E_POINTER;
+
+    float& r = *pRate;
+    r = 64;  //?
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfSource::IsRateSupported(
+    BOOL bThin,
+    float rate,
+    float* pNearestRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pEvents == 0)
+        return MF_E_SHUTDOWN;
+
+    if (bThin)
+        return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (rate < 0)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    //float int_part;
+    //const float frac_part = modf(rate, &int_part);
+
+    if (pNearestRate)
+        *pNearestRate = rate;
+
+    return S_OK;  //TODO
 }
 
 

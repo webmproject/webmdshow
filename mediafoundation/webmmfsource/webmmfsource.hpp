@@ -12,6 +12,8 @@ namespace WebmMfSourceLib
 class WebmMfStream;
 
 class WebmMfSource : public IMFMediaSource,
+                     public IMFRateControl,
+                     public IMFRateSupport,
                      public CLockable
 {
     friend HRESULT CreateSource(
@@ -68,6 +70,20 @@ public:
 
     HRESULT STDMETHODCALLTYPE Shutdown();
 
+    //IMFRateControl
+
+    HRESULT STDMETHODCALLTYPE SetRate(BOOL, float);
+
+    HRESULT STDMETHODCALLTYPE GetRate(BOOL*, float*);
+
+    //IMFRateSupport
+
+    HRESULT STDMETHODCALLTYPE GetSlowestRate(MFRATE_DIRECTION, BOOL, float*);
+
+    HRESULT STDMETHODCALLTYPE GetFastestRate(MFRATE_DIRECTION, BOOL, float*);
+
+    HRESULT STDMETHODCALLTYPE IsRateSupported(BOOL, float, float*);
+
 private:
 
     static std::wstring ConvertFromUTF8(const char*);
@@ -111,6 +127,7 @@ private:
     //void SetCurrPos(LONGLONG);
 
     ULONG m_cEOS;
+    float m_rate;
 
 public:
 
