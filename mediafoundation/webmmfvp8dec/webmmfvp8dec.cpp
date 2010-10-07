@@ -11,10 +11,11 @@
 #include <comdef.h>
 #include <cassert>
 #include <new>
-//#ifdef _DEBUG
-//#include "odbgstream.hpp"
-//using std::endl;
-//#endif
+#ifdef _DEBUG
+#include "odbgstream.hpp"
+#include "iidstr.hpp"
+using std::endl;
+#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 _COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
@@ -43,7 +44,7 @@ HRESULT CreateDecoder(
     if (p == 0)
         return E_OUTOFMEMORY;
 
-    IUnknown* const pUnk = p;
+    IMFTransform* const pUnk = p;
 
     const HRESULT hr = pUnk->QueryInterface(iid, ppv);
 
@@ -58,7 +59,9 @@ WebmMfVp8Dec::WebmMfVp8Dec(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),
     m_pInputMediaType(0),
-    m_pOutputMediaType(0)
+    m_pOutputMediaType(0),
+    m_rate(1),
+    m_bThin(FALSE)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -92,6 +95,16 @@ WebmMfVp8Dec::~WebmMfVp8Dec()
         m_pOutputMediaType = 0;
     }
 
+    while (!m_samples.empty())
+    {
+        IMFSample* const pSample = m_samples.front();
+        assert(pSample);
+
+        m_samples.pop_front();
+
+        pSample->Release();
+    }
+
     HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
 }
@@ -108,14 +121,31 @@ HRESULT WebmMfVp8Dec::QueryInterface(
 
     if (iid == __uuidof(IUnknown))
     {
-        pUnk = this;  //must be nondelegating
+        pUnk = static_cast<IMFTransform*>(this);  //must be nondelegating
     }
     else if (iid == __uuidof(IMFTransform))
     {
         pUnk = static_cast<IMFTransform*>(this);
     }
+    else if (iid == __uuidof(IMFRateControl))
+    {
+        pUnk = static_cast<IMFRateControl*>(this);
+    }
+    else if (iid == __uuidof(IMFRateSupport))
+    {
+        pUnk = static_cast<IMFRateSupport*>(this);
+    }
+    else if (iid == __uuidof(IMFGetService))
+    {
+        pUnk = static_cast<IMFGetService*>(this);
+    }
     else
     {
+#if 1
+        wodbgstream os;
+        os << "WebmMfVp8Dec::QI: iid=" << IIDStr(iid) << std::endl;
+#endif
+
         pUnk = 0;
         return E_NOINTERFACE;
     }
@@ -1423,6 +1453,160 @@ HRESULT WebmMfVp8Dec::GetFrame(
     return S_OK;
 }
 
+
+HRESULT WebmMfVp8Dec::SetRate(BOOL bThin, float rate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    //if (m_pEvents == 0)
+    //    return MF_E_SHUTDOWN;
+
+    //if (bThin)
+    //    return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (rate < 0)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    m_rate = rate;
+    m_bThin = bThin;
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfVp8Dec::GetRate(BOOL* pbThin, float* pRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    //if (m_pEvents == 0)
+    //    return MF_E_SHUTDOWN;
+
+    if (pbThin)
+        *pbThin = m_bThin;
+
+    if (pRate)  //return error when pRate ptr is NULL?
+        *pRate = m_rate;
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfVp8Dec::GetSlowestRate(
+    MFRATE_DIRECTION d,
+    BOOL /* bThin */ ,
+    float* pRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    //if (m_pEvents == 0)
+    //    return MF_E_SHUTDOWN;
+
+    if (d == MFRATE_REVERSE)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    //if (bThin)
+    //    return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (pRate == 0)
+        return E_POINTER;
+
+    float& r = *pRate;
+    r = 0;  //?
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfVp8Dec::GetFastestRate(
+    MFRATE_DIRECTION d,
+    BOOL /* bThin */ ,
+    float* pRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    //if (m_pEvents == 0)
+    //    return MF_E_SHUTDOWN;
+
+    if (d == MFRATE_REVERSE)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    //if (bThin)
+    //    return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (pRate == 0)
+        return E_POINTER;
+
+    float& r = *pRate;
+    r = 64;  //?
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfVp8Dec::IsRateSupported(
+    BOOL /* bThin */ ,
+    float rate,
+    float* pNearestRate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    //if (m_pEvents == 0)
+    //    return MF_E_SHUTDOWN;
+
+    //if (bThin)
+    //    return MF_E_THINNING_UNSUPPORTED;  //TODO
+
+    if (rate < 0)
+        return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    //float int_part;
+    //const float frac_part = modf(rate, &int_part);
+
+    if (pNearestRate)
+        *pNearestRate = rate;
+
+    return S_OK;  //TODO
+}
+
+
+HRESULT WebmMfVp8Dec::GetService(
+    REFGUID sid,
+    REFIID iid,
+    LPVOID* ppv)
+{
+    if (sid == MF_RATE_CONTROL_SERVICE)
+        return WebmMfVp8Dec::QueryInterface(iid, ppv);
+
+    if (ppv)
+        *ppv = 0;
+
+    return MF_E_UNSUPPORTED_SERVICE;
+}
 
 
 }  //end namespace WebmMfVp8DecLib

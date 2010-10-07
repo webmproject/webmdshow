@@ -5,6 +5,9 @@ namespace WebmMfVp8DecLib
 
 class WebmMfVp8Dec : public IMFTransform,
                      //TODO: public IVP8PostProcessing,
+                     public IMFRateControl,
+                     public IMFRateSupport,
+                     public IMFGetService,
                      public CLockable
 {
     friend HRESULT CreateDecoder(
@@ -124,6 +127,24 @@ public:
         MFT_OUTPUT_DATA_BUFFER* pOutputSamples,
         DWORD* pdwStatus);
 
+    //IMFRateControl
+
+    HRESULT STDMETHODCALLTYPE SetRate(BOOL, float);
+
+    HRESULT STDMETHODCALLTYPE GetRate(BOOL*, float*);
+
+    //IMFRateSupport
+
+    HRESULT STDMETHODCALLTYPE GetSlowestRate(MFRATE_DIRECTION, BOOL, float*);
+
+    HRESULT STDMETHODCALLTYPE GetFastestRate(MFRATE_DIRECTION, BOOL, float*);
+
+    HRESULT STDMETHODCALLTYPE IsRateSupported(BOOL, float, float*);
+
+    //IMFGetService
+
+    HRESULT STDMETHODCALLTYPE GetService(REFGUID, REFIID, LPVOID*);
+
 private:
 
     explicit WebmMfVp8Dec(IClassFactory*);
@@ -142,7 +163,9 @@ private:
     samples_t m_samples;
 
     vpx_codec_ctx_t m_ctx;
-    //vpx_codec_iter_t m_iter;
+
+    float m_rate;
+    BOOL m_bThin;
 
     DWORD GetOutputBufferSize(FrameSize&) const;
     HRESULT GetFrame(BYTE*, ULONG, const GUID&);

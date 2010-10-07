@@ -16,6 +16,7 @@
 #include <utility>  //std::make_pair
 #ifdef _DEBUG
 #include "odbgstream.hpp"
+#include "iidstr.hpp"
 using std::endl;
 #endif
 
@@ -164,11 +165,15 @@ HRESULT WebmMfSource::QueryInterface(
     {
         pUnk = static_cast<IMFRateSupport*>(this);
     }
+    else if (iid == __uuidof(IMFGetService))
+    {
+        pUnk = static_cast<IMFGetService*>(this);
+    }
     else
     {
-#if 0
+#if 1
         wodbgstream os;
-        os << "mp3source::filter::QI: iid=" << IIDStr(iid) << std::endl;
+        os << "WebmMfSource::QI: iid=" << IIDStr(iid) << std::endl;
 #endif
         pUnk = 0;
         return E_NOINTERFACE;
@@ -1241,6 +1246,22 @@ HRESULT WebmMfSource::IsRateSupported(
 
     return S_OK;  //TODO
 }
+
+
+HRESULT WebmMfSource::GetService(
+    REFGUID sid,
+    REFIID iid,
+    LPVOID* ppv)
+{
+    if (sid == MF_RATE_CONTROL_SERVICE)
+        return WebmMfSource::QueryInterface(iid, ppv);
+
+    if (ppv)
+        *ppv = 0;
+
+    return MF_E_UNSUPPORTED_SERVICE;
+}
+
 
 
 HRESULT WebmMfSource::NewStream(

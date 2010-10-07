@@ -362,6 +362,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\common\iidstr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\iidstr.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\common\vorbistypes.cpp"
 				>
 			</File>
