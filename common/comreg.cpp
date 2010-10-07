@@ -814,6 +814,7 @@ HRESULT ComReg::UnRegisterByteStreamHandler(
     wchar_t clsidstr[guid_buflen];  //name
 
     const int n = StringFromGUID2(clsid, clsidstr, guid_buflen);
+    n;
     assert(n == guid_buflen);
 
     wstring value;
