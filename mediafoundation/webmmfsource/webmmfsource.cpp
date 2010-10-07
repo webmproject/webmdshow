@@ -1772,6 +1772,10 @@ void WebmMfSource::Seek(
         VideoStream& s = vs.back();
 
         s.pStream = static_cast<WebmMfStreamVideo*>(pStream);
+
+#if 1
+        m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
+#else
         s.pCluster = 0;
         s.pBlockEntry = 0;
 
@@ -1794,6 +1798,7 @@ void WebmMfSource::Seek(
             m_pSegment->ParseCues();
             m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
         }
+#endif
 
         if ((s.pCluster == 0) || s.pCluster->EOS())
             continue;

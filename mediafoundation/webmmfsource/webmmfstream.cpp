@@ -253,9 +253,11 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
         assert(SUCCEEDED(hr));
     }
 #else
+    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+
     for (;;)
     {
-        const long status = m_pTrack->m_pSegment->LoadCluster();
+        const long status = pSegment->LoadCluster();
         assert(status == 0);  //TODO
 
         hr = PopulateSample(pSample);
@@ -263,6 +265,9 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
         if (hr != VFW_E_BUFFER_UNDERFLOW)
             break;
     }
+
+    if (mkvparser::Cues* pCues = pSegment->GetCues())
+        pCues->LoadCuePoint();
 #endif
 
     if (hr == S_OK)  //have a sample
