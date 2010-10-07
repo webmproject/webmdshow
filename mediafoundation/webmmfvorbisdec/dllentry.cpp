@@ -9,6 +9,7 @@
 #include "cfactory.hpp"
 #include "comreg.hpp"
 #include "webmtypes.hpp"
+#include "vorbistypes.hpp"
 #include <mfapi.h>
 #include <cassert>
 #include <comdef.h>
@@ -85,6 +86,7 @@ STDAPI DllUnregisterServer()
 
 
 STDAPI DllRegisterServer()
+
 {
     HRESULT hr = DllUnregisterServer();
     assert(SUCCEEDED(hr));
@@ -108,7 +110,7 @@ STDAPI DllRegisterServer()
             friendly_name,
             filename,
             L"Webm.MfVorbisDec",
-            L"Webm.MfVorbis.1",
+            L"Webm.MfVorbisDec.1",
             false,  //not insertable
             false,  //not a control
             ComReg::kBoth,  //DShow filters must support "both"
@@ -122,21 +124,20 @@ STDAPI DllRegisterServer()
     enum { cInputTypes = 1 };
     MFT_REGISTER_TYPE_INFO pInputTypes[cInputTypes] =
     {
-        { MFMediaType_Video, WebmTypes::MEDIASUBTYPE_WEBM }
+      { MFMediaType_Audio, VorbisTypes::MEDIASUBTYPE_Vorbis2 }
     };
 
-    enum { cOutputTypes = 2 };
+    enum { cOutputTypes = 1 };
     MFT_REGISTER_TYPE_INFO pOutputTypes[cOutputTypes] =
     {
-        { MFMediaType_Video, MFVideoFormat_YV12 },
-        { MFMediaType_Video, MFVideoFormat_IYUV }
+        { MFMediaType_Audio, MFAudioFormat_PCM}
     };
 
     wchar_t* const friendly_name_ = const_cast<wchar_t*>(friendly_name);
 
     hr = MFTRegister(
             WebmTypes::CLSID_WebmMfVorbisDec,
-            MFT_CATEGORY_VIDEO_DECODER,
+            MFT_CATEGORY_AUDIO_DECODER,
             friendly_name_,
             MFT_ENUM_FLAG_SYNCMFT,  //TODO: for now, just support sync
             cInputTypes,
