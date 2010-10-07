@@ -1751,11 +1751,30 @@ void WebmMfSource::Seek(
         VideoStream& s = vs.back();
 
         s.pStream = static_cast<WebmMfStreamVideo*>(pStream);
+        s.pCluster = 0;
+        s.pBlockEntry = 0;
 
-        m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
-        assert(s.pCluster);
+        if (m_pSegment->GetCount() <= 0)
+            m_pSegment->LoadCluster();
 
-        if (s.pCluster->EOS())
+        //TODO: really, the time we should be testing is the time
+        //of the second cluster, not the first.  But here we making
+        //an optimization for time=0, so merely testing the first
+        //cluster is probably OK.
+
+        mkvparser::Cluster* const pFirst = m_pSegment->GetFirst();
+        assert(pFirst);
+
+        if ((pFirst != 0) && !pFirst->EOS() && (time_ns <= pFirst->GetTime()))
+            m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
+
+        if ((s.pCluster == 0) || s.pCluster->EOS())
+        {
+            m_pSegment->ParseCues();
+            m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
+        }
+
+        if ((s.pCluster == 0) || s.pCluster->EOS())
             continue;
 
         if (base < 0)
