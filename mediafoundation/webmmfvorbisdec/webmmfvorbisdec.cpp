@@ -1001,6 +1001,12 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     IMFSample* const p_mf_input_sample = m_samples.front();
     m_samples.pop_front();
 
+    assert(p_mf_input_sample);
+    if (!p_mf_input_sample)
+      return E_FAIL; // TODO(tomfinegan): we return
+                     // MF_E_TRANSFORM_NEED_MORE_INPUT when m_samples is empty,
+                     // this is a serious error...
+
     status = DecodeMediaSample(p_mf_input_sample);
 
     if (FAILED(status))
@@ -1227,7 +1233,10 @@ void WebmMfVorbisDec::DestroyVorbisDecoder()
     {
         IMFSample* p_mf_input_sample = m_samples.front();
         m_samples.pop_front();
-        p_mf_input_sample->Release();
+
+        assert(p_mf_input_sample);
+        if (p_mf_input_sample)
+          p_mf_input_sample->Release();
     }
 }
 
