@@ -222,7 +222,7 @@
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x86\release&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x86\release&quot;"
 				ModuleDefinitionFile="webmmfvorbisdec.def"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="false"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
