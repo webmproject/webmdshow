@@ -874,7 +874,7 @@ HRESULT WebmMfVorbisDec::ProcessInput(
     DWORD count;
 
     HRESULT status = pSample->GetBufferCount(&count);
-    assert(SUCCEEDED(hr));
+    assert(SUCCEEDED(status));
 
     if (count == 0)
         return S_OK;  //TODO: is this an error?
@@ -1249,12 +1249,12 @@ HRESULT WebmMfVorbisDec::ValidatePCMAudioType(IMFMediaType *pmt)
         return MF_E_INVALIDMEDIATYPE;
 
     status = pmt->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &nChannels);
-    assert(nChannels == m_vorbis_info.channels);
+    assert(nChannels == static_cast<UINT32>(m_vorbis_info.channels));
     if (nChannels != static_cast<UINT32>(m_vorbis_info.channels))
         return MF_E_INVALIDMEDIATYPE;
 
     status = pmt->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &nSamplesPerSec);
-    assert(nSamplesPerSec == m_vorbis_info.rate);
+    assert(nSamplesPerSec == static_cast<UINT32>(m_vorbis_info.rate));
     if (nSamplesPerSec != static_cast<UINT32>(m_vorbis_info.rate))
         return MF_E_INVALIDMEDIATYPE;
 
