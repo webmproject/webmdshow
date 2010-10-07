@@ -14,6 +14,7 @@ class WebmMfStream;
 class WebmMfSource : public IMFMediaSource,
                      public IMFRateControl,
                      public IMFRateSupport,
+                     public IMFGetService,
                      public CLockable
 {
     friend HRESULT CreateSource(
@@ -83,6 +84,10 @@ public:
     HRESULT STDMETHODCALLTYPE GetFastestRate(MFRATE_DIRECTION, BOOL, float*);
 
     HRESULT STDMETHODCALLTYPE IsRateSupported(BOOL, float, float*);
+
+    //IMFGetService
+
+    HRESULT STDMETHODCALLTYPE GetService(REFGUID, REFIID, LPVOID*);
 
 private:
 
