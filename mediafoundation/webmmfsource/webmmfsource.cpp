@@ -171,7 +171,7 @@ HRESULT WebmMfSource::QueryInterface(
     }
     else
     {
-#if 1
+#ifdef _DEBUG
         wodbgstream os;
         os << "WebmMfSource::QI: iid=" << IIDStr(iid) << std::endl;
 #endif

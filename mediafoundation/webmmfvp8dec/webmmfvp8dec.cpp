@@ -141,7 +141,7 @@ HRESULT WebmMfVp8Dec::QueryInterface(
     }
     else
     {
-#if 1
+#ifdef _DEBUG
         wodbgstream os;
         os << "WebmMfVp8Dec::QI: iid=" << IIDStr(iid) << std::endl;
 #endif
