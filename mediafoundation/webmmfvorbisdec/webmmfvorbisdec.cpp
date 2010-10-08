@@ -12,6 +12,7 @@
 #include <cassert>
 #include <new>
 #include <cmath>
+#include <vector>
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 _COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
@@ -163,17 +164,11 @@ HRESULT WebmMfVorbisDec::GetStreamLimits(
     if (pdwOutputMax == 0)
         return E_POINTER;
 
-    DWORD& dwInputMin = *pdwInputMin;
-    dwInputMin = 1;
-
-    DWORD& dwInputMax = *pdwInputMax;
-    dwInputMax = 1;
-
-    DWORD& dwOutputMin = *pdwOutputMin;
-    dwOutputMin = 1;
-
-    DWORD& dwOutputMax = *pdwOutputMax;
-    dwOutputMax = 1;
+    // This MFT has a fixed number of streams.
+    *pdwInputMin = 1;
+    *pdwInputMax = 1;
+    *pdwOutputMin = 1;
+    *pdwOutputMax = 1;
 
     return S_OK;
 }
@@ -189,11 +184,9 @@ HRESULT WebmMfVorbisDec::GetStreamCount(
     if (pcOutputStreams == 0)
         return E_POINTER;
 
-    DWORD& cInputStreams = *pcInputStreams;
-    cInputStreams = 1;
-
-    DWORD& cOutputStreams = *pcOutputStreams;
-    cOutputStreams = 1;
+    // This MFT has a fixed number of streams.
+    *pcInputStreams = 1;
+    *pcOutputStreams = 1;
 
     return S_OK;
 }
@@ -248,8 +241,7 @@ HRESULT WebmMfVorbisDec::GetInputStreamInfo(
     // };
 
     info.dwFlags = MFT_INPUT_STREAM_WHOLE_SAMPLES |
-                   MFT_INPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER |
-                   MFT_INPUT_STREAM_DOES_NOT_ADDREF;
+                   MFT_INPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER;
 
     info.cbSize = 0;       //input size is variable
     info.cbAlignment = 0;  //no specific alignment requirements
@@ -378,10 +370,10 @@ HRESULT WebmMfVorbisDec::GetInputAvailableType(
     hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
     assert(SUCCEEDED(hr));
 
-    hr = pmt->SetGUID(MF_MT_SUBTYPE, VorbisTypes::FORMAT_Vorbis2);
+    hr = pmt->SetGUID(MF_MT_SUBTYPE, VorbisTypes::MEDIASUBTYPE_Vorbis2);
     assert(SUCCEEDED(hr));
 
-    hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, FALSE);
+    hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
     assert(SUCCEEDED(hr));
 
     hr = pmt->SetUINT32(MF_MT_COMPRESSED, TRUE);
@@ -402,7 +394,7 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(
     if (dwOutputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
-    if (dwTypeIndex > 1)
+    if (dwTypeIndex > 0)
         return MF_E_NO_MORE_TYPES;
 
     if (pp == 0)
@@ -421,30 +413,31 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(
     assert(SUCCEEDED(hr));
     assert(pmt);
 
-    hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-    assert(SUCCEEDED(hr));
+    if (FAILED(hr) || NULL == pmt)
+        return E_OUTOFMEMORY;
 
-    if (dwTypeIndex == 0)
+    if (m_pInputMediaType == 0)
     {
-        hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_YV12);
+        hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
+        assert(SUCCEEDED(hr));
+
+        hr = pmt->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
+        assert(SUCCEEDED(hr));
+
+        hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
+        assert(SUCCEEDED(hr));
+
+        hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
         assert(SUCCEEDED(hr));
     }
     else
     {
-        assert(dwTypeIndex == 1);
-
-        hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_IYUV);
+        hr = MFInitMediaTypeFromWaveFormatEx(pmt, &m_wave_format,
+                                             sizeof WAVEFORMATEX);
         assert(SUCCEEDED(hr));
+        // TODO(tomfinegan): ensure MFInitMediaTypeFromWaveFormatEx sets all
+        //                   necessary flags
     }
-
-    hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
-    assert(SUCCEEDED(hr));
-
-    hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
-    assert(SUCCEEDED(hr));
-
-    if (m_pInputMediaType == 0)
-        return S_OK;
 
     return S_OK;
 }
@@ -511,7 +504,7 @@ HRESULT WebmMfVorbisDec::SetInputType(
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
 
-    if (g != VorbisTypes::FORMAT_Vorbis2)
+    if (g != VorbisTypes::MEDIASUBTYPE_Vorbis2)
         return MF_E_INVALIDMEDIATYPE;
 
     UINT32 channels;
@@ -576,27 +569,13 @@ HRESULT WebmMfVorbisDec::SetInputType(
     //TODO: resolve this
     assert(m_pOutputMediaType == 0);
 
-    //TODO:
-    //We could update the preferred ("available") output media types,
-    //now that we know the frame rate and frame size, etc.
-
-    /*
     hr = MFCreateMediaType(&m_pOutputMediaType);
     assert(SUCCEEDED(hr));  //TODO
+    if (FAILED(hr))
+        return hr;
 
-    hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
-    assert(SUCCEEDED(hr));  //TODO
-
-    hr = pmt->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
-    assert(SUCCEEDED(hr));  //TODO
-
-    hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
-    assert(SUCCEEDED(hr));  //TODO
-
-    hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
-    assert(SUCCEEDED(hr));  //TODO
-    */
-    hr = MFInitMediaTypeFromWaveFormatEx(m_pOutputMediaType, &m_wave_format, 0);
+    hr = MFInitMediaTypeFromWaveFormatEx(m_pOutputMediaType, &m_wave_format,
+                                         sizeof WAVEFORMATEX);
     if (FAILED(hr))
         return hr;
 
@@ -659,15 +638,6 @@ HRESULT WebmMfVorbisDec::SetOutputType(
 
     if (ValidatePCMAudioType(pmt) != S_OK)
       return MF_E_INVALIDMEDIATYPE;
-
-    //if (g != MFAudioFormat_PCM /*&& g != MFAudioFormat_Float*/)
-    //    return MF_E_INVALIDMEDIATYPE;
-
-    //hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
-    //assert(SUCCEEDED(hr));
-
-    //hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
-    //assert(SUCCEEDED(hr));
 
     // TODO(tomfinegan): add MFAudioFormat_Float support?
 
@@ -786,13 +756,7 @@ HRESULT WebmMfVorbisDec::GetInputStatus(
 
     DWORD& dwFlags = *pdwFlags;
 
-#if 0
-    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
-
-    dwFlags = (f == 0) ? MFT_INPUT_STATUS_ACCEPT_DATA : 0;
-#else
     dwFlags = MFT_INPUT_STATUS_ACCEPT_DATA;  //because we always queue
-#endif
 
     return S_OK;
 }
@@ -800,36 +764,7 @@ HRESULT WebmMfVorbisDec::GetInputStatus(
 
 HRESULT WebmMfVorbisDec::GetOutputStatus(DWORD*)
 {
-#if 1
     return E_NOTIMPL;
-#else
-    Lock lock;
-
-    HRESULT hr = lock.Seize(this);
-
-    if (FAILED(hr))
-        return hr;
-
-    if (m_pInputMediaType == 0)
-        return MF_E_TRANSFORM_TYPE_NOT_SET;
-
-    //TODO: check output media type too?
-
-    if (pdwFlags == 0)
-        return E_POINTER;
-
-    DWORD& dwFlags = *pdwFlags;
-
-    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &m_iter);
-
-    dwFlags = f ? MFT_OUTPUT_STATUS_SAMPLE_READY : 0;
-
-    //TODO: alternatively, we could return E_NOTIMPL, which
-    //forces client to call ProcessOutput to determine whether
-    //a sample is ready.
-
-    return S_OK;
-#endif
 }
 
 
@@ -848,7 +783,8 @@ HRESULT WebmMfVorbisDec::ProcessEvent(
     if (dwInputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
-    return E_NOTIMPL;  //TODO
+    //return E_NOTIMPL;  //TODO
+    return S_OK;
 }
 
 
@@ -946,8 +882,8 @@ HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
 }
 
 HRESULT WebmMfVorbisDec::ConvertLibVorbisOutputPCMSamples(
-    IMFSample* const p_mf_output_sample,
-    double* const p_out_samples_decoded)
+    IMFSample* p_mf_output_sample,
+    double* p_out_samples_decoded)
 {
     if (NULL == p_out_samples_decoded)
         return E_INVALIDARG;
@@ -1068,7 +1004,6 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     if (m_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
-
     //TODO: check if cOutputSamples > 1 ?
 
     // confirm we have an output sample before we pop an input sample off the
@@ -1105,7 +1040,8 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
 
     double samples = 0;
     status = ConvertLibVorbisOutputPCMSamples(p_mf_output_sample, &samples);
-
+    if (SUCCEEDED(status) || status == MF_E_TRANSFORM_NEED_MORE_INPUT)
+        p_mf_input_sample->Release();
     if (FAILED(status))
         return status;
 
@@ -1125,15 +1061,10 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
 
     // set |p_mf_output_sample| duration to the duration of the pcm samples
     // output by libvorbis
-    double seconds_decoded =
-        static_cast<double>(samples) / static_cast<double>(m_vorbis_info.rate);
-    LONGLONG mediatime_decoded =
-        static_cast<LONGLONG>(seconds_decoded / 10000000.0f);
+    double seconds_decoded = (double)samples / (double)m_vorbis_info.rate;
+    LONGLONG mediatime_decoded = (LONGLONG)(seconds_decoded / 10000000.0f);
     status = p_mf_output_sample->SetSampleDuration(mediatime_decoded);
     assert(SUCCEEDED(status));
-
-    // we addref'd the input sample in |ProcessInput|, release it
-    p_mf_input_sample->Release();
 
     return S_OK;
 }
@@ -1143,7 +1074,7 @@ HRESULT WebmMfVorbisDec::NextOggPacket(BYTE* p_packet, DWORD packet_size)
     if (!p_packet || packet_size == 0)
         return E_INVALIDARG;
 
-    m_ogg_packet.b_o_s = 0;
+    m_ogg_packet.b_o_s = (m_ogg_packet_count == 0);
     m_ogg_packet.bytes = packet_size;
     m_ogg_packet.e_o_s = 0;
     m_ogg_packet.granulepos = 0;
@@ -1181,22 +1112,23 @@ HRESULT WebmMfVorbisDec::CreateVorbisDecoder(IMFMediaType* p_media_type)
     vorbis_info_init(&m_vorbis_info);
     vorbis_comment_init(&m_vorbis_comment);
 
-    // feed the 3 setup headers into libvorbis
+    // feed the ident and comment headers into libvorbis
     int vorbis_status = 0;
     for (BYTE header_num = 0; header_num < 3; ++header_num)
     {
         assert(vorbis_format.headerSize[header_num] > 0);
+
         // create an ogg packet in m_ogg_packet with current header for data
         status = NextOggPacket(p_headers[header_num],
                                vorbis_format.headerSize[header_num]);
         if (FAILED(status))
-          return MF_E_INVALIDMEDIATYPE;
+            return MF_E_INVALIDMEDIATYPE;
         assert(m_ogg_packet.packetno == header_num);
         vorbis_status = vorbis_synthesis_headerin(&m_vorbis_info,
                                                   &m_vorbis_comment,
                                                   &m_ogg_packet);
         if (vorbis_status < 0)
-          return MF_E_INVALIDMEDIATYPE;
+            return MF_E_INVALIDMEDIATYPE;
     }
 
     // final init steps, setup decoder state...
@@ -1335,8 +1267,6 @@ HRESULT WebmMfVorbisDec::CreateMediaBuffer(DWORD size,
 
     // Create the media buffer.
     status = MFCreateMemoryBuffer(size, &pBuffer);
-
-    // Lock the buffer to get a pointer to the memory.
     if (FAILED(status))
         return status;
 

@@ -142,10 +142,9 @@ private:
     HRESULT NextOggPacket(BYTE* p_packet, DWORD packet_size);
     HRESULT ValidatePCMAudioType(IMFMediaType *pmt);
     HRESULT CreateMediaBuffer(DWORD size, IMFMediaBuffer** pp_buffer);
-    HRESULT DecodeVorbisFormat2Sample(IMFSample* const p_mf_input_sample);
-    HRESULT ConvertLibVorbisOutputPCMSamples(
-        IMFSample* const p_mf_output_sample,
-        double* const p_out_samples_decoded);
+    HRESULT DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample);
+    HRESULT ConvertLibVorbisOutputPCMSamples(IMFSample* p_mf_output_sample,
+                                             double* p_out_samples_decoded);
 
     // vorbis members
     vorbis_info m_vorbis_info; // contains static bitstream settings
@@ -157,6 +156,9 @@ private:
 
     ogg_packet m_ogg_packet;
     DWORD m_ogg_packet_count;
+
+    LONGLONG m_input_start_time;
+    bool m_mf_samples_queued;
 };
 
 }  //end namespace WebmMfVorbisDecLib
