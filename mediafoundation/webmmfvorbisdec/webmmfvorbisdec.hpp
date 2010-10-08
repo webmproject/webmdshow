@@ -142,7 +142,10 @@ private:
     HRESULT NextOggPacket(BYTE* p_packet, DWORD packet_size);
     HRESULT ValidatePCMAudioType(IMFMediaType *pmt);
     HRESULT CreateMediaBuffer(DWORD size, IMFMediaBuffer** pp_buffer);
-    HRESULT DecodeMediaSample(IMFSample* p_mf_input_sample);
+    HRESULT DecodeVorbisFormat2Sample(IMFSample* const p_mf_input_sample);
+    HRESULT ConvertLibVorbisOutputPCMSamples(
+        IMFSample* const p_mf_output_sample,
+        double* const p_out_samples_decoded);
 
     // vorbis members
     vorbis_info m_vorbis_info; // contains static bitstream settings

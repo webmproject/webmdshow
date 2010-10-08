@@ -902,7 +902,7 @@ HRESULT WebmMfVorbisDec::ProcessInput(
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::DecodeMediaSample(IMFSample* p_mf_input_sample)
+HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
 {
     IMFMediaBufferPtr mf_input_sample_buffer;
 
@@ -941,6 +941,97 @@ HRESULT WebmMfVorbisDec::DecodeMediaSample(IMFSample* p_mf_input_sample)
 
     if (FAILED(status))
         return E_FAIL;
+
+    return S_OK;
+}
+
+HRESULT WebmMfVorbisDec::ConvertLibVorbisOutputPCMSamples(
+    IMFSample* const p_mf_output_sample,
+    double* const p_out_samples_decoded)
+{
+    if (NULL == p_out_samples_decoded)
+        return E_INVALIDARG;
+
+    // try to get a buffer from the output sample...
+    IMFMediaBufferPtr mf_output_buffer;
+    HRESULT status = p_mf_output_sample->GetBufferByIndex(0, &mf_output_buffer);
+
+    // and complain bitterly if unable
+    if (FAILED(status) || !bool(mf_output_buffer))
+        return E_INVALIDARG;
+
+    // prepare for sample conversion (libvorbis outputs floats, we want integer
+    // samples)
+    float** pp_pcm;
+    int samples = vorbis_synthesis_pcmout(&m_vorbis_state, &pp_pcm);
+    if (samples == 0)
+      return MF_E_TRANSFORM_NEED_MORE_INPUT;
+
+    UINT32 storage_space_needed = samples * m_vorbis_info.channels *
+                                  m_wave_format.nSamplesPerSec;
+    DWORD mf_storage_limit;
+    status = mf_output_buffer->GetMaxLength(&mf_storage_limit);
+    if (FAILED(status))
+        return status;
+
+    BYTE* p_mf_buffer_data = NULL;
+    DWORD mf_data_len = 0;
+    if (storage_space_needed > mf_storage_limit)
+    {
+        // TODO(tomfinegan): do I have to queue extra data, or is it alright to
+        //                   replace the sample buffer?
+        status = p_mf_output_sample->RemoveBufferByIndex(0);
+        assert(SUCCEEDED(status));
+        if (FAILED(status))
+            return status;
+
+        IMFMediaBuffer* p_buffer = NULL;
+        status = CreateMediaBuffer(storage_space_needed, &p_buffer);
+
+        if (FAILED(status))
+            return status;
+
+        mf_output_buffer = p_buffer;
+    }
+
+    status = mf_output_buffer->Lock(&p_mf_buffer_data, &mf_storage_limit,
+                                    &mf_data_len);
+    if (FAILED(status))
+        return status;
+
+    // from the vorbis decode sample, plus some edits
+    // |pp_pcm| is a multichannel float vector.  In stereo, for example,
+    // pp_pcm[0] is left, and pp_pcm[1] is right.  samples is the size of each
+    // channel.  Convert the float values (-1.<=range<=1.) to whatever PCM
+    // format and write it out
+
+    // TODO(tomfinegan): factor resample out into 8-bit/16-bit versions
+
+    INT16 *p_out_samples = reinterpret_cast<INT16*>(p_mf_buffer_data);
+    float* p_curr_channel_samples;
+    // convert floats to 16 bit signed ints (host order) and interleave
+    for (int i = 0; i < m_vorbis_info.channels; ++i)
+    {
+        p_out_samples += i;
+        p_curr_channel_samples = pp_pcm[i];
+        for (int sample = 0; sample < samples; sample += m_vorbis_info.channels)
+        {
+            p_out_samples[sample] = static_cast<INT16>(
+              floor(p_curr_channel_samples[sample] * 32767.f + .5f));
+        }
+    }
+
+    status = mf_output_buffer->SetCurrentLength(storage_space_needed);
+    assert(SUCCEEDED(status));
+    if (FAILED(status))
+        return status;
+
+    status = mf_output_buffer->Unlock();
+    assert(SUCCEEDED(status));
+    if (FAILED(status))
+        return status;
+
+    *p_out_samples_decoded = samples;
 
     return S_OK;
 }
@@ -1007,89 +1098,18 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
                      // MF_E_TRANSFORM_NEED_MORE_INPUT when m_samples is empty,
                      // this is a serious error...
 
-    status = DecodeMediaSample(p_mf_input_sample);
+    status = DecodeVorbisFormat2Sample(p_mf_input_sample);
+
+    if (FAILED(status))
+        return status;
+
+    double samples = 0;
+    status = ConvertLibVorbisOutputPCMSamples(p_mf_output_sample, &samples);
 
     if (FAILED(status))
         return status;
 
     // TODO(tomfinegan): put sample back in m_samples if we run into trouble?
-
-    // try get a buffer from the output sample...
-    IMFMediaBufferPtr mf_output_buffer;
-    status = p_mf_output_sample->GetBufferByIndex(0, &mf_output_buffer);
-
-    // and complain bitterly if unable
-    if (FAILED(status) || !bool(mf_output_buffer))
-        return E_INVALIDARG;
-
-    // prepare for sample conversion (libvorbis outputs floats, we want integer
-    // samples
-    float** pp_pcm;
-    int samples = vorbis_synthesis_pcmout(&m_vorbis_state, &pp_pcm);
-    if (samples == 0)
-      return MF_E_TRANSFORM_NEED_MORE_INPUT;
-
-    UINT32 storage_space_needed = samples * m_vorbis_info.channels *
-                                  m_wave_format.nSamplesPerSec;
-    DWORD mf_storage_limit;
-    status = mf_output_buffer->GetMaxLength(&mf_storage_limit);
-    if (FAILED(status))
-        return status;
-
-    BYTE* p_mf_buffer_data = NULL;
-    DWORD mf_data_len = 0;
-    if (storage_space_needed > mf_storage_limit)
-    {
-        // TODO(tomfinegan): do I have to queue extra data, or is it alright to
-        //                   replace the sample buffer?
-        status = p_mf_output_sample->RemoveBufferByIndex(0);
-        assert(SUCCEEDED(status));
-        if (FAILED(status))
-            return status;
-
-        IMFMediaBuffer* p_buffer = NULL;
-        status = CreateMediaBuffer(storage_space_needed, &p_buffer);
-
-        if (FAILED(status))
-            return status;
-
-        mf_output_buffer = p_buffer;
-    }
-
-    status = mf_output_buffer->Lock(&p_mf_buffer_data, &mf_storage_limit,
-                                    &mf_data_len);
-    if (FAILED(status))
-        return status;
-
-    // from the vorbis decode sample, plus some edits
-    // |pp_pcm| is a multichannel float vector.  In stereo, for example,
-    // pp_pcm[0] is left, and pp_pcm[1] is right.  samples is the size of each
-    // channel.  Convert the float values (-1.<=range<=1.) to whatever PCM
-    // format and write it out
-
-    INT16 *p_out_samples = reinterpret_cast<INT16*>(p_mf_buffer_data);
-    float* p_curr_channel_samples;
-    // convert floats to 16 bit signed ints (host order) and interleave
-    for (int i = 0; i < m_vorbis_info.channels; ++i)
-    {
-        p_out_samples += i;
-        p_curr_channel_samples = pp_pcm[i];
-        for (int sample = 0; sample < samples; sample += m_vorbis_info.channels)
-        {
-            p_out_samples[sample] = static_cast<INT16>(
-              floor(p_curr_channel_samples[sample] * 32767.f + .5f));
-        }
-    }
-
-    status = mf_output_buffer->SetCurrentLength(storage_space_needed);
-    assert(SUCCEEDED(status));
-    if (FAILED(status))
-        return status;
-
-    status = mf_output_buffer->Unlock();
-    assert(SUCCEEDED(status));
-    if (FAILED(status))
-        return status;
 
     // set |p_mf_output_sample| start time to input sample start time...
     LONGLONG start_time;
