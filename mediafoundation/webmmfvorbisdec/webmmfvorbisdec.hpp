@@ -157,8 +157,8 @@ private:
     ogg_packet m_ogg_packet;
     DWORD m_ogg_packet_count;
 
-    LONGLONG m_input_start_time;
-    bool m_mf_samples_queued;
+    //LONGLONG m_input_start_time;
+    //bool m_mf_samples_queued;
 };
 
 }  //end namespace WebmMfVorbisDecLib

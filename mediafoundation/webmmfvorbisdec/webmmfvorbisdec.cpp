@@ -1038,6 +1038,10 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     if (FAILED(status))
         return status;
 
+    // set |p_mf_output_sample| start time to input sample start time...
+    LONGLONG start_time;
+    status = p_mf_input_sample->GetSampleTime(&start_time);
+
     double samples = 0;
     status = ConvertLibVorbisOutputPCMSamples(p_mf_output_sample, &samples);
     if (SUCCEEDED(status) || status == MF_E_TRANSFORM_NEED_MORE_INPUT)
@@ -1045,11 +1049,6 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     if (FAILED(status))
         return status;
 
-    // TODO(tomfinegan): put sample back in m_samples if we run into trouble?
-
-    // set |p_mf_output_sample| start time to input sample start time...
-    LONGLONG start_time;
-    status = p_mf_input_sample->GetSampleTime(&start_time);
 
     if (SUCCEEDED(status))
     {
