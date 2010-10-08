@@ -266,8 +266,8 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
             break;
     }
 
-    if (mkvparser::Cues* pCues = pSegment->GetCues())
-        pCues->LoadCuePoint();
+    //if (mkvparser::Cues* pCues = pSegment->GetCues())
+    //    pCues->LoadCuePoint();
 #endif
 
     if (hr == S_OK)  //have a sample
