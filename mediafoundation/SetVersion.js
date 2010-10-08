@@ -391,6 +391,7 @@ MJH.Main = function() {
 
     process("webmmfsource");
     process("webmmfvp8dec");
+    process("webmmfvorbisdec");
 };
 
 
