@@ -21,7 +21,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="1"
@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\vp8_sdk\include&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;WEBMMFVORBISDEC_EXPORTS"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -124,7 +124,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common; $(SolutionDir)..\third_party\libvpx"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;"
 				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;_USRDLL;NOMINMAX"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -146,7 +146,7 @@
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x64\debug&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x64\debug&quot;"
 				GenerateManifest="false"
-				ModuleDefinitionFile="webmmfvp8dec.def"
+				ModuleDefinitionFile="webmmfvorbisdec.def"
 				GenerateDebugInformation="true"
 				TargetMachine="17"
 			/>
@@ -174,7 +174,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)..\..\dll\webmmf\$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="1"
@@ -274,7 +274,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\libvpx"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;"
 				PreprocessorDefinitions="WIN64;_WINDOWS;_USRDLL;NOMINMAX"
 				WarningLevel="4"
 			/>
@@ -294,7 +294,7 @@
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x64\release&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x64\release&quot;"
 				GenerateManifest="false"
-				ModuleDefinitionFile="webmmfvp8dec.def"
+				ModuleDefinitionFile="webmmfvorbisdec.def"
 				TargetMachine="17"
 			/>
 			<Tool
