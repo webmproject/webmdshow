@@ -157,8 +157,10 @@ private:
     ogg_packet m_ogg_packet;
     DWORD m_ogg_packet_count;
 
-    //LONGLONG m_input_start_time;
-    //bool m_mf_samples_queued;
+    typedef std::vector<float> vorbis_output_samples_t;
+    vorbis_output_samples_t m_vorbis_output_samples;
+
+    LONGLONG m_total_time_decoded;
 };
 
 }  //end namespace WebmMfVorbisDecLib

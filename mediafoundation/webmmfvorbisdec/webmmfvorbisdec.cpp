@@ -13,6 +13,22 @@
 #include <new>
 #include <cmath>
 #include <vector>
+#ifdef _DEBUG
+#include "odbgstream.hpp"
+#include "iidstr.hpp"
+using std::endl;
+
+// keep the compiler quiet about do/while(0)'s used in log macros
+#pragma warning(disable:4127)
+
+#define DBGLOG(X) \
+do { \
+    wodbgstream wos; \
+    wos << "["__FUNCTION__"] " << X << endl; \
+} while(0)
+#else
+#define DBG(X) do {} while(0)
+#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 _COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
@@ -57,7 +73,8 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_cRef(1),
     m_pInputMediaType(0),
     m_pOutputMediaType(0),
-    m_ogg_packet_count(0)
+    m_ogg_packet_count(0),
+    m_total_time_decoded(0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -898,13 +915,26 @@ HRESULT WebmMfVorbisDec::ConvertLibVorbisOutputPCMSamples(
 
     // prepare for sample conversion (libvorbis outputs floats, we want integer
     // samples)
-    float** pp_pcm;
-    int samples = vorbis_synthesis_pcmout(&m_vorbis_state, &pp_pcm);
-    if (samples == 0)
-      return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
-    UINT32 storage_space_needed = samples * m_vorbis_info.channels *
-                                  m_wave_format.nSamplesPerSec;
+    // Consume all PCM samples from libvorbis
+    int samples = 0, total_samples = 0;
+    float** pp_pcm;
+    while ((samples = vorbis_synthesis_pcmout(&m_vorbis_state, &pp_pcm)) > 0)
+    {
+        m_vorbis_output_samples.insert(m_vorbis_output_samples.end(),
+                                       pp_pcm[0], pp_pcm[0]+samples);
+        vorbis_synthesis_read(&m_vorbis_state, samples);
+        total_samples += samples;
+    }
+
+    // Need more input if libvorbis didn't produce any output samples
+    if (samples == 0 && m_vorbis_output_samples.empty())
+        return MF_E_TRANSFORM_NEED_MORE_INPUT;
+
+    //UINT32 storage_space_needed = samples * m_vorbis_info.channels *
+    UINT32 mf_storage_space_needed = total_samples * m_vorbis_info.channels *
+                                     (m_wave_format.wBitsPerSample / 8);
+
     DWORD mf_storage_limit;
     status = mf_output_buffer->GetMaxLength(&mf_storage_limit);
     if (FAILED(status))
@@ -912,8 +942,12 @@ HRESULT WebmMfVorbisDec::ConvertLibVorbisOutputPCMSamples(
 
     BYTE* p_mf_buffer_data = NULL;
     DWORD mf_data_len = 0;
-    if (storage_space_needed > mf_storage_limit)
+
+    if (mf_storage_space_needed > mf_storage_limit)
     {
+        DBGLOG("Reallocating buffer: mf_storage_limit=" << mf_storage_limit
+          << " mf_storage_space_needed=" << mf_storage_space_needed);
+
         // TODO(tomfinegan): do I have to queue extra data, or is it alright to
         //                   replace the sample buffer?
         status = p_mf_output_sample->RemoveBufferByIndex(0);
@@ -922,7 +956,7 @@ HRESULT WebmMfVorbisDec::ConvertLibVorbisOutputPCMSamples(
             return status;
 
         IMFMediaBuffer* p_buffer = NULL;
-        status = CreateMediaBuffer(storage_space_needed, &p_buffer);
+        status = CreateMediaBuffer(mf_storage_space_needed, &p_buffer);
 
         if (FAILED(status))
             return status;
@@ -942,22 +976,21 @@ HRESULT WebmMfVorbisDec::ConvertLibVorbisOutputPCMSamples(
     // format and write it out
 
     // TODO(tomfinegan): factor resample out into 8-bit/16-bit versions
+    // TODO(tomfinegan): support MFAudioFormat_Float
 
     INT16 *p_out_samples = reinterpret_cast<INT16*>(p_mf_buffer_data);
-    float* p_curr_channel_samples;
-    // convert floats to 16 bit signed ints (host order) and interleave
-    for (int i = 0; i < m_vorbis_info.channels; ++i)
-    {
-        p_out_samples += i;
-        p_curr_channel_samples = pp_pcm[i];
-        for (int sample = 0; sample < samples; sample += m_vorbis_info.channels)
-        {
-            p_out_samples[sample] = static_cast<INT16>(
-              floor(p_curr_channel_samples[sample] * 32767.f + .5f));
-        }
-    }
+    typedef vorbis_output_samples_t::const_iterator vorbis_sample_iterator_t;
+    vorbis_sample_iterator_t pcm_iter = m_vorbis_output_samples.begin();
+    vorbis_sample_iterator_t pcm_end = m_vorbis_output_samples.end();
 
-    status = mf_output_buffer->SetCurrentLength(storage_space_needed);
+    for (int sample = 0; pcm_iter != pcm_end; ++pcm_iter, ++sample)
+    {
+        p_out_samples[sample] = static_cast<INT16>(
+            floor(*pcm_iter * 32767.f + .5f));
+    }
+    m_vorbis_output_samples.clear();
+
+    status = mf_output_buffer->SetCurrentLength(mf_storage_space_needed);
     assert(SUCCEEDED(status));
     if (FAILED(status))
         return status;
@@ -1039,11 +1072,14 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
         return status;
 
     // set |p_mf_output_sample| start time to input sample start time...
-    LONGLONG start_time;
+    LONGLONG start_time = 0, duration = 0;
     status = p_mf_input_sample->GetSampleTime(&start_time);
+    assert(SUCCEEDED(status));
+
+    status = p_mf_input_sample->GetSampleDuration(&duration);
 
     double samples = 0;
-    status = ConvertLibVorbisOutputPCMSamples(p_mf_output_sample, &samples);
+    status = ConvertLibVorbisOutputPcmSamples(p_mf_output_sample, &samples);
     if (SUCCEEDED(status) || status == MF_E_TRANSFORM_NEED_MORE_INPUT)
         p_mf_input_sample->Release();
     if (FAILED(status))
@@ -1054,16 +1090,27 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     {
         assert(start_time >= 0);
 
+        start_time = m_total_time_decoded;
+
         status = p_mf_output_sample->SetSampleTime(start_time);
         assert(SUCCEEDED(status));
     }
 
     // set |p_mf_output_sample| duration to the duration of the pcm samples
     // output by libvorbis
-    double seconds_decoded = (double)samples / (double)m_vorbis_info.rate;
-    LONGLONG mediatime_decoded = (LONGLONG)(seconds_decoded / 10000000.0f);
+    double milliseconds_decoded = ((double)samples /
+                                  (double)m_vorbis_info.rate /
+                                  (double)m_vorbis_info.channels) * 1000;
+    LONGLONG mediatime_decoded =
+        static_cast<LONGLONG>((milliseconds_decoded * 10000));
     status = p_mf_output_sample->SetSampleDuration(mediatime_decoded);
     assert(SUCCEEDED(status));
+
+    DBGLOG("start_time=" << start_time << " duration=" << duration);
+    DBGLOG("mediatime_decoded=" << mediatime_decoded);
+    DBGLOG("m_total_time_decoded=" << m_total_time_decoded);
+
+    m_total_time_decoded += mediatime_decoded;
 
     return S_OK;
 }
