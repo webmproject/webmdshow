@@ -56,22 +56,11 @@ public:
 
     //Local methods and properties
 
-    //virtual HRESULT Seek(LONGLONG) = 0;
     HRESULT GetCurrMediaTime(LONGLONG&) const;  //not presentation time!
 
     HRESULT Select();
     HRESULT Deselect();
     bool IsSelected() const;
-
-    HRESULT Start(
-        const PROPVARIANT& time,
-        mkvparser::Cluster*,
-        const mkvparser::BlockEntry*);
-
-    HRESULT Seek(
-        const PROPVARIANT& time,
-        mkvparser::Cluster*,
-        const mkvparser::BlockEntry*);
 
     HRESULT Restart();
 
@@ -85,21 +74,13 @@ public:
 
 protected:
 
-    virtual HRESULT OnPopulateSample(
-                        const mkvparser::BlockEntry*,
-                        IMFSample*) = 0;
+    HRESULT OnStart(const PROPVARIANT& time);
+    HRESULT OnSeek(const PROPVARIANT& time);
 
-    //TODO: determine this during Start, and pass as
-    //param to stream; we don't need to cache it anymore.
-    //mkvparser::Cluster* m_pBaseCluster;
-
-    const mkvparser::BlockEntry* m_pCurr;
-    bool m_bDiscontinuity;
+    virtual const mkvparser::BlockEntry* GetCurrBlock() const = 0;
+    virtual HRESULT PopulateSample(IMFSample*) = 0;
 
 private:
-
-    //HRESULT Preload();
-    HRESULT PopulateSample(IMFSample*);
 
     IMFMediaEventQueue* m_pEvents;
 

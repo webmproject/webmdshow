@@ -28,11 +28,35 @@ public:
                     mkvparser::Track*,
                     WebmMfStream*&);
 
-    //HRESULT Seek(LONGLONG);
+    struct SeekInfo
+    {
+        mkvparser::Cluster* pCluster;
+        const mkvparser::BlockEntry* pBlockEntry;
+        const mkvparser::CuePoint* pCP;
+        const mkvparser::CuePoint::TrackPosition* pTP;
+    };
+
+    HRESULT GetCurrMediaTime(LONGLONG&) const;
+    void GetCluster(LONGLONG, SeekInfo&) const;
+
+    HRESULT Start(
+        const PROPVARIANT& time,
+        const SeekInfo&);
+
+    HRESULT Seek(
+        const PROPVARIANT& time,
+        const SeekInfo&);
 
 protected:
 
-    HRESULT OnPopulateSample(const mkvparser::BlockEntry*, IMFSample*);
+    const mkvparser::BlockEntry* GetCurrBlock() const;
+    HRESULT PopulateSample(IMFSample*);
+
+private:
+
+    bool m_bDiscontinuity;
+    SeekInfo m_curr;
+
 
 };
 

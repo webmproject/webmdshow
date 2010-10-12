@@ -27,11 +27,25 @@ public:
                     mkvparser::Track*,
                     WebmMfStream*&);
 
-    //HRESULT Seek(LONGLONG);
+    HRESULT GetCurrMediaTime(LONGLONG&) const;
+
+    HRESULT Start(
+        const PROPVARIANT& time,
+        const mkvparser::BlockEntry*);
+
+    HRESULT Seek(
+        const PROPVARIANT& time,
+        const mkvparser::BlockEntry*);
 
 protected:
 
-    HRESULT OnPopulateSample(const mkvparser::BlockEntry*, IMFSample*);
+    const mkvparser::BlockEntry* GetCurrBlock() const;
+    HRESULT PopulateSample(IMFSample*);
+
+private:
+
+    bool m_bDiscontinuity;
+    const mkvparser::BlockEntry* m_pCurr;
 
 };
 

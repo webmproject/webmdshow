@@ -119,17 +119,11 @@ private:
 
     void WebmMfSource::Seek(
         const PROPVARIANT& var,
-        HRESULT (WebmMfStream::*pfn)(
-            const PROPVARIANT&,
-            mkvparser::Cluster*,
-            const mkvparser::BlockEntry*));
+        bool bStart);  //true = start, false = seek
 
     HRESULT StartStreams(const PROPVARIANT&);
     HRESULT SeekStreams(const PROPVARIANT&);
     HRESULT RestartStreams();
-
-    //void GetBaseCluster(LONGLONG, mkvparser::Cluster*&);
-    //void SetCurrPos(LONGLONG);
 
     ULONG m_cEOS;
     float m_rate;
@@ -141,6 +135,8 @@ public:
     enum State { kStateStopped, kStatePaused, kStateStarted };
     State m_state;
     LONGLONG m_preroll_ns;
+    //LONGLONG m_thin_ns;
+    BOOL m_bThin;
 
     void NotifyEOS();
 

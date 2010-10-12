@@ -24,9 +24,6 @@ WebmMfStream::WebmMfStream(
     m_pSource(pSource),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
-    //m_pBaseCluster(0),
-    m_pCurr(0),
-    m_bDiscontinuity(true),
     m_bSelected(true),
     m_bEOS(false)
 {
@@ -241,23 +238,9 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     assert(SUCCEEDED(hr));
     assert(pSample);
 
-#if 0
     for (;;)
     {
-        hr = PopulateSample(pSample);
-
-        if (hr != VFW_E_BUFFER_UNDERFLOW)
-            break;
-
-        hr = Preload();  //TODO: file-based read assumed
-        assert(SUCCEEDED(hr));
-    }
-#else
-    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
-
-    for (;;)
-    {
-        const long status = pSegment->LoadCluster();
+        const long status = m_pTrack->m_pSegment->LoadCluster();
         assert(status == 0);  //TODO
 
         hr = PopulateSample(pSample);
@@ -265,10 +248,6 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
         if (hr != VFW_E_BUFFER_UNDERFLOW)
             break;
     }
-
-    //if (mkvparser::Cues* pCues = pSegment->GetCues())
-    //    pCues->LoadCuePoint();
-#endif
 
     if (hr == S_OK)  //have a sample
     {
@@ -315,31 +294,6 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
 
 #if 0
-HRESULT WebmMfStream::Preload()
-{
-    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
-
-    mkvparser::Cluster* pCluster;
-    LONGLONG pos;
-
-    //TODO: file-based load is assumed here
-    //We need to determine how MF handles network streams.
-
-    //TODO: is it possible to be smarter here, to keep
-    //parsing until we have a cluster containing a block from
-    //this track?
-
-    const long result = pSegment->ParseCluster(pCluster, pos);
-    result;
-    assert(result >= 0);
-
-    const bool bDone = pSegment->AddCluster(pCluster, pos);
-
-    return bDone ? S_FALSE : S_OK;
-}
-#endif
-
-
 HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 {
     if (m_pCurr == 0)
@@ -380,6 +334,7 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
     if (m_pCurr->EOS())
         return S_FALSE;  //no more samples: send EOS downstream
 
+#if 0  //must be done by subclass
     const mkvparser::BlockEntry* pNextBlock;
 
     const long result = m_pTrack->GetNext(m_pCurr, pNextBlock);
@@ -395,10 +350,13 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
     assert(hr == S_OK);     //TODO: for now, assume we never throw away
 
     m_pCurr = pNextBlock;
+#else
+    HRESULT hr = OnPopulateSample(pSample);
 
-#if 0  //TODO: resolve this
-    if (hr != S_OK)
-        return 2;  //throw away this sample
+    if (hr == VFW_E_BUFFER_UNDERFLOW)
+        return hr;
+
+    assert(hr == S_OK);
 #endif
 
     if (m_bDiscontinuity)
@@ -414,6 +372,7 @@ HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
 
     return S_OK;  //TODO
 }
+#endif
 
 
 void WebmMfStream::PurgeSamples()
@@ -527,43 +486,15 @@ bool WebmMfStream::IsSelected() const
 }
 
 
-HRESULT WebmMfStream::Start(
-    const PROPVARIANT& var,
-    mkvparser::Cluster* pBaseCluster,
-    const mkvparser::BlockEntry* pCurr)
+HRESULT WebmMfStream::OnStart(const PROPVARIANT& var)
 {
-    if (!m_bSelected)
-        return S_FALSE;
-
-    assert(pBaseCluster);
+    //assert(pCurr);
+    assert(m_bSelected);
     assert(m_samples.empty());
     assert(m_pEvents);
 
-    if (pCurr)
-        m_pCurr = pCurr;
-    else
-        m_pCurr = pBaseCluster->GetEntry(m_pTrack);
-
-#ifdef _DEBUG
-    if (!m_pCurr->EOS())
-    {
-        const LONGLONG ns = pBaseCluster->GetTime();
-
-        const mkvparser::Block* const pBlock = m_pCurr->GetBlock();
-        assert(pBlock);
-
-        const LONGLONG ns2 = pBlock->GetTime(pBaseCluster);
-
-        wodbgstream os;
-        os << L"WebmMfStream::Start: cluster.ns=" << ns
-           << " cluster.secs=" << (double(ns) / 1000000000)
-           << " block.ns=" << ns2
-           << " block.secs=" << (double(ns2) / 1000000000)
-           << endl;
-    }
-#endif
-
-    m_bDiscontinuity = true;
+    //m_pCurr = pCurr;
+    //m_bDiscontinuity = true;
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEStreamStarted,
@@ -577,41 +508,16 @@ HRESULT WebmMfStream::Start(
 }
 
 
-HRESULT WebmMfStream::Seek(
-    const PROPVARIANT& var,
-    mkvparser::Cluster* pBaseCluster,
-    const mkvparser::BlockEntry* pCurr)
+HRESULT WebmMfStream::OnSeek(const PROPVARIANT& var)
 {
-    if (!m_bSelected)
-        return S_FALSE;
+    //assert(pCurr);
+    assert(m_bSelected);
+    assert(m_pEvents);
 
     PurgeSamples();
 
-    if (pCurr)
-        m_pCurr = pCurr;
-    else
-        m_pCurr = pBaseCluster->GetEntry(m_pTrack);
-
-#ifdef _DEBUG
-    if (!m_pCurr->EOS())
-    {
-        const LONGLONG ns = pBaseCluster->GetTime();
-
-        const mkvparser::Block* const pBlock = m_pCurr->GetBlock();
-        const LONGLONG ns2 = pBlock->GetTime(pBaseCluster);
-
-        wodbgstream os;
-        os << L"WebmMfStream::Seek: cluster.ns=" << ns
-           << " cluster.secs=" << (double(ns) / 1000000000)
-           << " block.ns=" << ns2
-           << " block.secs=" << (double(ns2) / 1000000000)
-           << endl;
-    }
-#endif
-
-    m_bDiscontinuity = true;
-
-    assert(m_pEvents);
+    //m_pCurr = pCurr;
+    //m_bDiscontinuity = true;
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEStreamSeeked,
@@ -662,16 +568,18 @@ HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 {
     //source object already locked by caller
 
-    if (m_pCurr == 0)
+    const mkvparser::BlockEntry* const pCurr = GetCurrBlock();
+
+    if (pCurr == 0)  //?
     {
         reftime = 0;  //TODO: try to load the first cluster
         return S_OK;
     }
 
-    mkvparser::Cluster* const pCurrCluster = m_pCurr->GetCluster();
+    mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
 
-    const mkvparser::Block* const pCurrBlock = m_pCurr->GetBlock();
+    const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
     assert(pCurrBlock);
 
     const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);

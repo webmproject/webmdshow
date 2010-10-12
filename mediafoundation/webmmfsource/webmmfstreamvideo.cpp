@@ -8,10 +8,11 @@
 #include <limits>
 #include <cmath>
 #include <comdef.h>
-//#ifdef _DEBUG
-//#include "odbgstream.hpp"
-//using std::endl;
-//#endif
+#include <vfwmsgs.h>
+#ifdef _DEBUG
+#include "odbgstream.hpp"
+using std::endl;
+#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
 _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
@@ -155,6 +156,7 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     mkvparser::VideoTrack* pTrack) :
     WebmMfStream(pSource, pDesc, pTrack)
 {
+    m_curr.pBlockEntry = 0;
 }
 
 
@@ -163,6 +165,101 @@ WebmMfStreamVideo::~WebmMfStreamVideo()
 }
 
 
+HRESULT WebmMfStreamVideo::Start(
+    const PROPVARIANT& var,
+    const SeekInfo& info)
+{
+    m_bDiscontinuity = true;
+    m_curr = info;
+
+#ifdef _DEBUG
+    assert(var.vt == VT_I8);
+
+    const LONGLONG reftime = var.hVal.QuadPart;
+    assert(reftime >= 0);
+
+    odbgstream os;
+
+    os << "WebmMfStreamVideo::Start: reftime[sec]="
+       << (double(reftime) / 10000000);
+
+    const mkvparser::BlockEntry* const pBE = info.pBlockEntry;
+
+    if ((pBE != 0) && !pBE->EOS())
+    {
+        const mkvparser::Block* const pB = pBE->GetBlock();
+        assert(pB);
+        assert(pB->IsKey());
+
+        const LONGLONG time_ns = pB->GetTime(info.pCluster);
+        assert(time_ns >= 0);
+
+        os << " block.time[sec]="
+           << (double(time_ns) / 1000000000);
+    }
+
+    os << endl;
+#endif
+
+    return OnStart(var);
+}
+
+
+HRESULT WebmMfStreamVideo::Seek(
+    const PROPVARIANT& var,
+    const SeekInfo& info)
+{
+    m_bDiscontinuity = true;
+    m_curr = info;
+
+#ifdef _DEBUG
+    assert(var.vt == VT_I8);
+
+    const LONGLONG reftime = var.hVal.QuadPart;
+    assert(reftime >= 0);
+
+    odbgstream os;
+
+    os << "WebmMfStreamVideo::Seek: reftime[sec]="
+       << (double(reftime) / 10000000);
+
+    const mkvparser::BlockEntry* const pBE = info.pBlockEntry;
+
+    if ((pBE != 0) && !pBE->EOS())
+    {
+        const mkvparser::Block* const pB = pBE->GetBlock();
+        assert(pB);
+        assert(pB->IsKey());
+
+        const LONGLONG time_ns = pB->GetTime(info.pCluster);
+        assert(time_ns >= 0);
+
+        os << " block.time[sec]="
+           << (double(time_ns) / 1000000000);
+    }
+
+    os << endl;
+#endif
+
+    return OnSeek(var);
+}
+
+
+void WebmMfStreamVideo::GetCluster(LONGLONG time_ns, SeekInfo& i) const
+{
+    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+
+    pSegment->GetCluster(
+        time_ns,
+        m_pTrack,
+        i.pCluster,
+        i.pBlockEntry,
+        i.pCP,
+        i.pTP);
+}
+
+
+#if 0
 HRESULT WebmMfStreamVideo::OnPopulateSample(
     const mkvparser::BlockEntry* pNextEntry,
     IMFSample* pSample)
@@ -291,6 +388,156 @@ HRESULT WebmMfStreamVideo::OnPopulateSample(
 
     return S_OK;
 }
+#endif
+
+
+HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
+{
+    assert(pSample);
+
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBlockEntry;
+
+    if ((pCurr == 0) || pCurr->EOS())
+        return S_FALSE;
+
+    const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
+    assert(pCurrBlock);
+    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
+
+    mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
+    assert(pCurrCluster);
+    //assert(pCurrCluster == m_curr.pCluster);
+
+    //const LONGLONG thin_ns = m_pSource->m_thin_ns;
+
+    SeekInfo next;
+
+    //if (m_pSource->m_bThin)  //no thinning in progress
+    {
+        const long result = m_pTrack->GetNext(pCurr, next.pBlockEntry);
+
+        if (result == mkvparser::E_BUFFER_NOT_FULL)
+            return VFW_E_BUFFER_UNDERFLOW;
+
+        assert(result >= 0);
+        assert(next.pBlockEntry);
+    }
+
+    const long cbBuffer = pCurrBlock->GetSize();
+    assert(cbBuffer >= 0);
+
+    IMFMediaBufferPtr pBuffer;
+
+    HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
+    assert(SUCCEEDED(hr));
+    assert(pBuffer);
+
+    BYTE* ptr;
+    DWORD cbMaxLength;
+
+    hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
+    assert(SUCCEEDED(hr));
+    assert(ptr);
+    assert(cbMaxLength >= DWORD(cbBuffer));
+
+    mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
+
+    long status = pCurrBlock->Read(pReader, ptr);
+    assert(status == 0);  //all bytes were read
+
+    hr = pBuffer->SetCurrentLength(cbBuffer);
+    assert(SUCCEEDED(hr));
+
+    hr = pBuffer->Unlock();
+    assert(SUCCEEDED(hr));
+
+    hr = pSample->AddBuffer(pBuffer);
+    assert(SUCCEEDED(hr));
+
+    const bool bKey = pCurrBlock->IsKey();
+
+    if (bKey)
+    {
+        hr = pSample->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
+        assert(SUCCEEDED(hr));
+    }
+
+    if (m_bDiscontinuity)
+    {
+        //TODO: resolve whether to set this for first of the preroll samples,
+        //or wait until last of preroll samples has been pushed downstream.
+
+        hr = pSample->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
+        assert(SUCCEEDED(hr));
+
+        m_bDiscontinuity = false;  //TODO: must set back to true during a seek
+    }
+
+    const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
+    const LONGLONG sample_time = curr_ns / 100;  //reftime units
+
+    hr = pSample->SetSampleTime(sample_time);
+    assert(SUCCEEDED(hr));
+
+    const LONGLONG preroll_ns = m_pSource->m_preroll_ns;
+
+    if ((preroll_ns >= 0) && (curr_ns < preroll_ns))
+    {
+        //TODO: handle this for audio too
+
+        hr = pSample->SetUINT32(WebmTypes::WebMSample_Preroll, TRUE);
+        assert(SUCCEEDED(hr));
+
+        //odbgstream os;
+        //os << "WebmMfSource::WebmMfStreamVideo:"
+        //   << " sending PREROLL sample: preroll[sec]="
+        //   << (double(preroll_ns) / 1000000000)
+        //   << " curr[sec]="
+        //   << (double(curr_ns) / 1000000000)
+        //   << " cluster_idx=" << m_pCurr->GetCluster()->m_index;
+        //
+        //if (bKey)
+        //    os << " KEY";
+        //
+        //os << endl;
+    }
+
+    //TODO: list of attributes here:
+    //http://msdn.microsoft.com/en-us/library/dd317906%28v=VS.85%29.aspx
+    //http://msdn.microsoft.com/en-us/library/aa376629%28v=VS.85%29.aspx
+
+    //TODO: we can better here: synthesize duration of last block
+    //in stream from the duration of the stream
+
+    const mkvparser::BlockEntry* const pNextEntry = next.pBlockEntry;
+
+    if ((pNextEntry != 0) && !pNextEntry->EOS())
+    {
+        const mkvparser::Block* const pNextBlock = pNextEntry->GetBlock();
+        assert(pNextBlock);
+
+        mkvparser::Cluster* const pNextCluster = pNextEntry->GetCluster();
+
+        const __int64 next_ns = pNextBlock->GetTime(pNextCluster);
+        assert(next_ns >= curr_ns);
+
+        const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
+
+        hr = pSample->SetSampleDuration(sample_duration);
+        assert(SUCCEEDED(hr));
+    }
+
+    m_curr = next;
+
+    return S_OK;
+}
+
+
+const mkvparser::BlockEntry* WebmMfStreamVideo::GetCurrBlock() const
+{
+    return m_curr.pBlockEntry;
+}
+
 
 
 }  //end namespace WebmMfSourceLib

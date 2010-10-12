@@ -2,8 +2,6 @@
 #include "webmmfstream.hpp"
 #include "webmmfstreamvideo.hpp"
 #include "webmmfstreamaudio.hpp"
-//#include "webmtypes.hpp"
-//#include "vorbistypes.hpp"
 #include <mfapi.h>
 #include <mferror.h>
 #include <new>
@@ -18,6 +16,7 @@
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
 using std::endl;
+using std::boolalpha;
 #endif
 
 using std::wstring;
@@ -71,6 +70,7 @@ WebmMfSource::WebmMfSource(
     m_pSegment(0),
     m_state(kStateStopped),
     m_preroll_ns(-1),
+    m_bThin(FALSE),
     m_cEOS(0),
     m_rate(1)
 {
@@ -1112,6 +1112,15 @@ HRESULT WebmMfSource::Shutdown()
 
 HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::SetRate: bThin="
+       << boolalpha << (bThin ? true : false)
+       << " rate="
+       << rate
+       << endl;
+#endif
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1122,13 +1131,15 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;  //TODO
-
     if (rate < 0)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
 
+    if ((m_pSegment->GetCues() == 0) && bThin)
+        return MF_E_THINNING_UNSUPPORTED;
+
+    m_bThin = bThin;
     m_rate = rate;
+
     return S_OK;
 }
 
@@ -1146,10 +1157,20 @@ HRESULT WebmMfSource::GetRate(BOOL* pbThin, float* pRate)
         return MF_E_SHUTDOWN;
 
     if (pbThin)
-        *pbThin = FALSE;  //TODO
+        *pbThin = m_bThin;
 
-    if (pRate)  //return error when pRate ptr is NULL?
+    if (pRate)
         *pRate = m_rate;
+
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::GetRate: thin_ns="
+       << boolalpha
+       << (m_bThin ? true : false)
+       << " rate="
+       << m_rate
+       << endl;
+#endif
 
     return S_OK;
 }
@@ -1160,6 +1181,11 @@ HRESULT WebmMfSource::GetSlowestRate(
     BOOL bThin,
     float* pRate)
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::GetSlowestRate" << endl;
+#endif
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1173,14 +1199,14 @@ HRESULT WebmMfSource::GetSlowestRate(
     if (d == MFRATE_REVERSE)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
 
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;  //TODO
+    if ((m_pSegment->GetCues() == 0) && bThin)
+        return MF_E_THINNING_UNSUPPORTED;
 
     if (pRate == 0)
         return E_POINTER;
 
     float& r = *pRate;
-    r = 0;  //?
+    r = 0;
 
     return S_OK;
 }
@@ -1191,6 +1217,11 @@ HRESULT WebmMfSource::GetFastestRate(
     BOOL bThin,
     float* pRate)
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::GetFastestRate" << endl;
+#endif
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1204,14 +1235,14 @@ HRESULT WebmMfSource::GetFastestRate(
     if (d == MFRATE_REVERSE)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
 
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;  //TODO
+    if ((m_pSegment->GetCues() == 0) && bThin)
+        return MF_E_THINNING_UNSUPPORTED;
 
     if (pRate == 0)
         return E_POINTER;
 
     float& r = *pRate;
-    r = 64;  //?
+    r = 16;  //more or less arbitrary
 
     return S_OK;
 }
@@ -1222,6 +1253,11 @@ HRESULT WebmMfSource::IsRateSupported(
     float rate,
     float* pNearestRate)
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::IsRateSupported: rate=" << rate << endl;
+#endif
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1232,17 +1268,25 @@ HRESULT WebmMfSource::IsRateSupported(
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;  //TODO
-
     if (rate < 0)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
+
+    if ((m_pSegment->GetCues() == 0) && bThin)
+        return MF_E_THINNING_UNSUPPORTED;
 
     //float int_part;
     //const float frac_part = modf(rate, &int_part);
 
+    if (rate > 16)
+    {
+        if (pNearestRate)
+            *pNearestRate = 16;
+
+        return MF_E_UNSUPPORTED_RATE;
+    }
+
     if (pNearestRate)
-        *pNearestRate = rate;
+        *pNearestRate = rate;  //TODO
 
     return S_OK;  //TODO
 }
@@ -1700,10 +1744,7 @@ void WebmMfStream::GetBaseCluster(
 
 void WebmMfSource::Seek(
     const PROPVARIANT& var,
-    HRESULT (WebmMfStream::*pfn)(
-        const PROPVARIANT&,
-        mkvparser::Cluster*,
-        const mkvparser::BlockEntry*))
+    bool bStart) //true = start false=seek
 {
     assert(var.vt == VT_I8);
 
@@ -1723,8 +1764,14 @@ void WebmMfSource::Seek(
     struct VideoStream
     {
         WebmMfStreamVideo* pStream;
+#if 0
         mkvparser::Cluster* pCluster;
         const mkvparser::BlockEntry* pBlockEntry;
+        const mkvparser::CuePoint* pCP;
+        const mkvparser::CuePoint::TrackPosition* pTP;
+#else
+        WebmMfStreamVideo::SeekInfo info;
+#endif
     };
 
     typedef std::vector<VideoStream> vs_t;
@@ -1769,47 +1816,23 @@ void WebmMfSource::Seek(
         const vs_t::size_type idx = vs.size();
 
         vs.push_back(VideoStream());
+
         VideoStream& s = vs.back();
+        WebmMfStreamVideo::SeekInfo& i = s.info;
 
         s.pStream = static_cast<WebmMfStreamVideo*>(pStream);
+        s.pStream->GetCluster(time_ns, i);
 
-#if 1
-        m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
-#else
-        s.pCluster = 0;
-        s.pBlockEntry = 0;
-
-        if (m_pSegment->GetCount() <= 0)
-            m_pSegment->LoadCluster();
-
-        //TODO: really, the time we should be testing is the time
-        //of the second cluster, not the first.  But here we making
-        //an optimization for time=0, so merely testing the first
-        //cluster is probably OK.
-
-        mkvparser::Cluster* const pFirst = m_pSegment->GetFirst();
-        assert(pFirst);
-
-        if ((pFirst != 0) && !pFirst->EOS() && (time_ns <= pFirst->GetTime()))
-            m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
-
-        if ((s.pCluster == 0) || s.pCluster->EOS())
-        {
-            m_pSegment->ParseCues();
-            m_pSegment->GetCluster(time_ns, pTrack, s.pCluster, s.pBlockEntry);
-        }
-#endif
-
-        if ((s.pCluster == 0) || s.pCluster->EOS())
+        if ((i.pCluster == 0) || i.pCluster->EOS())
             continue;
 
         if (base < 0)
             base = static_cast<LONG>(idx);
         else
         {
-            mkvparser::Cluster* const pBaseCluster = vs[base].pCluster;
+            mkvparser::Cluster* const pBaseCluster = vs[base].info.pCluster;
 
-            if (s.pCluster->GetTime() < pBaseCluster->GetTime())
+            if (i.pCluster->GetTime() < pBaseCluster->GetTime())
                 base = static_cast<LONG>(idx);
         }
     }
@@ -1817,7 +1840,7 @@ void WebmMfSource::Seek(
 #ifdef _DEBUG
     if (base >= 0)
     {
-        mkvparser::Cluster* const pCluster = vs[base].pCluster;
+        mkvparser::Cluster* const pCluster = vs[base].info.pCluster;
         const LONGLONG ns = pCluster->GetTime();
 
         os << L"base cluster ns=" << ns
@@ -1833,20 +1856,36 @@ void WebmMfSource::Seek(
     for (vs_t::size_type idx = 0; idx < nvs; ++idx)
     {
         const VideoStream& s = vs[idx];
-        (s.pStream->*pfn)(var, s.pCluster, s.pBlockEntry);
+        assert(s.pStream->IsSelected());
+
+        if (bStart)
+            s.pStream->Start(var, s.info);
+        else
+            s.pStream->Seek(var, s.info);
     }
 
     mkvparser::Cluster* pBaseCluster;
 
     if (base >= 0)
-        pBaseCluster = vs[base].pCluster;
+        pBaseCluster = vs[base].info.pCluster;
     else
         pBaseCluster = m_pSegment->GetCluster(time_ns);
 
     const as_t::size_type nas = as.size();
 
     for (as_t::size_type idx = 0; idx < nas; ++idx)
-        (as[idx]->*pfn)(var, pBaseCluster, 0);
+    {
+        WebmMfStreamAudio* const s = as[idx];
+        assert(s->IsSelected());
+
+        const mkvparser::Track* const t = s->m_pTrack;
+        const mkvparser::BlockEntry* const e = pBaseCluster->GetEntry(t);
+
+        if (bStart)
+            s->Start(var, e);
+        else
+            s->Seek(var, e);
+    }
 }
 
 
@@ -1870,14 +1909,14 @@ HRESULT WebmMfSource::StartStreams(const PROPVARIANT& var)
             ++m_cEOS;  //to send event when all streams send EOS
     }
 
-    Seek(var, &WebmMfStream::Start);
+    Seek(var, true);  //start
     return S_OK;
 }
 
 
 HRESULT WebmMfSource::SeekStreams(const PROPVARIANT& var)
 {
-    Seek(var, &WebmMfStream::Seek);
+    Seek(var, false);  //seek
     return S_OK;
 }
 
