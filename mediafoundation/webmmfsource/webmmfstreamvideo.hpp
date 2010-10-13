@@ -30,7 +30,6 @@ public:
 
     struct SeekInfo
     {
-        //mkvparser::Cluster* pCluster;
         const mkvparser::BlockEntry* pBE;
         const mkvparser::CuePoint* pCP;
         const mkvparser::CuePoint::TrackPosition* pTP;
@@ -44,6 +43,8 @@ public:
         const SeekInfo&,
         bool bStart);
 
+    void SetRate(BOOL, float);
+
 protected:
 
     const mkvparser::BlockEntry* GetCurrBlock() const;
@@ -53,7 +54,8 @@ private:
 
     bool m_bDiscontinuity;
     SeekInfo m_curr;
-
+    float m_rate;
+    LONGLONG m_thin_ns;
 
 };
 

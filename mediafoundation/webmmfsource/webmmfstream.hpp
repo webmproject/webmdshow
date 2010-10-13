@@ -68,6 +68,8 @@ public:
     HRESULT Pause();
     HRESULT Shutdown();
 
+    virtual void SetRate(BOOL, float) = 0;
+
     WebmMfSource* const m_pSource;
     IMFStreamDescriptor* const m_pDesc;
     mkvparser::Track* const m_pTrack;

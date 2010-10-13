@@ -1141,6 +1141,7 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
     //IMFRateControl::SetRate Method
     //http://msdn.microsoft.com/en-us/library/ms696979%28v=VS.85%29.aspx
 
+    //TODO:
     //If the transition is not supported, the method returns
     //MF_E_UNSUPPORTED_RATE_TRANSITION.
 
@@ -1148,6 +1149,7 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
     //the MESourceRateChanged event. Other pipeline components do
     //not send this event.
 
+    //TODO:
     //If a media source switches between thinned and non-thinned playback,
     //the streams send an MEStreamThinMode event to indicate the transition.
     //Events from the media source are not synchronized with events from
@@ -1158,6 +1160,35 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
 
     m_bThin = bThin;
     m_rate = rate;
+
+    typedef streams_t::iterator iter_t;
+
+    iter_t i = m_streams.begin();
+    const iter_t j = m_streams.end();
+
+    while (i != j)
+    {
+        streams_t::value_type& value = *i++;
+
+        WebmMfStream* const pStream = value.second;
+        assert(pStream);
+
+        if (pStream->IsSelected())
+            pStream->SetRate(m_bThin, m_rate);
+    }
+
+    PROPVARIANT var;
+
+    var.vt = VT_R4;
+    var.fltVal = rate;
+
+    hr = m_pEvents->QueueEventParamVar(
+            MESourceRateChanged,
+            GUID_NULL,
+            S_OK,
+            &var);
+
+    assert(SUCCEEDED(hr));
 
     return S_OK;
 }
@@ -1200,10 +1231,10 @@ HRESULT WebmMfSource::GetSlowestRate(
     BOOL bThin,
     float* pRate)
 {
-#ifdef _DEBUG
-    odbgstream os;
-    os << "WebmMfSource::GetSlowestRate" << endl;
-#endif
+//#ifdef _DEBUG
+//    odbgstream os;
+//    os << "WebmMfSource::GetSlowestRate" << endl;
+//#endif
 
     Lock lock;
 
@@ -1236,10 +1267,10 @@ HRESULT WebmMfSource::GetFastestRate(
     BOOL bThin,
     float* pRate)
 {
-#ifdef _DEBUG
-    odbgstream os;
-    os << "WebmMfSource::GetFastestRate" << endl;
-#endif
+//#ifdef _DEBUG
+//    odbgstream os;
+//    os << "WebmMfSource::GetFastestRate" << endl;
+//#endif
 
     Lock lock;
 
@@ -1261,7 +1292,7 @@ HRESULT WebmMfSource::GetFastestRate(
         return E_POINTER;
 
     float& r = *pRate;
-    r = 16;  //more or less arbitrary
+    r = 128;  //more or less arbitrary
 
     return S_OK;
 }
@@ -1272,10 +1303,10 @@ HRESULT WebmMfSource::IsRateSupported(
     float rate,
     float* pNearestRate)
 {
-#ifdef _DEBUG
-    odbgstream os;
-    os << "WebmMfSource::IsRateSupported: rate=" << rate << endl;
-#endif
+//#ifdef _DEBUG
+//    odbgstream os;
+//    os << "WebmMfSource::IsRateSupported: rate=" << rate << endl;
+//#endif
 
     Lock lock;
 
@@ -1296,10 +1327,10 @@ HRESULT WebmMfSource::IsRateSupported(
     //float int_part;
     //const float frac_part = modf(rate, &int_part);
 
-    if (rate > 16)
+    if (rate > 128)
     {
         if (pNearestRate)
-            *pNearestRate = 16;
+            *pNearestRate = 128;
 
         return MF_E_UNSUPPORTED_RATE;
     }
