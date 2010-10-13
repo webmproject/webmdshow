@@ -1,18 +1,20 @@
 #pragma warning(disable:4505)  //unreferenced local function removed
-#include "clockable.hpp"
 #include <mfidl.h>
 #include <list>
 #include <vector>
-#include "vorbis/codec.h"
-#include "webmmfvorbisdec.hpp"
-#include "webmtypes.hpp"
-#include "vorbistypes.hpp"
 #include <mfapi.h>
 #include <mferror.h>
 #include <comdef.h>
 #include <cassert>
 #include <new>
 #include <cmath>
+
+#include "clockable.hpp"
+#include "vorbis/codec.h"
+#include "webmtypes.hpp"
+#include "vorbistypes.hpp"
+#include "webmmfvorbisdec.hpp"
+
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
@@ -69,8 +71,6 @@ HRESULT CreateDecoder(
 WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),
-    m_pInputMediaType(0),
-    m_pOutputMediaType(0),
     m_ogg_packet_count(0),
     m_total_time_decoded(0),
     m_audio_format_tag(WAVE_FORMAT_IEEE_FLOAT)
@@ -92,25 +92,8 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
 
 WebmMfVorbisDec::~WebmMfVorbisDec()
 {
-    if (m_pInputMediaType)
-    {
-        const ULONG n = m_pInputMediaType->Release();
-        n;
-        assert(n == 0);
-
-        m_pInputMediaType = 0;
-
+    if (m_input_mediatype)
         DestroyVorbisDecoder();
-    }
-
-    if (m_pOutputMediaType)
-    {
-        const ULONG n = m_pOutputMediaType->Release();
-        n;
-        assert(n == 0);
-
-        m_pOutputMediaType = 0;
-    }
 
     HRESULT hr = m_pClassFactory->LockServer(FALSE);
     hr;
@@ -309,7 +292,7 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(
                    //MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER |
                    //MFT_OUTPUT_STREAM_FIXED_SAMPLE_SIZE;
 
-    info.cbSize = 0;
+    info.cbSize = m_wave_format.nAvgBytesPerSec / 2;
     info.cbAlignment = 0;
 
     return S_OK;
@@ -432,7 +415,7 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(
     if (FAILED(hr) || NULL == pmt)
         return E_OUTOFMEMORY;
 
-    if (m_pInputMediaType == 0)
+    if (m_input_mediatype == 0)
     {
         hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
         assert(SUCCEEDED(hr));
@@ -480,31 +463,19 @@ HRESULT WebmMfVorbisDec::SetInputType(
     if (FAILED(hr))
         return hr;
 
-    GUID majortype = GUID_NULL;
-    GUID subtype = GUID_NULL;
-
-    if (pmt)
-    {
-        pmt->GetMajorType(&majortype);
-        pmt->GetGUID(MF_MT_SUBTYPE, &subtype);
-    }
-
-    if (pmt == 0 || (pmt && (majortype == GUID_NULL || subtype == GUID_NULL)))
+    if (pmt == 0)
     {
         //TODO: disallow this case while we're playing?
 
-        if (m_pInputMediaType)
+        if (m_input_mediatype)
         {
-            hr = ResetMediaType(true);
+            m_input_mediatype = 0;
             assert(SUCCEEDED(hr));
             DestroyVorbisDecoder();
         }
 
-        if (m_pOutputMediaType)
-        {
-            hr = ResetMediaType(false);
-            assert(SUCCEEDED(hr));
-        }
+        if (m_output_mediatype)
+            m_output_mediatype = 0;
 
         return S_OK;
     }
@@ -519,22 +490,20 @@ HRESULT WebmMfVorbisDec::SetInputType(
     if (dwFlags & MFT_SET_TYPE_TEST_ONLY)
         return S_OK;
 
-    if (m_pInputMediaType)
+    if (m_input_mediatype)
     {
-        hr = m_pInputMediaType->DeleteAllItems();
-        assert(SUCCEEDED(hr));
-
+        m_input_mediatype->DeleteAllItems();
         DestroyVorbisDecoder();
     }
     else
     {
-        hr = MFCreateMediaType(&m_pInputMediaType);
+        hr = MFCreateMediaType(&m_input_mediatype);
 
         if (FAILED(hr))
             return hr;
     }
 
-    hr = pmt->CopyAllItems(m_pInputMediaType);
+    hr = pmt->CopyAllItems(m_input_mediatype);
 
     if (FAILED(hr))
         return hr;
@@ -546,20 +515,15 @@ HRESULT WebmMfVorbisDec::SetInputType(
 
     SetOutputWaveFormat(MFAudioFormat_Float);
 
-    if (m_pOutputMediaType)
-    {
-        hr = ResetMediaType(false);
-        assert(SUCCEEDED(hr));
-    }
+    if (m_output_mediatype)
+        m_output_mediatype = 0;
 
-    // TODO(tomfinegan):
-    assert(m_pOutputMediaType == 0);
-    hr = MFCreateMediaType(&m_pOutputMediaType);
+    hr = MFCreateMediaType(&m_output_mediatype);
     assert(SUCCEEDED(hr));
     if (FAILED(hr))
         return hr;
 
-    hr = MFInitMediaTypeFromWaveFormatEx(m_pOutputMediaType, &m_wave_format,
+    hr = MFInitMediaTypeFromWaveFormatEx(m_output_mediatype, &m_wave_format,
                                          sizeof WAVEFORMATEX);
     if (FAILED(hr))
         return hr;
@@ -584,16 +548,13 @@ HRESULT WebmMfVorbisDec::SetOutputType(DWORD dwOutputStreamID,
     {
         //TODO: disallow this case while we're playing?
 
-        if (m_pOutputMediaType)
-        {
-            hr = ResetMediaType(false);
-            assert(SUCCEEDED(hr));
-        }
+        if (m_output_mediatype)
+            m_output_mediatype = 0;
 
         return S_OK;
     }
 
-    if (m_pInputMediaType == 0)
+    if (m_input_mediatype == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     if (FormatSupported(false, pmt) == false)
@@ -610,20 +571,21 @@ HRESULT WebmMfVorbisDec::SetOutputType(DWORD dwOutputStreamID,
 
     SetOutputWaveFormat(subtype);
 
-    // update our copy of the output type: |m_pOutputMediaType|
-    if (m_pOutputMediaType)
-    {        hr = m_pOutputMediaType->DeleteAllItems();
+    // update our copy of the output type: |m_output_mediatype|
+    if (m_output_mediatype)
+    {
+        hr = m_output_mediatype->DeleteAllItems();
         assert(SUCCEEDED(hr));
     }
     else
     {
-        hr = MFCreateMediaType(&m_pOutputMediaType);
+        hr = MFCreateMediaType(&m_output_mediatype);
 
         if (FAILED(hr))
             return hr;
     }
 
-    hr = pmt->CopyAllItems(m_pOutputMediaType);
+    hr = pmt->CopyAllItems(m_output_mediatype);
 
     if (FAILED(hr))
         return hr;
@@ -648,7 +610,7 @@ HRESULT WebmMfVorbisDec::GetInputCurrentType(DWORD dwInputStreamID,
     if (FAILED(hr))
         return hr;
 
-    if (m_pInputMediaType == 0)
+    if (m_input_mediatype == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     IMFMediaType*& p = *pp;
@@ -658,7 +620,7 @@ HRESULT WebmMfVorbisDec::GetInputCurrentType(DWORD dwInputStreamID,
     if (FAILED(hr))
         return hr;
 
-    return m_pInputMediaType->CopyAllItems(p);
+    return m_input_mediatype->CopyAllItems(p);
 }
 
 
@@ -678,9 +640,7 @@ HRESULT WebmMfVorbisDec::GetOutputCurrentType(DWORD dwOutputStreamID,
     if (FAILED(hr))
         return hr;
 
-    //TODO: synthesize from input media type?
-
-    if (m_pOutputMediaType == 0)  //TODO: liberalize?
+    if (m_output_mediatype == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     IMFMediaType*& p = *pp;
@@ -690,7 +650,7 @@ HRESULT WebmMfVorbisDec::GetOutputCurrentType(DWORD dwOutputStreamID,
     if (FAILED(hr))
         return hr;
 
-    return m_pOutputMediaType->CopyAllItems(p);
+    return m_output_mediatype->CopyAllItems(p);
 }
 
 
@@ -706,10 +666,8 @@ HRESULT WebmMfVorbisDec::GetInputStatus(DWORD dwInputStreamID, DWORD* pdwFlags)
     if (FAILED(hr))
         return hr;
 
-    if (m_pInputMediaType == 0)
+    if (m_input_mediatype == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
-
-    //TODO: check output media type too?
 
     if (pdwFlags == 0)
         return E_POINTER;
@@ -786,7 +744,7 @@ HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
     if (FAILED(status))
         return status;
 
-    if (m_pInputMediaType == 0)
+    if (m_input_mediatype == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     // addref on/store sample for use in ProcessOutput
@@ -795,6 +753,7 @@ HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
 
     return S_OK;
 }
+
 
 HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
 {
@@ -838,6 +797,7 @@ HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
     return S_OK;
 }
 
+
 namespace
 {
     INT16 clip16(int val)
@@ -854,6 +814,7 @@ namespace
         return static_cast<INT16>(val);
     }
 } // end anon namespace
+
 
 HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
     IMFSample* p_mf_output_sample,
@@ -887,7 +848,7 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
     }
 
     // Need more input if libvorbis didn't produce any output samples
-    if (samples == 0 && m_vorbis_output_samples.empty())
+    if (m_vorbis_output_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
     int total_samples = m_vorbis_output_samples.size();
@@ -942,9 +903,9 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
 
         // from the vorbis decode sample:
         // |pp_pcm| is a multichannel float vector.  In stereo, for example,
-        // pp_pcm[0] is left, and pp_pcm[1] is right.  samples is the size of each
-        // channel.  Convert the float values (-1.<=range<=1.) to whatever PCM
-        // format and write it out
+        // pp_pcm[0] is left, and pp_pcm[1] is right.  samples is the size of
+        // each channel.  Convert the float values (-1.<=range<=1.) to whatever
+        // PCM format and write it out
 
         // TODO(tomfinegan): factor resample out into 8-bit/16-bit versions
 
@@ -993,7 +954,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     if (FAILED(status))
         return status;
 
-    if (m_pInputMediaType == 0)
+    if (m_input_mediatype == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     if (cOutputBufferCount == 0)
@@ -1371,38 +1332,6 @@ bool WebmMfVorbisDec::FormatSupported(bool is_input, IMFMediaType* p_mediatype)
 
     // all tests pass, we support this format:
     return true;
-}
-
-HRESULT WebmMfVorbisDec::ResetMediaType(bool reset_input)
-{
-    HRESULT result = E_FAIL;
-
-    if (reset_input && m_pInputMediaType)
-    {
-        result = m_pInputMediaType->DeleteAllItems();
-        assert(SUCCEEDED(result));
-
-        const ULONG n = m_pInputMediaType->Release();
-        n;
-        assert(n == 0);
-
-        m_pOutputMediaType = 0;
-        result = S_OK;
-    }
-    else if (reset_input == false && m_pOutputMediaType)
-    {
-        result = m_pOutputMediaType->DeleteAllItems();
-        assert(SUCCEEDED(result));
-
-        const ULONG n = m_pOutputMediaType->Release();
-        n;
-        assert(n == 0);
-
-        m_pOutputMediaType = 0;
-        result = S_OK;
-    }
-
-    return result;
 }
 
 }  //end namespace WebmMfVorbisDecLib
