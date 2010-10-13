@@ -34,6 +34,8 @@ public:
         const mkvparser::BlockEntry*,
         bool bStart);
 
+    void SetRate(BOOL, float);
+
 protected:
 
     const mkvparser::BlockEntry* GetCurrBlock() const;

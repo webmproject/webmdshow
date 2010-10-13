@@ -154,7 +154,9 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     mkvparser::VideoTrack* pTrack) :
-    WebmMfStream(pSource, pDesc, pTrack)
+    WebmMfStream(pSource, pDesc, pTrack),
+    m_rate(1),
+    m_thin_ns(-2)
 {
     m_curr.pBE = 0;
     m_curr.pCP = 0;
@@ -221,16 +223,10 @@ HRESULT WebmMfStreamVideo::Seek(
     m_bDiscontinuity = true;
     m_curr = info;
 
-#ifdef _DEBUG
     assert(var.vt == VT_I8);
 
     const LONGLONG reftime = var.hVal.QuadPart;
     assert(reftime >= 0);
-
-    odbgstream os;
-
-    os << "WebmMfStreamVideo::Seek: reftime[sec]="
-       << (double(reftime) / 10000000);
 
     const mkvparser::BlockEntry* const pBE = info.pBE;
 
@@ -245,12 +241,9 @@ HRESULT WebmMfStreamVideo::Seek(
         const LONGLONG time_ns = pB->GetTime(pCluster);
         assert(time_ns >= 0);
 
-        os << " block.time[sec]="
-           << (double(time_ns) / 1000000000);
+        if (m_thin_ns >= -1)
+            m_thin_ns = time_ns;
     }
-
-    os << endl;
-#endif
 
     if (bStart)
         return OnStart(var);
@@ -429,19 +422,30 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
     mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
-    //assert(pCurrCluster == m_curr.pCluster);
+
+#ifdef _DEBUG
+    if (m_thin_ns >= 0)
+    {
+        const mkvparser::Block* const pBlock = pCurr->GetBlock();
+        assert(pBlock);
+
+        const LONGLONG ns = pBlock->GetTime(pCurrCluster);
+
+        const double c = double(ns) / 1000000000;
+        const double t = double(m_thin_ns) / 1000000000;
+
+        odbgstream os;
+        os << "WebmMfSTreamVideo::PopulateSample: thin[sec]=" << t
+           << " curr[sec]=" << c
+           << " curr-thin=" << (c - t)
+           << " rate=" << m_rate
+           << endl;
+    }
+#endif
 
     SeekInfo next;
 
-    //next.pCluster = 0;
-    //next.pCP = 0;
-    //next.pTP = 0;
-    //next.pBlockEntry = 0;
-
-    const float rate = m_pSource->m_rate;
-    assert(rate >= 0);  //TODO
-
-    if (!m_pSource->m_bThin)
+    if (m_thin_ns < 0)  //no thinning
     {
         const long result = m_pTrack->GetNext(pCurr, next.pBE);
 
@@ -458,19 +462,84 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         const mkvparser::Cues* const pCues = m_pTrack->m_pSegment->GetCues();
         assert(pCues);
 
-        next.pCP = pCues->GetNext(m_curr.pCP);
-
-        if (next.pCP == 0)
+        if (m_rate <= 1)
         {
-            next.pTP = 0;
-            next.pBE = 0;
+            next.pCP = pCues->GetNext(m_curr.pCP);
+
+            if (next.pCP == 0)
+            {
+                next.pTP = 0;
+                next.pBE = 0;
+            }
+            else
+            {
+                next.pTP = next.pCP->Find(m_pTrack);
+                assert(next.pTP);  //TODO
+
+                next.pBE = pCues->GetBlock(next.pCP, next.pTP);
+            }
         }
         else
         {
-            next.pTP = next.pCP->Find(m_pTrack);
-            assert(next.pTP);  //TODO
+            const double delta_ns_ = double(m_rate) * 1000000000.0;
+            const LONGLONG delta_ns = static_cast<LONGLONG>(delta_ns_);
+            LONGLONG next_ns = m_thin_ns + delta_ns;  //target
 
-            next.pBE = pCues->GetBlock(next.pCP, next.pTP);
+            typedef mkvparser::CuePoint CP;
+            typedef mkvparser::CuePoint::TrackPosition TP;
+            typedef mkvparser::BlockEntry BE;
+            typedef mkvparser::Block B;
+
+            const CP* pCurr = m_curr.pCP;
+            assert(pCurr);
+
+            for (;;)
+            {
+                const CP* const pNext = pCues->GetNext(pCurr);
+
+                if (pNext == 0)  //no more cue points: done
+                {
+                    next.pTP = 0;
+                    next.pBE = 0;
+
+                    break;
+                }
+
+                const TP* const pTP = pNext->Find(m_pTrack);
+                assert(pTP);  //TODO
+
+                const BE* const pBE = pCues->GetBlock(pNext, pTP);
+                assert(pBE);  //TODO
+                assert(!pBE->EOS());
+
+                const B* const pB = pBE->GetBlock();
+                assert(pB);
+
+                const LONGLONG time_ns = pB->GetTime(pBE->GetCluster());
+
+                if (time_ns >= next_ns)
+                {
+                    next.pCP = pNext;
+                    next.pTP = pTP;
+                    next.pBE = pBE;
+
+                    m_thin_ns = next_ns;
+
+                    for (;;)
+                    {
+                        next_ns = m_thin_ns + delta_ns;
+
+                        if (next_ns > time_ns)
+                            break;
+
+                        m_thin_ns = next_ns;
+                    }
+
+                    break;
+                }
+
+                pCurr = pNext;
+            }
         }
     }
 
@@ -560,7 +629,11 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     //TODO: we can better here: synthesize duration of last block
     //in stream from the duration of the stream
 
-    const mkvparser::BlockEntry* const pNextEntry = next.pBE;
+    //const mkvparser::BlockEntry* const pNextEntry = next.pBE;
+    const mkvparser::BlockEntry* pNextEntry;
+
+    const long result = m_pTrack->GetNext(m_curr.pBE, pNextEntry);
+    assert(result >= 0);  //TODO
 
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
@@ -587,6 +660,58 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 const mkvparser::BlockEntry* WebmMfStreamVideo::GetCurrBlock() const
 {
     return m_curr.pBE;
+}
+
+
+void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
+{
+    assert(rate >= 0);  //TODO
+    m_rate = rate;
+
+    if (!bThin)
+    {
+        m_thin_ns = -2;
+        return;
+    }
+
+    if (m_pSource->m_state == WebmMfSource::kStateStopped)
+    {
+        m_thin_ns = -1;  //request
+        return;
+    }
+
+    SeekInfo& i = m_curr;
+
+    if ((i.pBE == 0) || i.pBE->EOS())  //we're already done
+        return;
+
+    mkvparser::Cluster* const pCluster = i.pBE->GetCluster();
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    const mkvparser::Block* pBlock = i.pBE->GetBlock();
+    assert(pBlock);
+
+    const LONGLONG time_ns = pBlock->GetTime(pCluster);
+    assert(time_ns >= 0);
+
+    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+
+    const mkvparser::Cues* const pCues = pSegment->GetCues();
+    assert(pCues);  //req'd to support thinning
+
+    const bool bFound = pCues->Find(time_ns, m_pTrack, i.pCP, i.pTP);
+    assert(bFound);
+
+    i.pBE = pCues->GetBlock(i.pCP, i.pTP);
+    assert(i.pBE);  //TODO
+    assert(!i.pBE->EOS());
+
+    pBlock = i.pBE->GetBlock();
+    assert(pBlock);
+
+    m_thin_ns = pBlock->GetTime(pCluster);
+    assert(m_thin_ns >= 0);
 }
 
 

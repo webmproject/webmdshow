@@ -471,4 +471,10 @@ const mkvparser::BlockEntry* WebmMfStreamAudio::GetCurrBlock() const
 }
 
 
+void WebmMfStreamAudio::SetRate(BOOL, float)
+{
+    //TODO
+}
+
+
 }  //end namespace WebmMfSourceLib

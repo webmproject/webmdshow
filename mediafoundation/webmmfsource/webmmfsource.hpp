@@ -134,10 +134,13 @@ public:
     enum State { kStateStopped, kStatePaused, kStateStarted };
     State m_state;
     LONGLONG m_preroll_ns;
-    BOOL m_bThin;
-    float m_rate;
 
     void NotifyEOS();
+
+private:
+
+    BOOL m_bThin;
+    float m_rate;
 
 };
 
