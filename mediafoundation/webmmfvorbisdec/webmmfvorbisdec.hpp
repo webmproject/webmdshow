@@ -128,15 +128,6 @@ private:
     explicit WebmMfVorbisDec(IClassFactory*);
     virtual ~WebmMfVorbisDec();
 
-    IClassFactory* const m_pClassFactory;
-    LONG m_cRef;
-
-    IMFMediaType* m_pInputMediaType;
-    IMFMediaType* m_pOutputMediaType;
-
-    typedef std::list<IMFSample*> samples_t;
-    samples_t m_samples;
-
     HRESULT CreateVorbisDecoder(IMFMediaType* pmt);
     void DestroyVorbisDecoder();
     HRESULT NextOggPacket(BYTE* p_packet, DWORD packet_size);
@@ -150,6 +141,16 @@ private:
     HRESULT ResetMediaType(bool reset_input);
 
     void SetOutputWaveFormat(GUID subtype);
+
+    IClassFactory* const m_pClassFactory;
+    LONG m_cRef;
+
+    _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
+    IMFMediaTypePtr m_input_mediatype;
+    IMFMediaTypePtr m_output_mediatype;
+
+    typedef std::list<IMFSample*> samples_t;
+    samples_t m_samples;
 
     // vorbis members
     vorbis_info m_vorbis_info; // contains static bitstream settings
