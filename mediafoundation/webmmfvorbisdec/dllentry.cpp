@@ -124,12 +124,13 @@ STDAPI DllRegisterServer()
     enum { cInputTypes = 1 };
     MFT_REGISTER_TYPE_INFO pInputTypes[cInputTypes] =
     {
-      { MFMediaType_Audio, VorbisTypes::MEDIASUBTYPE_Vorbis2 }
+        { MFMediaType_Audio, VorbisTypes::MEDIASUBTYPE_Vorbis2 }
     };
 
     enum { cOutputTypes = 1 };
     MFT_REGISTER_TYPE_INFO pOutputTypes[cOutputTypes] =
     {
+        //{ MFMediaType_Audio, MFAudioFormat_Float },
         { MFMediaType_Audio, MFAudioFormat_PCM }
     };
 
