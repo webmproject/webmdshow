@@ -156,7 +156,9 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     mkvparser::VideoTrack* pTrack) :
     WebmMfStream(pSource, pDesc, pTrack)
 {
-    m_curr.pBlockEntry = 0;
+    m_curr.pBE = 0;
+    m_curr.pCP = 0;
+    m_curr.pTP = 0;
 }
 
 
@@ -165,27 +167,32 @@ WebmMfStreamVideo::~WebmMfStreamVideo()
 }
 
 
+#if 0
 HRESULT WebmMfStreamVideo::Start(
     const PROPVARIANT& var,
     const SeekInfo& info)
 {
-    m_bDiscontinuity = true;
-    m_curr = info;
+    //TODO: could pass bThin and rate here too
 
-#ifdef _DEBUG
     assert(var.vt == VT_I8);
 
     const LONGLONG reftime = var.hVal.QuadPart;
     assert(reftime >= 0);
 
+    m_bDiscontinuity = true;
+    m_curr = info;
+
+    const mkvparser::BlockEntry* const pBE = info.pBE;
+
+#ifdef _DEBUG
     odbgstream os;
 
     os << "WebmMfStreamVideo::Start: reftime[sec]="
        << (double(reftime) / 10000000);
 
-    const mkvparser::BlockEntry* const pBE = info.pBlockEntry;
-
-    if ((pBE != 0) && !pBE->EOS())
+    if ((pBE == 0) || pBE->EOS())
+        __noop;
+    else
     {
         const mkvparser::Block* const pB = pBE->GetBlock();
         assert(pB);
@@ -203,11 +210,13 @@ HRESULT WebmMfStreamVideo::Start(
 
     return OnStart(var);
 }
+#endif
 
 
 HRESULT WebmMfStreamVideo::Seek(
     const PROPVARIANT& var,
-    const SeekInfo& info)
+    const SeekInfo& info,
+    bool bStart)
 {
     m_bDiscontinuity = true;
     m_curr = info;
@@ -223,7 +232,7 @@ HRESULT WebmMfStreamVideo::Seek(
     os << "WebmMfStreamVideo::Seek: reftime[sec]="
        << (double(reftime) / 10000000);
 
-    const mkvparser::BlockEntry* const pBE = info.pBlockEntry;
+    const mkvparser::BlockEntry* const pBE = info.pBE;
 
     if ((pBE != 0) && !pBE->EOS())
     {
@@ -231,7 +240,9 @@ HRESULT WebmMfStreamVideo::Seek(
         assert(pB);
         assert(pB->IsKey());
 
-        const LONGLONG time_ns = pB->GetTime(info.pCluster);
+        mkvparser::Cluster* const pCluster = pBE->GetCluster();
+
+        const LONGLONG time_ns = pB->GetTime(pCluster);
         assert(time_ns >= 0);
 
         os << " block.time[sec]="
@@ -241,21 +252,33 @@ HRESULT WebmMfStreamVideo::Seek(
     os << endl;
 #endif
 
-    return OnSeek(var);
+    if (bStart)
+        return OnStart(var);
+    else
+        return OnSeek(var);
 }
 
 
-void WebmMfStreamVideo::GetCluster(LONGLONG time_ns, SeekInfo& i) const
+void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
 {
     mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
 
-    pSegment->GetCluster(
-        time_ns,
-        m_pTrack,
-        i.pCluster,
-        i.pBlockEntry,
-        i.pCP,
-        i.pTP);
+    if (const mkvparser::Cues* pCues = pSegment->GetCues())
+    {
+        const bool bFound = pCues->Find(time_ns, m_pTrack, i.pCP, i.pTP);
+
+        if (bFound)
+        {
+            i.pBE = pCues->GetBlock(i.pCP, i.pTP);
+
+            if ((i.pBE != 0) && !i.pBE->EOS())
+                return;
+        }
+    }
+
+    i.pBE = pSegment->Seek(time_ns, m_pTrack);
+    i.pCP = 0;
+    i.pTP = 0;
 }
 
 
@@ -395,7 +418,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 {
     assert(pSample);
 
-    const mkvparser::BlockEntry* const pCurr = m_curr.pBlockEntry;
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
 
     if ((pCurr == 0) || pCurr->EOS())
         return S_FALSE;
@@ -408,19 +431,47 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     assert(pCurrCluster);
     //assert(pCurrCluster == m_curr.pCluster);
 
-    //const LONGLONG thin_ns = m_pSource->m_thin_ns;
-
     SeekInfo next;
 
-    //if (m_pSource->m_bThin)  //no thinning in progress
+    //next.pCluster = 0;
+    //next.pCP = 0;
+    //next.pTP = 0;
+    //next.pBlockEntry = 0;
+
+    const float rate = m_pSource->m_rate;
+    assert(rate >= 0);  //TODO
+
+    if (!m_pSource->m_bThin)
     {
-        const long result = m_pTrack->GetNext(pCurr, next.pBlockEntry);
+        const long result = m_pTrack->GetNext(pCurr, next.pBE);
 
         if (result == mkvparser::E_BUFFER_NOT_FULL)
             return VFW_E_BUFFER_UNDERFLOW;
 
         assert(result >= 0);
-        assert(next.pBlockEntry);
+    }
+    else
+    {
+        assert(m_curr.pCP);
+        assert(m_curr.pTP);
+
+        const mkvparser::Cues* const pCues = m_pTrack->m_pSegment->GetCues();
+        assert(pCues);
+
+        next.pCP = pCues->GetNext(m_curr.pCP);
+
+        if (next.pCP == 0)
+        {
+            next.pTP = 0;
+            next.pBE = 0;
+        }
+        else
+        {
+            next.pTP = next.pCP->Find(m_pTrack);
+            assert(next.pTP);  //TODO
+
+            next.pBE = pCues->GetBlock(next.pCP, next.pTP);
+        }
     }
 
     const long cbBuffer = pCurrBlock->GetSize();
@@ -470,7 +521,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         hr = pSample->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
         assert(SUCCEEDED(hr));
 
-        m_bDiscontinuity = false;  //TODO: must set back to true during a seek
+        m_bDiscontinuity = false;
     }
 
     const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
@@ -509,7 +560,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     //TODO: we can better here: synthesize duration of last block
     //in stream from the duration of the stream
 
-    const mkvparser::BlockEntry* const pNextEntry = next.pBlockEntry;
+    const mkvparser::BlockEntry* const pNextEntry = next.pBE;
 
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
@@ -535,7 +586,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
 const mkvparser::BlockEntry* WebmMfStreamVideo::GetCurrBlock() const
 {
-    return m_curr.pBlockEntry;
+    return m_curr.pBE;
 }
 
 

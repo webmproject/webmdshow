@@ -240,25 +240,18 @@ WebmMfStreamAudio::~WebmMfStreamAudio()
 }
 
 
-HRESULT WebmMfStreamAudio::Start(
-    const PROPVARIANT& var,
-    const mkvparser::BlockEntry* pCurr)
-{
-    m_bDiscontinuity = true;
-    m_pCurr = pCurr;
-
-    return OnStart(var);
-}
-
-
 HRESULT WebmMfStreamAudio::Seek(
     const PROPVARIANT& var,
-    const mkvparser::BlockEntry* pCurr)
+    const mkvparser::BlockEntry* pCurr,
+    bool bStart)
 {
     m_bDiscontinuity = true;
     m_pCurr = pCurr;
 
-    return OnSeek(var);
+    if (bStart)
+        return OnStart(var);
+    else
+        return OnSeek(var);
 }
 
 #if 0

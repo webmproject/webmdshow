@@ -1118,6 +1118,7 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
        << boolalpha << (bThin ? true : false)
        << " rate="
        << rate
+       << " state=" << m_state
        << endl;
 #endif
 
@@ -1136,6 +1137,24 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
 
     if ((m_pSegment->GetCues() == 0) && bThin)
         return MF_E_THINNING_UNSUPPORTED;
+
+    //IMFRateControl::SetRate Method
+    //http://msdn.microsoft.com/en-us/library/ms696979%28v=VS.85%29.aspx
+
+    //If the transition is not supported, the method returns
+    //MF_E_UNSUPPORTED_RATE_TRANSITION.
+
+    //When a media source completes a call to SetRate, it sends
+    //the MESourceRateChanged event. Other pipeline components do
+    //not send this event.
+
+    //If a media source switches between thinned and non-thinned playback,
+    //the streams send an MEStreamThinMode event to indicate the transition.
+    //Events from the media source are not synchronized with events from
+    //the media streams. After you receive the MESourceRateChanged event,
+    //you can still receive samples that were queued before the stream
+    //switched to thinned or non-thinned mode. The MEStreamThinMode event
+    //marks the exact point in the stream where the transition occurs.
 
     m_bThin = bThin;
     m_rate = rate;
@@ -1821,23 +1840,27 @@ void WebmMfSource::Seek(
         WebmMfStreamVideo::SeekInfo& i = s.info;
 
         s.pStream = static_cast<WebmMfStreamVideo*>(pStream);
-        s.pStream->GetCluster(time_ns, i);
+        s.pStream->GetSeekInfo(time_ns, i);
 
-        if ((i.pCluster == 0) || i.pCluster->EOS())
+        if ((i.pBE == 0) || i.pBE->EOS())
             continue;
 
         if (base < 0)
             base = static_cast<LONG>(idx);
         else
         {
-            mkvparser::Cluster* const pBaseCluster = vs[base].info.pCluster;
+            mkvparser::Cluster* const pCluster = i.pBE->GetCluster();
+            assert(pCluster);
+            assert(!pCluster->EOS());
 
-            if (i.pCluster->GetTime() < pBaseCluster->GetTime())
+            mkvparser::Cluster* const pBase = vs[base].info.pBE->GetCluster();
+
+            if (pCluster->GetTime() < pBase->GetTime())
                 base = static_cast<LONG>(idx);
         }
     }
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     if (base >= 0)
     {
         mkvparser::Cluster* const pCluster = vs[base].info.pCluster;
@@ -1858,18 +1881,15 @@ void WebmMfSource::Seek(
         const VideoStream& s = vs[idx];
         assert(s.pStream->IsSelected());
 
-        if (bStart)
-            s.pStream->Start(var, s.info);
-        else
-            s.pStream->Seek(var, s.info);
+        s.pStream->Seek(var, s.info, bStart);
     }
 
     mkvparser::Cluster* pBaseCluster;
 
     if (base >= 0)
-        pBaseCluster = vs[base].info.pCluster;
-    else
-        pBaseCluster = m_pSegment->GetCluster(time_ns);
+        pBaseCluster = vs[base].info.pBE->GetCluster();
+    else  //no video stream(s)
+        pBaseCluster = m_pSegment->FindCluster(time_ns);
 
     const as_t::size_type nas = as.size();
 
@@ -1881,10 +1901,7 @@ void WebmMfSource::Seek(
         const mkvparser::Track* const t = s->m_pTrack;
         const mkvparser::BlockEntry* const e = pBaseCluster->GetEntry(t);
 
-        if (bStart)
-            s->Start(var, e);
-        else
-            s->Seek(var, e);
+        s->Seek(var, e, bStart);
     }
 }
 

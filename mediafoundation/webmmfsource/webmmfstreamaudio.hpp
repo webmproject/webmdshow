@@ -29,13 +29,10 @@ public:
 
     HRESULT GetCurrMediaTime(LONGLONG&) const;
 
-    HRESULT Start(
-        const PROPVARIANT& time,
-        const mkvparser::BlockEntry*);
-
     HRESULT Seek(
         const PROPVARIANT& time,
-        const mkvparser::BlockEntry*);
+        const mkvparser::BlockEntry*,
+        bool bStart);
 
 protected:
 

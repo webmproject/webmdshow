@@ -30,22 +30,19 @@ public:
 
     struct SeekInfo
     {
-        mkvparser::Cluster* pCluster;
-        const mkvparser::BlockEntry* pBlockEntry;
+        //mkvparser::Cluster* pCluster;
+        const mkvparser::BlockEntry* pBE;
         const mkvparser::CuePoint* pCP;
         const mkvparser::CuePoint::TrackPosition* pTP;
     };
 
     HRESULT GetCurrMediaTime(LONGLONG&) const;
-    void GetCluster(LONGLONG, SeekInfo&) const;
-
-    HRESULT Start(
-        const PROPVARIANT& time,
-        const SeekInfo&);
+    void GetSeekInfo(LONGLONG, SeekInfo&) const;
 
     HRESULT Seek(
         const PROPVARIANT& time,
-        const SeekInfo&);
+        const SeekInfo&,
+        bool bStart);
 
 protected:
 

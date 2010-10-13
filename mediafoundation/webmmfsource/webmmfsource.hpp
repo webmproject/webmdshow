@@ -126,7 +126,6 @@ private:
     HRESULT RestartStreams();
 
     ULONG m_cEOS;
-    float m_rate;
 
 public:
 
@@ -135,8 +134,8 @@ public:
     enum State { kStateStopped, kStatePaused, kStateStarted };
     State m_state;
     LONGLONG m_preroll_ns;
-    //LONGLONG m_thin_ns;
     BOOL m_bThin;
+    float m_rate;
 
     void NotifyEOS();
 
