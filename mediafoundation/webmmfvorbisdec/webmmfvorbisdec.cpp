@@ -2,6 +2,7 @@
 #include "clockable.hpp"
 #include <mfidl.h>
 #include <list>
+#include <vector>
 #include "vorbis/codec.h"
 #include "webmmfvorbisdec.hpp"
 #include "webmtypes.hpp"
@@ -12,7 +13,6 @@
 #include <cassert>
 #include <new>
 #include <cmath>
-#include <vector>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
@@ -31,8 +31,6 @@ do { \
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
-_COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
-
 
 namespace WebmMfVorbisDecLib
 {
@@ -839,9 +837,6 @@ HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
 
     return S_OK;
 }
-
-
-HRESULT WebmMfVorbisDec::ConvertLibVorbisOutputPCMSamples(
 
 namespace
 {
