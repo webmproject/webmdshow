@@ -140,11 +140,16 @@ private:
     HRESULT CreateVorbisDecoder(IMFMediaType* pmt);
     void DestroyVorbisDecoder();
     HRESULT NextOggPacket(BYTE* p_packet, DWORD packet_size);
-    HRESULT ValidatePCMAudioType(IMFMediaType *pmt);
+    HRESULT ValidatePcmAudioType(IMFMediaType *pmt);
     HRESULT CreateMediaBuffer(DWORD size, IMFMediaBuffer** pp_buffer);
     HRESULT DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample);
-    HRESULT ConvertLibVorbisOutputPCMSamples(IMFSample* p_mf_output_sample,
-                                             double* p_out_samples_decoded);
+    HRESULT ProcessLibVorbisOutputPcmSamples(IMFSample* p_mf_output_sample,
+                                             int* p_out_samples_decoded);
+    bool FormatSupported(bool is_input, IMFMediaType* p_mediatype);
+
+    HRESULT ResetMediaType(bool reset_input);
+
+    void SetOutputWaveFormat(GUID subtype);
 
     // vorbis members
     vorbis_info m_vorbis_info; // contains static bitstream settings
@@ -161,6 +166,10 @@ private:
     vorbis_output_samples_t m_vorbis_output_samples;
 
     LONGLONG m_total_time_decoded;
+
+    int m_audio_format_tag;
+
+    bool m_end_of_stream_reached;
 };
 
 }  //end namespace WebmMfVorbisDecLib
