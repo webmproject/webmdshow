@@ -15,13 +15,13 @@
 #include "vorbistypes.hpp"
 #include "webmmfvorbisdec.hpp"
 
+// keep the compiler quiet about do/while(0)'s used in log macros
+#pragma warning(disable:4127)
+
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
 using std::endl;
-
-// keep the compiler quiet about do/while(0)'s used in log macros
-#pragma warning(disable:4127)
 
 #define DBGLOG(X) \
 do { \
@@ -29,7 +29,7 @@ do { \
     wos << "["__FUNCTION__"] " << X << endl; \
 } while(0)
 #else
-#define DBG(X) do {} while(0)
+#define DBGLOG(X) do {} while(0)
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
@@ -871,8 +871,12 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
     if (m_vorbis_output_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
-    int total_samples = m_vorbis_output_samples.size();
-    UINT32 mf_storage_space_needed = total_samples *
+    const vorbis_output_samples_t::size_type total_samples_ =
+        m_vorbis_output_samples.size();
+        
+    const int total_samples = static_cast<int>(total_samples_);
+    
+    const UINT32 mf_storage_space_needed = total_samples *
                                      (m_wave_format.wBitsPerSample / 8);
 
     DWORD mf_storage_limit;

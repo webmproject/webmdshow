@@ -1070,12 +1070,12 @@ HRESULT WebmMfVp8Dec::SetOutputBounds(
 
 HRESULT WebmMfVp8Dec::ProcessEvent(
     DWORD dwInputStreamID,
-    IMFMediaEvent* pEvent)
+    IMFMediaEvent* /* pEvent */ )
 {
     if (dwInputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     if (pEvent)
     {
         MediaEventType t;
