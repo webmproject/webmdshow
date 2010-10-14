@@ -200,7 +200,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\vp8_sdk\include&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMMFVORBISDEC_EXPORTS"
+				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
