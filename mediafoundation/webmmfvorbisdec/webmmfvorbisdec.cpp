@@ -37,7 +37,6 @@ _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 namespace WebmMfVorbisDecLib
 {
 
-
 HRESULT CreateDecoder(
     IClassFactory* pClassFactory,
     IUnknown* pOuter,
@@ -67,7 +66,6 @@ HRESULT CreateDecoder(
     return hr;
 }
 
-
 WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),
@@ -89,7 +87,6 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     ::memset(&m_wave_format, 0, sizeof WAVEFORMATEX);
 }
 
-
 WebmMfVorbisDec::~WebmMfVorbisDec()
 {
     if (m_input_mediatype)
@@ -99,7 +96,6 @@ WebmMfVorbisDec::~WebmMfVorbisDec()
     hr;
     assert(SUCCEEDED(hr));
 }
-
 
 HRESULT WebmMfVorbisDec::QueryInterface(
     const IID& iid,
@@ -128,12 +124,10 @@ HRESULT WebmMfVorbisDec::QueryInterface(
     return S_OK;
 }
 
-
 ULONG WebmMfVorbisDec::AddRef()
 {
     return InterlockedIncrement(&m_cRef);
 }
-
 
 ULONG WebmMfVorbisDec::Release()
 {
@@ -143,7 +137,6 @@ ULONG WebmMfVorbisDec::Release()
     delete this;
     return 0;
 }
-
 
 HRESULT WebmMfVorbisDec::GetStreamLimits(
     DWORD* pdwInputMin,
@@ -172,7 +165,6 @@ HRESULT WebmMfVorbisDec::GetStreamLimits(
     return S_OK;
 }
 
-
 HRESULT WebmMfVorbisDec::GetStreamCount(
     DWORD* pcInputStreams,
     DWORD* pcOutputStreams)
@@ -190,7 +182,6 @@ HRESULT WebmMfVorbisDec::GetStreamCount(
     return S_OK;
 }
 
-
 HRESULT WebmMfVorbisDec::GetStreamIDs(
     DWORD,
     DWORD* pdwInputIDs,
@@ -205,7 +196,6 @@ HRESULT WebmMfVorbisDec::GetStreamIDs(
 
     return E_NOTIMPL;
 }
-
 
 HRESULT WebmMfVorbisDec::GetInputStreamInfo(
     DWORD dwInputStreamID,
@@ -247,7 +237,6 @@ HRESULT WebmMfVorbisDec::GetInputStreamInfo(
 
     return S_OK;
 }
-
 
 HRESULT WebmMfVorbisDec::GetOutputStreamInfo(
     DWORD dwOutputStreamID,
@@ -306,7 +295,6 @@ HRESULT WebmMfVorbisDec::GetAttributes(IMFAttributes** pp)
     return E_NOTIMPL;
 }
 
-
 HRESULT WebmMfVorbisDec::GetInputStreamAttributes(
     DWORD,
     IMFAttributes** pp)
@@ -316,7 +304,6 @@ HRESULT WebmMfVorbisDec::GetInputStreamAttributes(
 
     return E_NOTIMPL;
 }
-
 
 HRESULT WebmMfVorbisDec::GetOutputStreamAttributes(
     DWORD,
@@ -328,12 +315,10 @@ HRESULT WebmMfVorbisDec::GetOutputStreamAttributes(
     return E_NOTIMPL;
 }
 
-
 HRESULT WebmMfVorbisDec::DeleteInputStream(DWORD)
 {
     return E_NOTIMPL;
 }
-
 
 HRESULT WebmMfVorbisDec::AddInputStreams(
     DWORD,
@@ -341,7 +326,6 @@ HRESULT WebmMfVorbisDec::AddInputStreams(
 {
     return E_NOTIMPL;
 }
-
 
 HRESULT WebmMfVorbisDec::GetInputAvailableType(
     DWORD dwInputStreamID,
@@ -380,7 +364,6 @@ HRESULT WebmMfVorbisDec::GetInputAvailableType(
 
     return S_OK;
 }
-
 
 HRESULT WebmMfVorbisDec::GetOutputAvailableType(
     DWORD dwOutputStreamID,
@@ -446,7 +429,6 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(
 
     return S_OK;
 }
-
 
 HRESULT WebmMfVorbisDec::SetInputType(
     DWORD dwInputStreamID,
@@ -593,7 +575,6 @@ HRESULT WebmMfVorbisDec::SetOutputType(DWORD dwOutputStreamID,
     return S_OK;
 }
 
-
 HRESULT WebmMfVorbisDec::GetInputCurrentType(DWORD dwInputStreamID,
                                              IMFMediaType** pp)
 {
@@ -622,7 +603,6 @@ HRESULT WebmMfVorbisDec::GetInputCurrentType(DWORD dwInputStreamID,
 
     return m_input_mediatype->CopyAllItems(p);
 }
-
 
 HRESULT WebmMfVorbisDec::GetOutputCurrentType(DWORD dwOutputStreamID,
                                               IMFMediaType** pp)
@@ -653,7 +633,6 @@ HRESULT WebmMfVorbisDec::GetOutputCurrentType(DWORD dwOutputStreamID,
     return m_output_mediatype->CopyAllItems(p);
 }
 
-
 HRESULT WebmMfVorbisDec::GetInputStatus(DWORD dwInputStreamID, DWORD* pdwFlags)
 {
     if (dwInputStreamID != 0)
@@ -679,12 +658,10 @@ HRESULT WebmMfVorbisDec::GetInputStatus(DWORD dwInputStreamID, DWORD* pdwFlags)
     return S_OK;
 }
 
-
 HRESULT WebmMfVorbisDec::GetOutputStatus(DWORD*)
 {
     return E_NOTIMPL;
 }
-
 
 HRESULT WebmMfVorbisDec::SetOutputBounds(
     LONGLONG /* hnsLowerBound */ ,
@@ -692,7 +669,6 @@ HRESULT WebmMfVorbisDec::SetOutputBounds(
 {
     return E_NOTIMPL;  //TODO
 }
-
 
 HRESULT WebmMfVorbisDec::ProcessEvent(
     DWORD dwInputStreamID,
@@ -705,14 +681,61 @@ HRESULT WebmMfVorbisDec::ProcessEvent(
     return S_OK;
 }
 
-
-HRESULT WebmMfVorbisDec::ProcessMessage(
-    MFT_MESSAGE_TYPE,
-    ULONG_PTR)
+HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
 {
-    return S_OK;  //TODO
-}
+    HRESULT hr = S_OK;
 
+    switch (message)
+    {
+    case MFT_MESSAGE_COMMAND_FLUSH:
+        DBGLOG("MFT_MESSAGE_COMMAND_FLUSH");
+        m_total_time_decoded = 0;
+        vorbis_synthesis_restart(&m_vorbis_state);
+        m_vorbis_output_samples.clear();
+
+        while (!m_samples.empty())
+        {
+            IMFSample* p_sample = m_samples.front();
+            if (p_sample)
+                p_sample->Release();
+            m_samples.pop_front();
+        }
+
+        break;
+
+    case MFT_MESSAGE_NOTIFY_BEGIN_STREAMING:
+        DBGLOG("MFT_MESSAGE_NOTIFY_BEGIN_STREAMING");
+        break;
+
+    case MFT_MESSAGE_NOTIFY_END_STREAMING:
+        DBGLOG("MFT_MESSAGE_NOTIFY_END_STREAMING");
+        break;
+
+    case MFT_MESSAGE_COMMAND_DRAIN:
+        // Drain: Tells the MFT not to accept any more input until
+        // all of the pending output has been processed.
+        DBGLOG("MFT_MESSAGE_COMMAND_DRAIN");
+        break;
+
+    case MFT_MESSAGE_SET_D3D_MANAGER:
+        // The pipeline should never send this message unless the MFT
+        // has the MF_SA_D3D_AWARE attribute set to TRUE. However, if we
+        // do get this message, it's invalid and we don't implement it.
+        hr = E_NOTIMPL;
+        DBGLOG("MFT_MESSAGE_SET_D3D_MANAGER");
+        break;
+
+    case MFT_MESSAGE_NOTIFY_END_OF_STREAM:
+        DBGLOG("MFT_MESSAGE_NOTIFY_END_OF_STREAM");
+        break;
+
+    case MFT_MESSAGE_NOTIFY_START_OF_STREAM:
+        DBGLOG("MFT_MESSAGE_NOTIFY_START_OF_STREAM");
+        break;
+    }
+
+    return hr;
+}
 
 HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
                                       DWORD)
@@ -753,7 +776,6 @@ HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
 
     return S_OK;
 }
-
 
 HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
 {
@@ -797,7 +819,6 @@ HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
     return S_OK;
 }
 
-
 namespace
 {
     INT16 clip16(int val)
@@ -814,7 +835,6 @@ namespace
         return static_cast<INT16>(val);
     }
 } // end anon namespace
-
 
 HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
     IMFSample* p_mf_output_sample,
