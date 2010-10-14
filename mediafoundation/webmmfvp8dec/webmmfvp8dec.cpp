@@ -13,8 +13,9 @@
 #include <new>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
-#include "iidstr.hpp"
+//#include "iidstr.hpp"
 using std::endl;
+using std::boolalpha;
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
@@ -141,10 +142,10 @@ HRESULT WebmMfVp8Dec::QueryInterface(
     }
     else
     {
-#ifdef _DEBUG
-        wodbgstream os;
-        os << "WebmMfVp8Dec::QI: iid=" << IIDStr(iid) << std::endl;
-#endif
+//#ifdef _DEBUG
+//        wodbgstream os;
+//        os << "WebmMfVp8Dec::QI: iid=" << IIDStr(iid) << std::endl;
+//#endif
 
         pUnk = 0;
         return E_NOINTERFACE;
@@ -1069,20 +1070,106 @@ HRESULT WebmMfVp8Dec::SetOutputBounds(
 
 HRESULT WebmMfVp8Dec::ProcessEvent(
     DWORD dwInputStreamID,
-    IMFMediaEvent*)
+    IMFMediaEvent* pEvent)
 {
     if (dwInputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
+
+#ifdef _DEBUG
+    if (pEvent)
+    {
+        MediaEventType t;
+
+        HRESULT hr = pEvent->GetType(&t);
+        assert(SUCCEEDED(hr));
+
+        odbgstream os;
+        os << "WebmMfVp8Dec::ProcessEvent: type=" << t << endl;
+    }
+#endif
 
     return E_NOTIMPL;  //TODO
 }
 
 
 HRESULT WebmMfVp8Dec::ProcessMessage(
-    MFT_MESSAGE_TYPE,
+    MFT_MESSAGE_TYPE m,
     ULONG_PTR)
 {
-    return S_OK;  //TODO
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfVp8Dec::ProcessMessage(samples.size="
+       << m_samples.size() << "): ";
+#endif
+
+    switch (m)
+    {
+        case MFT_MESSAGE_COMMAND_FLUSH:
+#ifdef _DEBUG
+            os << "COMMAND_FLUSH" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_COMMAND_DRAIN:
+#ifdef _DEBUG
+            os << "COMMAND_DRAIN" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_SET_D3D_MANAGER:
+#ifdef _DEBUG
+            os << "SET_D3D" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_DROP_SAMPLES:
+#ifdef _DEBUG
+            os << "DROP_SAMPLES" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_NOTIFY_BEGIN_STREAMING:
+#ifdef _DEBUG
+            os << "NOTIFY_BEGIN_STREAMING" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_NOTIFY_END_STREAMING:
+#ifdef _DEBUG
+            os << "NOTIFY_END_STREAMING" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_NOTIFY_END_OF_STREAM:
+#ifdef _DEBUG
+            os << "NOTIFY_EOS" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_NOTIFY_START_OF_STREAM:
+#ifdef _DEBUG
+            os << "NOTIFY_START_OF_STREAM" << endl;
+#endif
+
+            return S_OK;
+
+        case MFT_MESSAGE_COMMAND_MARKER:
+#ifdef _DEBUG
+            os << "COMMAND_MARKER" << endl;
+#endif
+
+            return S_OK;
+
+        default:
+            return S_OK;
+    }
 }
 
 
@@ -1456,6 +1543,13 @@ HRESULT WebmMfVp8Dec::GetFrame(
 
 HRESULT WebmMfVp8Dec::SetRate(BOOL bThin, float rate)
 {
+    //odbgstream os;
+    //os << "WebmMfVp8Dec::SetRate: bThin="
+    //   << boolalpha << (bThin ? true : false)
+    //   << " rate="
+    //   << rate
+    //   << endl;
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1497,6 +1591,13 @@ HRESULT WebmMfVp8Dec::GetRate(BOOL* pbThin, float* pRate)
     if (pRate)  //return error when pRate ptr is NULL?
         *pRate = m_rate;
 
+    //odbgstream os;
+    //os << "WebmMfVp8Dec::GetRate: bThin="
+    //   << boolalpha << m_bThin
+    //   << " rate="
+    //   << m_rate
+    //   << endl;
+
     return S_OK;
 }
 
@@ -1506,6 +1607,9 @@ HRESULT WebmMfVp8Dec::GetSlowestRate(
     BOOL /* bThin */ ,
     float* pRate)
 {
+    //odbgstream os;
+    //os << "WebmMfVp8Dec::GetSlowestRate" << endl;
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1537,6 +1641,9 @@ HRESULT WebmMfVp8Dec::GetFastestRate(
     BOOL /* bThin */ ,
     float* pRate)
 {
+    //odbgstream os;
+    //os << "WebmMfSource::GetFastestRate" << endl;
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
@@ -1568,6 +1675,9 @@ HRESULT WebmMfVp8Dec::IsRateSupported(
     float rate,
     float* pNearestRate)
 {
+    //odbgstream os;
+    //os << "WebmMfVp8Dec::IsRateSupported: rate=" << rate << endl;
+
     Lock lock;
 
     HRESULT hr = lock.Seize(this);
