@@ -149,6 +149,7 @@ private:
     IMFMediaTypePtr m_input_mediatype;
     IMFMediaTypePtr m_output_mediatype;
 
+    // TODO(tomfinegan): disambiguate the sample storage member names
     typedef std::list<IMFSample*> samples_t;
     samples_t m_samples;
 
