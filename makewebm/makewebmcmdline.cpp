@@ -26,6 +26,7 @@ using std::dec;
 
 CmdLine::CmdLine() :
     m_input(0),
+    m_audio_input(0),
     m_output(0),
     m_usage(false),
     m_list(false),
@@ -754,6 +755,32 @@ int CmdLine::ParseLongPost(
         return 2;
     }
 
+    if (_wcsnicmp(arg, L"audio-input", len) == 0)
+    {
+        if (has_value)
+        {
+            m_audio_input = arg + len + 1;
+
+            if (wcslen(m_audio_input) == 0)
+            {
+                wcout << "Empty value specified for audio input filename switch." << endl;
+                return -1;  //error
+            }
+
+            return 1;
+        }
+
+        m_audio_input = *++i;
+
+        if (m_audio_input == 0)
+        {
+            wcout << "No filename specified for audio input switch." << endl;
+            return -1;  //error
+        }
+
+        return 2;
+    }
+
     if (_wcsnicmp(arg, L"output", len) == 0)
     {
         if (has_value)
@@ -1245,6 +1272,12 @@ const wchar_t* CmdLine::GetInputFileName() const
 }
 
 
+const wchar_t* CmdLine::GetAudioInputFileName() const
+{
+    return m_audio_input;
+}
+
+
 const wchar_t* CmdLine::GetOutputFileName() const
 {
     return m_output;
@@ -1471,6 +1504,7 @@ void CmdLine::PrintUsage() const
     wcout << L"usage: makewebm <opts> <args>\n";
 
     wcout << L"  -i, --input                     input filename\n"
+          << L"  --audio-input                   audio input filename\n"
           << L"  -o, --output                    output filename\n"
           << L"  --deadline                      max time for frame encode (in microseconds)\n"
           << L"  --decoder-buffer-size           buffer size (in milliseconds)\n"
@@ -1564,6 +1598,22 @@ void CmdLine::ListArgs() const
             wcout << GetPath(m_input);
         else
             wcout << m_input;
+
+        wcout << L"\"\n";
+    }
+
+    wcout << L"audio-input: ";
+
+    if (m_audio_input == 0)
+        wcout << "(no audio input specified)\n";
+    else
+    {
+        wcout << L"\"";
+
+        if (m_verbose)
+            wcout << GetPath(m_audio_input);
+        else
+            wcout << m_audio_input;
 
         wcout << L"\"\n";
     }

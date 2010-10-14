@@ -52,9 +52,17 @@ private:
     static bool IsVP8(IPin*);
     static GUID GetSubtype(IPin*);
 
-    GraphUtil::IBaseFilterPtr AddDemuxFilter(IBaseFilter*) const;
-    GraphUtil::IBaseFilterPtr FindDemuxFilter(IBaseFilter*) const;
-    GraphUtil::IBaseFilterPtr EnumDemuxFilters(IPin*) const;
+    GraphUtil::IBaseFilterPtr AddDemuxFilter(
+        IBaseFilter*,
+        const wchar_t*) const;
+
+    GraphUtil::IBaseFilterPtr FindDemuxFilter(
+        IBaseFilter*,
+        const wchar_t*) const;
+
+    GraphUtil::IBaseFilterPtr EnumDemuxFilters(
+        IPin*,
+        const wchar_t*) const;
 
 #if 0
     bool ConnectVideo(IPin*, IPin*) const;

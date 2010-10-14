@@ -23,6 +23,7 @@ public:
     int Parse(int argc, wchar_t* argv[]);
 
     const wchar_t* GetInputFileName() const;
+    const wchar_t* GetAudioInputFileName() const;
     const wchar_t* GetOutputFileName() const;
     bool ScriptMode() const;
     bool GetList() const;
@@ -67,6 +68,7 @@ private:
     bool m_list;
     bool m_version;
     const wchar_t* m_input;
+    const wchar_t* m_audio_input;
     std::wstring m_synthesized_output;
     const wchar_t* m_output;
     bool m_no_video;

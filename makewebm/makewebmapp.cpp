@@ -143,7 +143,7 @@ int App::operator()(int argc, wchar_t* argv[])
         return 1;
     }
 
-    const GraphUtil::IBaseFilterPtr pDemux = AddDemuxFilter(pReader);
+    const GraphUtil::IBaseFilterPtr pDemux = AddDemuxFilter(pReader, L"demux");
 
     if (!bool(pDemux))
         return 1;
@@ -169,7 +169,44 @@ int App::operator()(int argc, wchar_t* argv[])
                 &App::DumpVideoMediaType);
     }
 
-    const GraphUtil::IPinPtr pDemuxOutpinAudio = FindOutpinAudio(pDemux);
+    GraphUtil::IPinPtr pDemuxOutpinAudio;
+
+    if (const wchar_t* f = m_cmdline.GetAudioInputFileName())
+    {
+        IBaseFilterPtr pAudioReader;
+
+        hr = pBuilder->AddSourceFilter(f, L"audio source", &pAudioReader);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to add audio source filter to graph.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return 1;
+        }
+
+        assert(bool(pAudioReader));
+
+        if (GraphUtil::PinCount(pAudioReader) == 0)
+        {
+            wcout << "Audio source filter does not have "
+                  << "any output pins.\n" << endl;
+            return 1;
+        }
+
+        const GraphUtil::IBaseFilterPtr pAudioDemux =
+            AddDemuxFilter(pAudioReader, L"audio demux");
+
+        if (!bool(pAudioDemux))
+            return 1;
+
+        pDemuxOutpinAudio = FindOutpinAudio(pAudioDemux);
+    }
+    else
+        pDemuxOutpinAudio = FindOutpinAudio(pDemux);
+
     //TODO: we need to do better here: we check for the 0 case,
     //but we must also check for the 1+ case.
 
@@ -1484,7 +1521,9 @@ void App::DumpBitMapInfoHeader(const BITMAPINFOHEADER& bmih)
 }
 
 
-GraphUtil::IBaseFilterPtr App::AddDemuxFilter(IBaseFilter* pReader) const
+GraphUtil::IBaseFilterPtr App::AddDemuxFilter(
+    IBaseFilter* pReader,
+    const wchar_t* name) const
 {
     assert(bool(m_pGraph));
     assert(pReader);
@@ -1533,7 +1572,7 @@ GraphUtil::IBaseFilterPtr App::AddDemuxFilter(IBaseFilter* pReader) const
         MediaTypeUtil::Free(pmt);
 
         if (g == MEDIATYPE_Stream)
-            return FindDemuxFilter(pReader);
+            return FindDemuxFilter(pReader, name);
 
         if (g == MEDIATYPE_Video)
             return pReader;
@@ -1542,12 +1581,14 @@ GraphUtil::IBaseFilterPtr App::AddDemuxFilter(IBaseFilter* pReader) const
             return pReader;
 
         if (g == MEDIATYPE_NULL)  //assume stream
-            return FindDemuxFilter(pReader);
+            return FindDemuxFilter(pReader, name);
     }
 }
 
 
-GraphUtil::IBaseFilterPtr App::FindDemuxFilter(IBaseFilter* pReader) const
+GraphUtil::IBaseFilterPtr App::FindDemuxFilter(
+    IBaseFilter* pReader,
+    const wchar_t* name) const
 {
     assert(bool(m_pGraph));
     assert(pReader);
@@ -1560,14 +1601,14 @@ GraphUtil::IBaseFilterPtr App::FindDemuxFilter(IBaseFilter* pReader) const
     HRESULT hr = f.CreateInstance(WebmTypes::CLSID_WebmSplit);
 
     if (FAILED(hr))
-        return EnumDemuxFilters(pOutputPin);
+        return EnumDemuxFilters(pOutputPin, name);
 
     assert(bool(f));
 
     const IPinPtr pInputPin = GraphUtil::FindInpin(f);
     assert(bool(pInputPin));
 
-    hr = m_pGraph->AddFilter(f, L"demux");
+    hr = m_pGraph->AddFilter(f, name);
     assert(SUCCEEDED(hr));
 
     hr = m_pGraph->ConnectDirect(pOutputPin, pInputPin, 0);
@@ -1581,11 +1622,14 @@ GraphUtil::IBaseFilterPtr App::FindDemuxFilter(IBaseFilter* pReader) const
     hr = m_pGraph->RemoveFilter(f);
     assert(SUCCEEDED(hr));
 
-    return EnumDemuxFilters(pOutputPin);
+    return EnumDemuxFilters(pOutputPin, name);
 }
 
 
-GraphUtil::IBaseFilterPtr App::EnumDemuxFilters(IPin* pOutputPin) const
+GraphUtil::IBaseFilterPtr
+App::EnumDemuxFilters(
+    IPin* pOutputPin,
+    const wchar_t* name) const
 {
     const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
     assert(bool(pMapper));
@@ -1660,7 +1704,7 @@ GraphUtil::IBaseFilterPtr App::EnumDemuxFilters(IPin* pOutputPin) const
         if (!bool(pInputPin))
             continue;
 
-        hr = m_pGraph->AddFilter(f, L"demux");
+        hr = m_pGraph->AddFilter(f, name);
         assert(SUCCEEDED(hr));
 
         hr = m_pGraph->ConnectDirect(pOutputPin, pInputPin, 0);
