@@ -8,6 +8,7 @@
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
+using std::boolalpha;
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaEventQueue, __uuidof(IMFMediaEventQueue));
@@ -279,6 +280,17 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     }
 
     assert(hr == S_FALSE);  //EOS
+
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfStream::RequestSample: EOS detected; track="
+       << m_pTrack->GetNumber()
+       << " type="
+       << m_pTrack->GetType()
+       << " bEOS=" 
+       << boolalpha << m_bEOS
+       << endl;
+#endif
 
     if (m_bEOS)  //sent event already
         return MF_E_END_OF_STREAM;
