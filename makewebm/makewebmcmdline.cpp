@@ -32,6 +32,7 @@ CmdLine::CmdLine() :
     m_version(false),
     m_script(false),
     m_verbose(false),
+    m_no_video(false),
     m_require_audio(false),
     m_no_audio(false),
     m_deadline(-1),
@@ -640,6 +641,18 @@ int CmdLine::ParseLongPost(
         }
 
         m_list = true;
+        return 1;
+    }
+
+    if (_wcsnicmp(arg, L"no-video", len) == 0)
+    {
+        if (has_value)
+        {
+            wcout << "The no-video switch does not accept a value." << endl;
+            return -1;  //error
+        }
+
+        m_no_video = true;
         return 1;
     }
 
@@ -1262,6 +1275,12 @@ bool CmdLine::GetVerbose() const
 }
 
 
+bool CmdLine::GetNoVideo() const
+{
+    return m_no_video;
+}
+
+
 bool CmdLine::GetRequireAudio() const
 {
     return m_require_audio;
@@ -1467,6 +1486,7 @@ void CmdLine::PrintUsage() const
           << L"  --lag-in-frames                 consume frames before producing\n"
           << L"  --min-quantizer                 min (best quality) quantizer\n"
           << L"  --max-quantizer                 max (worst quality) quantizer\n"
+          << L"  --no-video                      do not render video (if present)\n"
           << L"  --require-audio                 quit if no audio encoder available\n"
           << L"  --no-audio                      do not render audio (if present)\n"
           << L"  --resize-allowed                spatial resampling\n"
@@ -1499,8 +1519,10 @@ void CmdLine::PrintUsage() const
           << L"The order of appearance of switches and arguments\n"
           << L"on the command line does not matter.\n"
           << L'\n'
-          << L"Long-form switches may be abbreviated, and are case-insensitive.\n"
-          << L"They may also be specified using Windows-style syntax, using a\n"
+          << L"Long-form switches may be abbreviated, and are "
+          << L"case-insensitive.\n"
+          << L"They may also be specified using Windows-style syntax, "
+          << L"using a\n"
           << L"forward slash for the switch.\n";
 
     wcout << L'\n'
@@ -1509,7 +1531,8 @@ void CmdLine::PrintUsage() const
           << L'\n'
           << L"The output filename may be specified as either a switch\n"
           << L"value or command-line argument, but it may also be omitted.\n"
-          << L"If omitted, its value is synthesized from the input filename.\n";
+          << L"If omitted, its value is synthesized from the input "
+          << L"filename.\n";
 
     wcout << L'\n'
           << L"The deadline value specifies the maximum amount of time\n"
@@ -1574,6 +1597,7 @@ void CmdLine::ListArgs() const
 
     wcout << L"script-mode  : " << boolalpha << m_script << L'\n';
     wcout << L"verbose      : " << boolalpha << m_verbose << L'\n';
+    wcout << L"no-video     : " << boolalpha << m_no_video << L'\n';
     wcout << L"require-audio: " << boolalpha << m_require_audio << L'\n';
     wcout << L"no-audio     : " << boolalpha << m_no_audio << L'\n';
 
@@ -1608,7 +1632,8 @@ void CmdLine::ListArgs() const
 
     if (m_decoder_buffer_initial_size >= 0)
     {
-        wcout << L"decoder-buffer-initial-size: " << m_decoder_buffer_initial_size;
+        wcout << L"decoder-buffer-initial-size: "
+              << m_decoder_buffer_initial_size;
 
         if (m_decoder_buffer_initial_size == 0)
             wcout << " (use encoder default)";
@@ -1618,7 +1643,8 @@ void CmdLine::ListArgs() const
 
     if (m_decoder_buffer_optimal_size >= 0)
     {
-        wcout << L"decoder-buffer-optimal-size: " << m_decoder_buffer_optimal_size;
+        wcout << L"decoder-buffer-optimal-size: "
+              << m_decoder_buffer_optimal_size;
 
         if (m_decoder_buffer_optimal_size == 0)
             wcout << " (use encoder default)";
@@ -1700,13 +1726,19 @@ void CmdLine::ListArgs() const
         wcout << L"two-pass: " << m_two_pass << L'\n';
 
     if (m_two_pass_vbr_bias_pct >= 0)
-        wcout << L"two-pass-vbr-bias-pct: " << m_two_pass_vbr_bias_pct << L'\n';
+        wcout << L"two-pass-vbr-bias-pct: "
+              << m_two_pass_vbr_bias_pct
+              << L'\n';
 
     if (m_two_pass_vbr_minsection_pct >= 0)
-        wcout << L"two-pass-vbr-minsection-pct: " << m_two_pass_vbr_minsection_pct << L'\n';
+        wcout << L"two-pass-vbr-minsection-pct: "
+              << m_two_pass_vbr_minsection_pct
+              << L'\n';
 
     if (m_two_pass_vbr_maxsection_pct >= 0)
-        wcout << L"two-pass-vbr-maxsection-pct: " << m_two_pass_vbr_maxsection_pct << L'\n';
+        wcout << L"two-pass-vbr-maxsection-pct: "
+              << m_two_pass_vbr_maxsection_pct
+              << L'\n';
 
     if (m_undershoot_pct >= 0)
         wcout << L"undershoot-pct: " << m_undershoot_pct << L'\n';
@@ -1747,18 +1779,26 @@ void CmdLine::ListArgs() const
     }
     else if (m_keyframe_frequency >= 0)
     {
-        wcout << L"keyframe-mode: 1 (auto implied by keyframe-frequency)" << endl;
+        wcout << L"keyframe-mode: 1 (auto implied by keyframe-frequency)"
+              << endl;
     }
 
     if (m_keyframe_min_interval >= 0)
-        wcout << L"keyframe-min-interval: " << m_keyframe_min_interval << L'\n';
+        wcout << L"keyframe-min-interval: "
+              << m_keyframe_min_interval
+              << L'\n';
+
     else if (m_keyframe_frequency >= 0)
-        wcout << L"keyframe-min-interval: (determined from framerate)" << L'\n';
+        wcout << L"keyframe-min-interval: (determined from framerate)"
+              << L'\n';
 
     if (m_keyframe_max_interval >= 0)
-        wcout << L"keyframe-max-interval: " << m_keyframe_max_interval << L'\n';
+        wcout << L"keyframe-max-interval: "
+              << m_keyframe_max_interval
+              << L'\n';
     else
-        wcout << L"keyframe-max-interval: (determined from framerate)" << L'\n';
+        wcout << L"keyframe-max-interval: (determined from framerate)"
+              << L'\n';
 
     wcout << endl;
 }
@@ -1875,7 +1915,11 @@ int CmdLine::ParseOpt(
         {
             if (is_required)
             {
-                wcout << "Empty value specified for " << name << " switch." << endl;
+                wcout << "Empty value specified for "
+                      << name
+                      << " switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -1896,7 +1940,11 @@ int CmdLine::ParseOpt(
 
                 if (is_required)
                 {
-                    wcout << "No value specified for " << name << " switch." << endl;
+                    wcout << "No value specified for "
+                          << name
+                          << " switch."
+                          << endl;
+
                     return -1;  //error
                 }
 

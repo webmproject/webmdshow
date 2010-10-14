@@ -213,9 +213,10 @@ int App::operator()(int argc, wchar_t* argv[])
     assert(bool(mon));
 #endif
 
+    const bool bNoVideo = m_cmdline.GetNoVideo();
     const bool bTwoPass = (m_cmdline.GetTwoPass() >= 1);
 
-    if (bTwoPass)
+    if (bTwoPass && !bNoVideo)
     {
         assert(m_cmdline.GetSaveGraphFile() == 0);
 
@@ -247,10 +248,12 @@ int App::operator()(int argc, wchar_t* argv[])
     {
         IBaseFilterPtr pMux;
 
+        const bool bNoAudio = m_cmdline.GetNoAudio();
+
         status = CreateMuxerGraph(
                     bTwoPass,
-                    pDemuxOutpinVideo,
-                    pDemuxOutpinAudio,
+                    bNoVideo ? 0 : pDemuxOutpinVideo,
+                    bNoAudio ? 0 : pDemuxOutpinAudio,
                     &pMux);
 
         if (status)
@@ -552,7 +555,7 @@ int App::CreateMuxerGraph(
                 &App::DumpVideoMediaType);
     }
 
-    if ((pDemuxOutpinAudio != 0) && !m_cmdline.GetNoAudio())
+    if (pDemuxOutpinAudio)
     {
         const IPinPtr pMuxInpinAudio(FindInpinAudio(pMux));
         assert(bool(pMuxInpinAudio));

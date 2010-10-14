@@ -27,6 +27,7 @@ public:
     bool ScriptMode() const;
     bool GetList() const;
     bool GetVerbose() const;
+    bool GetNoVideo() const;
     bool GetRequireAudio() const;
     bool GetNoAudio() const;
     int GetDeadline() const;
@@ -68,6 +69,7 @@ private:
     const wchar_t* m_input;
     std::wstring m_synthesized_output;
     const wchar_t* m_output;
+    bool m_no_video;
     bool m_require_audio;
     bool m_no_audio;
 
