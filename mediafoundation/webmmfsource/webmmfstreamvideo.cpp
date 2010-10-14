@@ -605,21 +605,28 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     {
         //TODO: handle this for audio too
 
+        //TODO: it's not clear whether we need to do
+        //this if we're thinning.  No great harm as is,
+        //since all it means is that immediately following
+        //a seek the user sees a different keyframe.
+
         hr = pSample->SetUINT32(WebmTypes::WebMSample_Preroll, TRUE);
         assert(SUCCEEDED(hr));
 
-        //odbgstream os;
-        //os << "WebmMfSource::WebmMfStreamVideo:"
-        //   << " sending PREROLL sample: preroll[sec]="
-        //   << (double(preroll_ns) / 1000000000)
-        //   << " curr[sec]="
-        //   << (double(curr_ns) / 1000000000)
-        //   << " cluster_idx=" << m_pCurr->GetCluster()->m_index;
-        //
-        //if (bKey)
-        //    os << " KEY";
-        //
-        //os << endl;
+#if 0  //def _DEBUG
+        odbgstream os;
+        os << "WebmMfSource::WebmMfStreamVideo:"
+           << " sending PREROLL sample: preroll[sec]="
+           << (double(preroll_ns) / 1000000000)
+           << " curr[sec]="
+           << (double(curr_ns) / 1000000000)
+           << " cluster_idx=" << pCurrCluster->m_index;
+
+        if (bKey)
+            os << " KEY";
+
+        os << endl;
+#endif
     }
 
     //TODO: list of attributes here:
