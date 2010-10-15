@@ -658,7 +658,7 @@ HRESULT WebmMfVorbisDec::SetOutputType(
     //TODO: assume for now we have integer sampling rate
     hr = pmt->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &samples_per_sec);
 
-    if (FAILED(hr) || (samples_per_sec == UINT32(m_vorbis_info.rate)))
+    if (FAILED(hr) || (samples_per_sec != UINT32(m_vorbis_info.rate)))
         return MF_E_INVALIDMEDIATYPE;
 
     //TODO: anything else that needs to be vetted
