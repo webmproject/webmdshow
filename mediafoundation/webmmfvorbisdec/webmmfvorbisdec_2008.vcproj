@@ -291,7 +291,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="mfuuid.lib mfplat.lib libogg_static.lib libvorbis_static.lib"
-				OutputFile="$(OutDir)\webmmfvp8dec.dll"
+				OutputFile="$(OutDir)\webmmfvorbisdec.dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x64\release&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x64\release&quot;"
 				GenerateManifest="false"
