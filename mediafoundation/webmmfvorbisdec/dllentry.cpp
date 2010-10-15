@@ -29,8 +29,9 @@ namespace WebmMfVorbisDecLib
 
 }  //end namespace WebmMfVorbisDecLib
 
-static CFactory s_handler_factory(&s_cLock, &WebmMfVorbisDecLib::CreateDecoder);
-
+static CFactory s_handler_factory(
+                    &s_cLock,
+                    &WebmMfVorbisDecLib::CreateDecoder);
 
 BOOL APIENTRY DllMain(
     HINSTANCE hModule,
@@ -100,9 +101,11 @@ STDAPI DllRegisterServer()
     const wchar_t* const filename = filename_.c_str();
 
 #if _DEBUG
-    const wchar_t friendly_name[] = L"WebM MF Vorbis Decoder Transform (Debug)";
+    const wchar_t friendly_name[] =
+        L"WebM MF Vorbis Decoder Transform (Debug)";
 #else
-    const wchar_t friendly_name[] = L"WebM MF Vorbis Decoder Transform";
+    const wchar_t friendly_name[] =
+        L"WebM MF Vorbis Decoder Transform";
 #endif
 
     hr = ComReg::RegisterCoclass(
