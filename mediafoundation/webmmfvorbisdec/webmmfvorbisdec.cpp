@@ -1045,9 +1045,9 @@ HRESULT WebmMfVorbisDec::ProcessOutputSamples(
     {
         const size_t size = n * sizeof(float);
         assert(size <= max_len);
-        
+
         const float* const src = &m_output_samples[0];
-        
+
         memcpy(dst, src, size);
 
         hr = pBuffer->SetCurrentLength(size);
@@ -1056,7 +1056,7 @@ HRESULT WebmMfVorbisDec::ProcessOutputSamples(
     else
     {
         assert(g == MFAudioFormat_PCM);
-        
+
         const size_t size = n * 2;  //TODO: 2 bytes/sample assumed here
         assert(size <= max_len);
 
@@ -1174,6 +1174,8 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     DBGLOG("start_time=" << start_time << " duration=" << duration);
 #endif
 
+    m_samples.pop_front();
+
     pInputSample->Release();
     pInputSample = 0;
 
@@ -1183,7 +1185,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
 
     if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT)
         return hr;
-        
+
     assert(SUCCEEDED(hr));
 
     //TODO
