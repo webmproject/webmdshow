@@ -984,6 +984,7 @@ HRESULT WebmMfVorbisDec::ProcessOutputSamples(
     if (m_output_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
+#if 0  //TODO
     const int total_samples = static_cast<int>(m_output_samples.size());
 
     UINT32 sample_size;  //bytes/sample
@@ -1000,7 +1001,6 @@ HRESULT WebmMfVorbisDec::ProcessOutputSamples(
     assert(SUCCEEDED(hr));
     assert(storage_space_needed <= max_len);  //TODO
 
-#if 0
     BYTE* p_mf_buffer_data = NULL;
     DWORD mf_data_len = 0;
 
@@ -1027,26 +1027,41 @@ HRESULT WebmMfVorbisDec::ProcessOutputSamples(
     }
 #endif
 
-    BYTE* ptr;
+    BYTE* dst;
+    DWORD max_len;
 
-    hr = pBuffer->Lock(&ptr, &max_len, 0);
-    assert(ptr);
-    assert(max_len >= storage_space_needed);
+    hr = pBuffer->Lock(&dst, &max_len, 0);
+    assert(dst);
+    //assert(max_len >= storage_space_needed);
 
     GUID g;
 
     hr = m_output_mediatype->GetGUID(MF_MT_SUBTYPE, &g);
     assert(SUCCEEDED(hr));
 
+    const output_samples_t::size_type n = m_output_samples.size();
+
     if (g == MFAudioFormat_Float)
     {
-        memcpy(ptr, &m_output_samples[0], storage_space_needed);
+        const size_t size = n * sizeof(float);
+        assert(size <= max_len);
+        
+        const float* const src = &m_output_samples[0];
+        
+        memcpy(dst, src, size);
+
+        hr = pBuffer->SetCurrentLength(size);
+        assert(SUCCEEDED(hr));
     }
     else
     {
         assert(g == MFAudioFormat_PCM);
+        
+        const size_t size = n * 2;  //TODO: 2 bytes/sample assumed here
+        assert(size <= max_len);
 
         typedef output_samples_t::const_iterator iter_t;
+
         iter_t iter = m_output_samples.begin();
         const iter_t iter_end = m_output_samples.end();
 
@@ -1058,25 +1073,24 @@ HRESULT WebmMfVorbisDec::ProcessOutputSamples(
 
         // TODO(tomfinegan): factor resample out into 8-bit/16-bit versions
 
-        INT16* p_out_samples = reinterpret_cast<INT16*>(ptr);
+        INT16* const p_out_samples = reinterpret_cast<INT16*>(dst);
 
         for (int sample = 0; iter != iter_end; ++iter, ++sample)
         {
             p_out_samples[sample] = static_cast<INT16>(clip16((int)
                 floor(*iter * 32767.f + .5f)));
         }
+
+        hr = pBuffer->SetCurrentLength(size);
+        assert(SUCCEEDED(hr));
     }
 
-    // we consumed all samples: empty the vector
     m_output_samples.clear();
-
-    hr = pBuffer->SetCurrentLength(storage_space_needed);
-    assert(SUCCEEDED(hr));
 
     hr = pBuffer->Unlock();
     assert(SUCCEEDED(hr));
 
-    samples_decoded = total_samples / m_vorbis_info.channels;
+    samples_decoded = n / m_vorbis_info.channels;  //TODO: verify this
 
     return S_OK;
 }
@@ -1166,7 +1180,11 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     int samples;
 
     hr = ProcessOutputSamples(pOutputSample, samples);
-    assert(SUCCEEDED(hr));  //TODO
+
+    if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT)
+        return hr;
+        
+    assert(SUCCEEDED(hr));
 
     //TODO
     //time = m_total_time_decoded;
