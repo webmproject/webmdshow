@@ -1709,7 +1709,12 @@ void WebmMfSource::Seek(
     if (base >= 0)
         pBaseCluster = vs[base].info.pBE->GetCluster();
     else  //no video stream(s)
+    {
+        const long status = m_pSegment->LoadCluster();
+        assert(status == 0);  //TODO
+
         pBaseCluster = m_pSegment->FindCluster(time_ns);
+    }
 
     const as_t::size_type nas = as.size();
 

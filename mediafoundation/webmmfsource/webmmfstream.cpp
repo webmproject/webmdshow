@@ -287,7 +287,7 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
        << m_pTrack->GetNumber()
        << " type="
        << m_pTrack->GetType()
-       << " bEOS=" 
+       << " bEOS="
        << boolalpha << m_bEOS
        << endl;
 #endif
