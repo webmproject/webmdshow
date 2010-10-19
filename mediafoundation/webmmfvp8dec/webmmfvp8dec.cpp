@@ -1299,10 +1299,13 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     assert(len);
 
     const vpx_codec_err_t e = vpx_codec_decode(&m_ctx, ptr, len, 0, 0);
-    assert(e == VPX_CODEC_OK);  //TODO
+    //assert(e == VPX_CODEC_OK);  //TODO
 
     hr = buf_in->Unlock();
     assert(SUCCEEDED(hr));
+
+    if (e != VPX_CODEC_OK)
+        return MF_E_INVALID_STREAM_DATA;  //send Media Event too?  How?
 
     UINT32 bPreroll;
 
