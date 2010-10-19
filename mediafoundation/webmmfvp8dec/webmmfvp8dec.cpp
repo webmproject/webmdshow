@@ -1277,8 +1277,10 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     if (FAILED(hr) || !bool(buf_out))
         return E_INVALIDARG;
 
-    IMFSample* const pSample_in = m_samples.front();
-    assert(pSample_in);
+    _COM_SMARTPTR_TYPEDEF(IMFSample, __uuidof(IMFSample));
+
+    const IMFSamplePtr pSample_in(m_samples.front(), false);  //don't addref
+    assert(bool(pSample_in));
 
     m_samples.pop_front();
 
@@ -1439,7 +1441,7 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
         assert(SUCCEEDED(hr));
     }
 
-    pSample_in->Release();
+    //pSample_in->Release();
 
     return S_OK;
 }
