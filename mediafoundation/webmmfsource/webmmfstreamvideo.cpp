@@ -501,14 +501,14 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     //http://msdn.microsoft.com/en-us/library/dd317906%28v=VS.85%29.aspx
     //http://msdn.microsoft.com/en-us/library/aa376629%28v=VS.85%29.aspx
 
-    //TODO: we can better here: synthesize duration of last block
-    //in stream from the duration of the stream
-
     //const mkvparser::BlockEntry* const pNextEntry = next.pBE;
     const mkvparser::BlockEntry* pNextEntry;
 
     const long result = m_pTrack->GetNext(m_curr.pBE, pNextEntry);
     assert(result >= 0);  //TODO
+
+    const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+    const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
 
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
@@ -517,7 +517,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
         mkvparser::Cluster* const pNextCluster = pNextEntry->GetCluster();
 
-        const __int64 next_ns = pNextBlock->GetTime(pNextCluster);
+        const LONGLONG next_ns = pNextBlock->GetTime(pNextCluster);
         assert(next_ns >= curr_ns);
 
         const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
@@ -525,6 +525,46 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         hr = pSample->SetSampleDuration(sample_duration);
         assert(SUCCEEDED(hr));
     }
+    else if (pInfo)
+    {
+        const LONGLONG next_ns = pInfo->GetDuration();
+
+#ifdef _DEBUG
+        odbgstream os;
+        os << "WebmMfStreamVideo::PopulateSample: last block; curr_ns="
+           << curr_ns
+           << " next_ns="
+           << next_ns
+           << " next-curr="
+           << (next_ns - curr_ns)
+           << endl;
+#endif
+
+        if (next_ns > curr_ns)  //have duration, and it's suitable
+        {
+            const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
+
+            if (sample_duration > 0)
+            {
+#ifdef _DEBUG
+                os << "sample_duration[sec]="
+                   << (double(sample_duration) / 10000000)
+                   << endl;
+#endif
+
+                hr = pSample->SetSampleDuration(sample_duration);
+                assert(SUCCEEDED(hr));
+            }
+        }
+    }
+#ifdef _DEBUG
+    else
+    {
+        odbgstream os;
+        os << "WebmMfStreamVideo::PopulateSample: last block; no duration"
+           << endl;
+    }
+#endif
 
     m_curr = next;
 

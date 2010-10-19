@@ -8,6 +8,10 @@
 #include <cmath>
 #include <comdef.h>
 #include <vfwmsgs.h>
+#if 0 //def _DEBUG
+#include "odbgstream.hpp"
+using std::endl;
+#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
 _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
@@ -254,111 +258,6 @@ HRESULT WebmMfStreamAudio::Seek(
         return OnSeek(var);
 }
 
-#if 0
-HRESULT WebmMfStreamAudio::OnPopulateSample(
-    const mkvparser::BlockEntry* pNextEntry,
-    IMFSample* pSample)
-{
-    assert(pSample);
-
-    //TODO:
-    //assert(m_pBaseCluster);
-    //assert(!m_pBaseCluster->EOS());
-
-    assert(m_pCurr);
-    assert(!m_pCurr->EOS());
-
-    const mkvparser::Block* const pCurrBlock = m_pCurr->GetBlock();
-    assert(pCurrBlock);
-    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
-
-    mkvparser::Cluster* const pCurrCluster = m_pCurr->GetCluster();
-    assert(pCurrCluster);
-
-    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
-    assert(curr_ns >= 0);
-    //assert((start_ns % 100) == 0);
-
-    //TODO:
-    //const __int64 basetime_ns = m_pBaseCluster->GetFirstTime();
-    //assert(basetime_ns >= 0);
-    ////assert((basetime_ns % 100) == 0);
-    //assert(curr_ns >= basetime_ns);
-
-    const long cbBuffer = pCurrBlock->GetSize();
-    assert(cbBuffer >= 0);
-
-    IMFMediaBufferPtr pBuffer;
-
-    HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
-    assert(SUCCEEDED(hr));
-    assert(pBuffer);
-
-    BYTE* ptr;
-    DWORD cbMaxLength;
-
-    hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
-    assert(SUCCEEDED(hr));
-    assert(ptr);
-    assert(cbMaxLength >= DWORD(cbBuffer));
-
-    mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
-
-    long status = pCurrBlock->Read(pReader, ptr);
-    assert(status == 0);  //all bytes were read
-
-    hr = pBuffer->SetCurrentLength(cbBuffer);
-    assert(SUCCEEDED(hr));
-
-    hr = pBuffer->Unlock();
-    assert(SUCCEEDED(hr));
-
-    hr = pSample->AddBuffer(pBuffer);
-    assert(SUCCEEDED(hr));
-
-#if 0  //TODO
-
-    hr = pSample->SetPreroll(FALSE);
-    assert(SUCCEEDED(hr));
-
-#endif //TODO
-
-    hr = pSample->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
-    assert(SUCCEEDED(hr));
-
-    //const LONGLONG sample_time = (curr_ns - basetime_ns) / 100;
-    const LONGLONG sample_time = curr_ns / 100;
-
-    hr = pSample->SetSampleTime(sample_time);
-    assert(SUCCEEDED(hr));
-
-    //TODO: we can better here: synthesize duration of last block
-    //in stream from the duration of the stream
-
-    //TODO: this might not be accurate, if there are gaps in the
-    //audio blocks.  (How do we detect gaps?)
-
-    if ((pNextEntry != 0) && !pNextEntry->EOS())
-    {
-        const mkvparser::Block* const pNextBlock = pNextEntry->GetBlock();
-        assert(pNextBlock);
-
-        mkvparser::Cluster* const pNextCluster = pNextEntry->GetCluster();
-
-        const __int64 next_ns = pNextBlock->GetTime(pNextCluster);
-        assert(next_ns >= curr_ns);
-
-        const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
-
-        hr = pSample->SetSampleDuration(sample_duration);
-        assert(SUCCEEDED(hr));
-    }
-
-    return S_OK;
-}
-#endif
-
-
 HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
 {
     assert(pSample);
@@ -436,11 +335,13 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
 
-    //TODO: we can better here: synthesize duration of last block
-    //in stream from the duration of the stream
-
     //TODO: this might not be accurate, if there are gaps in the
     //audio blocks.  (How do we detect gaps?)
+
+#if 0
+    const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+    const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
+#endif
 
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
@@ -458,6 +359,48 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
         hr = pSample->SetSampleDuration(sample_duration);
         assert(SUCCEEDED(hr));
     }
+#if 0
+    else if (pInfo)
+    {
+        const LONGLONG next_ns = pInfo->GetDuration();
+
+#ifdef _DEBUG
+        odbgstream os;
+        os << "WebmMfStreamAudio::PopulateSample: last block; curr_ns="
+           << curr_ns
+           << " next_ns="
+           << next_ns
+           << " next-curr="
+           << (next_ns - curr_ns)
+           << endl;
+#endif
+
+        if (next_ns > curr_ns)  //have duration, and it's suitable
+        {
+            const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
+
+            if (sample_duration > 0)
+            {
+#ifdef _DEBUG
+                os << "sample_duration[sec]="
+                   << (double(sample_duration) / 10000000)
+                   << endl;
+#endif
+
+                hr = pSample->SetSampleDuration(sample_duration);
+                assert(SUCCEEDED(hr));
+            }
+        }
+    }
+#ifdef _DEBUG
+    else
+    {
+        odbgstream os;
+        os << "WebmMfStreamAudio::PopulateSample: last block; no duration"
+           << endl;
+    }
+#endif
+#endif
 
     m_pCurr = pNextEntry;
 
