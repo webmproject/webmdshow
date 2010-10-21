@@ -92,9 +92,7 @@ WebmMfVorbisDec::~WebmMfVorbisDec()
     assert(SUCCEEDED(hr));
 }
 
-HRESULT WebmMfVorbisDec::QueryInterface(
-    const IID& iid,
-    void** ppv)
+HRESULT WebmMfVorbisDec::QueryInterface(const IID& iid, void** ppv)
 {
     if (ppv == 0)
         return E_POINTER;
@@ -133,11 +131,10 @@ ULONG WebmMfVorbisDec::Release()
     return 0;
 }
 
-HRESULT WebmMfVorbisDec::GetStreamLimits(
-    DWORD* pdwInputMin,
-    DWORD* pdwInputMax,
-    DWORD* pdwOutputMin,
-    DWORD* pdwOutputMax)
+HRESULT WebmMfVorbisDec::GetStreamLimits(DWORD* pdwInputMin,
+                                         DWORD* pdwInputMax,
+                                         DWORD* pdwOutputMin,
+                                         DWORD* pdwOutputMax)
 {
     if (pdwInputMin == 0)
         return E_POINTER;
@@ -160,9 +157,8 @@ HRESULT WebmMfVorbisDec::GetStreamLimits(
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::GetStreamCount(
-    DWORD* pcInputStreams,
-    DWORD* pcOutputStreams)
+HRESULT WebmMfVorbisDec::GetStreamCount(DWORD* pcInputStreams,
+                                        DWORD* pcOutputStreams)
 {
     if (pcInputStreams == 0)
         return E_POINTER;
@@ -177,11 +173,8 @@ HRESULT WebmMfVorbisDec::GetStreamCount(
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::GetStreamIDs(
-    DWORD,
-    DWORD* pdwInputIDs,
-    DWORD,
-    DWORD* pdwOutputIDs)
+HRESULT WebmMfVorbisDec::GetStreamIDs(DWORD, DWORD* pdwInputIDs, DWORD,
+                                      DWORD* pdwOutputIDs)
 {
     if (pdwInputIDs)
         *pdwInputIDs = 0;
@@ -192,9 +185,8 @@ HRESULT WebmMfVorbisDec::GetStreamIDs(
     return E_NOTIMPL;
 }
 
-HRESULT WebmMfVorbisDec::GetInputStreamInfo(
-    DWORD dwInputStreamID,
-    MFT_INPUT_STREAM_INFO* pStreamInfo)
+HRESULT WebmMfVorbisDec::GetInputStreamInfo(DWORD dwInputStreamID,
+                                            MFT_INPUT_STREAM_INFO* pStreamInfo)
 {
     if (pStreamInfo == 0)
         return E_POINTER;
@@ -215,11 +207,10 @@ HRESULT WebmMfVorbisDec::GetInputStreamInfo(
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::GetOutputStreamInfo(
-    DWORD dwOutputStreamID,
-    MFT_OUTPUT_STREAM_INFO* pStreamInfo)
+HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
+                                             MFT_OUTPUT_STREAM_INFO* p_info)
 {
-    if (pStreamInfo == 0)
+    if (p_info == 0)
         return E_POINTER;
 
     if (dwOutputStreamID != 0)
@@ -232,7 +223,7 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(
     if (FAILED(hr))
         return hr;
 
-    MFT_OUTPUT_STREAM_INFO& info = *pStreamInfo;
+    MFT_OUTPUT_STREAM_INFO& info = *p_info;
 
     info.dwFlags = MFT_OUTPUT_STREAM_WHOLE_SAMPLES |
                    MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER;
@@ -251,9 +242,7 @@ HRESULT WebmMfVorbisDec::GetAttributes(IMFAttributes** pp)
     return E_NOTIMPL;
 }
 
-HRESULT WebmMfVorbisDec::GetInputStreamAttributes(
-    DWORD,
-    IMFAttributes** pp)
+HRESULT WebmMfVorbisDec::GetInputStreamAttributes(DWORD, IMFAttributes** pp)
 {
     if (pp)
         *pp = 0;
@@ -261,9 +250,7 @@ HRESULT WebmMfVorbisDec::GetInputStreamAttributes(
     return E_NOTIMPL;
 }
 
-HRESULT WebmMfVorbisDec::GetOutputStreamAttributes(
-    DWORD,
-    IMFAttributes** pp)
+HRESULT WebmMfVorbisDec::GetOutputStreamAttributes(DWORD, IMFAttributes** pp)
 {
     if (pp)
         *pp = 0;
@@ -276,17 +263,14 @@ HRESULT WebmMfVorbisDec::DeleteInputStream(DWORD)
     return E_NOTIMPL;
 }
 
-HRESULT WebmMfVorbisDec::AddInputStreams(
-    DWORD,
-    DWORD*)
+HRESULT WebmMfVorbisDec::AddInputStreams(DWORD, DWORD*)
 {
     return E_NOTIMPL;
 }
 
-HRESULT WebmMfVorbisDec::GetInputAvailableType(
-    DWORD dwInputStreamID,
-    DWORD dwTypeIndex,
-    IMFMediaType** pp)
+HRESULT WebmMfVorbisDec::GetInputAvailableType(DWORD dwInputStreamID,
+                                               DWORD dwTypeIndex,
+                                               IMFMediaType** pp)
 {
      if (pp)
         *pp = 0;
@@ -321,10 +305,9 @@ HRESULT WebmMfVorbisDec::GetInputAvailableType(
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::GetOutputAvailableType(
-    DWORD dwOutputStreamID,
-    DWORD dwTypeIndex,
-    IMFMediaType** pp)
+HRESULT WebmMfVorbisDec::GetOutputAvailableType(DWORD dwOutputStreamID,
+                                                DWORD dwTypeIndex,
+                                                IMFMediaType** pp)
 {
      if (pp)
         *pp = 0;
@@ -386,10 +369,9 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::SetInputType(
-    DWORD dwInputStreamID,
-    IMFMediaType* pmt,
-    DWORD dwFlags)
+HRESULT WebmMfVorbisDec::SetInputType(DWORD dwInputStreamID,
+                                      IMFMediaType* pmt,
+                                      DWORD dwFlags)
 {
     if (dwInputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
@@ -780,7 +762,8 @@ HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
     if (FAILED(status))
         return E_FAIL;
 
-    status = m_vorbis_decoder.Decode(p_input_sample_data, input_sample_data_len);
+    status = m_vorbis_decoder.Decode(p_input_sample_data,
+                                     input_sample_data_len);
 
     mf_input_sample_buffer->Unlock();
 
@@ -844,11 +827,9 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
     return status;
 }
 
-HRESULT WebmMfVorbisDec::ProcessOutput(
-    DWORD dwFlags,
-    DWORD cOutputBufferCount,
-    MFT_OUTPUT_DATA_BUFFER* pOutputSamples,
-    DWORD* pdwStatus)
+HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
+                                       MFT_OUTPUT_DATA_BUFFER* pOutputSamples,
+                                       DWORD* pdwStatus)
 {
     if (pdwStatus)
         *pdwStatus = 0;
