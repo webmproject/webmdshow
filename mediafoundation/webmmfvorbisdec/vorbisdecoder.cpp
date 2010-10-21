@@ -184,6 +184,29 @@ int VorbisDecoder::Decode(BYTE* ptr_samples, UINT32 length)
     return S_OK;
 }
 
+int VorbisDecoder::GetOutputSamplesAvailable(UINT32* ptr_num_samples_available)
+{
+    if (!ptr_num_samples_available)
+        return E_INVALIDARG;
+
+    const UINT32 total_samples_available = m_output_samples.size();
+    const UINT32 channels = m_vorbis_info.channels;
+
+    if (channels > 1)
+    {
+        // caller wants the total samples, not the size of the sample vector
+        *ptr_num_samples_available =
+            (total_samples_available + (channels - 1)) / channels;
+    }
+    else
+    {
+        // for mono the size of the samples vector is the number of samples
+        *ptr_num_samples_available = total_samples_available;
+    }
+
+    return S_OK;
+}
+
 int VorbisDecoder::ConsumeOutputSamples(BYTE* ptr_out_sample_buffer,
                                         UINT32 buffer_limit_in_bytes,
                                         UINT32* ptr_output_bytes_written,

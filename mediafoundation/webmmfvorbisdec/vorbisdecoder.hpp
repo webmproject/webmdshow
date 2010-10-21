@@ -22,6 +22,8 @@ public:
 
     int Decode(BYTE* ptr_samples, UINT32 length);
 
+    int GetOutputSamplesAvailable(UINT32* ptr_num_samples_available);
+
     int ConsumeOutputSamples(BYTE* ptr_output_buffer,
                              UINT32 buffer_limit_in_bytes,
                              UINT32* ptr_output_bytes_written,
