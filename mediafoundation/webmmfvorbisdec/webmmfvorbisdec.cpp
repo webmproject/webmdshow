@@ -669,6 +669,8 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
             m_samples.pop_front();
         }
 
+        m_vorbis_decoder.Flush();
+
         break;
 
     case MFT_MESSAGE_NOTIFY_BEGIN_STREAMING:
