@@ -1040,7 +1040,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     }
     assert(SUCCEEDED(status));
 
-    DBGLOG("start_time=" << start_time << " duration=" << duration);
+    DBGLOG("IN start_time=" << start_time << " duration=" << duration);
 
     int samples = 0;
     status = ProcessLibVorbisOutputPcmSamples(p_mf_output_sample, &samples);
@@ -1063,12 +1063,11 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
     status = p_mf_output_sample->SetSampleDuration(mediatime_decoded);
     assert(SUCCEEDED(status));
 
-    DBGLOG("mediatime_decoded=" << mediatime_decoded);
-    DBGLOG("m_total_time_decoded=" << m_total_time_decoded);
-
     // TODO(tomfinegan): does |m_total_time_decoded| need reset after seeking?
     m_total_time_decoded += mediatime_decoded;
 
+    DBGLOG("OUT start_time=" << start_time << " duration=" << mediatime_decoded);
+    DBGLOG("m_total_time_decoded=" << m_total_time_decoded);
     return S_OK;
 }
 
@@ -1148,6 +1147,19 @@ HRESULT WebmMfVorbisDec::CreateVorbisDecoder(IMFMediaType* p_media_type)
 
     SetOutputWaveFormat(MFAudioFormat_Float);
 
+    UINT32 mt_num_channels;
+    status = p_media_type->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS,
+                                     &mt_num_channels);
+    assert(SUCCEEDED(status));
+    UINT32 mt_sample_rate;
+    status = p_media_type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND,
+                                     &mt_sample_rate);
+    assert(SUCCEEDED(status));
+
+    assert(m_vorbis_info.rate > 0);
+    assert(mt_sample_rate == (UINT32)m_vorbis_info.rate);
+    assert(m_vorbis_info.channels > 0);
+    assert(mt_num_channels == (UINT32)m_vorbis_info.channels);
     assert(m_samples.empty() == true);
 
     return S_OK;
