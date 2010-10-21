@@ -1237,6 +1237,11 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     if (FAILED(hr))
         return hr;
 
+#if 0 //def _DEBUG
+    odbgstream os;
+    os << "WebmMfVp8Dec::ProcessOutput (begin)" << endl;
+#endif
+
     if (m_pInputMediaType == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
@@ -1313,7 +1318,7 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
     if (SUCCEEDED(hr) && (bPreroll != FALSE))
     {
-        pSample_in->Release();
+        //pSample_in->Release();
 
         //odbgstream os;
         //os << "WebmMfVp8Dec::ProcessOutput: received PREROLL flag" << endl;
@@ -1382,7 +1387,7 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
         //http://msdn.microsoft.com/en-us/library/aa473821%28v=VS.85%29.aspx
         //explains how to calculate the "minimum stride":
         //  MF_MT_DEFAULT_STRIDE
-        //  or, MFGetStrideForBitmapInfoHader
+        //  or, MFGetStrideForBitmapInfoHeader
         //  or, calculate it yourself
 
         INT32 stride_out;
@@ -1445,6 +1450,10 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     }
 
     //pSample_in->Release();
+
+#if 0 //def _DEBUG
+    os << "WebmMfVp8Dec::ProcessOutput (end)" << endl;
+#endif
 
     return S_OK;
 }
