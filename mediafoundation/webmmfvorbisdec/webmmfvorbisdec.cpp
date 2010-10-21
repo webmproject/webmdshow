@@ -15,13 +15,13 @@
 #include "vorbistypes.hpp"
 #include "webmmfvorbisdec.hpp"
 
-// keep the compiler quiet about do/while(0)'s used in log macros
-#pragma warning(disable:4127)
-
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
 using std::endl;
+
+// keep the compiler quiet about do/while(0)'s used in log macros
+#pragma warning(disable:4127)
 
 #define DBGLOG(X) \
 do { \
@@ -282,7 +282,7 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(
                    //MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER |
                    //MFT_OUTPUT_STREAM_FIXED_SAMPLE_SIZE;
 
-    info.cbSize = m_wave_format.nAvgBytesPerSec / 2;
+    info.cbSize = (DWORD)((double)m_wave_format.nAvgBytesPerSec / 4.f);
     info.cbAlignment = 0;
 
     return S_OK;
@@ -738,10 +738,8 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
     return hr;
 }
 
-HRESULT WebmMfVorbisDec::ProcessInput(
-    DWORD dwInputStreamID,
-    IMFSample* pSample,
-    DWORD)
+HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
+                                      DWORD)
 {
     if (dwInputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
@@ -780,8 +778,7 @@ HRESULT WebmMfVorbisDec::ProcessInput(
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(
-    IMFSample* p_mf_input_sample)
+HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
 {
     IMFMediaBufferPtr mf_input_sample_buffer;
 
@@ -849,9 +846,7 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
 
     // try to get a buffer from the output sample...
     IMFMediaBufferPtr mf_output_buffer;
-    HRESULT status = p_mf_output_sample->GetBufferByIndex(
-                        0,
-                        &mf_output_buffer);
+    HRESULT status = p_mf_output_sample->GetBufferByIndex(0, &mf_output_buffer);
 
     // and complain bitterly if unable
     if (FAILED(status) || !bool(mf_output_buffer))
@@ -877,12 +872,8 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutputPcmSamples(
     if (m_vorbis_output_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
-    const vorbis_output_samples_t::size_type total_samples_ =
-        m_vorbis_output_samples.size();
-
-    const int total_samples = static_cast<int>(total_samples_);
-
-    const UINT32 mf_storage_space_needed = total_samples *
+    int total_samples = m_vorbis_output_samples.size();
+    UINT32 mf_storage_space_needed = total_samples *
                                      (m_wave_format.wBitsPerSample / 8);
 
     DWORD mf_storage_limit;
@@ -1065,8 +1056,8 @@ HRESULT WebmMfVorbisDec::ProcessOutput(
 
     // set |p_mf_output_sample| duration to the duration of the pcm samples
     // output by libvorbis
-    double dmediatime_decoded = (double(samples) / m_vorbis_info.rate) *
-                                10000000.0;
+    double dmediatime_decoded = ((double)samples / (double)m_vorbis_info.rate) *
+                                10000000.0f;
     LONGLONG mediatime_decoded = static_cast<LONGLONG>(dmediatime_decoded);
 
     status = p_mf_output_sample->SetSampleDuration(mediatime_decoded);
@@ -1105,8 +1096,7 @@ HRESULT WebmMfVorbisDec::CreateVorbisDecoder(IMFMediaType* p_media_type)
     BYTE* p_format_blob = NULL;
     UINT32 blob_size = 0;
     HRESULT status = p_media_type->GetAllocatedBlob(MF_MT_USER_DATA,
-                                                    &p_format_blob,
-                                                    &blob_size);
+                                                    &p_format_blob, &blob_size);
     if (S_OK != status)
       return MF_E_INVALIDMEDIATYPE;
     if (NULL == p_format_blob)
@@ -1228,9 +1218,7 @@ HRESULT WebmMfVorbisDec::ValidatePcmAudioType(IMFMediaType *pmt)
     if (nSamplesPerSec != static_cast<UINT32>(m_vorbis_info.rate))
         return MF_E_INVALIDMEDIATYPE;
 
-    status = pmt->GetUINT32(
-                MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
-                &nAvgBytesPerSec);
+    status = pmt->GetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, &nAvgBytesPerSec);
     if (FAILED(status))
         return MF_E_INVALIDMEDIATYPE;
 
@@ -1299,8 +1287,7 @@ void WebmMfVorbisDec::SetOutputWaveFormat(GUID subtype)
      {
          m_wave_format.wBitsPerSample = sizeof(float) * 8;
          m_wave_format.nBlockAlign = m_wave_format.nChannels * sizeof(float);
-         m_wave_format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-         m_audio_format_tag = m_wave_format.wFormatTag;
+         m_audio_format_tag = m_wave_format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
      }
      else if (subtype == MFAudioFormat_PCM)
      {
