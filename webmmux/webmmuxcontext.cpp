@@ -1032,8 +1032,7 @@ int Context::EOS(Stream*)
 }
 
 
-void Context::CreateNewCluster(
-    const StreamVideo::VideoFrame* pvf_stop)
+void Context::CreateNewCluster(const StreamVideo::VideoFrame* pvf_stop)
 {
 #if 0
     odbgstream os;
@@ -1113,16 +1112,27 @@ void Context::CreateNewCluster(
 #endif
 
     ULONG cFrames = 0;
+    LONG vtc_prev  = -1;
 
     StreamVideo::frames_t& rframes = m_pVideo->GetKeyFrames();
 
     while (!vframes.empty())
     {
-        const StreamVideo::VideoFrame* const pvf = vframes.front();
+        typedef StreamVideo::frames_t::const_iterator video_iter_t;
+
+        video_iter_t video_iter = vframes.begin();
+        const video_iter_t video_iter_end = vframes.end();
+
+        const StreamVideo::VideoFrame* const pvf = *video_iter++;
         assert(pvf);
 
         if (pvf == pvf_stop)
             break;
+
+        const StreamVideo::VideoFrame* const pvf_next =
+            (video_iter == video_iter_end) ? 0 : *video_iter;
+
+        //const bool bLastVideo = (pvf_next == pvf_stop);
 
         const ULONG vt = pvf->GetTimecode();
         assert(vt >= c.m_timecode);
@@ -1133,15 +1143,20 @@ void Context::CreateNewCluster(
             if (!rframes.empty() && (pvf == rframes.front()))
                 rframes.pop_front();
 
-            WriteVideoFrame(c, cFrames);
+            const ULONG vtc = pvf->GetTimecode();
+
+            WriteVideoFrame(c, cFrames, pvf_stop, pvf_next, vtc_prev);
+
+            vtc_prev = vtc;
+
             continue;
         }
 
         const StreamAudio::frames_t& aframes = m_pAudio->GetFrames();
-        typedef StreamAudio::frames_t::const_iterator iter_t;
+        typedef StreamAudio::frames_t::const_iterator audio_iter_t;
 
-        iter_t i = aframes.begin();
-        const iter_t j = aframes.end();
+        audio_iter_t i = aframes.begin();
+        const audio_iter_t j = aframes.end();
 
         const StreamAudio::AudioFrame* const paf = *i++;  //1st audio frame
         assert(paf);
@@ -1154,14 +1169,18 @@ void Context::CreateNewCluster(
             if (!rframes.empty() && (pvf == rframes.front()))
                 rframes.pop_front();
 
-            WriteVideoFrame(c, cFrames);
+            const ULONG vtc = pvf->GetTimecode();
+
+            WriteVideoFrame(c, cFrames, pvf_stop, pvf_next, vtc_prev);
+
+            vtc_prev = vtc;
 
             continue;
         }
 
         //At this point, we have (at least) one audio frame,
         //and (at least) one video frame.  They could have an
-        //equal timecode, or that audio might be smaller than
+        //equal timecode, or the audio might be smaller than
         //the video.  Our desire is that the largest audio
         //frame less than the pvf_stop go on the next cluster,
         //which means any video frames greater than the audio
@@ -1301,7 +1320,12 @@ void Context::CreateNewClusterAudioOnly()
 }
 
 
-void Context::WriteVideoFrame(Cluster& c, ULONG& cFrames)
+void Context::WriteVideoFrame(
+    Cluster& c,
+    ULONG& cFrames,
+    const StreamVideo::VideoFrame* stop,
+    const StreamVideo::VideoFrame* next,
+    LONG prev_timecode)
 {
     assert(m_pVideo);
     StreamVideo& s = *m_pVideo;
@@ -1311,6 +1335,8 @@ void Context::WriteVideoFrame(Cluster& c, ULONG& cFrames)
 
     StreamVideo::VideoFrame* const pf = vframes.front();
     assert(pf);
+    assert(pf != stop);
+    assert(pf != next);
 
     StreamVideo::frames_t& rframes = m_pVideo->GetKeyFrames();
     rframes;  //already popped
@@ -1319,9 +1345,36 @@ void Context::WriteVideoFrame(Cluster& c, ULONG& cFrames)
     assert(cFrames < ULONG_MAX);
     ++cFrames;
 
-    pf->Write(s, c.m_timecode);
-
     const ULONG ft = pf->GetTimecode();
+
+    if (next != stop)
+        pf->WriteSimpleBlock(s, c.m_timecode);
+    else
+    {
+        ULONG duration;
+
+        if (next == 0)
+            duration = pf->GetDuration();
+        else
+        {
+            const ULONG tc_curr = pf->GetTimecode();
+            const ULONG tc_next = next->GetTimecode();
+
+            if (tc_next <= tc_curr)
+                duration = 0;
+            else
+                duration = tc_next - tc_curr;
+        }
+
+        if (duration == 0)
+            pf->WriteSimpleBlock(s, c.m_timecode);
+        else if ((prev_timecode >= 0) && (ft > ULONG(prev_timecode)))
+            pf->WriteBlockGroup(s, c.m_timecode, prev_timecode, duration);
+        else if (pf->IsKey())
+            pf->WriteBlockGroup(s, c.m_timecode, -1, duration);
+        else
+            pf->WriteSimpleBlock(s, c.m_timecode);
+    }
 
     if (pf->IsKey())
     {
@@ -1361,7 +1414,7 @@ void Context::WriteAudioFrame(Cluster& c, ULONG& cFrames)
    assert(cFrames < ULONG_MAX);
    ++cFrames;
 
-   pf->Write(s, c.m_timecode);
+   pf->WriteSimpleBlock(s, c.m_timecode);
 
    const ULONG ft = pf->GetTimecode();
 

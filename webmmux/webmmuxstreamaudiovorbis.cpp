@@ -13,6 +13,7 @@
 #include "cmediatypes.hpp"
 #include <cassert>
 #include <uuids.h>
+#include <vfwmsgs.h>
 #if 0 //def _DEBUG
 #include <odbgstream.hpp>
 #include <iomanip>
@@ -184,17 +185,26 @@ StreamAudioVorbis::VorbisFrame::VorbisFrame(
     assert(SUCCEEDED(hr));
     assert(st >= 0);
 
-    const __int64 ns = st * 100;  //nanoseconds
+    __int64 ns = st * 100;  //nanoseconds
 
     const Context& ctx = pStream->m_context;
     const ULONG scale = ctx.GetTimecodeScale();
     assert(scale >= 1);
 
     //TODO: verify this when scale equals audio sampling rate
-    const __int64 tc = ns / scale;
+    __int64 tc = ns / scale;
     assert(tc <= ULONG_MAX);
 
     m_timecode = static_cast<ULONG>(tc);
+
+    if ((hr == VFW_S_NO_STOP_TIME) || (sp <= st))
+        m_duration = 0;
+    else
+    {
+        ns = (sp - st) * 100;  //duration (ns units)
+        tc = ns / scale;
+        m_duration = static_cast<ULONG>(tc);
+    }
 
     const long size = pSample->GetActualDataLength();
     assert(size > 0);
@@ -267,6 +277,12 @@ BYTE StreamAudioVorbis::GetChannels() const
 ULONG StreamAudioVorbis::VorbisFrame::GetTimecode() const
 {
     return m_timecode;
+}
+
+
+ULONG StreamAudioVorbis::VorbisFrame::GetDuration() const
+{
+    return m_duration;
 }
 
 

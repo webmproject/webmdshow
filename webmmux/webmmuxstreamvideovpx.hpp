@@ -41,6 +41,7 @@ private:
     private:
         IMediaSample* const m_pSample;
         ULONG m_timecode;
+        ULONG m_duration;
 
     public:
         explicit VPxFrame(IMediaSample*, StreamVideoVPx*);
@@ -48,6 +49,7 @@ private:
 
         bool IsKey() const;
         ULONG GetTimecode() const;
+        ULONG GetDuration() const;
         ULONG GetSize() const;
         const BYTE* GetData() const;
 

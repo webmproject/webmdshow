@@ -58,6 +58,7 @@ private:
 
     private:
         ULONG m_timecode;
+        ULONG m_duration;
         BYTE* m_data;
         ULONG m_size;
 
@@ -66,6 +67,8 @@ private:
         ~VorbisFrame();
 
         ULONG GetTimecode() const;
+        ULONG GetDuration() const;
+
         ULONG GetSize() const;
         const BYTE* GetData() const;
 

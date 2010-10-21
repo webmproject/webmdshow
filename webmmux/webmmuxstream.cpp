@@ -182,17 +182,96 @@ Stream::TrackUID_t Stream::CreateTrackUID()
 }
 
 
-void Stream::Frame::Write(
+ULONG Stream::Frame::GetBlockSize() const
+{
+    const ULONG result = 1 + 2 + 1 + GetSize();  //tn, tc, flg, f
+    return result;
+}
+
+void Stream::Frame::WriteSimpleBlock(
     const Stream& s,
-    ULONG cluster_timecode) const
+    ULONG cluster_tc) const
+{
+    WriteBlock(s, cluster_tc, true, GetBlockSize());  //SimpleBlock
+}
+
+void Stream::Frame::WriteBlockGroup(
+    const Stream& s,
+    ULONG cluster_tc,
+    LONG prev_tc,
+    ULONG duration) const
 {
     EbmlIO::File& file = s.m_context.m_file;
 
-    const ULONG block_size = 1 + 2 + 1 + GetSize();     //tn, tc, flg, f
+    const ULONG block_size = GetBlockSize();
+    ULONG block_group_size = 5 + block_size;
+
+    const bool bKey = IsKey();
+
+    if (bKey)
+        block_group_size += 1 + 1 + 2;
+
+    if (duration > 0)
+        block_group_size += 1 + 1 + 4;
+
+    //begin block group
+
+    file.WriteID1(0xA0);  //block group
+    file.Write4UInt(block_group_size);
+
+#ifdef _DEBUG
+    const __int64 pos = file.GetPosition();
+#endif
+
+    WriteBlock(s, cluster_tc, false, block_size);
+
+    if (bKey)
+    {
+        assert(prev_tc >= 0);
+
+        const ULONG curr_tc = GetTimecode();
+        assert(curr_tc <= LONG_MAX);
+
+        const LONG tc = prev_tc - LONG(curr_tc);
+        assert(tc < 0);
+        assert(tc >= SHRT_MIN);
+
+        const SHORT val = static_cast<SHORT>(tc);
+
+        file.WriteID1(0xFB);  //ReferenceBlock ID
+        file.Write1UInt(2);
+        file.Serialize2SInt(val);
+    }
+
+    if (duration > 0)
+    {
+        file.WriteID1(0x9B);  //BlockDuration ID
+        file.Write1UInt(4);
+        file.Serialize4UInt(duration);
+    }
+
+    //end block group
+
+#ifdef _DEBUG
+    const __int64 newpos = file.GetPosition();
+    assert((newpos - pos) == block_group_size);
+#endif
+}
+
+
+void Stream::Frame::WriteBlock(
+    const Stream& s,
+    ULONG cluster_timecode,
+    bool simple_block,
+    ULONG block_size) const
+{
+    EbmlIO::File& file = s.m_context.m_file;
 
     //begin block
 
-    file.WriteID1(0xA3);    //SimpleBlock ID
+    const BYTE id = simple_block ? 0xA3 : 0xA1;  //SimpleBlock vs. Block
+
+    file.WriteID1(id);
     file.Write4UInt(block_size);
 
 #ifdef _DEBUG
@@ -207,9 +286,10 @@ void Stream::Frame::Write(
 
     file.Write1UInt(tn);   //track number
 
-    const ULONG ft = GetTimecode();
-
     {
+        const ULONG ft = GetTimecode();
+        assert(ft <= LONG_MAX);
+
         const LONG tc_ = LONG(ft) - LONG(cluster_timecode);
         assert(tc_ >= SHRT_MIN);
         assert(tc_ <= SHRT_MAX);
@@ -221,7 +301,7 @@ void Stream::Frame::Write(
 
     BYTE flags = 0;
 
-    if (IsKey())
+    if (simple_block & IsKey())
         flags |= BYTE(1 << 7);
 
     file.Write(&flags, 1);   //written as binary, not uint
@@ -234,9 +314,7 @@ void Stream::Frame::Write(
     const __int64 newpos = file.GetPosition();
     assert((newpos - pos) == block_size);
 #endif
-
 }
-
 
 
 }  //end namespace WebmMuxLib

@@ -111,7 +111,13 @@ private:
     void CreateNewCluster(const StreamVideo::VideoFrame*);
     void CreateNewClusterAudioOnly();
 
-    void WriteVideoFrame(Cluster&, ULONG&);
+    void WriteVideoFrame(
+        Cluster&,
+        ULONG&,
+        const StreamVideo::VideoFrame* stop,
+        const StreamVideo::VideoFrame* next,
+        LONG prev_timecode);
+
     void WriteAudioFrame(Cluster&, ULONG&);
 
     void WriteCuePoints(const Cluster&);

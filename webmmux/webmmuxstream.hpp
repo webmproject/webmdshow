@@ -42,12 +42,33 @@ public:
         Frame();
         virtual ~Frame();
 
+        void WriteBlock(
+            const Stream&,
+            ULONG cluster_timecode,
+            bool simple_block,
+            ULONG block_size) const;
+
+        ULONG GetBlockSize() const;
+
     public:
         virtual bool IsKey() const = 0;
-        virtual void Write(const Stream&, ULONG cluster_timecode) const;
+
+        void WriteSimpleBlock(
+                    const Stream&,
+                    ULONG cluster_timecode) const;
+
+        void WriteBlockGroup(
+                    const Stream&,
+                    ULONG cluster_timecode,
+                    LONG prev_timecode,
+                    ULONG duration) const;
+
         virtual ULONG GetTimecode() const = 0;
+        virtual ULONG GetDuration() const = 0;  //TimecodeScale units
+
         virtual const BYTE* GetData() const = 0;
         virtual ULONG GetSize() const = 0;
+
         virtual void Release();
 
     };

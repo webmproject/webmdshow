@@ -170,24 +170,37 @@ StreamAudioVorbisOgg::VorbisFrame::VorbisFrame(
     assert(SUCCEEDED(hr));
     assert(st >= 0);
 
-    const double samples = double(st);
+    double samples = double(st);
 
-    const ULONG samplesPerSec = pStream->GetSamplesPerSec();
-    assert(samplesPerSec > 0);
+    const ULONG samples_per_sec_ = pStream->GetSamplesPerSec();
+    assert(samples_per_sec_ > 0);
+
+    const double samples_per_sec = double(samples_per_sec_);
 
     //secs [=] samples / samples/sec
-    const double secs = samples / double(samplesPerSec);
+    double secs = samples / samples_per_sec;
 
-    const double ns = secs * 1000000000.0;
+    double ns = secs * 1000000000.0;
 
     const Context& ctx = pStream->m_context;
     const ULONG scale = ctx.GetTimecodeScale();
     assert(scale >= 1);
 
-    const double tc = ns / scale;
+    double tc = ns / scale;
     assert(tc <= ULONG_MAX);
 
     m_timecode = static_cast<ULONG>(tc);
+
+    if ((hr == VFW_S_NO_STOP_TIME) || (sp <= st))
+        m_duration = 0;
+    else
+    {
+        samples = double(sp - st);
+        secs = samples / samples_per_sec;
+        ns = secs * 1000000000.0;
+        tc = ns / scale;
+        m_duration = static_cast<ULONG>(tc);
+    }
 
     const long size = pSample->GetActualDataLength();
     assert(size > 0);
@@ -254,6 +267,12 @@ BYTE StreamAudioVorbisOgg::GetChannels() const
 ULONG StreamAudioVorbisOgg::VorbisFrame::GetTimecode() const
 {
     return m_timecode;
+}
+
+
+ULONG StreamAudioVorbisOgg::VorbisFrame::GetDuration() const
+{
+    return m_duration;
 }
 
 

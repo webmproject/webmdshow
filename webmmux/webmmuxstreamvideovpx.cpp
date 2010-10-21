@@ -11,6 +11,7 @@
 #include "webmmuxstreamvideovpx.hpp"
 #include <climits>
 #include <cassert>
+#include <vfwmsgs.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -36,16 +37,25 @@ StreamVideoVPx::VPxFrame::VPxFrame(
     assert(SUCCEEDED(hr));
     assert(st >= 0);
 
-    const __int64 ns = st * 100;  //nanoseconds
+    __int64 ns = st * 100;  //nanoseconds
 
     const Context& ctx = pStream->m_context;
     const ULONG scale = ctx.GetTimecodeScale();
     assert(scale >= 1);
 
-    const __int64 tc = ns / scale;
+    __int64 tc = ns / scale;
     assert(tc <= ULONG_MAX);
 
     m_timecode = static_cast<ULONG>(tc);
+
+    if ((hr == VFW_S_NO_STOP_TIME) || (sp <= st))
+        m_duration = 0;
+    else
+    {
+        ns = (sp - st) * 100;  //duration (ns units)
+        tc = ns / scale;
+        m_duration = static_cast<ULONG>(tc);
+    }
 }
 
 
@@ -59,6 +69,12 @@ StreamVideoVPx::VPxFrame::~VPxFrame()
 ULONG StreamVideoVPx::VPxFrame::GetTimecode() const
 {
     return m_timecode;
+}
+
+
+ULONG StreamVideoVPx::VPxFrame::GetDuration() const
+{
+    return m_duration;
 }
 
 
