@@ -131,7 +131,7 @@ private:
     HRESULT CreateVorbisDecoder(IMFMediaType* pmt);
     void DestroyVorbisDecoder();
     HRESULT NextOggPacket(BYTE* p_packet, DWORD packet_size);
-    HRESULT ValidatePcmAudioType(IMFMediaType *pmt);
+    HRESULT ValidateOutputFormat(IMFMediaType *pmt);
     HRESULT CreateMediaBuffer(DWORD size, IMFMediaBuffer** pp_buffer);
     HRESULT DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample);
     HRESULT ProcessLibVorbisOutputPcmSamples(IMFSample* p_mf_output_sample,
@@ -153,25 +153,12 @@ private:
     typedef std::list<IMFSample*> samples_t;
     samples_t m_samples;
 
-    // vorbis members
-    vorbis_info m_vorbis_info; // contains static bitstream settings
-    vorbis_comment m_vorbis_comment; // contains user comments
-    vorbis_dsp_state m_vorbis_state; // decoder state
-    vorbis_block m_vorbis_block; // working space for packet->PCM decode
-
     WAVEFORMATEX m_wave_format;
-
-    ogg_packet m_ogg_packet;
-    DWORD m_ogg_packet_count;
-
-    typedef std::vector<float> vorbis_output_samples_t;
-    vorbis_output_samples_t m_vorbis_output_samples;
-
     LONGLONG m_total_time_decoded;
 
     int m_audio_format_tag;
 
-    bool m_end_of_stream_reached;
+    VorbisDecoder m_vorbis_decoder;
 };
 
 }  //end namespace WebmMfVorbisDecLib

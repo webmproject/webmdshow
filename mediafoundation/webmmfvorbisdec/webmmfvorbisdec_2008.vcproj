@@ -411,6 +411,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\vorbisdecoder.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\vorbisdecoder.hpp"
+			>
+		</File>
+		<File
 			RelativePath=".\webmmfvorbisdec.cpp"
 			>
 		</File>
