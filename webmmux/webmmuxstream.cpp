@@ -208,7 +208,7 @@ void Stream::Frame::WriteBlockGroup(
 
     const bool bKey = IsKey();
 
-    if (bKey)
+    if (!bKey)
         block_group_size += 1 + 1 + 2;
 
     if (duration > 0)
@@ -225,7 +225,7 @@ void Stream::Frame::WriteBlockGroup(
 
     WriteBlock(s, cluster_tc, false, block_size);
 
-    if (bKey)
+    if (!bKey)
     {
         assert(prev_tc >= 0);
 
