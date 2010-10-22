@@ -881,15 +881,15 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     IMFSample* const p_mf_input_sample = m_samples.front();
 
     assert(p_mf_input_sample);
-    if (!p_mf_input_sample)
-      return E_FAIL; // TODO(tomfinegan): we return
-                     // MF_E_TRANSFORM_NEED_MORE_INPUT when m_samples is empty,
-                     // this is a serious error...
 
     status = DecodeVorbisFormat2Sample(p_mf_input_sample);
 
     if (FAILED(status))
         return status;
+
+    // TODO(tomfinegan): try holding samples until we can satisfy the endtime
+    //                   of an input media sample; leave any excess samples
+    //                   in |m_vorbis_decoder|
 
     // media sample data has been passed to libvorbis; pop/release
     p_mf_input_sample->Release();
