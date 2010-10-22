@@ -581,8 +581,8 @@ HRESULT WebmMfSource::CreatePresentationDescriptor(
     mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
     assert(pTracks);
 
-    bool have_video = false;
-    bool have_audio = false;
+    LONG idx_video = -1;
+    LONG idx_audio = -1;
 
     for (DWORD idx = 0; idx < cSD; ++idx)
     {
@@ -605,7 +605,7 @@ HRESULT WebmMfSource::CreatePresentationDescriptor(
 
         if (type == 1)  //video
         {
-            if (have_video)
+            if (idx_video >= 0)
             {
                 hr = pDesc->DeselectStream(idx);
                 assert(SUCCEEDED(hr));
@@ -615,14 +615,14 @@ HRESULT WebmMfSource::CreatePresentationDescriptor(
                 hr = pDesc->SelectStream(idx);
                 assert(SUCCEEDED(hr));
 
-                have_video = true;
+                idx_video = idx;
             }
         }
         else
         {
             assert(type == 2);  //audio
 
-            if (have_audio)
+            if (idx_audio >= 0)
             {
                 hr = pDesc->DeselectStream(idx);
                 assert(SUCCEEDED(hr));
@@ -632,21 +632,222 @@ HRESULT WebmMfSource::CreatePresentationDescriptor(
                 hr = pDesc->SelectStream(idx);
                 assert(SUCCEEDED(hr));
 
-                have_audio = true;
+                idx_audio = idx;
             }
         }
     }
 
-    const LONGLONG duration_ns = m_pSegment->GetDuration();
-    assert(duration_ns >= 0);  //TODO
+#if 0
+    SetDuration(pDesc, idx_video, idx_audio);
+#else
+    const LONGLONG duration = GetDuration();  //reftime units
 
-    const UINT64 duration = duration_ns / 100;
-
-    hr = pDesc->SetUINT64(MF_PD_DURATION, duration);
-    assert(SUCCEEDED(hr));  //TODO
+    if (duration > 0)
+    {
+        const HRESULT hr = pDesc->SetUINT64(MF_PD_DURATION, duration);
+        assert(SUCCEEDED(hr));  //TODO
+    }
+#endif
 
     return S_OK;
 }
+
+
+#if 0
+void WebmMfSource::SetDuration(
+    IMFPresentationDescriptor* pDesc,
+    LONG idx_video,
+    LONG idx_audio) const
+{
+    assert(pDesc);
+
+    const LONGLONG duration_ns = m_pSegment->GetDuration();
+
+    if (duration_ns > 0)
+    {
+        const UINT64 duration = duration_ns / 100;  //reftime units
+
+        const HRESULT hr = pDesc->SetUINT64(MF_PD_DURATION, duration);
+        assert(SUCCEEDED(hr));  //TODO
+
+        return;
+    }
+
+    if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
+    {
+        using namespace mkvparser;
+
+        //TODO: this is not necessarily the CuePoint we want.
+        //Really, we want the last cue point containing a track position
+        //for our selected track(s).
+
+        //TODO: we don't really care what tracks have been selected.
+        //We can just: get the last cue point, and get some track
+        //position from that cue point, get its block entry,
+        //get its cluster, and then use that.
+
+        const CuePoint* const pCP = pCues->GetLast();
+        assert(pCP);  //TODO
+
+        LONG idx;
+
+        if (idx_video >= 0)
+            idx = idx_video;
+        else if (idx_audio >= 0)
+            idx = idx_audio;
+        else
+            idx = -1;
+
+        if (idx >= 0)
+        {
+            BOOL fSelected;
+            IMFStreamDescriptorPtr pSD;
+
+            HRESULT hr = pDesc->GetStreamDescriptorByIndex(
+                idx,
+                &fSelected,
+                &pSD);
+
+            assert(SUCCEEDED(hr));
+            assert(pSD);
+
+            DWORD id;
+
+            hr = pSD->GetStreamIdentifier(&id);
+            assert(SUCCEEDED(hr));
+
+            const Tracks* const pTracks = m_pSegment->GetTracks();
+
+            const Track* const pTrack = pTracks->GetTrackByNumber(id);
+            assert(pTrack);
+
+            const CuePoint::TrackPosition* const pTP = pCP->Find(pTrack);
+
+            if (pTP)
+            {
+                const BlockEntry* const pBE = pCues->GetBlock(pCP, pTP);
+
+                if ((pBE != 0) && !pBE->EOS())
+                {
+                    Cluster* pCluster = pBE->GetCluster();
+                    assert(pCluster);
+                    assert(!pCluster->EOS());
+
+                    if (pCluster->m_index >= 0)  //loaded
+                    {
+                        Cluster* const p = m_pSegment->GetLast();
+                        assert(p);
+                        assert(p->m_index >= 0);
+
+                        pCluster = p;
+                    }
+                    else //pre-loaded
+                    {
+                        for (int i = 0; i < 10; ++i)
+                        {
+                            Cluster* const p = m_pSegment->GetNext(pCluster);
+
+                            if ((p == 0) || p->EOS())
+                                break;
+
+                            pCluster = p;
+                        }
+                    }
+
+                    const LONGLONG ns = pCluster->GetLastTime();
+                    assert(ns >= 0);
+
+                    const UINT64 duration = ns / 100;  //reftime
+
+                    hr = pDesc->SetUINT64(MF_PD_DURATION, duration);
+                    assert(SUCCEEDED(hr));  //TODO
+
+                    return;
+                }
+            }
+        }
+    }
+
+    //TODO: anything else we can do here?
+
+    return;
+}
+#else
+LONGLONG WebmMfSource::GetDuration() const
+{
+    const LONGLONG duration_ns = m_pSegment->GetDuration();
+
+    if (duration_ns > 0)
+    {
+        const UINT64 reftime = duration_ns / 100;  //reftime units
+        return reftime;
+    }
+
+    if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
+    {
+        using namespace mkvparser;
+
+        const CuePoint* const pCP = pCues->GetLast();
+        assert(pCP);  //TODO
+
+        const Tracks* const pTracks = m_pSegment->GetTracks();
+        const ULONG count = pTracks->GetTracksCount();
+
+        for (ULONG idx = 0; idx < count; ++idx)
+        {
+            const Track* const pTrack = pTracks->GetTrackByIndex(idx);
+
+            if (pTrack == 0)
+                continue;
+
+            const CuePoint::TrackPosition* const pTP = pCP->Find(pTrack);
+
+            if (pTP == 0)
+                continue;
+
+            const BlockEntry* const pBE = pCues->GetBlock(pCP, pTP);
+
+            if ((pBE == 0) || pBE->EOS())
+                continue;
+
+            Cluster* pCluster = pBE->GetCluster();
+            assert(pCluster);
+            assert(!pCluster->EOS());
+
+            if (pCluster->m_index >= 0)  //loaded
+            {
+                Cluster* const p = m_pSegment->GetLast();
+                assert(p);
+                assert(p->m_index >= 0);
+
+                pCluster = p;
+            }
+            else //pre-loaded
+            {
+                for (int i = 0; i < 10; ++i)
+                {
+                    Cluster* const p = m_pSegment->GetNext(pCluster);
+
+                    if ((p == 0) || p->EOS())
+                        break;
+
+                    pCluster = p;
+                }
+            }
+
+            const LONGLONG ns = pCluster->GetLastTime();
+            assert(ns >= 0);
+
+            const UINT64 reftime = ns / 100;  //reftime
+            return reftime;
+        }
+    }
+
+    //TODO: anything else we can do here?
+
+    return -1;
+}
+#endif
 
 
 HRESULT WebmMfSource::Start(
@@ -1710,6 +1911,9 @@ void WebmMfSource::Seek(
         pBaseCluster = vs[base].info.pBE->GetCluster();
     else  //no video stream(s)
     {
+        //TODO: we can do better here, by trying to see if
+        //the audio streams have cue points of their own.
+
         const long status = m_pSegment->LoadCluster();
         assert(status == 0);  //TODO
 

@@ -97,6 +97,7 @@ private:
     virtual ~WebmMfSource();
 
     HRESULT Load();
+    LONGLONG GetDuration() const;
 
     IClassFactory* const m_pClassFactory;
     LONG m_cRef;
