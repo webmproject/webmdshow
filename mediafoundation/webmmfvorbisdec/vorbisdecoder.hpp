@@ -1,6 +1,12 @@
 #ifndef _MEDIAFOUNDATION_WEBMMFVORBISDEC_VORBISDECODER_HPP_
 #define _MEDIAFOUNDATION_WEBMMFVORBISDEC_VORBISDECODER_HPP_
 
+#ifndef DISALLOW_COPY_AND_ASSIGN
+#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
+  TypeName(const TypeName&);               \
+  void operator=(const TypeName&)
+#endif
+
 #include "vorbis/codec.h"
 
 namespace WebmMfVorbisDecLib
@@ -66,9 +72,9 @@ private:
     typedef std::vector<float> pcm_samples_t;
     pcm_samples_t m_output_samples;
 
+
     // disallow copy and assign
-    VorbisDecoder(const VorbisDecoder&);
-    void operator=(const VorbisDecoder&);
+    DISALLOW_COPY_AND_ASSIGN(VorbisDecoder);
 };
 
 } // namespace WebmMfVorbisDecLib
