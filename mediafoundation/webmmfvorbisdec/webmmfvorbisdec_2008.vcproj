@@ -411,6 +411,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\pcmwriter.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\pcmwriter.hpp"
+			>
+		</File>
+		<File
 			RelativePath=".\vorbisdecoder.cpp"
 			>
 		</File>

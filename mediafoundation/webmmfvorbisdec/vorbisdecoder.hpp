@@ -9,6 +9,10 @@
 
 #include "vorbis/codec.h"
 
+#ifdef _DEBUG
+#include "pcmwriter.hpp"
+#endif
+
 namespace WebmMfVorbisDecLib
 {
 
@@ -72,6 +76,9 @@ private:
     typedef std::vector<float> pcm_samples_t;
     pcm_samples_t m_output_samples;
 
+#ifdef _DEBUG
+    WebmMfVorbisDecLib::WfxPcmWriter m_pcm_writer;
+#endif
 
     // disallow copy and assign
     DISALLOW_COPY_AND_ASSIGN(VorbisDecoder);

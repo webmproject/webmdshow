@@ -24,6 +24,7 @@ do { \
     wodbgstream wos; \
     wos << "["__FUNCTION__"] " << X << endl; \
 } while(0)
+
 #else
 #define DBGLOG(X) do {} while(0)
 #endif
@@ -110,6 +111,10 @@ int VorbisDecoder::CreateDecoder(const BYTE** const ptr_headers,
 
     assert(m_vorbis_info.rate > 0);
     assert(m_vorbis_info.channels > 0);
+
+#ifdef _DEBUG
+    m_pcm_writer.Open(&m_wave_format);
+#endif
 
     return S_OK;
 }
@@ -252,6 +257,10 @@ int VorbisDecoder::ConsumeOutputSamples(BYTE* ptr_out_sample_buffer,
     DBGLOG("out_sample_count=" << *ptr_output_sample_count);
 
     *ptr_output_bytes_written = bytes_to_copy;
+
+#ifdef _DEBUG
+    m_pcm_writer.Write(ptr_out_sample_buffer, bytes_to_copy);
+#endif
 
     return S_OK;
 }
