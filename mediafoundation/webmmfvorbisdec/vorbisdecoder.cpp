@@ -112,7 +112,7 @@ int VorbisDecoder::CreateDecoder(const BYTE** const ptr_headers,
     assert(m_vorbis_info.rate > 0);
     assert(m_vorbis_info.channels > 0);
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     m_pcm_writer.Open(&m_wave_format);
 #endif
 
@@ -258,7 +258,7 @@ int VorbisDecoder::ConsumeOutputSamples(BYTE* ptr_out_sample_buffer,
 
     *ptr_output_bytes_written = bytes_to_copy;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     m_pcm_writer.Write(ptr_out_sample_buffer, bytes_to_copy);
 #endif
 
