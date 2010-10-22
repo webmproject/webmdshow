@@ -41,6 +41,7 @@ VorbisDecoder::VorbisDecoder() :
     ::memset(&m_vorbis_state, 0, sizeof vorbis_dsp_state);
     ::memset(&m_vorbis_block, 0, sizeof vorbis_block);
     ::memset(&m_ogg_packet, 0, sizeof ogg_packet);
+    ::memset(&m_wave_format, 0, sizeof WAVEFORMATEX);
 }
 
 VorbisDecoder::~VorbisDecoder()
