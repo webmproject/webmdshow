@@ -28,8 +28,12 @@ do { \
     wodbgstream wos; \
     wos << "["__FUNCTION__"] " << X << endl; \
 } while(0)
+
+#define REFTIMETOSECONDS(X) ((double)X / 10000000.0f)
+
 #else
 #define DBGLOG(X) do {} while(0)
+#define REFTIMETOSECONDS(X) X
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
@@ -71,6 +75,7 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),
     m_total_time_decoded(0),
+    m_stream_start_time(-1),
     m_audio_format_tag(WAVE_FORMAT_IEEE_FLOAT)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
@@ -660,6 +665,7 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
         DBGLOG("MFT_MESSAGE_COMMAND_FLUSH");
 
         m_total_time_decoded = 0;
+        m_stream_start_time = -1;
 
         while (!m_samples.empty())
         {
@@ -887,22 +893,21 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     if (FAILED(status))
         return status;
 
-    // TODO(tomfinegan): try holding samples until we can satisfy the endtime
-    //                   of an input media sample; leave any excess samples
-    //                   in |m_vorbis_decoder|
-
-    // media sample data has been passed to libvorbis; pop/release
-    p_mf_input_sample->Release();
-    m_samples.pop_front();
-
     // set |p_mf_output_sample| start time to input sample start time...
-    LONGLONG start_time = 0, duration = 0;
+    LONGLONG start_time = 0;
     status = p_mf_input_sample->GetSampleTime(&start_time);
     assert(SUCCEEDED(status));
     assert(start_time >= 0);
     if (FAILED(status))
       return status;
 
+    if (m_stream_start_time == -1)
+    {
+        m_stream_start_time = start_time;
+        DBGLOG("m_stream_start_time=" << REFTIMETOSECONDS(m_stream_start_time));
+    }
+
+    LONGLONG duration;
     status = p_mf_input_sample->GetSampleDuration(&duration);
     if (FAILED(status) && MF_E_NO_SAMPLE_DURATION != status)
     {
@@ -910,14 +915,27 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
         assert(SUCCEEDED(status));
     }
 
-    DBGLOG("IN start_time=" << start_time << " duration=" << duration);
+    // media sample data has been passed to libvorbis; pop/release
+    p_mf_input_sample->Release();
+    m_samples.pop_front();
+
+    DBGLOG("IN start_time=" << REFTIMETOSECONDS(start_time) <<
+           " duration=" << REFTIMETOSECONDS(duration));
+
+    UINT32 num_samples_available;
+    status = m_vorbis_decoder.GetOutputSamplesAvailable(&num_samples_available);
+
+    if (num_samples_available == 0)
+    {
+        return MF_E_TRANSFORM_NEED_MORE_INPUT;
+    }
 
     int samples = 0;
     status = ProcessLibVorbisOutputPcmSamples(p_mf_output_sample, &samples);
     if (FAILED(status))
         return status;
 
-    start_time = m_total_time_decoded;
+    start_time = m_stream_start_time + m_total_time_decoded;
 
     status = p_mf_output_sample->SetSampleTime(start_time);
     assert(SUCCEEDED(status));
@@ -933,11 +951,11 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     status = p_mf_output_sample->SetSampleDuration(mediatime_decoded);
     assert(SUCCEEDED(status));
 
-    // TODO(tomfinegan): does |m_total_time_decoded| need reset after seeking?
     m_total_time_decoded += mediatime_decoded;
 
-    DBGLOG("OUT start_time=" << start_time << " duration=" << mediatime_decoded);
-    DBGLOG("m_total_time_decoded=" << m_total_time_decoded);
+    DBGLOG("OUT start_time=" << REFTIMETOSECONDS(start_time) <<
+           " duration=" << REFTIMETOSECONDS(mediatime_decoded));
+    DBGLOG("m_total_time_decoded=" << REFTIMETOSECONDS(m_total_time_decoded));
     return S_OK;
 }
 

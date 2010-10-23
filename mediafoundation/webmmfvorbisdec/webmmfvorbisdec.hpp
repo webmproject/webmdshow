@@ -154,7 +154,8 @@ private:
     samples_t m_samples;
 
     WAVEFORMATEX m_wave_format;
-    LONGLONG m_total_time_decoded;
+    REFERENCE_TIME m_total_time_decoded;
+    REFERENCE_TIME m_stream_start_time;
 
     int m_audio_format_tag;
 
