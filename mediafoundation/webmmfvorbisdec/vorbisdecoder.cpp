@@ -9,7 +9,7 @@
 #include "mmreg.h"
 #endif
 
-#include "VorbisDecoder.hpp"
+#include "vorbisdecoder.hpp"
 
 #ifdef _DEBUG
 #include "odbgstream.hpp"

@@ -10,7 +10,7 @@
 #include <cmath>
 
 #include "clockable.hpp"
-#include "VorbisDecoder.hpp"
+#include "vorbisdecoder.hpp"
 #include "webmtypes.hpp"
 #include "vorbistypes.hpp"
 #include "webmmfvorbisdec.hpp"
