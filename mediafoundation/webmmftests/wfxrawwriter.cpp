@@ -7,22 +7,22 @@
 #include "mmsystem.h"
 #include "mmreg.h"
 #endif
-#include "pcmwriter.hpp"
+#include "wfxrawwriter.hpp"
 
 namespace WebmMfVorbisDecLib
 {
 
-WfxPcmWriter::WfxPcmWriter() : closed_(true)
+WfxRawWriter::WfxRawWriter() : closed_(true)
 {
   ::memset(&wave_format_, 0, sizeof WAVEFORMATEX);
 }
 
-WfxPcmWriter::~WfxPcmWriter()
+WfxRawWriter::~WfxRawWriter()
 {
   Close();
 }
 
-int WfxPcmWriter::Open(const WAVEFORMATEX* ptr_wave_format)
+int WfxRawWriter::Open(const WAVEFORMATEX* ptr_wave_format)
 {
   if (!ptr_wave_format)
     return E_POINTER;
@@ -45,7 +45,7 @@ int WfxPcmWriter::Open(const WAVEFORMATEX* ptr_wave_format)
   return result;
 }
 
-int WfxPcmWriter::Write(const BYTE* const ptr_byte_buffer, UINT32 byte_count)
+int WfxRawWriter::Write(const BYTE* const ptr_byte_buffer, UINT32 byte_count)
 {
   assert(ptr_byte_buffer);
   assert(byte_count > 0);
@@ -62,7 +62,7 @@ int WfxPcmWriter::Write(const BYTE* const ptr_byte_buffer, UINT32 byte_count)
   return S_OK;
 }
 
-int WfxPcmWriter::Reopen_()
+int WfxRawWriter::Reopen_()
 {
   using std::ios;
   file_stream_.open(file_name_.c_str(), ios::binary | ios::ate | ios::app);
@@ -73,7 +73,7 @@ int WfxPcmWriter::Reopen_()
   return S_OK;
 }
 
-int WfxPcmWriter::Close()
+int WfxRawWriter::Close()
 {
   int result = S_FALSE;
   if (!closed_)

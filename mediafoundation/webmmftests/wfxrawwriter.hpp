@@ -1,5 +1,5 @@
-#ifndef __MEDIAFOUNDATION_WEBMMFVORBISDEC_PCMWRITER_HPP__
-#define __MEDIAFOUNDATION_WEBMMFVORBISDEC_PCMWRITER_HPP__
+#ifndef __MEDIAFOUNDATION_WEBMMFVORBISDEC_WFXRAWWRITER_HPP__
+#define __MEDIAFOUNDATION_WEBMMFVORBISDEC_WFXRAWWRITER_HPP__
 
 #ifndef DISALLOW_COPY_AND_ASSIGN
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
@@ -20,11 +20,11 @@ namespace WebmMfVorbisDecLib
 // ------------------------------------------------------
 // | WAVEFORMATEX | WAVEFORMATEX.cbSize bytes | samples |
 // ------------------------------------------------------
-class WfxPcmWriter
+class WfxRawWriter
 {
 public:
-    WfxPcmWriter();
-    ~WfxPcmWriter();
+    WfxRawWriter();
+    ~WfxRawWriter();
     int Open(const WAVEFORMATEX* ptr_wave_format);
     int Write(const BYTE* const ptr_byte_buffer, UINT32 byte_count);
     int Close();
@@ -34,10 +34,10 @@ private:
     WAVEFORMATEX wave_format_;
     std::ofstream file_stream_;
     std::string file_name_;
-    DISALLOW_COPY_AND_ASSIGN(WfxPcmWriter);
+    DISALLOW_COPY_AND_ASSIGN(WfxRawWriter);
 };
 
 }
 #endif // _DEBUG
 
-#endif // __MEDIAFOUNDATION_WEBMMFVORBISDEC_PCMWRITER_HPP__
+#endif // __MEDIAFOUNDATION_WEBMMFVORBISDEC_WFXRAWWRITER_HPP__
