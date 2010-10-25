@@ -29,7 +29,7 @@ do { \
     wos << "["__FUNCTION__"] " << X << endl; \
 } while(0)
 
-#define REFTIMETOSECONDS(X) ((double)X / 10000000.0f)
+#define REFTIMETOSECONDS(X) (double(X) / 10000000.0f)
 
 #else
 #define DBGLOG(X) do {} while(0)
