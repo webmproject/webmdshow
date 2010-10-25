@@ -142,6 +142,8 @@ private:
 
     void SetOutputWaveFormat(GUID subtype);
 
+    REFERENCE_TIME SamplesToMediaTime(UINT64 num_samples);
+
     IClassFactory* const m_pClassFactory;
     LONG m_cRef;
 
@@ -154,7 +156,7 @@ private:
     samples_t m_samples;
 
     WAVEFORMATEX m_wave_format;
-    REFERENCE_TIME m_total_time_decoded;
+    UINT64 m_total_samples_decoded;
     REFERENCE_TIME m_stream_start_time;
 
     int m_audio_format_tag;
