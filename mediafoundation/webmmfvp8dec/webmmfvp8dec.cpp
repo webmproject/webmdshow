@@ -1318,13 +1318,38 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
     if (SUCCEEDED(hr) && (bPreroll != FALSE))
     {
-        //pSample_in->Release();
+#if 0
+        odbgstream os;
+        os << "WebmMfVp8Dec::ProcessOutput: received PREROLL flag";
 
-        //odbgstream os;
-        //os << "WebmMfVp8Dec::ProcessOutput: received PREROLL flag" << endl;
+        LONGLONG t;
+
+        hr = pSample_in->GetSampleTime(&t);
+
+        if (SUCCEEDED(hr))
+            os << "; t[sec]=" << (double(t) / 10000000);
+
+        os << endl;
+#endif
 
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
     }
+
+#if 0
+    {
+        odbgstream os;
+        os << "WebmMfVp8Dec::ProcessOutput: non-PREROLL";
+
+        LONGLONG t;
+
+        hr = pSample_in->GetSampleTime(&t);
+
+        if (SUCCEEDED(hr))
+            os << "; t[sec]=" << (double(t) / 10000000);
+
+        os << endl;
+    }
+#endif
 
     GUID subtype;
 

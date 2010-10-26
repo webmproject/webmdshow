@@ -221,9 +221,6 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     HRESULT hr = lock.Seize(m_pSource);
     assert(SUCCEEDED(hr));  //TODO
 
-    //odbgstream os;
-    //os << "WebmMfStream::RequestSample" << endl;
-
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
@@ -252,6 +249,22 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
     if (hr == S_OK)  //have a sample
     {
+#if 0
+        odbgstream os;
+
+        LONGLONG t;
+
+        hr = pSample->GetSampleTime(&t);
+        assert(SUCCEEDED(hr));
+        assert(t >= 0);
+
+        os << "WebmMfStream::RequestSample: type="
+           << m_pTrack->GetType()
+           << " time[sec]="
+           << (double(t) / 10000000)
+           << endl;
+#endif
+
         //WavSource sample says:
         // NOTE: If we processed sample requests asynchronously, we would
         // need to call AddRef on the token and put the token onto a FIFO
@@ -283,6 +296,7 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
 #ifdef _DEBUG
     odbgstream os;
+
     os << "WebmMfStream::RequestSample: EOS detected; track="
        << m_pTrack->GetNumber()
        << " type="
