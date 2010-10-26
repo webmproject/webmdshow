@@ -65,7 +65,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmtd.lib"
+				AdditionalDependencies="mfuuid.lib evr_vista.lib mfplat_vista.lib vpxmtd.lib"
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\libvpx\x86\debug"
@@ -140,7 +140,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmtd.lib"
+				AdditionalDependencies="mfuuid.lib evr_vista.lib mfplat_vista.lib vpxmtd.lib"
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\libvpx\x64\debug"
 				GenerateManifest="false"
@@ -216,7 +216,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmt.lib"
+				AdditionalDependencies="mfuuid.lib evr_vista.lib mfplat_vista.lib vpxmt.lib"
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\libvpx\x86\release"
@@ -289,7 +289,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mfuuid.lib mfplat.lib vpxmt.lib"
+				AdditionalDependencies="mfuuid.lib evr_vista.lib mfplat_vista.lib vpxmt.lib"
 				OutputFile="$(OutDir)\webmmfvp8dec.dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\libvpx\x64\release"
