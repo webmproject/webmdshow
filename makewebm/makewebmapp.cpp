@@ -1991,6 +1991,12 @@ bool App::ConnectAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
     if (SUCCEEDED(hr))
         return true;  //connected
 
+    hr = TranscodeAudio(pDemuxOutpin, pMuxInpin);
+
+    if (SUCCEEDED(hr))
+        return true;  //connected
+
+#if 0  //TODO: do this too?
     const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
     assert(bool(pBuilder));
 
@@ -2003,13 +2009,214 @@ bool App::ConnectAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
 
     if (SUCCEEDED(hr))
         return true;  //connected
+#endif
 
     wcout << "Unable to connect audio stream to muxer." << endl;
     return false;
 }
 
 
-HRESULT App::ConnectVorbisEncoder(IPin* pDemuxOutpin, IPin* pMuxInpin) const
+HRESULT App::TranscodeAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
+{
+    GraphUtil::IEnumMediaTypesPtr e;
+
+    HRESULT hr = pDemuxOutpin->EnumMediaTypes(&e);
+
+    if (FAILED(hr))
+        return hr;
+
+    for (;;)
+    {
+        AM_MEDIA_TYPE* pmt;
+
+        hr = e->Next(1, &pmt, 0);
+
+        if (hr != S_OK)
+            return VFW_E_NO_ACCEPTABLE_TYPES;
+
+        assert(pmt);
+
+        if (pmt->subtype == MEDIASUBTYPE_PCM)
+            hr = ConnectVorbisEncoder(pDemuxOutpin, pMuxInpin);
+
+        else if (pmt->formattype == FORMAT_WaveFormatEx)  //TODO: liberalize
+            hr = TranscodeAudio(*pmt, pDemuxOutpin, pMuxInpin);
+
+        else
+            hr = E_FAIL;
+
+        CoTaskMemFree(pmt->pbFormat);
+        CoTaskMemFree(pmt);
+
+        if (SUCCEEDED(hr))
+            return S_OK;  //done
+    }
+}
+
+
+HRESULT App::TranscodeAudio(
+    const AM_MEDIA_TYPE& mt_demux,
+    IPin* pDemuxOutpin,
+    IPin* pMuxInpin) const
+{
+    assert(mt_demux.formattype == FORMAT_WaveFormatEx);
+    assert(mt_demux.pbFormat);
+    assert(mt_demux.cbFormat >= sizeof(WAVEFORMATEX));
+
+    const WAVEFORMATEX& wfx_demux = (WAVEFORMATEX&)(*mt_demux.pbFormat);
+
+    if (wfx_demux.wFormatTag == WAVE_FORMAT_PCM)  //weird
+        return ConnectVorbisEncoder(pDemuxOutpin, pMuxInpin);
+
+    const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
+    assert(bool(pMapper));
+
+    IEnumMonikerPtr e;
+
+    enum { cInputTypes = 1 };
+    const GUID inputTypes[2 * cInputTypes] =
+    {
+        mt_demux.majortype, mt_demux.subtype
+    };
+
+    enum { cOutputTypes = 1 };
+    const GUID outputTypes[2 * cOutputTypes] =
+    {
+        MEDIATYPE_Audio, MEDIASUBTYPE_PCM
+    };
+
+    HRESULT hr = pMapper->EnumMatchingFilters(
+                    &e,
+                    0,  //flags (reserved -- must be 0)
+                    TRUE,  //yes, require exact match
+                    MERIT_NORMAL,
+                    TRUE,   //input needed
+                    cInputTypes,
+                    inputTypes,
+                    0,  //input medium
+                    0,  //input category
+                    FALSE,  //bRender
+                    TRUE,  //yes, output needed
+                    cOutputTypes,
+                    outputTypes,
+                    0,  //output medium
+                    0); //output category
+
+    if (FAILED(hr))
+        return hr;
+
+    const GraphUtil::IGraphBuilderPtr pBuilder(m_pGraph);
+    assert(bool(pBuilder));
+
+    for (;;)
+    {
+        IMonikerPtr m;
+
+        hr = e->Next(1, &m, 0);
+
+        if (hr != S_OK)
+            return VFW_E_NOT_CONNECTED;
+
+        assert(bool(m));
+
+        IBaseFilterPtr f;
+
+        hr = m->BindToObject(0, 0, __uuidof(IBaseFilter), (void**)&f);
+
+        if (FAILED(hr))
+            continue;
+
+        assert(bool(f));  //we now have our audio decoder
+
+        hr = m_pGraph->AddFilter(f, L"audio decoder");
+        assert(SUCCEEDED(hr));
+
+        const IPinPtr pDecoderInpin = GraphUtil::FindInpin(f);
+        assert(bool(pDecoderInpin));
+
+        hr = pBuilder->Connect(pDemuxOutpin, pDecoderInpin);
+
+        if (FAILED(hr))
+        {
+            hr = m_pGraph->RemoveFilter(f);
+            assert(SUCCEEDED(hr));
+
+            continue;
+        }
+
+        const IPinPtr pDecoderOutpin = GraphUtil::FindOutpin(f);
+        assert(bool(pDecoderOutpin));
+
+        GraphUtil::IEnumMediaTypesPtr emt;
+
+        hr = pDecoderOutpin->EnumMediaTypes(&emt);
+
+        if (FAILED(hr))
+        {
+            hr = m_pGraph->RemoveFilter(f);
+            assert(SUCCEEDED(hr));
+
+            continue;
+        }
+
+        for (;;)
+        {
+            AM_MEDIA_TYPE* pmt;
+
+            hr = emt->Next(1, &pmt, 0);
+
+            if (hr != S_OK)
+                break;
+
+            assert(pmt);
+
+            hr = ConnectVorbisEncoder(
+                    wfx_demux,  //demux outpin
+                    *pmt,       //decoder outpin
+                    pDecoderOutpin,
+                    pMuxInpin);
+
+            CoTaskMemFree(pmt->pbFormat);
+            CoTaskMemFree(pmt);
+
+            if (hr == S_OK)
+                return S_OK;  //done
+        }
+
+        hr = m_pGraph->RemoveFilter(f);
+        assert(SUCCEEDED(hr));
+    }
+}
+
+
+HRESULT App::ConnectVorbisEncoder(
+    const WAVEFORMATEX& wfx_demux,
+    const AM_MEDIA_TYPE& mt_decoder,
+    IPin* pDecoderOutpin,   //PCM
+    IPin* pMuxInpin) const
+{
+    if (mt_decoder.subtype != MEDIASUBTYPE_PCM)  //weird
+        return S_FALSE;
+
+    if (mt_decoder.formattype != FORMAT_WaveFormatEx)  //weird
+        return S_FALSE;
+
+    assert(mt_decoder.pbFormat);
+    assert(mt_decoder.cbFormat >= sizeof(WAVEFORMATEX));
+
+    const WAVEFORMATEX& wfx_decoder = (WAVEFORMATEX&)*mt_decoder.pbFormat;
+
+    if (wfx_decoder.nChannels != wfx_demux.nChannels)
+        return S_FALSE;
+
+    if (wfx_decoder.nSamplesPerSec != wfx_demux.nSamplesPerSec)
+        return S_FALSE;
+
+    return ConnectVorbisEncoder(pDecoderOutpin, pMuxInpin);
+}
+
+
+HRESULT App::ConnectVorbisEncoder(IPin* pDecoderOutpin, IPin* pMuxInpin) const
 {
     const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
     assert(bool(pMapper));
@@ -2075,25 +2282,13 @@ HRESULT App::ConnectVorbisEncoder(IPin* pDemuxOutpin, IPin* pMuxInpin) const
 
         assert(bool(f));
 
-#if 0
-        hr = pConfig->AddFilterToCache(f);
-        assert(SUCCEEDED(hr));
-
-        const HRESULT hrConnect = pBuilder->Connect(pDemuxOutpin, pMuxInpin);
-
-        hr = pConfig->RemoveFilterFromCache(f);
-        assert(SUCCEEDED(hr));
-
-        if (SUCCEEDED(hrConnect))
-            return S_OK;
-#else
         hr = m_pGraph->AddFilter(f, L"vorbis encoder");
         assert(SUCCEEDED(hr));
 
         const IPinPtr pEncoderInpin = GraphUtil::FindInpin(f);
         assert(bool(pEncoderInpin));
 
-        hr = pBuilder->Connect(pDemuxOutpin, pEncoderInpin);
+        hr = pBuilder->ConnectDirect(pDecoderOutpin, pEncoderInpin, 0);
 
         if (FAILED(hr))
         {
@@ -2113,10 +2308,8 @@ HRESULT App::ConnectVorbisEncoder(IPin* pDemuxOutpin, IPin* pMuxInpin) const
 
         hr = m_pGraph->RemoveFilter(f);
         assert(SUCCEEDED(hr));
-#endif
     }
 }
-
 
 
 void App::DumpPreferredMediaTypes(

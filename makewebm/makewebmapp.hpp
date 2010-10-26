@@ -70,6 +70,16 @@ private:
 #endif
 
     bool ConnectAudio(IPin*, IPin*) const;
+    HRESULT TranscodeAudio(IPin*, IPin*) const;
+
+    HRESULT TranscodeAudio(const AM_MEDIA_TYPE&, IPin*, IPin*) const;
+
+    HRESULT ConnectVorbisEncoder(
+        const WAVEFORMATEX&,
+        const AM_MEDIA_TYPE&,
+        IPin*,
+        IPin*) const;
+
     HRESULT ConnectVorbisEncoder(IPin*, IPin*) const;
 
     static void DumpPreferredMediaTypes(
