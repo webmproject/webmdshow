@@ -713,10 +713,95 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (FAILED(hr))
         return hr;
 
-    assert(st >= 0);
-    assert(st >= m_start_reftime);
+    if (st < 0)  //?
+    {
+#ifdef _DEBUG
+        odbgstream os;
+        os << "Vp8Encoder::Receive: st[reftime="
+           << st
+           << " st[sec]="
+           << (double(st) / 10000000)
+           << " sp[reftime]="
+           << sp
+           << " sp[sec]="
+           << (double(sp) / 10000000)
+           << " start_reftime="
+           << m_start_reftime
+           << "; START TIME LESS THAN 0"
+           << endl;
+#endif
 
-    m_start_reftime = st;
+        return S_OK;
+    }
+
+    const bool bFirst = (m_start_reftime < 0);
+
+    if (bFirst)
+    {
+#ifdef _DEBUG
+        odbgstream os;
+        os << "Vp8Encoder::Receive: st[reftime]="
+           << st
+           << " st[sec]="
+           << (double(st) / 10000000)
+           << " sp[reftime]="
+           << sp
+           << " sp[sec]="
+           << (double(sp) / 10000000)
+           //<< " start_reftime="
+           //<< m_start_reftime
+           //<< " start_reftime[sec]="
+           //<< (double(m_start_reftime) / 10000000)
+           << "; FIRST SAMPLE DETECTED"
+           << endl;
+#endif
+
+        m_start_reftime = 0;
+    }
+    else if (st <= m_start_reftime)  //?
+    {
+#ifdef _DEBUG
+        odbgstream os;
+        os << "Vp8Encoder::Receive: st[reftime]="
+           << st
+           << " st[sec]="
+           << (double(st) / 10000000)
+           << " sp[reftime]="
+           << sp
+           << " sp[sec]="
+           << (double(sp) / 10000000)
+           << " start_reftime="
+           << m_start_reftime
+           << " start_reftime[sec]="
+           << (double(m_start_reftime) / 10000000)
+           << "; START TIME LESS THAN PREV SAMPLE"
+           << endl;
+#endif
+
+        return S_OK;
+    }
+    else
+    {
+#if 0 //def _DEBUG
+        odbgstream os;
+        os << "Vp8Encoder::Receive: st[reftime]="
+           << st
+           << " st[sec]="
+           << (double(st) / 10000000)
+           << " sp[reftime]="
+           << sp
+           << " sp[sec]="
+           << (double(sp) / 10000000)
+           << " start_reftime="
+           << m_start_reftime
+           << " start_reftime[sec]="
+           << (double(m_start_reftime) / 10000000)
+           << "; POST-FIRST SAMPLE DETECTED"
+           << endl;
+#endif
+
+        m_start_reftime = st;
+    }
 
     const __int64 duration_ = GetAvgTimePerFrame();
     assert(duration_ > 0);
@@ -728,7 +813,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     vpx_enc_frame_flags_t f = 0;
 
-    if (m_pFilter->m_bForceKeyframe || bDiscontinuity || (st <= 0))
+    if (m_pFilter->m_bForceKeyframe || bDiscontinuity || bFirst)
     {
         f |= VPX_EFLAG_FORCE_KF;
         m_pFilter->m_bForceKeyframe = false;
@@ -737,8 +822,9 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     const Filter::Config::int32_t deadline_ = m_pFilter->m_cfg.deadline;
     const ULONG dl = (deadline_ >= 0) ? deadline_ : kDeadlineGoodQuality;
 
-    __int64 st2 = st/10000;  // scale to ms
-    const unsigned long d2 = d/10000;  // scale to ms
+    const __int64 st2 = m_start_reftime / 10000;  // scale to ms
+    const unsigned long d2 = (d + 9999) / 10000;  // scale to ms
+
     const vpx_codec_err_t err = vpx_codec_encode(&m_ctx, img, st2, d2, f, dl);
     err;
     assert(err == VPX_CODEC_OK);  //TODO
@@ -995,7 +1081,7 @@ HRESULT Inpin::Start()
     m_bDiscontinuity = true;
     m_bEndOfStream = false;
     m_bFlush = false;
-    m_start_reftime = 0;
+    m_start_reftime = -1;  //first-time flag
 
     PurgePending();
 
