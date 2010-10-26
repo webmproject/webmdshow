@@ -1325,7 +1325,7 @@ void Context::WriteVideoFrame(
     ULONG& cFrames,
     const StreamVideo::VideoFrame* stop,
     const StreamVideo::VideoFrame* next,
-    LONG prev_timecode)
+    LONG /* prev_timecode */ )
 {
     assert(m_pVideo);
     StreamVideo& s = *m_pVideo;
@@ -1347,6 +1347,9 @@ void Context::WriteVideoFrame(
 
     const ULONG ft = pf->GetTimecode();
 
+#if 1
+    pf->WriteSimpleBlock(s, c.m_timecode);
+#else
     if (next != stop)
         pf->WriteSimpleBlock(s, c.m_timecode);
     else
@@ -1375,6 +1378,7 @@ void Context::WriteVideoFrame(
         else
             pf->WriteSimpleBlock(s, c.m_timecode);
     }
+#endif
 
     if (pf->IsKey())
     {
