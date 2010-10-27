@@ -9,10 +9,6 @@
 
 #include "vorbis/codec.h"
 
-#ifdef _DEBUG
-#include "wfxrawwriter.hpp"
-#endif
-
 namespace WebmMfVorbisDecLib
 {
 
@@ -28,36 +24,24 @@ public:
                       unsigned int num_headers /* must be == 3 */);
     void DestroyDecoder();
 
-    int GetWaveFormat(WAVEFORMATEX* ptr_out_wave_format);
-
     int Decode(BYTE* ptr_samples, UINT32 length);
 
     int GetOutputSamplesAvailable(UINT32* ptr_num_samples_available);
-
-    int ConsumeOutputSamples(BYTE* ptr_output_buffer,
-                             UINT32 buffer_limit_in_bytes,
-                             UINT32* ptr_output_bytes_written,
-                             UINT32* ptr_output_sample_count);
+    int ConsumeOutputSamples(float* ptr_out_sample_buffer,
+                             UINT32 blocks_to_consume);
     void Flush();
 
-    int GetVorbisRate() {
+    int GetVorbisRate() const
+    {
         return m_vorbis_info.rate;
     };
-    int GetVorbisChannels() {
+    int GetVorbisChannels() const
+    {
         return m_vorbis_info.channels;
     };
 
-    int GetOutputWaveFormat(int* ptr_format_tag, int* ptr_bits_per_sample);
-    int SetOutputWaveFormat(int format_tag, int bits_per_sample);
-
 private:
     int NextOggPacket_(const BYTE* ptr_packet, DWORD packet_size);
-    void SetDecodedWaveFormat_();
-
-    int ConvertOutputSamplesS16_(BYTE* ptr_output_buffer,
-                                 UINT32 buffer_limit_in_bytes,
-                                 UINT32* ptr_output_bytes_written,
-                                 UINT32* ptr_output_sample_count);
 
     ogg_packet m_ogg_packet;
     DWORD m_ogg_packet_count;
@@ -67,18 +51,12 @@ private:
     vorbis_dsp_state m_vorbis_state; // decoder state
     vorbis_block m_vorbis_block; // working space for packet->PCM decode
 
-    int m_output_format_tag;
-    int m_output_bits_per_sample;
+    const int m_bytes_per_sample;
 
     WAVEFORMATEX m_wave_format;
 
-
     typedef std::vector<float> pcm_samples_t;
     pcm_samples_t m_output_samples;
-
-#ifdef _DEBUG
-    WfxRawWriter m_pcm_writer;
-#endif
 
     // disallow copy and assign
     DISALLOW_COPY_AND_ASSIGN(VorbisDecoder);
