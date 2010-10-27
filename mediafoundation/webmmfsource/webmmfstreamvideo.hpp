@@ -57,6 +57,11 @@ private:
     float m_rate;
     LONGLONG m_thin_ns;
 
+    static HRESULT GetFrameRate(
+        const mkvparser::VideoTrack*,
+        UINT32&,
+        UINT32&);
+
 };
 
 }  //end namespace WebmMfSourceLib

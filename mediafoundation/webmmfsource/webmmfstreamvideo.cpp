@@ -62,37 +62,12 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
     hr = pmt->SetUINT32(MF_MT_COMPRESSED, TRUE);
     assert(SUCCEEDED(hr));
 
-    const double frame_rate = pTrack->GetFrameRate();
+    UINT32 numer, denom;
 
-    if ((frame_rate > 0) && (frame_rate <= std::numeric_limits<UINT32>::max()))
+    hr = GetFrameRate(pTrack, numer, denom);
+
+    if (hr == S_OK)
     {
-        UINT32 numer;
-        UINT32 denom = 1;
-
-        for (;;)
-        {
-            const double r = frame_rate * denom;
-
-            double int_part;
-            const double frac_part = modf(r, &int_part);
-
-            //I think the 0 test is valid (because 0 is a model number), but
-            //if not, then you can cast it to a integer and compare that way.
-            //
-            //http://www.cygnus-software.com/papers/comparingfloats/
-            //  Comparing%20floating%20point%20numbers.htm
-
-            if ((frac_part == 0) ||
-                (denom == 1000000000) ||
-                ((10 * int_part) > std::numeric_limits<UINT32>::max()))
-            {
-                numer = static_cast<UINT32>(int_part);
-                break;
-            }
-
-            denom *= 10;
-        }
-
         hr = MFSetAttributeRatio(pmt, MF_MT_FRAME_RATE, numer, denom);
         assert(SUCCEEDED(hr));
     }
@@ -127,6 +102,148 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
 
     return S_OK;
 }
+
+
+HRESULT WebmMfStreamVideo::GetFrameRate(
+    const mkvparser::VideoTrack* pTrack,
+    UINT32& numer,
+    UINT32& denom)
+{
+    mkvparser::Segment* const pSegment = pTrack->m_pSegment;
+
+    double frame_rate = pTrack->GetFrameRate();
+
+    if ((frame_rate <= 0) || (frame_rate > std::numeric_limits<UINT32>::max()))
+    {
+#if 0
+        const long result = pSegment->LoadCluster();
+        result;
+
+        using mkvparser::Cluster;
+        using mkvparser::BlockEntry;
+        using mkvparser::Block;
+
+        Cluster* const pCluster = pSegment->GetFirst();
+
+        if ((pCluster == 0) || pCluster->EOS())
+            return E_FAIL;
+
+        const LONGLONG tn = pTrack->GetNumber();
+        assert(tn > 0);
+
+        const BlockEntry* const pFirst = pCluster->GetEntry(pTrack);
+
+        if ((pFirst == 0) || pFirst->EOS())
+            return E_FAIL;
+
+        int count = 0;
+        LONGLONG t1 = 0;  //to pacify compiler
+
+        while (const BlockEntry* pLast = pCluster->GetNext(pFirst))
+        {
+            const Block* const pBlock = pLast->GetBlock();
+            assert(pBlock);
+
+            if (pBlock->GetTrackNumber() == tn)
+            {
+                ++count;
+                t1 = pBlock->GetTime(pCluster);
+            }
+
+            pLast = pCluster->GetNext(pLast);
+        }
+
+        if (count <= 0)
+            return E_FAIL;
+
+        const LONGLONG t0 = pFirst->GetBlock()->GetTime(pCluster);
+        const LONGLONG ns = t1 - t0;
+
+        if (ns <= 0)
+            return E_FAIL;
+
+        frame_rate = (double(count) * 1000000000) / double(ns);
+#else
+        using namespace mkvparser;
+
+        long result = pSegment->LoadCluster();
+
+        const BlockEntry* pFirst;
+        result = pTrack->GetFirst(pFirst);
+
+        if ((pFirst == 0) || pFirst->EOS())
+            return E_FAIL;
+
+        const LONGLONG t0 = pFirst->GetBlock()->GetTime(pFirst->GetCluster());
+
+        int count = 0;
+        const BlockEntry* pLast = pFirst;
+
+        while (count < 10)
+        {
+            const BlockEntry* const pCurr = pLast;
+            const BlockEntry* pNext;
+
+            result = pTrack->GetNext(pCurr, pNext);
+
+            if (result == 0)  //success
+            {
+                ++count;
+                pLast = pNext;
+
+                continue;
+            }
+
+            if (result != mkvparser::E_BUFFER_NOT_FULL)
+                break;
+
+            result = pSegment->LoadCluster();
+        }
+
+        if (count <= 0)
+            return E_FAIL;
+
+        const LONGLONG t1 = pLast->GetBlock()->GetTime(pLast->GetCluster());
+
+        if (t1 <= t0)
+            return E_FAIL;
+
+        const LONGLONG ns = t1 - t0;
+        assert(ns > 0);
+
+        frame_rate = (double(count) * 1000000000) / double(ns);
+#endif
+    }
+
+    denom = 1;
+
+    for (;;)
+    {
+        const double r = frame_rate * denom;
+
+        double int_part;
+        const double frac_part = modf(r, &int_part);
+
+        //I think the 0 test is valid (because 0 is a model number), but
+        //if not, then you can cast it to a integer and compare that way.
+        //
+        //http://www.cygnus-software.com/papers/comparingfloats/
+        //  Comparing%20floating%20point%20numbers.htm
+
+        if ((frac_part == 0) ||
+            (denom == 1000000000) ||
+            ((10 * int_part) > std::numeric_limits<UINT32>::max()))
+        {
+            numer = static_cast<UINT32>(int_part);
+            break;
+        }
+
+        denom *= 10;
+    }
+
+    return S_OK;
+}
+
 
 
 HRESULT WebmMfStreamVideo::CreateStream(
