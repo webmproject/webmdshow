@@ -134,15 +134,17 @@ private:
     HRESULT ValidateOutputFormat(IMFMediaType *pmt);
     HRESULT CreateMediaBuffer(DWORD size, IMFMediaBuffer** pp_buffer);
     HRESULT DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample);
-    HRESULT ProcessLibVorbisOutputPcmSamples(IMFSample* p_mf_output_sample,
-                                             int* p_out_samples_decoded);
+    HRESULT ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
+                                   int samples_to_process,
+                                   int* p_out_samples_decoded);
     bool FormatSupported(bool is_input, IMFMediaType* p_mediatype);
 
     HRESULT ResetMediaType(bool reset_input);
 
     void SetOutputWaveFormat(GUID subtype);
 
-    REFERENCE_TIME SamplesToMediaTime(UINT64 num_samples);
+    REFERENCE_TIME SamplesToMediaTime(UINT64 num_samples) const;
+    UINT64 MediaTimeToSamples(REFERENCE_TIME media_time) const;
 
     IClassFactory* const m_pClassFactory;
     LONG m_cRef;

@@ -130,11 +130,10 @@ STDAPI DllRegisterServer()
         { MFMediaType_Audio, VorbisTypes::MEDIASUBTYPE_Vorbis2 }
     };
 
-    enum { cOutputTypes = 2 };
+    enum { cOutputTypes = 1 };
     MFT_REGISTER_TYPE_INFO pOutputTypes[cOutputTypes] =
     {
-        { MFMediaType_Audio, MFAudioFormat_Float },
-        { MFMediaType_Audio, MFAudioFormat_PCM }
+        { MFMediaType_Audio, MFAudioFormat_Float }
     };
 
     wchar_t* const friendly_name_ = const_cast<wchar_t*>(friendly_name);
