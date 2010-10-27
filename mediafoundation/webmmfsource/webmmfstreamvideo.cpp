@@ -85,6 +85,12 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
     hr = MFSetAttributeSize(pmt, MF_MT_FRAME_SIZE, w, h);
     assert(SUCCEEDED(hr));
 
+    //http://msdn.microsoft.com/en-us/library/bb530115%28v=VS.85%29.aspx
+    //http://msdn.microsoft.com/en-us/library/ms704767%28v=VS.85%29.aspx
+
+    hr = MFSetAttributeRatio(pmt, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
+    assert(SUCCEEDED(hr));
+
     IMFMediaType* mtv[1] = { pmt };
 
     hr = MFCreateStreamDescriptor(id, 1, mtv, &pDesc);
