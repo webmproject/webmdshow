@@ -74,9 +74,11 @@ HRESULT CreateDecoder(
 WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),
-    m_stream_start_time(-1),
+    m_decode_start_time(-1),
     m_total_samples_decoded(0),
-    m_audio_format_tag(WAVE_FORMAT_IEEE_FLOAT)
+    m_audio_format_tag(WAVE_FORMAT_IEEE_FLOAT),
+    m_mediatime_decoded(-1),
+    m_mediatime_recvd(-1)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -657,7 +659,7 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
     case MFT_MESSAGE_COMMAND_FLUSH:
         DBGLOG("MFT_MESSAGE_COMMAND_FLUSH");
 
-        m_stream_start_time = -1;
+        m_decode_start_time = -1;
 
         while (!m_samples.empty())
         {
@@ -909,20 +911,28 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     if (FAILED(status))
       return status;
 
-    if (m_stream_start_time < 0)
+    if (m_decode_start_time < 0)
     {
         m_total_samples_decoded = 0;
-        m_stream_start_time = start_time;
-        DBGLOG("m_stream_start_time=" << REFTIMETOSECONDS(m_stream_start_time));
+        m_decode_start_time = start_time;
+
+        // DEBUG
+        m_mediatime_decoded = 0;
+        m_mediatime_recvd = 0;
+
+        m_start_time = -1;
+        DBGLOG("m_decode_start_time=" << REFTIMETOSECONDS(m_decode_start_time));
     }
 
-    LONGLONG duration;
+    LONGLONG duration = 0;
     status = p_mf_input_sample->GetSampleDuration(&duration);
     if (FAILED(status) && MF_E_NO_SAMPLE_DURATION != status)
     {
         DBGLOG("no duration on input sample!");
         assert(SUCCEEDED(status));
     }
+
+    m_mediatime_recvd += duration;
 
     // media sample data has been passed to libvorbis; pop/release
     m_samples.pop_front();
@@ -938,9 +948,15 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     DBGLOG("samples_needed=" << samples_needed << " num_samples_available=" <<
            num_samples_available);
 
-    if (num_samples_available < samples_needed)
+    if (num_samples_available < samples_needed && samples_needed != 0)
     {
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
+    }
+
+    if (samples_needed == 0)
+    {
+        // 0 duration, output any buffered samples from |m_vorbis_decoder|
+        samples_needed = num_samples_available;
     }
 
     int samples = 0;
@@ -949,7 +965,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     if (FAILED(status))
         return status;
 
-    start_time = m_stream_start_time +
+    start_time = m_decode_start_time +
                  SamplesToMediaTime(m_total_samples_decoded);
 
     status = p_mf_output_sample->SetSampleTime(start_time);
@@ -964,12 +980,20 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
     m_total_samples_decoded += samples;
 
+    m_mediatime_decoded += mediatime_decoded;
+
     DBGLOG("OUT start_time=" << REFTIMETOSECONDS(start_time) <<
            " duration=" << REFTIMETOSECONDS(mediatime_decoded) <<
            " end time=" << REFTIMETOSECONDS(start_time + mediatime_decoded));
     DBGLOG("m_total_samples_decoded=" << m_total_samples_decoded);
-    DBGLOG("total time decoded (seconds)=" <<
-           REFTIMETOSECONDS(SamplesToMediaTime(m_total_samples_decoded)));
+    DBGLOG("total time recvd (seconds)=" <<
+           REFTIMETOSECONDS(m_mediatime_recvd) <<
+           " total time decoded (seconds)=" <<
+           REFTIMETOSECONDS(m_mediatime_decoded) <<
+           " lag (seconds)=" <<
+           REFTIMETOSECONDS(m_mediatime_recvd - m_mediatime_decoded));
+    DBGLOG("lag (samples)=" <<
+           MediaTimeToSamples(m_mediatime_recvd - m_mediatime_decoded));
     return S_OK;
 }
 

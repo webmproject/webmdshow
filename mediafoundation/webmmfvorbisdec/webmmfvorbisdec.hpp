@@ -159,7 +159,12 @@ private:
 
     WAVEFORMATEX m_wave_format;
     UINT64 m_total_samples_decoded;
-    REFERENCE_TIME m_stream_start_time;
+    REFERENCE_TIME m_decode_start_time;
+    REFERENCE_TIME m_start_time;
+
+    // DEBUG 
+    REFERENCE_TIME m_mediatime_decoded;
+    REFERENCE_TIME m_mediatime_recvd;
 
     int m_audio_format_tag;
 
