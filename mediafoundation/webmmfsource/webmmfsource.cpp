@@ -282,12 +282,27 @@ HRESULT WebmMfSource::Load()
     HRESULT hr;
 
 #if 0
+#ifdef _DEBUG
+    os << L"WebmMfSource::Load: calling Segment::Load" << endl;
+#endif
+
     //TODO: this does big-bang loading, which is not what we
     //want.  Load clusters incrementally.
-    hr = pSegment->Load();
+    const long status = pSegment->Load();
 
-    if (FAILED(hr))
-        return hr;
+#ifdef _DEBUG
+    os << L"WebmMfSource::Load: done calling Segment::Load; status="
+       << status
+       << endl;
+#endif
+
+    if (status < 0)  //error
+    {
+        if (status == mkvparser::E_FILE_FORMAT_INVALID)
+            return VFW_E_INVALID_FILE_FORMAT;
+
+        return E_FAIL;  //TODO
+    }
 #else
 #ifdef _DEBUG
     os << L"WebmMfSource::Load: begin parsing webm file headers" << endl;
