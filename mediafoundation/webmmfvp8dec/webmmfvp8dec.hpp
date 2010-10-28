@@ -170,6 +170,8 @@ private:
     DWORD GetOutputBufferSize(FrameSize&) const;
     HRESULT GetFrame(BYTE*, ULONG, const GUID&);
 
+    void Flush();
+
 };
 
 }  //end namespace WebmMfVp8DecLib

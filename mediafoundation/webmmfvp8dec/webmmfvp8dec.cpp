@@ -96,15 +96,7 @@ WebmMfVp8Dec::~WebmMfVp8Dec()
         m_pOutputMediaType = 0;
     }
 
-    while (!m_samples.empty())
-    {
-        IMFSample* const pSample = m_samples.front();
-        assert(pSample);
-
-        m_samples.pop_front();
-
-        pSample->Release();
-    }
+    Flush();
 
     HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
@@ -1109,12 +1101,20 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             os << "COMMAND_FLUSH" << endl;
 #endif
 
+        //http://msdn.microsoft.com/en-us/library/dd940419%28v=VS.85%29.aspx
+
+            Flush();
             return S_OK;
 
         case MFT_MESSAGE_COMMAND_DRAIN:
 #ifdef _DEBUG
             os << "COMMAND_DRAIN" << endl;
 #endif
+
+        //http://msdn.microsoft.com/en-us/library/dd940418%28v=VS.85%29.aspx
+
+        //TODO: input stream does not accept input in the MFT processes all
+        //data from previous calls to ProcessInput.
 
             return S_OK;
 
@@ -1137,6 +1137,10 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             os << "NOTIFY_BEGIN_STREAMING" << endl;
 #endif
 
+        //http://msdn.microsoft.com/en-us/library/dd940421%28v=VS.85%29.aspx
+
+        //TODO: init decoder library here, instead of during SetInputType
+
             return S_OK;
 
         case MFT_MESSAGE_NOTIFY_END_STREAMING:
@@ -1144,12 +1148,20 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             os << "NOTIFY_END_STREAMING" << endl;
 #endif
 
+        //http://msdn.microsoft.com/en-us/library/dd940423%28v=VS.85%29.aspx
+
+        //NOTE: flush is not performed here
+
             return S_OK;
 
         case MFT_MESSAGE_NOTIFY_END_OF_STREAM:
 #ifdef _DEBUG
             os << "NOTIFY_EOS" << endl;
 #endif
+
+        //http://msdn.microsoft.com/en-us/library/dd940422%28v=VS.85%29.aspx
+
+        //TODO: set discontinuity flag on first sample after this
 
             return S_OK;
 
@@ -1755,6 +1767,20 @@ HRESULT WebmMfVp8Dec::GetService(
         *ppv = 0;
 
     return MF_E_UNSUPPORTED_SERVICE;
+}
+
+
+void WebmMfVp8Dec::Flush()
+{
+    while (!m_samples.empty())
+    {
+        IMFSample* const pSample = m_samples.front();
+        assert(pSample);
+
+        m_samples.pop_front();
+
+        pSample->Release();
+    }
 }
 
 
