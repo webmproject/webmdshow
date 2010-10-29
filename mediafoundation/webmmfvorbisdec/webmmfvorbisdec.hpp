@@ -153,16 +153,15 @@ private:
     IMFMediaTypePtr m_input_mediatype;
     IMFMediaTypePtr m_output_mediatype;
 
-    // TODO(tomfinegan): disambiguate the sample storage member names
-    typedef std::list<IMFSample*> samples_t;
-    samples_t m_samples;
+    typedef std::list<IMFSample*> mf_input_samples_t;
+    mf_input_samples_t m_mf_input_samples;
 
     WAVEFORMATEX m_wave_format;
     UINT64 m_total_samples_decoded;
     REFERENCE_TIME m_decode_start_time;
     REFERENCE_TIME m_start_time;
 
-    // DEBUG 
+    // DEBUG
     REFERENCE_TIME m_mediatime_decoded;
     REFERENCE_TIME m_mediatime_recvd;
 

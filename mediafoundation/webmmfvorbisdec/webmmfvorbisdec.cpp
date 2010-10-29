@@ -661,12 +661,12 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
 
         m_decode_start_time = -1;
 
-        while (!m_samples.empty())
+        while (!m_mf_input_samples.empty())
         {
-            IMFSample* p_sample = m_samples.front();
+            IMFSample* p_sample = m_mf_input_samples.front();
             assert(p_sample);
             p_sample->Release();
-            m_samples.pop_front();
+            m_mf_input_samples.pop_front();
         }
 
         m_vorbis_decoder.Flush();
@@ -742,7 +742,7 @@ HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
 
     // addref on/store sample for use in ProcessOutput
     pSample->AddRef();
-    m_samples.push_back(pSample);
+    m_mf_input_samples.push_back(pSample);
 
     return S_OK;
 }
@@ -871,13 +871,13 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
         return E_INVALIDARG;
 
     // make sure we have an input sample to work on
-    if (m_samples.empty())
+    if (m_mf_input_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
     //TODO: check if cOutputSamples > 1 ?
 
     // confirm we have an output sample before we pop an input sample off the
-    // front of |m_samples|
+    // front of |m_mf_input_samples|
     MFT_OUTPUT_DATA_BUFFER& data = pOutputSamples[0];
 
     //data.dwStreamID should equal 0, but we ignore it
@@ -894,7 +894,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     if (SUCCEEDED(status) && (count != 1))
         return E_INVALIDARG;
 
-    IMFSample* const p_mf_input_sample = m_samples.front();
+    IMFSample* const p_mf_input_sample = m_mf_input_samples.front();
 
     assert(p_mf_input_sample);
 
@@ -935,7 +935,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     m_mediatime_recvd += duration;
 
     // media sample data has been passed to libvorbis; pop/release
-    m_samples.pop_front();
+    m_mf_input_samples.pop_front();
     p_mf_input_sample->Release();
 
     DBGLOG("IN start_time=" << REFTIMETOSECONDS(start_time) <<
@@ -1036,10 +1036,10 @@ HRESULT WebmMfVorbisDec::CreateVorbisDecoder(IMFMediaType* p_media_type)
 void WebmMfVorbisDec::DestroyVorbisDecoder()
 {
     m_vorbis_decoder.DestroyDecoder();
-    while (m_samples.empty() == false)
+    while (m_mf_input_samples.empty() == false)
     {
-        IMFSample* p_mf_input_sample = m_samples.front();
-        m_samples.pop_front();
+        IMFSample* p_mf_input_sample = m_mf_input_samples.front();
+        m_mf_input_samples.pop_front();
 
         assert(p_mf_input_sample);
         p_mf_input_sample->Release();
