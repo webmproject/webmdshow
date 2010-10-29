@@ -32,8 +32,8 @@ do { \
 #define REFTIMETOSECONDS(X) (double(X) / 10000000.0f)
 
 #else
-#define DBGLOG(X) do {} while(0)
-#define REFTIMETOSECONDS(X) X
+#define DBGLOG(X)
+#define REFTIMETOSECONDS(X)
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));

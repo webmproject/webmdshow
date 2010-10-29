@@ -26,7 +26,7 @@ do { \
 } while(0)
 
 #else
-#define DBGLOG(X) do {} while(0)
+#define DBGLOG(X)
 #endif
 
 namespace WebmMfVorbisDecLib
