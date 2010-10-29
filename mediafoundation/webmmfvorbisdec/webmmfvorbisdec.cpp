@@ -776,12 +776,8 @@ HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
 }
 
 HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
-                                                int samples_to_process,
-                                                int* p_out_samples_decoded)
+                                                UINT32 samples_to_process)
 {
-    if (NULL == p_out_samples_decoded)
-        return E_INVALIDARG;
-
     // try to get a buffer from the output sample...
     IMFMediaBufferPtr mf_output_buffer;
     HRESULT status = p_mf_output_sample->GetBufferByIndex(0, &mf_output_buffer);
@@ -825,8 +821,6 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
 
     status = mf_output_buffer->SetCurrentLength(bytes_written);
     assert(SUCCEEDED(status));
-
-    *p_out_samples_decoded = samples_to_process;
 
     return status;
 }
@@ -903,97 +897,92 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     if (FAILED(status))
         return status;
 
-    // set |p_mf_output_sample| start time to input sample start time...
-    LONGLONG start_time = 0;
-    status = p_mf_input_sample->GetSampleTime(&start_time);
+    // store input start time for logging/debugging
+    LONGLONG input_start_time = 0;
+    status = p_mf_input_sample->GetSampleTime(&input_start_time);
     assert(SUCCEEDED(status));
-    assert(start_time >= 0);
+    assert(input_start_time >= 0);
     if (FAILED(status))
       return status;
 
     if (m_decode_start_time < 0)
     {
         m_total_samples_decoded = 0;
-        m_decode_start_time = start_time;
+        m_decode_start_time = input_start_time;
 
         // DEBUG
         m_mediatime_decoded = 0;
         m_mediatime_recvd = 0;
 
-        m_start_time = -1;
+        m_start_time = m_decode_start_time;
         DBGLOG("m_decode_start_time=" << REFTIMETOSECONDS(m_decode_start_time));
     }
 
-    LONGLONG duration = 0;
-    status = p_mf_input_sample->GetSampleDuration(&duration);
+    LONGLONG input_duration = 0;
+    status = p_mf_input_sample->GetSampleDuration(&input_duration);
     if (FAILED(status) && MF_E_NO_SAMPLE_DURATION != status)
     {
         DBGLOG("no duration on input sample!");
         assert(SUCCEEDED(status));
     }
 
-    m_mediatime_recvd += duration;
+    m_mediatime_recvd += input_duration;
 
     // media sample data has been passed to libvorbis; pop/release
     m_mf_input_samples.pop_front();
     p_mf_input_sample->Release();
 
-    DBGLOG("IN start_time=" << REFTIMETOSECONDS(start_time) <<
-           " duration=" << REFTIMETOSECONDS(duration));
+    DBGLOG("IN start_time=" << REFTIMETOSECONDS(input_start_time) <<
+           " duration=" << REFTIMETOSECONDS(input_duration));
 
     UINT32 num_samples_available;
     status = m_vorbis_decoder.GetOutputSamplesAvailable(&num_samples_available);
 
-    UINT64 samples_needed = MediaTimeToSamples(duration);
-    DBGLOG("samples_needed=" << samples_needed << " num_samples_available=" <<
-           num_samples_available);
-
-    if (num_samples_available < samples_needed && samples_needed != 0)
+    if (num_samples_available < 1)
     {
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
     }
 
-    if (samples_needed == 0)
-    {
-        // 0 duration, output any buffered samples from |m_vorbis_decoder|
-        samples_needed = num_samples_available;
-    }
-
-    int samples = 0;
-    status = ProcessLibVorbisOutput(p_mf_output_sample, int(samples_needed),
-                                    &samples);
+    status = ProcessLibVorbisOutput(p_mf_output_sample, num_samples_available);
     if (FAILED(status))
         return status;
 
-    start_time = m_decode_start_time +
-                 SamplesToMediaTime(m_total_samples_decoded);
-
-    status = p_mf_output_sample->SetSampleTime(start_time);
+    // |m_start_time| is total samples decoded converted to media time
+    status = p_mf_output_sample->SetSampleTime(m_start_time);
     assert(SUCCEEDED(status));
 
-    // set |p_mf_output_sample| duration to the duration of the pcm samples
-    // output by libvorbis
-    LONGLONG mediatime_decoded = SamplesToMediaTime(samples);
-
-    status = p_mf_output_sample->SetSampleDuration(mediatime_decoded);
-    assert(SUCCEEDED(status));
-
-    m_total_samples_decoded += samples;
-
+    // update running sample and time totals
+    m_total_samples_decoded += num_samples_available;
+    LONGLONG mediatime_decoded = SamplesToMediaTime(num_samples_available);
     m_mediatime_decoded += mediatime_decoded;
 
-    DBGLOG("OUT start_time=" << REFTIMETOSECONDS(start_time) <<
-           " duration=" << REFTIMETOSECONDS(mediatime_decoded) <<
-           " end time=" << REFTIMETOSECONDS(start_time + mediatime_decoded));
+    // logging spam for tracking audio pauses with some input files
+    DBGLOG("OUT start_time=" << REFTIMETOSECONDS(m_start_time) <<
+           " duration (seconds)=" << REFTIMETOSECONDS(mediatime_decoded) <<
+           " duration (samples)=" << num_samples_available <<
+           " end time=" <<
+           REFTIMETOSECONDS(m_start_time + mediatime_decoded));
     DBGLOG("m_total_samples_decoded=" << m_total_samples_decoded);
     DBGLOG("total time recvd (seconds)=" <<
            REFTIMETOSECONDS(m_mediatime_recvd) <<
            " total time decoded (seconds)=" <<
-           REFTIMETOSECONDS(m_mediatime_decoded) <<
-           " lag (seconds)=" <<
-           REFTIMETOSECONDS(m_mediatime_recvd - m_mediatime_decoded));
-    DBGLOG("lag (samples)=" <<
+           REFTIMETOSECONDS(m_mediatime_decoded));
+    DBGLOG("lag (seconds)=" <<
+           REFTIMETOSECONDS(m_mediatime_recvd - m_mediatime_decoded) <<
+           " lag (samples)=" <<
            MediaTimeToSamples(m_mediatime_recvd - m_mediatime_decoded));
+
+    // update |m_start_time| for the next time through |ProcessOutput|
+    const LONGLONG start_time = m_decode_start_time +
+                                SamplesToMediaTime(m_total_samples_decoded);
+
+    const LONGLONG duration = start_time - m_start_time;
+
+    status = p_mf_output_sample->SetSampleDuration(duration);
+    assert(SUCCEEDED(status));
+
+    m_start_time = start_time;
+
     return S_OK;
 }
 

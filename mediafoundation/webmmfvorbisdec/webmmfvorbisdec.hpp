@@ -135,8 +135,7 @@ private:
     HRESULT CreateMediaBuffer(DWORD size, IMFMediaBuffer** pp_buffer);
     HRESULT DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample);
     HRESULT ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
-                                   int samples_to_process,
-                                   int* p_out_samples_decoded);
+                                   UINT32 samples_to_process);
     bool FormatSupported(bool is_input, IMFMediaType* p_mediatype);
 
     HRESULT ResetMediaType(bool reset_input);
