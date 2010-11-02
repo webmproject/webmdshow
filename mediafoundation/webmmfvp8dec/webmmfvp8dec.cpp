@@ -1255,19 +1255,11 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     if (FAILED(hr))
         return hr;
 
-#if 0 //def _DEBUG
-    odbgstream os;
-    os << "WebmMfVp8Dec::ProcessOutput (begin)" << endl;
-#endif
-
     if (m_pInputMediaType == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
 
     if (m_pOutputMediaType == 0)
         return MF_E_TRANSFORM_TYPE_NOT_SET;
-
-    if (m_samples.empty())
-        return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
     if (cOutputBufferCount == 0)
         return E_INVALIDARG;
@@ -1275,38 +1267,66 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     if (pOutputSamples == 0)
         return E_INVALIDARG;
 
-    MFT_OUTPUT_DATA_BUFFER& data = pOutputSamples[0];
+    const MFT_OUTPUT_DATA_BUFFER& data = pOutputSamples[0];
     //data.dwStreamID should equal 0, but we ignore it
 
-    IMFSample* const pSample_out = data.pSample;
+    for (;;)
+    {
+        hr = Decode(data.pSample);
 
+        if (FAILED(hr) || (hr == S_OK))
+            return hr;
+    }
+}
+
+
+HRESULT WebmMfVp8Dec::Decode(IMFSample* pSample_out)
+{
     if (pSample_out == 0)
         return E_INVALIDARG;
 
-    SampleInfo& i = m_samples.front();
-    assert(i.pSample);
-
-    UINT32 bPreroll;
-
-    hr = i.pSample->GetUINT32(WebmTypes::WebMSample_Preroll, &bPreroll);
-
-    if (SUCCEEDED(hr) && (bPreroll != FALSE))
-    {
-        hr = i.DecodeAll(m_ctx);
-
-        i.pSample->Release();
-        i.pSample = 0;
-
-        m_samples.pop_front();
-
-        if (FAILED(hr))
-            return hr;
-
+    if (m_samples.empty())
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
-    }
 
-    //Get output buffer now, before we change any
-    //state because of decode.
+    HRESULT hr;
+    LONGLONG time, duration;
+
+    {
+        SampleInfo& i = m_samples.front();
+        assert(i.pSample);
+
+        UINT32 bPreroll;
+
+        hr = i.pSample->GetUINT32(WebmTypes::WebMSample_Preroll, &bPreroll);
+
+        if (SUCCEEDED(hr) && (bPreroll != FALSE))
+        {
+            hr = i.DecodeAll(m_ctx);
+
+            i.pSample->Release();
+            i.pSample = 0;
+
+            m_samples.pop_front();
+
+            if (FAILED(hr))
+                return hr;
+
+            return MF_E_TRANSFORM_NEED_MORE_INPUT;
+        }
+
+        hr = i.DecodeOne(m_ctx, time, duration);
+
+        if (FAILED(hr) || (hr != S_OK))
+        {
+            i.pSample->Release();
+            i.pSample = 0;
+
+            m_samples.pop_front();
+
+            if (FAILED(hr))
+                return hr;
+        }
+    }
 
     DWORD count_out;
 
@@ -1321,23 +1341,6 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
     if (FAILED(hr) || !bool(buf_out))
         return E_INVALIDARG;
-
-    //We have our output buffer, so it's safe to decode.
-
-    LONGLONG time, duration;
-
-    hr = i.DecodeOne(m_ctx, time, duration);
-
-    if (FAILED(hr) || (hr != S_OK))
-    {
-        i.pSample->Release();
-        i.pSample = 0;
-
-        m_samples.pop_front();
-
-        if (FAILED(hr))
-            return hr;
-    }
 
     GUID subtype;
 
@@ -1373,8 +1376,7 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
         assert(ptr_out);
         assert(stride_out > 0);  //top-down DIBs are positive, right?
 
-        hr = GetFrame(ptr_out, stride_out, subtype);
-        assert(SUCCEEDED(hr));
+        const HRESULT hrGetFrame = GetFrame(ptr_out, stride_out, subtype);
 
         //TODO: set output buffer length?
 
@@ -1383,6 +1385,9 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
         buf2d_out->Release();
         buf2d_out = 0;
+
+        if (FAILED(hrGetFrame) || (hrGetFrame != S_OK))
+            return hrGetFrame;
     }
     else
     {
@@ -1431,13 +1436,15 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
             }
         }
 
-        hr = GetFrame(ptr_out, stride_out, subtype);
-        assert(SUCCEEDED(hr));
-
-        hr = buf_out->SetCurrentLength(cbFrameLen);
-        assert(SUCCEEDED(hr));
+        const HRESULT hrGetFrame = GetFrame(ptr_out, stride_out, subtype);
 
         hr = buf_out->Unlock();
+        assert(SUCCEEDED(hr));
+
+        if (FAILED(hrGetFrame) || (hrGetFrame != S_OK))
+            return hrGetFrame;
+
+        hr = buf_out->SetCurrentLength(cbFrameLen);
         assert(SUCCEEDED(hr));
     }
 
@@ -1453,11 +1460,7 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
         assert(SUCCEEDED(hr));
     }
 
-#if 0 //def _DEBUG
-    os << "WebmMfVp8Dec::ProcessOutput (end)" << endl;
-#endif
-
-    return S_OK;
+    return S_OK;  //done
 }
 
 
@@ -1472,8 +1475,10 @@ HRESULT WebmMfVp8Dec::GetFrame(
 
     vpx_codec_iter_t iter = 0;
 
-    const vpx_image_t* f = vpx_codec_get_frame(&m_ctx, &iter);
-    assert(f);  //TODO: this will fail if alt-ref frame ("invisible")
+    const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &iter);
+
+    if (f == 0)  //alt-ref
+        return S_FALSE;  //tell caller to pop this buffer and call me back
 
     //Y
 
@@ -1550,8 +1555,9 @@ HRESULT WebmMfVp8Dec::GetFrame(
         }
     }
 
-    f = vpx_codec_get_frame(&m_ctx, &iter);
-    assert(f == 0);
+    const vpx_image_t* const f2 = vpx_codec_get_frame(&m_ctx, &iter);
+    f2;
+    assert(f2 == 0);
 
     return S_OK;
 }
