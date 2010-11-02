@@ -177,6 +177,7 @@ private:
     BOOL m_bThin;
 
     DWORD GetOutputBufferSize(FrameSize&) const;
+    HRESULT Decode(IMFSample*);
     HRESULT GetFrame(BYTE*, ULONG, const GUID&);
 
     void Flush();
