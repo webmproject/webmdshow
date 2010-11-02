@@ -30,7 +30,7 @@ libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
 
 # the following string vars disable their respective builds if non-empty
 # TODO(tomfinegan): need to hook the disable_* flags up w/getopt
-disable_xiph_builds="true" # disables ogg and vorbis builds
+disable_xiph_builds="" # disables ogg and vorbis builds
 disable_libvpx_build=""
 
 function die() {
@@ -54,7 +54,7 @@ function wget_and_untar() {
   #echo "outfile_url_array=${outfile_url_array[@]}"
   IFS="${oldIFS}"
   local last_array_element=${#outfile_url_array[@]}-1
-  local outfile="${outfile_url_array[arg{last_array_element}]}"
+  local outfile="${outfile_url_array[${last_array_element}]}"
   wget "${url}"
   if [[ ! -e "${outfile}" ]]; then
     die "wget_and_untar: download failed [argurl]"
