@@ -35,7 +35,11 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
     const char* const codec = pTrack->GetCodecId();
     assert(codec);
 
-    if (_stricmp(codec, "V_VP8") != 0)  //weird
+    if (_stricmp(codec, "V_VP8") == 0)
+        __noop;
+    //else if (_stricmp(codec, "V_ON2VP8") == 0)  //legacy
+    //    __noop;
+    else  //weird
     {
         pDesc = 0;
         return E_FAIL;
@@ -364,7 +368,7 @@ HRESULT WebmMfStreamVideo::Seek(
         const LONGLONG time_ns = pB->GetTime(pCluster);
         assert(time_ns >= 0);
 
-        if (m_thin_ns >= -1)
+        if (m_thin_ns >= -1)  //rate change has been requested
             m_thin_ns = time_ns;
     }
 
@@ -534,22 +538,9 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         }
     }
 
+#if 0
     const long cbBuffer = pCurrBlock->GetSize();
     assert(cbBuffer >= 0);
-
-    IMFMediaBufferPtr pBuffer;
-
-    HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
-    assert(SUCCEEDED(hr));
-    assert(pBuffer);
-
-    BYTE* ptr;
-    DWORD cbMaxLength;
-
-    hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
-    assert(SUCCEEDED(hr));
-    assert(ptr);
-    assert(cbMaxLength >= DWORD(cbBuffer));
 
     mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
 
@@ -564,11 +555,55 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
     hr = pSample->AddBuffer(pBuffer);
     assert(SUCCEEDED(hr));
+#else
+    HRESULT hr;
+
+    mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
+
+    const int frame_count = pCurrBlock->GetFrameCount();
+    assert(frame_count > 0);  //TODO
+
+    for (int i = 0; i < frame_count; ++i)
+    {
+        const mkvparser::Block::Frame& f = pCurrBlock->GetFrame(i);
+
+        const long cbBuffer = f.len;
+        assert(cbBuffer > 0);
+
+        IMFMediaBufferPtr pBuffer;
+
+        hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
+        assert(SUCCEEDED(hr));
+        assert(pBuffer);
+
+        BYTE* ptr;
+        DWORD cbMaxLength;
+
+        hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
+        assert(SUCCEEDED(hr));
+        assert(ptr);
+        assert(cbMaxLength >= DWORD(cbBuffer));
+
+        const long status = f.Read(pReader, ptr);
+        assert(status == 0);
+
+        hr = pBuffer->SetCurrentLength(cbBuffer);
+        assert(SUCCEEDED(hr));
+
+        hr = pBuffer->Unlock();
+        assert(SUCCEEDED(hr));
+
+        hr = pSample->AddBuffer(pBuffer);
+        assert(SUCCEEDED(hr));
+    }
+#endif
 
     const bool bKey = pCurrBlock->IsKey();
 
     if (bKey)
     {
+        assert(frame_count == 1);  //TODO
+
         hr = pSample->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
         assert(SUCCEEDED(hr));
     }
@@ -751,7 +786,6 @@ void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
     m_thin_ns = pBlock->GetTime(pCluster);
     assert(m_thin_ns >= 0);
 }
-
 
 
 }  //end namespace WebmMfSourceLib

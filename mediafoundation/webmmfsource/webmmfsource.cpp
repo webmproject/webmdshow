@@ -374,6 +374,7 @@ HRESULT WebmMfSource::Load()
             assert(pDesc);
             m_stream_descriptors.push_back(pDesc);
         }
+#if 1
         else if (type == 2)  //audio
         {
             hr = WebmMfStreamAudio::CreateStreamDescriptor(pTrack, pDesc);
@@ -384,6 +385,7 @@ HRESULT WebmMfSource::Load()
             assert(pDesc);
             m_stream_descriptors.push_back(pDesc);
         }
+#endif
     }
 
     if (m_stream_descriptors.empty())

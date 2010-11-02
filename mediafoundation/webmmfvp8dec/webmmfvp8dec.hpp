@@ -159,7 +159,16 @@ private:
     IMFMediaType* m_pInputMediaType;
     IMFMediaType* m_pOutputMediaType;
 
-    typedef std::list<IMFSample*> samples_t;
+    struct SampleInfo
+    {
+        IMFSample* pSample;
+        DWORD dwBuffer;
+
+        HRESULT DecodeAll(vpx_codec_ctx_t&);
+        HRESULT DecodeOne(vpx_codec_ctx_t&, LONGLONG&, LONGLONG&);
+    };
+
+    typedef std::list<SampleInfo> samples_t;
     samples_t m_samples;
 
     vpx_codec_ctx_t m_ctx;

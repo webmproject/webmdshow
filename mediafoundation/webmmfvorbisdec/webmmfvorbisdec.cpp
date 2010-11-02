@@ -205,9 +205,7 @@ HRESULT WebmMfVorbisDec::GetInputStreamInfo(DWORD dwInputStreamID,
 
     info.cbMaxLookahead = 0;
     info.hnsMaxLatency = 0;
-    info.dwFlags = MFT_INPUT_STREAM_WHOLE_SAMPLES |
-                   MFT_INPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER;
-
+    info.dwFlags = MFT_INPUT_STREAM_WHOLE_SAMPLES;
     info.cbSize = 0;       //input size is variable
     info.cbAlignment = 0;  //no specific alignment requirements
 
@@ -232,10 +230,17 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
 
     MFT_OUTPUT_STREAM_INFO& info = *p_info;
 
-    info.dwFlags = MFT_OUTPUT_STREAM_WHOLE_SAMPLES |
-                   MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER;
+    info.dwFlags = MFT_OUTPUT_STREAM_WHOLE_SAMPLES;
+                   //MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER;
+                   //MFT_OUTPUT_STREAM_FIXED_SAMPLE_SIZE  //TODO
+                   //MFT_OUTPUT_STREAM_PROVIDES_SAMPLES   //TODO
+                   //MFT_OUTPUT_STREAM_OPTIONAL
 
-    info.cbSize = (DWORD)((double)m_wave_format.nAvgBytesPerSec / 4.f);
+    const DWORD bytes_per_sec = m_wave_format.nAvgBytesPerSec;
+    assert(bytes_per_sec > 0);  //TODO: must have input media type
+
+    //TODO: we could eliminate this by specifying PROVIDES_SAMPLES
+    info.cbSize = (bytes_per_sec + 3) / 4;
     info.cbAlignment = 0;
 
     return S_OK;
@@ -707,7 +712,8 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
     return hr;
 }
 
-HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
+HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID,
+                                      IMFSample* pSample,
                                       DWORD)
 {
     if (dwInputStreamID != 0)
@@ -721,11 +727,11 @@ HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
     HRESULT status = pSample->GetBufferCount(&count);
     assert(SUCCEEDED(status));
 
-    if (count == 0)
-        return S_OK;  //TODO: is this an error?
+    if (count == 0)  //weird
+        return S_OK;
 
-    if (count > 1)
-        return E_INVALIDARG;
+    //if (count > 1)
+    //    return E_INVALIDARG;
 
     //TODO: check duration
     //TODO: check timestamp
@@ -747,40 +753,52 @@ HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID, IMFSample* pSample,
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample)
+HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_sample)
 {
-    IMFMediaBufferPtr mf_input_sample_buffer;
+    assert(p_sample);
 
-    HRESULT status =
-        p_mf_input_sample->GetBufferByIndex(0, &mf_input_sample_buffer);
-    if (FAILED(status))
-        return E_INVALIDARG;
+    DWORD count;
 
-    BYTE* p_input_sample_data = NULL;
-    DWORD input_sample_data_max_size = 0, input_sample_data_len = 0;
-    status = mf_input_sample_buffer->Lock(&p_input_sample_data,
-                                          &input_sample_data_max_size,
-                                          &input_sample_data_len);
-    if (FAILED(status))
-        return E_FAIL;
-
-    status = m_vorbis_decoder.Decode(p_input_sample_data,
-                                     input_sample_data_len);
-
-    mf_input_sample_buffer->Unlock();
+    HRESULT status = p_sample->GetBufferCount(&count);
 
     if (FAILED(status))
         return status;
 
+    for (DWORD idx = 0; idx < count; ++idx)
+    {
+        IMFMediaBufferPtr buf;
+
+        status = p_sample->GetBufferByIndex(idx, &buf);
+
+        if (FAILED(status))
+            return status;
+
+        BYTE* p_data;
+        DWORD data_max_size, data_len;
+
+        status = buf->Lock(&p_data, &data_max_size, &data_len);
+
+        if (FAILED(status))
+            return status;
+
+        const HRESULT status2 = m_vorbis_decoder.Decode(p_data, data_len);
+
+        status = buf->Unlock();
+        assert(SUCCEEDED(status));
+
+        if (FAILED(status2))  //decode status
+            return status2;
+    }
+
     return S_OK;
 }
 
-HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
+HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_sample,
                                                 UINT32 samples_to_process)
 {
     // try to get a buffer from the output sample...
     IMFMediaBufferPtr mf_output_buffer;
-    HRESULT status = p_mf_output_sample->GetBufferByIndex(0, &mf_output_buffer);
+    HRESULT status = p_sample->GetBufferByIndex(0, &mf_output_buffer);
 
     // and complain bitterly if unable
     if (FAILED(status) || !bool(mf_output_buffer))
@@ -791,10 +809,12 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
     if (FAILED(status))
         return status;
 
+    const UINT32 block_align = m_wave_format.nBlockAlign;
+    assert(block_align > 0);
+
     // adjust number of bytes to consume based on number of samples caller
     // requested: shoving it all in just because it fits isn't what we want...
-    const DWORD max_bytes_to_consume = samples_to_process *
-                                       m_wave_format.nBlockAlign;
+    const DWORD max_bytes_to_consume = samples_to_process * block_align;
     assert(max_bytes_to_consume <= mf_storage_limit);
 
     BYTE* p_mf_buffer_data = NULL;
@@ -804,8 +824,7 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
     if (FAILED(status))
         return status;
 
-    float* const ptr_mf_buffer =
-        reinterpret_cast<float* const>(p_mf_buffer_data);
+    float* const ptr_mf_buffer = reinterpret_cast<float*>(p_mf_buffer_data);
 
     status = m_vorbis_decoder.ConsumeOutputSamples(ptr_mf_buffer,
                                                    samples_to_process);
@@ -817,7 +836,7 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
     if (FAILED(unlock_status))
         return unlock_status;
 
-    const UINT32 bytes_written = samples_to_process * m_wave_format.nBlockAlign;
+    const UINT32 bytes_written = max_bytes_to_consume;
 
     status = mf_output_buffer->SetCurrentLength(bytes_written);
     assert(SUCCEEDED(status));
@@ -873,7 +892,6 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     // confirm we have an output sample before we pop an input sample off the
     // front of |m_mf_input_samples|
     MFT_OUTPUT_DATA_BUFFER& data = pOutputSamples[0];
-
     //data.dwStreamID should equal 0, but we ignore it
 
     IMFSample* const p_mf_output_sample = data.pSample;
@@ -885,11 +903,10 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
     status = p_mf_output_sample->GetBufferCount(&count);
 
-    if (SUCCEEDED(status) && (count != 1))
+    if (SUCCEEDED(status) && (count != 1))  //TODO: handle this?
         return E_INVALIDARG;
 
     IMFSample* const p_mf_input_sample = m_mf_input_samples.front();
-
     assert(p_mf_input_sample);
 
     status = DecodeVorbisFormat2Sample(p_mf_input_sample);
@@ -915,7 +932,9 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
         m_mediatime_recvd = 0;
 
         m_start_time = m_decode_start_time;
-        DBGLOG("m_decode_start_time=" << REFTIMETOSECONDS(m_decode_start_time));
+
+        DBGLOG("m_decode_start_time="
+               << REFTIMETOSECONDS(m_decode_start_time));
     }
 
     LONGLONG input_duration = 0;
@@ -935,15 +954,13 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     DBGLOG("IN start_time=" << REFTIMETOSECONDS(input_start_time) <<
            " duration=" << REFTIMETOSECONDS(input_duration));
 
-    UINT32 num_samples_available;
-    status = m_vorbis_decoder.GetOutputSamplesAvailable(&num_samples_available);
+    UINT32 samples_available;
+    status = m_vorbis_decoder.GetOutputSamplesAvailable(&samples_available);
 
-    if (num_samples_available < 1)
-    {
+    if (samples_available < 1)
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
-    }
 
-    status = ProcessLibVorbisOutput(p_mf_output_sample, num_samples_available);
+    status = ProcessLibVorbisOutput(p_mf_output_sample, samples_available);
     if (FAILED(status))
         return status;
 
@@ -952,14 +969,14 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     assert(SUCCEEDED(status));
 
     // update running sample and time totals
-    m_total_samples_decoded += num_samples_available;
-    LONGLONG mediatime_decoded = SamplesToMediaTime(num_samples_available);
+    m_total_samples_decoded += samples_available;
+    LONGLONG mediatime_decoded = SamplesToMediaTime(samples_available);
     m_mediatime_decoded += mediatime_decoded;
 
     // logging spam for tracking audio pauses with some input files
     DBGLOG("OUT start_time=" << REFTIMETOSECONDS(m_start_time) <<
            " duration (seconds)=" << REFTIMETOSECONDS(mediatime_decoded) <<
-           " duration (samples)=" << num_samples_available <<
+           " duration (samples)=" << samples_available <<
            " end time=" <<
            REFTIMETOSECONDS(m_start_time + mediatime_decoded));
     DBGLOG("m_total_samples_decoded=" << m_total_samples_decoded);
@@ -994,7 +1011,8 @@ HRESULT WebmMfVorbisDec::CreateVorbisDecoder(IMFMediaType* p_media_type)
     BYTE* p_format_blob = NULL;
     UINT32 blob_size = 0;
     HRESULT status = p_media_type->GetAllocatedBlob(MF_MT_USER_DATA,
-                                                    &p_format_blob, &blob_size);
+                                                    &p_format_blob,
+                                                    &blob_size);
     if (S_OK != status)
       return MF_E_INVALIDMEDIATYPE;
     if (NULL == p_format_blob)
