@@ -1326,62 +1326,18 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
     LONGLONG time, duration;
 
-    const HRESULT hrDecode = i.DecodeOne(m_ctx, time, duration);
+    hr = i.DecodeOne(m_ctx, time, duration);
 
-    if (FAILED(hrDecode))
+    if (FAILED(hr) || (hr != S_OK))
     {
         i.pSample->Release();
         i.pSample = 0;
 
         m_samples.pop_front();
 
-        return hrDecode;
+        if (FAILED(hr))
+            return hr;
     }
-
-#if 0
-    DWORD count_in;
-
-    HRESULT hr = i.pSample->GetBufferCount(&count_in);
-    assert(SUCCEEDED(hr));
-    assert(count_in > 0);
-
-    DWORD& idx = i.dwBuffer;
-    assert(idx < count_in);
-
-    IMFMediaBufferPtr buf_in;
-
-    hr = i.pSample->GetBufferByIndex(idx, &buf_in);
-    assert(SUCCEEDED(hr));
-    assert(buf_in);
-
-    ++idx;  //consume this input buffer
-
-    BYTE* ptr;
-    DWORD len;
-
-    hr = buf_in->Lock(&ptr, 0, &len);
-    assert(SUCCEEDED(hr));
-    assert(ptr);
-    assert(len);
-
-    const vpx_codec_err_t e = vpx_codec_decode(&m_ctx, ptr, len, 0, 0);
-
-    hr = buf_in->Unlock();
-    assert(SUCCEEDED(hr));
-
-    if (e != VPX_CODEC_OK)
-    {
-        if (idx >= count_in)
-        {
-            i.pSample->Release();
-            i.pSample = 0;
-
-            m_samples.pop_front();
-        }
-
-        return MF_E_INVALID_STREAM_DATA;
-    }
-#endif
 
     GUID subtype;
 
@@ -1391,8 +1347,6 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
 
     //TODO:
     //MFVideoFormat_I420
-
-    const DWORD fcc = subtype.Data1;
 
     FrameSize frame_size;
 
@@ -1458,6 +1412,8 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
             assert(stride_out > 0);
         else
         {
+            const DWORD fcc = subtype.Data1;
+
             const DWORD w = frame_size.width;
             LONG stride_out_;
 
@@ -1485,29 +1441,6 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
         assert(SUCCEEDED(hr));
     }
 
-#if 0
-    LONGLONG t;
-
-    hr = pSample_in->GetSampleTime(&t);
-
-    if (SUCCEEDED(hr))
-    {
-        assert(t >= 0);
-
-        hr = pSample_out->SetSampleTime(t);
-        assert(SUCCEEDED(hr));
-    }
-
-    hr = pSample_in->GetSampleDuration(&t);
-
-    if (SUCCEEDED(hr))
-    {
-        assert(t >= 0);  //TODO: move this into predicate?
-
-        hr = pSample_out->SetSampleDuration(t);
-        assert(SUCCEEDED(hr));
-    }
-#else
     if (time >= 0)
     {
         hr = pSample_out->SetSampleTime(time);
@@ -1518,15 +1451,6 @@ HRESULT WebmMfVp8Dec::ProcessOutput(
     {
         hr = pSample_out->SetSampleDuration(duration);
         assert(SUCCEEDED(hr));
-    }
-#endif
-
-    if (hrDecode != S_OK)  //done
-    {
-        i.pSample->Release();
-        i.pSample = 0;
-
-        m_samples.pop_front();
     }
 
 #if 0 //def _DEBUG
