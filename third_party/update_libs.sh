@@ -10,13 +10,16 @@
 # 3. (Optional) run mintty.exe once Cygwin.bat finishes.
 #    - this provides a fully functional terminal
 
+
+# TODO(tomfinegan): update script to support IDEs other than vs2008
+
 # xiph config vars
 # TODO(tomfinegan): rename some of these vars to distinguish them from
 #                   the libvpx vars
 build_config_array=(debug\|win32 debug\|x64 release\|win32 release\|x64)
 libvorbis_url=\
-"http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.1.tar.gz"
-libogg_url="http://downloads.xiph.org/releases/ogg/libogg-1.2.0.tar.gz"
+"http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.2.tar.gz"
+libogg_url="http://downloads.xiph.org/releases/ogg/libogg-1.2.1.tar.gz"
 patches_dir="patches"
 # note: the order of the following two arrays must match
 devenv_outdir_array=(win32/debug x64/debug win32/release x64/release)
@@ -25,7 +28,7 @@ install_dir_array=(x86/debug x64/debug x86/release x64/release)
 # libvpx stuff
 libvpx_dir="libvpx.git"
 libvpx_remote="git://review.webmproject.org/libvpx"
-libvpx_tag="bdf469c"
+libvpx_tag="cad2164"  # TODO(tomfinegan): rename var; works only w/git hashes
 libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
 
 # the following string vars disable their respective builds if non-empty
@@ -98,9 +101,10 @@ function fix_xiph_project() {
   sed -i -e "s/RuntimeLibrary=\"3\"/RuntimeLibrary=\"1\"/g" \
 -e "s/RuntimeLibrary=\"2\"/RuntimeLibrary=\"0\"/g" \
 ${projdir}/${project}.vcproj
+  # TODO(tomfinegan): extract libogg version from libogg URL
   if [[ "${project}" == "libvorbis_static" ]]; then
     sed -i -e \
-"s/libogg\\\\inc/libogg-1\.2\.0\\\\inc/g" \
+"s/libogg\\\\inc/libogg-1\.2\.1\\\\inc/g" \
 ${projdir}/${project}.vcproj
   fi
 }
@@ -136,6 +140,18 @@ function install_xiph_files() {
   for (( lib_index=0; lib_index < ${#install_dir_array[@]}; lib_index++ )); do
     cp ${src_dir}/win32/VS2008/${devenv_outdir_array[$lib_index]}/${project}.lib \
 ${target_dir}/${install_dir_array[$lib_index]}/
+    # copy pdb files for debug builds
+    if [[ -n $(echo ${install_dir_array[$lib_index]} | grep debug) ]]; then
+      local pdb_path_ogg=\
+"${src_dir}/win32/VS2008/${devenv_outdir_array[$lib_index]}/vc90.pdb"
+      if [[ -e "${pdb_path_ogg}" ]]; then
+        cp "${pdb_path_ogg}" ${target_dir}/${install_dir_array[$lib_index]}/
+      else
+        pdb_path_vorbis=\
+"${src_dir}/win32/VS2008/libvorbis/${devenv_outdir_array[$lib_index]}/vc90.pdb"
+        cp "${pdb_path_vorbis}" ${target_dir}/${install_dir_array[$lib_index]}/
+      fi
+    fi
   done
 }
 
