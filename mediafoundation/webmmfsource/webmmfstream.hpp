@@ -16,7 +16,7 @@ protected:
     WebmMfStream(
         WebmMfSource*,
         IMFStreamDescriptor*,
-        mkvparser::Track*);
+        const mkvparser::Track*);
 
 public:
 
@@ -72,7 +72,7 @@ public:
 
     WebmMfSource* const m_pSource;
     IMFStreamDescriptor* const m_pDesc;
-    mkvparser::Track* const m_pTrack;
+    const mkvparser::Track* const m_pTrack;
 
 protected:
 

@@ -8,7 +8,7 @@ class WebmMfStreamAudio : public WebmMfStream
     WebmMfStreamAudio(
         WebmMfSource*,
         IMFStreamDescriptor*,
-        mkvparser::AudioTrack*);
+        const mkvparser::AudioTrack*);
 
     virtual ~WebmMfStreamAudio();
 
@@ -18,13 +18,13 @@ class WebmMfStreamAudio : public WebmMfStream
 public:
 
     static HRESULT CreateStreamDescriptor(
-                    mkvparser::Track*,
+                    const mkvparser::Track*,
                     IMFStreamDescriptor*&);
 
     static HRESULT CreateStream(
                     IMFStreamDescriptor*,
                     WebmMfSource*,
-                    mkvparser::Track*,
+                    const mkvparser::Track*,
                     WebmMfStream*&);
 
     HRESULT GetCurrMediaTime(LONGLONG&) const;

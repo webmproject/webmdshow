@@ -355,7 +355,7 @@ HRESULT WebmMfSource::Load()
 
     for (ULONG idx = 0; idx < nTracks; ++idx)
     {
-        mkvparser::Track* const pTrack = pTracks->GetTrackByIndex(idx);
+        const mkvparser::Track* const pTrack = pTracks->GetTrackByIndex(idx);
 
         if (pTrack == 0)
             continue;
@@ -827,13 +827,13 @@ LONGLONG WebmMfSource::GetDuration() const
             if ((pBE == 0) || pBE->EOS())
                 continue;
 
-            Cluster* pCluster = pBE->GetCluster();
+            const Cluster* pCluster = pBE->GetCluster();
             assert(pCluster);
             assert(!pCluster->EOS());
 
             if (pCluster->m_index >= 0)  //loaded
             {
-                Cluster* const p = m_pSegment->GetLast();
+                const Cluster* const p = m_pSegment->GetLast();
                 assert(p);
                 assert(p->m_index >= 0);
 
@@ -843,7 +843,7 @@ LONGLONG WebmMfSource::GetDuration() const
             {
                 for (int i = 0; i < 10; ++i)
                 {
-                    Cluster* const p = m_pSegment->GetNext(pCluster);
+                    const Cluster* const p = m_pSegment->GetNext(pCluster);
 
                     if ((p == 0) || p->EOS())
                         break;
@@ -1079,7 +1079,7 @@ HRESULT WebmMfSource::Start(
         const mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
         assert(pTracks);
 
-        mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
+        const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
         assert(pTrack);
         assert(pTrack->GetNumber() == id);
 
@@ -1576,7 +1576,7 @@ HRESULT WebmMfSource::GetService(
 
 HRESULT WebmMfSource::NewStream(
     IMFStreamDescriptor* pSD,
-    mkvparser::Track* pTrack
+    const mkvparser::Track* pTrack
     /* LONGLONG time */ )
 {
     assert(pSD);
@@ -1738,7 +1738,7 @@ void WebmMfSource::GetTime(
         const mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
         assert(pTracks);
 
-        mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
+        const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
         assert(pTrack);
         assert(pTrack->GetNumber() == id);
 
@@ -1870,7 +1870,7 @@ void WebmMfSource::Seek(
         if (!pStream->IsSelected())
             continue;
 
-        mkvparser::Track* const pTrack = pStream->m_pTrack;
+        const mkvparser::Track* const pTrack = pStream->m_pTrack;
         const LONGLONG type = pTrack->GetType();
 
         if (type == 2)  //audio
@@ -1901,11 +1901,12 @@ void WebmMfSource::Seek(
             base = static_cast<LONG>(idx);
         else
         {
-            mkvparser::Cluster* const pCluster = i.pBE->GetCluster();
+            const mkvparser::Cluster* const pCluster = i.pBE->GetCluster();
             assert(pCluster);
             assert(!pCluster->EOS());
 
-            mkvparser::Cluster* const pBase = vs[base].info.pBE->GetCluster();
+            const WebmMfStreamVideo::SeekInfo& info = vs[base].info;
+            const mkvparser::Cluster* const pBase = info.pBE->GetCluster();
 
             if (pCluster->GetTime() < pBase->GetTime())
                 base = static_cast<LONG>(idx);
@@ -1922,7 +1923,7 @@ void WebmMfSource::Seek(
         s.pStream->Seek(var, s.info, bStart);
     }
 
-    mkvparser::Cluster* pBaseCluster;
+    const mkvparser::Cluster* pBaseCluster;
 
     if (base >= 0)
         pBaseCluster = vs[base].info.pBE->GetCluster();

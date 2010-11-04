@@ -23,14 +23,14 @@ namespace WebmMfSourceLib
 {
 
 HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
-    mkvparser::Track* pTrack_,
+    const mkvparser::Track* pTrack_,
     IMFStreamDescriptor*& pDesc)
 {
     assert(pTrack_);
     assert(pTrack_->GetType() == 1);
 
-    using mkvparser::VideoTrack;
-    VideoTrack* const pTrack = static_cast<VideoTrack*>(pTrack_);
+    typedef mkvparser::VideoTrack VT;
+    const VT* const pTrack = static_cast<const VT*>(pTrack_);
 
     const char* const codec = pTrack->GetCodecId();
     assert(codec);
@@ -259,14 +259,14 @@ HRESULT WebmMfStreamVideo::GetFrameRate(
 HRESULT WebmMfStreamVideo::CreateStream(
     IMFStreamDescriptor* pSD,
     WebmMfSource* pSource,
-    mkvparser::Track* pTrack_,
+    const mkvparser::Track* pTrack_,
     WebmMfStream*& pStream)
 {
     assert(pTrack_);
     assert(pTrack_->GetType() == 1);
 
-    using mkvparser::VideoTrack;
-    VideoTrack* const pTrack = static_cast<VideoTrack*>(pTrack_);
+    typedef mkvparser::VideoTrack VT;
+    const VT* const pTrack = static_cast<const VT*>(pTrack_);
 
     pStream = new (std::nothrow) WebmMfStreamVideo(pSource, pSD, pTrack);
     assert(pStream);  //TODO
@@ -280,7 +280,7 @@ HRESULT WebmMfStreamVideo::CreateStream(
 WebmMfStreamVideo::WebmMfStreamVideo(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
-    mkvparser::VideoTrack* pTrack) :
+    const mkvparser::VideoTrack* pTrack) :
     WebmMfStream(pSource, pDesc, pTrack),
     m_rate(1),
     m_thin_ns(-2)
@@ -363,7 +363,7 @@ HRESULT WebmMfStreamVideo::Seek(
         assert(pB);
         assert(pB->IsKey());
 
-        mkvparser::Cluster* const pCluster = pBE->GetCluster();
+        const mkvparser::Cluster* const pCluster = pBE->GetCluster();
 
         const LONGLONG time_ns = pB->GetTime(pCluster);
         assert(time_ns >= 0);
@@ -415,7 +415,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     assert(pCurrBlock);
     assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
 
-    mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
+    const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
 
 #ifdef _DEBUG
@@ -670,12 +670,12 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
-        const mkvparser::Block* const pNextBlock = pNextEntry->GetBlock();
-        assert(pNextBlock);
+        const mkvparser::Block* const b = pNextEntry->GetBlock();
+        assert(b);
 
-        mkvparser::Cluster* const pNextCluster = pNextEntry->GetCluster();
+        const mkvparser::Cluster* const c = pNextEntry->GetCluster();
 
-        const LONGLONG next_ns = pNextBlock->GetTime(pNextCluster);
+        const LONGLONG next_ns = b->GetTime(c);
         assert(next_ns >= curr_ns);
 
         const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
@@ -758,7 +758,7 @@ void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
     if ((i.pBE == 0) || i.pBE->EOS())  //we're already done
         return;
 
-    mkvparser::Cluster* const pCluster = i.pBE->GetCluster();
+    const mkvparser::Cluster* const pCluster = i.pBE->GetCluster();
     assert(pCluster);
     assert(!pCluster->EOS());
 

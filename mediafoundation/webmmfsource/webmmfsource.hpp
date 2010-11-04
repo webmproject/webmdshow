@@ -110,7 +110,7 @@ private:
     typedef std::map<ULONG, WebmMfStream*> streams_t;
     streams_t m_streams;
 
-    HRESULT NewStream(IMFStreamDescriptor*, mkvparser::Track*);
+    HRESULT NewStream(IMFStreamDescriptor*, const mkvparser::Track*);
     HRESULT UpdateStream(IMFStreamDescriptor*, WebmMfStream*);
 
     void GetTime(
