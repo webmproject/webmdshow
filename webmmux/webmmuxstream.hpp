@@ -19,7 +19,6 @@ class Stream
     Stream& operator=(const Stream&);
 
 public:
-
     virtual ~Stream();
     virtual void Final();  //grant last wishes
 

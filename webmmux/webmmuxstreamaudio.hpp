@@ -22,6 +22,7 @@ class StreamAudio : public Stream
 
 protected:
     StreamAudio(Context&, const BYTE*, ULONG);
+    ~StreamAudio();
 
     void WriteTrackType();
     void WriteTrackSettings();
@@ -32,8 +33,6 @@ protected:
     virtual BYTE GetChannels() const = 0;
 
 public:
-    ~StreamAudio();
-
     void Flush();
     bool Wait() const;
 
