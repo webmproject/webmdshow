@@ -9,7 +9,7 @@ class WebmMfStreamVideo : public WebmMfStream
     WebmMfStreamVideo(
         WebmMfSource*,
         IMFStreamDescriptor*,
-        mkvparser::VideoTrack*);
+        const mkvparser::VideoTrack*);
 
     virtual ~WebmMfStreamVideo();
 
@@ -19,13 +19,13 @@ class WebmMfStreamVideo : public WebmMfStream
 public:
 
     static HRESULT CreateStreamDescriptor(
-                    mkvparser::Track*,
+                    const mkvparser::Track*,
                     IMFStreamDescriptor*&);
 
     static HRESULT CreateStream(
                     IMFStreamDescriptor*,
                     WebmMfSource*,
-                    mkvparser::Track*,
+                    const mkvparser::Track*,
                     WebmMfStream*&);
 
     struct SeekInfo

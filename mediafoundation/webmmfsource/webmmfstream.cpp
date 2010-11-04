@@ -21,7 +21,7 @@ namespace WebmMfSourceLib
 WebmMfStream::WebmMfStream(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
-    mkvparser::Track* pTrack) :
+    const mkvparser::Track* pTrack) :
     m_pSource(pSource),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
@@ -602,7 +602,7 @@ HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
         return S_OK;
     }
 
-    mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
+    const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
 
     const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();

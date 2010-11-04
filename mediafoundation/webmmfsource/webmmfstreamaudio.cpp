@@ -24,14 +24,14 @@ namespace WebmMfSourceLib
 
 
 HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
-    mkvparser::Track* pTrack_,
+    const mkvparser::Track* pTrack_,
     IMFStreamDescriptor*& pDesc)
 {
     assert(pTrack_);
     assert(pTrack_->GetType() == 2);  //audio
 
-    using mkvparser::AudioTrack;
-    AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);
+    typedef mkvparser::AudioTrack AT;
+    const AT* const pTrack = static_cast<const AT*>(pTrack_);
 
     pDesc = 0;
 
@@ -211,14 +211,14 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
 HRESULT WebmMfStreamAudio::CreateStream(
     IMFStreamDescriptor* pSD,
     WebmMfSource* pSource,
-    mkvparser::Track* pTrack_,
+    const mkvparser::Track* pTrack_,
     WebmMfStream*& pStream)
 {
     assert(pTrack_);
     assert(pTrack_->GetType() == 2);
 
-    using mkvparser::AudioTrack;
-    AudioTrack* const pTrack = static_cast<AudioTrack*>(pTrack_);
+    typedef mkvparser::AudioTrack AT;
+    const AT* const pTrack = static_cast<const AT*>(pTrack_);
 
     pStream = new (std::nothrow) WebmMfStreamAudio(pSource, pSD, pTrack);
     assert(pStream);  //TODO
@@ -232,7 +232,7 @@ HRESULT WebmMfStreamAudio::CreateStream(
 WebmMfStreamAudio::WebmMfStreamAudio(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
-    mkvparser::AudioTrack* pTrack) :
+    const mkvparser::AudioTrack* pTrack) :
     WebmMfStream(pSource, pDesc, pTrack),
     m_pCurr(0)
 {
@@ -279,7 +279,7 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
     assert(pCurrBlock);
     assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
 
-    mkvparser::Cluster* const pCurrCluster = m_pCurr->GetCluster();
+    const mkvparser::Cluster* const pCurrCluster = m_pCurr->GetCluster();
     assert(pCurrCluster);
 
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
@@ -388,13 +388,13 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
 
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
-        const mkvparser::Block* const pNextBlock = pNextEntry->GetBlock();
-        assert(pNextBlock);
+        const mkvparser::Block* const b = pNextEntry->GetBlock();
+        assert(b);
 
-        mkvparser::Cluster* const pNextCluster = pNextEntry->GetCluster();
-        assert(pNextCluster);
+        const mkvparser::Cluster* const c = pNextEntry->GetCluster();
+        assert(c);
 
-        const __int64 next_ns = pNextBlock->GetTime(pNextCluster);
+        const __int64 next_ns = b->GetTime(c);
         assert(next_ns >= curr_ns);
 
         const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
