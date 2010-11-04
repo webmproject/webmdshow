@@ -443,12 +443,6 @@ HRESULT WebmMfVorbisDec::SetInputType(DWORD dwInputStreamID,
     if (m_output_mediatype)
         m_output_mediatype = 0;
 
-    if (m_wave_format.nChannels > 2 &&
-        (m_wave_format.nChannels != 6 && m_wave_format.nChannels != 8))
-    {
-        return MF_E_INVALIDMEDIATYPE;
-    }
-
     hr = MFCreateMediaType(&m_output_mediatype);
     assert(SUCCEEDED(hr));
     if (FAILED(hr))
@@ -459,28 +453,10 @@ HRESULT WebmMfVorbisDec::SetInputType(DWORD dwInputStreamID,
     if (FAILED(hr))
         return hr;
 
-    if (m_wave_format.nChannels > 2)
+    if (m_wave_format.nChannels > 1 && m_wave_format.nChannels < 9)
     {
-        if (m_wave_format.nChannels == 6)
-        {
-            UINT32 mask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT |
-                          SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
-                          SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
-
-            hr = m_output_mediatype->SetUINT32(MF_MT_AUDIO_CHANNEL_MASK, mask);
-            assert(SUCCEEDED(hr));
-        }
-        else // if (m_wave_format.nChannels == 8)
-        {
-            UINT32 mask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT |
-                          SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
-                          SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT |
-                          SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
-
-            hr = m_output_mediatype->SetUINT32(MF_MT_AUDIO_CHANNEL_MASK, mask);
-            assert(SUCCEEDED(hr));
-        }
-
+        const UINT32 mask = m_vorbis_decoder.GetChannelMask();
+        hr = m_output_mediatype->SetUINT32(MF_MT_AUDIO_CHANNEL_MASK, mask);
         assert(SUCCEEDED(hr));
     }
 

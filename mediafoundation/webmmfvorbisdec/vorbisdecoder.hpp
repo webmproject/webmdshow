@@ -40,8 +40,13 @@ public:
         return m_vorbis_info.channels;
     };
 
+    UINT32 GetChannelMask() const;
+
 private:
     int NextOggPacket_(const BYTE* ptr_packet, DWORD packet_size);
+
+    void ReorderAndInterleaveBlock_(float** ptr_blocks, int sample);
+    int ReorderAndInterleave_();
 
     ogg_packet m_ogg_packet;
     DWORD m_ogg_packet_count;

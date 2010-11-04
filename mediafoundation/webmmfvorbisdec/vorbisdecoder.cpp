@@ -143,22 +143,10 @@ int VorbisDecoder::Decode(BYTE* ptr_samples, UINT32 length)
       return E_FAIL;
 
     // Consume all PCM samples from libvorbis
-    int samples = 0;
-    float** pp_pcm;
-
-    while ((samples = vorbis_synthesis_pcmout(&m_vorbis_state, &pp_pcm)) > 0)
-    {
-        for (int sample = 0; sample < samples; ++sample)
-        {
-            for (int channel = 0; channel < m_vorbis_info.channels; ++channel)
-            {
-                m_output_samples.push_back(pp_pcm[channel][sample]);
-            }
-        }
-        vorbis_synthesis_read(&m_vorbis_state, samples);
-    }
-
-    return S_OK;
+    // Notes:
+    // - channel reordering is performed only when necessary
+    // - all streams w/>2 channels require inteleaving
+    return ReorderAndInterleave_();
 }
 
 int VorbisDecoder::GetOutputSamplesAvailable(UINT32* ptr_num_samples_available)
@@ -214,6 +202,170 @@ void VorbisDecoder::Flush()
 {
     vorbis_synthesis_restart(&m_vorbis_state);
     m_output_samples.clear();
+}
+
+void VorbisDecoder::ReorderAndInterleaveBlock_(float** ptr_blocks, int sample)
+{
+    const int vorbis_channels = m_vorbis_info.channels;
+    assert(vorbis_channels > 0);
+
+    // On channel ordering, from the vorbis spec:
+    // http://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-800004.3.9
+    // one channel
+    //   the stream is monophonic
+    // two channels
+    //   the stream is stereo. channel order: left, right
+    // three channels
+    //   the stream is a 1d-surround encoding. channel order: left, center,
+    //   right
+    // four channels
+    //   the stream is quadraphonic surround. channel order: front left, front
+    //   right, rear left, rear right
+    // five channels
+    //   the stream is five-channel surround. channel order: front left,
+    //   center, front right, rear left, rear right
+    // six channels
+    //   the stream is 5.1 surround. channel order: front left, center,
+    //   front right, rear left, rear right, LFE
+    // seven channels
+    //   the stream is 6.1 surround. channel order: front left, center,
+    //   front right, side left, side right, rear center, LFE
+    // eight channels
+    //   the stream is 7.1 surround. channel order: front left, center,
+    //   front right, side left, side right, rear left, rear right, LFE
+    // greater than eight channels
+    //   channel use and order is defined by the application
+
+    switch (vorbis_channels)
+    {
+        case 3:
+            m_output_samples.push_back(ptr_blocks[0][sample]); // FL
+            m_output_samples.push_back(ptr_blocks[2][sample]); // FR
+            m_output_samples.push_back(ptr_blocks[1][sample]); // FC
+            break;
+        case 5:
+            m_output_samples.push_back(ptr_blocks[0][sample]); // FL
+            m_output_samples.push_back(ptr_blocks[2][sample]); // FR
+            m_output_samples.push_back(ptr_blocks[1][sample]); // FC
+            m_output_samples.push_back(ptr_blocks[3][sample]); // BL
+            m_output_samples.push_back(ptr_blocks[4][sample]); // BR
+            break;
+        case 6:
+            // WebM Vorbis decode multi-channel ordering
+            // 5.1 Vorbis to PCM (Decoding)
+            // Vorbis                PCM
+            // 0 Front Left   => 0 Front Left
+            // 1 Front Center => 2 Front Right
+            // 2 Front Right  => 1 Front Center
+            // 3 Back Left    => 5 LFE
+            // 4 Back Right   => 3 Back Left
+            // 5 LFE          => 4 Back Right
+            m_output_samples.push_back(ptr_blocks[0][sample]); // FL
+            m_output_samples.push_back(ptr_blocks[2][sample]); // FR
+            m_output_samples.push_back(ptr_blocks[1][sample]); // FC
+            m_output_samples.push_back(ptr_blocks[5][sample]); // LFE
+            m_output_samples.push_back(ptr_blocks[3][sample]); // BL
+            m_output_samples.push_back(ptr_blocks[4][sample]); // BR
+            break;
+        case 7:
+            m_output_samples.push_back(ptr_blocks[0][sample]); // FL
+            m_output_samples.push_back(ptr_blocks[2][sample]); // FR
+            m_output_samples.push_back(ptr_blocks[1][sample]); // FC
+            m_output_samples.push_back(ptr_blocks[6][sample]); // LFE
+            m_output_samples.push_back(ptr_blocks[5][sample]); // BC
+            m_output_samples.push_back(ptr_blocks[3][sample]); // SL
+            m_output_samples.push_back(ptr_blocks[4][sample]); // SR
+            break;
+        case 8:
+            // 7.1 Vorbis to PCM (Decoding)
+            // Vorbis             PCM
+            // 0 Front Left   => 0 Front Left
+            // 1 Front Center => 2 Front Right
+            // 2 Front Right  => 1 Front Center
+            // 3 Side Left    => 7 LFE
+            // 4 Side Right   => 5 Back Left
+            // 5 Back Left    => 6 Back Right
+            // 6 Back Right   => 3 Side Left
+            // 7 LFE          => 4 Side Right
+            m_output_samples.push_back(ptr_blocks[0][sample]); // FL
+            m_output_samples.push_back(ptr_blocks[2][sample]); // FR
+            m_output_samples.push_back(ptr_blocks[1][sample]); // FC
+            m_output_samples.push_back(ptr_blocks[7][sample]); // LFE
+            m_output_samples.push_back(ptr_blocks[5][sample]); // BL
+            m_output_samples.push_back(ptr_blocks[6][sample]); // BR
+            m_output_samples.push_back(ptr_blocks[3][sample]); // SL
+            m_output_samples.push_back(ptr_blocks[4][sample]); // SR
+            break;
+        case 1:
+        case 2:
+        case 4:
+        default:
+            // For mono/stereo/quadrophonic stereo/>8 channels: output in the
+            // order libvorbis uses.  It's correct for the formats named, and
+            // at present the Vorbis spec says streams w/>8 channels have user
+            // defined channel order.
+            for (int channel = 0; channel < vorbis_channels; ++channel)
+                m_output_samples.push_back(ptr_blocks[channel][sample]);
+    }
+
+
+}
+
+int VorbisDecoder::ReorderAndInterleave_()
+{
+    int samples = 0;
+    float** pp_pcm;
+    vorbis_dsp_state* const ptr_state = &m_vorbis_state;
+    while ((samples = vorbis_synthesis_pcmout(ptr_state, &pp_pcm)) > 0)
+    {
+        for (int sample = 0; sample < samples; ++sample)
+            ReorderAndInterleaveBlock_(pp_pcm, sample);
+
+        vorbis_synthesis_read(ptr_state, samples);
+    }
+    return S_OK;
+}
+
+UINT32 VorbisDecoder::GetChannelMask() const
+{
+    assert(m_vorbis_info.channels > 0);
+    const int vorbis_channels = m_vorbis_info.channels;
+
+    UINT32 mask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+    switch (vorbis_channels)
+    {
+        case 2:
+            break;
+        case 3:
+            mask |= SPEAKER_FRONT_CENTER;
+            break;
+        case 4:
+            mask |= SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+            break;
+        case 5:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT |
+                    SPEAKER_BACK_RIGHT;
+            break;
+        case 6:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+            break;
+        case 7:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_CENTER | SPEAKER_SIDE_LEFT |
+                    SPEAKER_SIDE_RIGHT;
+            break;
+        case 8:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT |
+                    SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
+            break;
+        case 1:
+        default:
+            mask = 0;
+    }
+
+    return mask;
 }
 
 } // end namespace WebmMfVorbisDecLib
