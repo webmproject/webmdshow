@@ -12,7 +12,7 @@
 
 class CMediaTypes;
 
-namespace MkvParser
+namespace mkvparser
 {
 
 class Track;
@@ -47,26 +47,24 @@ public:
 
     HRESULT GetAvailable(LONGLONG*) const;
 
-    //NOTE: too inefficient
-    //void LoadCurrPosition(LONGLONG, DWORD, __int64& parse_result);
-
     LONGLONG GetSeekTime(LONGLONG currTime, DWORD dwCurr) const;
     //convert from reftime to ns
 
-    Cluster* GetSeekBase(LONGLONG ns) const;
+    const Cluster* GetSeekBase(LONGLONG ns, bool use_cues) const;
     //find the cluster that corresponds to this seek time
 
-    void PreloadSeek(LONGLONG ns);
+    //void PreloadSeek(LONGLONG ns);
     //(pre)load a few clusters, an anticpation of seek request
 
-    Cluster* SetCurrPosition(LONGLONG ns);
-    void SetCurrPosition(Cluster*);
+    const Cluster* Seek(LONGLONG ns, bool use_cues);
+    void SetCurrPosition(const Cluster*);
 
     void SetStopPosition(LONGLONG, DWORD);
     void SetStopPositionEOS();
 
     ULONG GetClusterCount() const;
 
+#if 0
     template<typename T, typename S, typename F>
     struct TCreateOutpins
     {
@@ -83,15 +81,17 @@ public:
                 f->CreateOutpin(s);
         }
     };
+#endif
 
-    Track* const m_pTrack;
+    const Track* const m_pTrack;
+    static std::wstring ConvertFromUTF8(const char*);
 
 protected:
-    explicit Stream(Track*);
+    explicit Stream(const Track*);
     bool m_bDiscontinuity;
     const BlockEntry* m_pCurr;
     const BlockEntry* m_pStop;
-    Cluster* m_pBase;
+    const Cluster* m_pBase;
 
     virtual std::wostream& GetKind(std::wostream&) const = 0;
 
@@ -103,4 +103,4 @@ protected:
 
 };
 
-}  //end namespace MkvParser
+}  //end namespace mkvparser

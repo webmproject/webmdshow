@@ -11,6 +11,7 @@
 #include "mkvparser.hpp"
 #include "webmtypes.hpp"
 #include "graphutil.hpp"
+#include "cmediatypes.hpp"
 #include <cassert>
 #include <amvideo.h>
 #include <dvdmedia.h>
@@ -24,11 +25,11 @@ static const char* const s_CodecId_VP8 = "V_VP8";
 static const char* const s_CodecId_ON2VP8 = "V_ON2VP8";
 static const char* const s_CodecId_VFW = "V_MS/VFW/FOURCC";
 
-namespace MkvParser
+namespace mkvparser
 {
 
 
-VideoStream* VideoStream::CreateInstance(VideoTrack* pTrack)
+VideoStream* VideoStream::CreateInstance(const VideoTrack* pTrack)
 {
     assert(pTrack);
 
@@ -60,7 +61,7 @@ VideoStream* VideoStream::CreateInstance(VideoTrack* pTrack)
 }
 
 
-VideoStream::VideoStream(VideoTrack* pTrack) : Stream(pTrack)
+VideoStream::VideoStream(const VideoTrack* pTrack) : Stream(pTrack)
 {
 }
 
@@ -110,7 +111,7 @@ void VideoStream::GetVp8MediaTypes(CMediaTypes& mtv) const
     vih.dwBitRate = 0;
     vih.dwBitErrorRate = 0;
 
-    const VideoTrack* const pTrack = static_cast<VideoTrack*>(m_pTrack);
+    const VideoTrack* const pTrack = static_cast<const VideoTrack*>(m_pTrack);
 
     const double r = pTrack->GetFrameRate();
 
@@ -148,9 +149,10 @@ void VideoStream::GetVp8MediaTypes(CMediaTypes& mtv) const
 
 void VideoStream::GetVfwMediaTypes(CMediaTypes& mtv) const
 {
-    const bytes_t& cp = m_pTrack->GetCodecPrivate();
-    const ULONG cp_size = static_cast<ULONG>(cp.size());
-    cp_size;
+    size_t cp_size;
+
+    const BYTE* const cp = m_pTrack->GetCodecPrivate(cp_size);
+    assert(cp);
     assert(cp_size >= sizeof(BITMAPINFOHEADER));
 
     AM_MEDIA_TYPE mt;
@@ -176,7 +178,7 @@ void VideoStream::GetVfwMediaTypes(CMediaTypes& mtv) const
     vih.dwBitRate = 0;
     vih.dwBitErrorRate = 0;
 
-    const VideoTrack* const pTrack = static_cast<VideoTrack*>(m_pTrack);
+    const VideoTrack* const pTrack = static_cast<const VideoTrack*>(m_pTrack);
 
     const double r = pTrack->GetFrameRate();
 
@@ -233,9 +235,13 @@ HRESULT VideoStream::QueryAccept(const AM_MEDIA_TYPE* pmt) const
         if (!GraphUtil::FourCCGUID::IsFourCC(mt.subtype))
             return S_FALSE;
 
-        const bytes_t& cp = m_pTrack->GetCodecPrivate();
+        size_t cp_size;
+        const BYTE* const cp = m_pTrack->GetCodecPrivate(cp_size);
 
-        if (cp.size() < sizeof(BITMAPINFOHEADER))
+        if (cp == 0)
+            return S_FALSE;
+
+        if (cp_size < sizeof(BITMAPINFOHEADER))
             return S_FALSE;
 
         BITMAPINFOHEADER bmih;
@@ -288,7 +294,7 @@ HRESULT VideoStream::UpdateAllocatorProperties(
 
 long VideoStream::GetBufferSize() const
 {
-    const VideoTrack* const pTrack = static_cast<VideoTrack*>(m_pTrack);
+    const VideoTrack* const pTrack = static_cast<const VideoTrack*>(m_pTrack);
 
     const __int64 w = pTrack->GetWidth();
     const __int64 h = pTrack->GetHeight();
@@ -316,15 +322,17 @@ HRESULT VideoStream::OnPopulateSample(
     assert(m_pCurr);
     assert(m_pCurr != m_pStop);
     assert(!m_pCurr->EOS());
+#if 0
     assert((pNextEntry == 0) ||
            pNextEntry->EOS() ||
            !pNextEntry->IsBFrame());
+#endif
 
     const Block* const pCurrBlock = m_pCurr->GetBlock();
     assert(pCurrBlock);
-    assert(pCurrBlock->GetNumber() == m_pTrack->GetNumber());
+    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
 
-    Cluster* const pCurrCluster = m_pCurr->GetCluster();
+    const Cluster* const pCurrCluster = m_pCurr->GetCluster();
     assert(pCurrCluster);
 
     assert((m_pStop == 0) ||
@@ -342,7 +350,12 @@ HRESULT VideoStream::OnPopulateSample(
     assert((basetime_ns % 100) == 0);
 #endif
 
-    const LONG srcsize = pCurrBlock->GetSize();
+    const int nFrames = pCurrBlock->GetFrameCount();
+    assert(nFrames == 1);  //TODO: support lacing
+
+    const Block::Frame& f = pCurrBlock->GetFrame(0);
+
+    const LONG srcsize = f.len;
     assert(srcsize >= 0);
 
     const long tgtsize = pSample->GetSize();
@@ -356,10 +369,10 @@ HRESULT VideoStream::OnPopulateSample(
     assert(SUCCEEDED(hr));
     assert(ptr);
 
-    IMkvFile* const pFile = pCurrCluster->m_pSegment->m_pFile;
+    IMkvReader* const pFile = pCurrCluster->m_pSegment->m_pReader;
 
-    hr = pCurrBlock->Read(pFile, ptr);
-    assert(hr == S_OK);  //all bytes were read
+    const long status = f.Read(pFile, ptr);
+    assert(status == 0);  //all bytes were read
 
     hr = pSample->SetActualDataLength(srcsize);
 
@@ -385,6 +398,7 @@ HRESULT VideoStream::OnPopulateSample(
 
     //TODO: is there a better way to make this test?
     //We could genericize this, e.g. BlockEntry::HasTime().
+#if 0  //TODO
     if (m_pCurr->IsBFrame())
     {
         assert(!bKey);
@@ -393,6 +407,7 @@ HRESULT VideoStream::OnPopulateSample(
         assert(SUCCEEDED(hr));
     }
     else
+#endif
     {
         const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
         assert(start_ns >= basetime_ns);
@@ -411,7 +426,7 @@ HRESULT VideoStream::OnPopulateSample(
             const Block* const pNextBlock = pNextEntry->GetBlock();
             assert(pNextBlock);
 
-            Cluster* const pNextCluster = pNextEntry->GetCluster();
+            const Cluster* const pNextCluster = pNextEntry->GetCluster();
 
             const __int64 stop_ns = pNextBlock->GetTime(pNextCluster);
             assert(stop_ns > start_ns);
@@ -435,4 +450,4 @@ HRESULT VideoStream::OnPopulateSample(
 
 
 
-}  //end namespace MkvParser
+}  //end namespace mkvparser

@@ -18,11 +18,11 @@
 using std::endl;
 #endif
 
-namespace MkvParser
+namespace mkvparser
 {
 
 
-Stream::Stream(Track* pTrack) :
+Stream::Stream(const Track* pTrack) :
     m_pTrack(pTrack)
 {
     Init();
@@ -60,13 +60,13 @@ std::wstring Stream::GetName() const
     const Track* const t = m_pTrack;
     assert(t);
 
-    if (const wchar_t* codecName = t->GetCodecName())
-        return codecName;
+    if (const char* codecName = t->GetCodecNameAsUTF8())
+        return ConvertFromUTF8(codecName);
 
-    if (const wchar_t* name = t->GetName())
-        return name;
+    if (const char* name = t->GetNameAsUTF8())
+        return ConvertFromUTF8(name);
 
-    if (ULONG tn = t->GetNumber())
+    if (LONGLONG tn = t->GetNumber())
     {
         std::wostringstream os;
         os << L"Track" << tn;
@@ -116,7 +116,7 @@ HRESULT Stream::GetAvailable(LONGLONG* pLatest) const
         pos = GetDuration();
     else
     {
-        Cluster* const pCluster = pSegment->GetLast();
+        const Cluster* const pCluster = pSegment->GetLast();
 
         if ((pCluster == 0) || pCluster->EOS())
             pos = 0;
@@ -155,7 +155,6 @@ __int64 Stream::GetCurrTime() const
     //populate a media sample, just send the B-frames as part of
     //the same sample as the preceding I- or P-frame).
     const __int64 ns = pBlock->GetTime(m_pCurr->GetCluster());
-
     const __int64 reftime = ns / 100;  //100-ns ticks
 
     return reftime;
@@ -180,7 +179,6 @@ __int64 Stream::GetStopTime() const
     assert(pBlock);
 
     const __int64 ns = pBlock->GetTime(m_pStop->GetCluster());
-
     const __int64 reftime = ns / 100;  //100-ns ticks
 
     return reftime;
@@ -236,71 +234,55 @@ LONGLONG Stream::GetSeekTime(
 }
 
 
-Cluster* Stream::GetSeekBase(LONGLONG tCurr_ns) const
+const Cluster* Stream::GetSeekBase(LONGLONG tCurr_ns, bool use_cues) const
 {
     Segment* const pSegment = m_pTrack->m_pSegment;
-
-    Cluster* pBase;
 
     if (pSegment->GetCount() == 0)
     {
         if (pSegment->Unparsed() <= 0)
-            pBase = &pSegment->m_eos;
-        else
-            pBase = 0;  //lazy init later when we have data
-    }
-    else if (tCurr_ns <= 0)
-    {
-        pBase = 0;
-    }
-    else if (tCurr_ns >= pSegment->GetDuration())
-    {
-        pBase = &pSegment->m_eos;
-    }
-    else
-    {
-#if 0 //def _DEBUG
-        odbgstream os;
-        os << "mkvparserstream[track="
-           << m_pTrack->GetNumber()
-           << "]::GetSeekBase: tCurr_ns="
-           << tCurr_ns
-           << endl;
-#endif
+            return &pSegment->m_eos;
 
-        const BlockEntry* pCurr;
-        pSegment->GetCluster(tCurr_ns, m_pTrack, pBase, pCurr);
-        assert(pBase);
-        assert(!pBase->EOS());
-        assert(pCurr);
+        return 0;  //lazy init later when we have data
+    }
 
-#if 0 //def _DEBUG
-        os << "mkvparserstream[track="
-           << m_pTrack->GetNumber()
-           << "]::GetSeekBase(cont'd): tCurr_ns="
-           << tCurr_ns
-           << " pBaseCluster->GetTime="
-           << pBase->GetTime()
-           << " pCurr=";
+    if (tCurr_ns <= 0)
+        return 0;
 
-        if (pCurr->EOS())
-            os << "EOS";
-        else
+    if (tCurr_ns >= pSegment->GetDuration())
+        return &pSegment->m_eos;
+
+    if (!use_cues)
+        __noop;
+    else if (const Cues* pCues = pSegment->GetCues())
+    {
+        const mkvparser::CuePoint* pCP;
+        const mkvparser::CuePoint::TrackPosition* pTP;
+
+        const bool bFound = pCues->Find(tCurr_ns, m_pTrack, pCP, pTP);
+
+        if (bFound)
         {
-            const Block* const pBlock = pCurr->GetBlock();
-            assert(pBlock);
+            const BlockEntry* const pBE = pCues->GetBlock(pCP, pTP);
+            assert(pBE);
+            assert(!pBE->EOS());
 
-            os << pBlock->GetTime(pCurr->GetCluster());
+            return pBE->GetCluster();
         }
 
-        os << endl;
-#endif
+        //yes, fall through
     }
 
-    return pBase;
+    //TODO: use Segment::FindCluster instead?
+    const BlockEntry* const pBE = pSegment->Seek(tCurr_ns, m_pTrack);
+    assert(pBE);
+    assert(!pBE->EOS());
+
+    return pBE->GetCluster();
 }
 
 
+#if 0
 void Stream::PreloadSeek(LONGLONG seek_ns)
 {
     Segment* const pSegment = m_pTrack->m_pSegment;
@@ -349,85 +331,83 @@ void Stream::PreloadSeek(LONGLONG seek_ns)
             return;
     }
 }
+#endif
 
 
-Cluster* Stream::SetCurrPosition(LONGLONG tCurr_ns)
+const Cluster* Stream::Seek(LONGLONG tCurr_ns, bool use_cues)
 {
     Segment* const pSegment = m_pTrack->m_pSegment;
 
     const __int64 duration_ns = pSegment->GetDuration();
     assert(duration_ns >= 0);
 
-    Cluster* pBase;
+    m_bDiscontinuity = true;
 
     if (pSegment->GetCount() == 0)
     {
+        //TODO: we can probably do better here.
+
         if (pSegment->Unparsed() <= 0)
         {
-            pBase = &pSegment->m_eos;
+            m_pBase = &pSegment->m_eos;
             m_pCurr = m_pTrack->GetEOS();
         }
         else
         {
-            pBase = 0;
+            m_pBase = 0;
             m_pCurr = 0;  //lazy init later when we have data
         }
+
+        return m_pBase;
     }
-    else if (tCurr_ns <= 0)
+
+    if (tCurr_ns <= 0)
     {
-        pBase = 0;
+        m_pBase = 0;
         m_pCurr = 0;  //lazy init later
+
+        return m_pBase;
     }
-    else if (tCurr_ns >= duration_ns)
+
+    if (tCurr_ns >= duration_ns)
     {
-        pBase = &pSegment->m_eos;
+        m_pBase = &pSegment->m_eos;
         m_pCurr = m_pTrack->GetEOS();
+
+        return m_pBase;
     }
-    else
+
+    if (!use_cues)
+        __noop;
+    else if (const Cues* pCues = pSegment->GetCues())
     {
-#if 0 //def _DEBUG
-        odbgstream os;
-        os << "mkvparserstream[track="
-           << m_pTrack->GetNumber()
-           << "]::SetCurrPos: tCurr_ns="
-           << tCurr_ns
-           << endl;
-#endif
+        const mkvparser::CuePoint* pCP;
+        const mkvparser::CuePoint::TrackPosition* pTP;
 
-        pSegment->GetCluster(tCurr_ns, m_pTrack, pBase, m_pCurr);
-        assert(pBase);
-        assert(!pBase->EOS());
-        assert(m_pCurr);
+        const bool bFound = pCues->Find(tCurr_ns, m_pTrack, pCP, pTP);
 
-#if 0 //def _DEBUG
-        os << "mkvparserstream[track="
-           << m_pTrack->GetNumber()
-           << "]::SetCurrPos(cont'd): tCurr_ns="
-           << tCurr_ns
-           << " m_pCurr=";
-
-        if (m_pCurr->EOS())
-            os << "EOS";
-        else
+        if (bFound)
         {
-            const Block* const pBlock = m_pCurr->GetBlock();
-            assert(pBlock);
+            m_pCurr = pCues->GetBlock(pCP, pTP);
+            assert(m_pCurr);
+            assert(!m_pCurr->EOS());
 
-            os << pBlock->GetTime(m_pCurr->GetCluster());
+            m_pBase = m_pCurr->GetCluster();
+            return m_pBase;
         }
-
-        os << endl;
-#endif
     }
 
-    m_pBase = pBase;
-    m_bDiscontinuity = true;
+    //TODO: use Segment::FindCluster instead?
+    m_pCurr = pSegment->Seek(tCurr_ns, m_pTrack);
+    assert(m_pCurr);
+    assert(!m_pCurr->EOS());
 
-    return pBase;
+    m_pBase = m_pCurr->GetCluster();
+    return m_pBase;
 }
 
 
-void Stream::SetCurrPosition(Cluster* pBase)
+void Stream::SetCurrPosition(const Cluster* pBase)
 {
     if (pBase == 0)
         m_pCurr = 0;  //lazy init
@@ -450,7 +430,7 @@ void Stream::SetStopPosition(
 
     if (pSegment->GetCount() == 0)
     {
-        m_pStop = m_pTrack->GetEOS();
+        m_pStop = m_pTrack->GetEOS();  //means "play to end"
         return;
     }
 
@@ -472,8 +452,8 @@ void Stream::SetStopPosition(
         assert(tCurr_ns >= 0);
     }
 
-
-    Cluster* const pCurrCluster = m_pBase ? m_pBase : pSegment->GetFirst();
+    const Cluster* const pFirst = pSegment->GetFirst();
+    const Cluster* const pCurrCluster = m_pBase ? m_pBase : pFirst;
     pCurrCluster;
     assert(pCurrCluster);
     assert(!pCurrCluster->EOS());
@@ -535,7 +515,7 @@ void Stream::SetStopPosition(
         return;
     }
 
-    Cluster* pStopCluster = pSegment->GetCluster(tStop_ns);  //TODO
+    const Cluster* pStopCluster = pSegment->FindCluster(tStop_ns);  //TODO
     assert(pStopCluster);
 
     if (pStopCluster == pCurrCluster)
@@ -558,6 +538,7 @@ HRESULT Stream::Preload()
 {
     Segment* const pSegment = m_pTrack->m_pSegment;
 
+#if 0
     Cluster* pCluster;
     __int64 pos;
 
@@ -568,6 +549,14 @@ HRESULT Stream::Preload()
     const bool bDone = pSegment->AddCluster(pCluster, pos);
 
     return bDone ? S_FALSE : S_OK;
+#else
+    const int status = pSegment->LoadCluster();
+
+    if (status < 0)  //error
+        return E_FAIL;
+
+    return S_OK;
+#endif
 }
 
 
@@ -579,14 +568,14 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
     if (SendPreroll(pSample))
         return S_OK;
 
-    if (m_pCurr == 0)
+    if (m_pCurr == 0)  //lazy-init of first block
     {
-        const HRESULT hr = m_pTrack->GetFirst(m_pCurr);
+        const long status = m_pTrack->GetFirst(m_pCurr);
 
-        if (hr == VFW_E_BUFFER_UNDERFLOW)
-            return hr;  //try again later
+        if (status == E_BUFFER_NOT_FULL)
+            return VFW_E_BUFFER_UNDERFLOW;
 
-        assert(SUCCEEDED(hr));
+        assert(status >= 0);  //success
         assert(m_pCurr);
 
         m_pBase = m_pTrack->m_pSegment->GetFirst();
@@ -605,31 +594,33 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
 
     const BlockEntry* pNextBlock;
 
-    HRESULT hr = m_pTrack->GetNextBlock(m_pCurr, pNextBlock);
+    long status = m_pTrack->GetNext(m_pCurr, pNextBlock);
 
-    if (hr == VFW_E_BUFFER_UNDERFLOW)
-        return hr;
+    if (status == E_BUFFER_NOT_FULL)
+        return VFW_E_BUFFER_UNDERFLOW;
 
-    assert(SUCCEEDED(hr));
+    assert(status >= 0);  //success
     assert(pNextBlock);
 
+#if 0  //TODO: keep this?
     const BlockEntry* pNextTime;
 
-    hr = m_pTrack->GetNextTime(m_pCurr, pNextBlock, pNextTime);
+    status = m_pTrack->GetNextTime(m_pCurr, pNextBlock, pNextTime);
 
-    if (hr == VFW_E_BUFFER_UNDERFLOW)
-        return hr;
+    if (status == E_BUFFER_NOT_FULL)
+        return VFW_E_BUFFER_UNDERFLOW;
 
-    assert(SUCCEEDED(hr));
+    assert(status >= 0);  //success
     assert(pNextTime);
+#endif
 
-    hr = OnPopulateSample(pNextTime, pSample);
+    const HRESULT hr = OnPopulateSample( /* pNextTime */ pNextBlock, pSample);
     assert(SUCCEEDED(hr));  //TODO
 
     m_pCurr = pNextBlock;
 
-    if (hr != S_OK)
-        return 2;  //throw away this sample
+    if (hr != S_OK)  //TODO: do we still need to do this?
+        return 2;    //throw away this sample
 
     m_bDiscontinuity = false;
 
@@ -655,4 +646,35 @@ HRESULT Stream::SetConnectionMediaType(const AM_MEDIA_TYPE&)
 }
 
 
-}  //end namespace MkvParser
+std::wstring Stream::ConvertFromUTF8(const char* str)
+{
+    const int cch = MultiByteToWideChar(
+                        CP_UTF8,
+                        0,  //TODO: MB_ERR_INVALID_CHARS
+                        str,
+                        -1,  //include NUL terminator in result
+                        0,
+                        0);  //request length
+
+    assert(cch > 0);
+
+    const size_t cb = cch * sizeof(wchar_t);
+    wchar_t* const wstr = (wchar_t*)_malloca(cb);
+
+    const int cch2 = MultiByteToWideChar(
+                        CP_UTF8,
+                        0,  //TODO: MB_ERR_INVALID_CHARS
+                        str,
+                        -1,
+                        wstr,
+                        cch);
+
+    cch2;
+    assert(cch2 > 0);
+    assert(cch2 == cch);
+
+    return wstr;
+}
+
+
+}  //end namespace mkvparser
