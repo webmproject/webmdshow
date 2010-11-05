@@ -12,7 +12,7 @@
 namespace WebmSource
 {
 
-class MkvFile : public MkvParser::IMkvFile
+class MkvFile : public mkvparser::IMkvReader
 {
     MkvFile(const MkvFile&);
     MkvFile& operator=(const MkvFile&);
@@ -25,6 +25,10 @@ public:
     HRESULT Close();
     bool IsOpen() const;
 
+    int Read(long long pos, long len, unsigned char* buf);
+    int Length(long long* total, long long* available);
+
+#if 0
     HRESULT MkvRead(
         LONGLONG,
         LONG,
@@ -33,6 +37,7 @@ public:
     HRESULT MkvLength(
         LONGLONG*,
         LONGLONG*);
+#endif
 
 private:
     HANDLE m_hFile;
