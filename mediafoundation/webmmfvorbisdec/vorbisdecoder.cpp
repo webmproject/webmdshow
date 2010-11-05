@@ -336,6 +336,9 @@ UINT32 VorbisDecoder::GetChannelMask() const
     {
         case 2:
             break;
+        case 1:
+            mask = SPEAKER_FRONT_CENTER;
+            break;
         case 3:
             mask |= SPEAKER_FRONT_CENTER;
             break;
@@ -360,7 +363,6 @@ UINT32 VorbisDecoder::GetChannelMask() const
                     SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT |
                     SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
             break;
-        case 1:
         default:
             mask = 0;
     }
