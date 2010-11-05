@@ -37,19 +37,19 @@ BOOL APIENTRY DllMain(
     DWORD  dwReason,
     LPVOID)
 {
-   switch (dwReason)
-   {
-       case DLL_PROCESS_ATTACH:
+    switch (dwReason)
+    {
+        case DLL_PROCESS_ATTACH:
         {
             g_hModule = hModule;
-           break;
+            break;
         }
-       case DLL_THREAD_ATTACH:
-       case DLL_THREAD_DETACH:
-       case DLL_PROCESS_DETACH:
-       default:
-          break;
-   }
+        case DLL_THREAD_ATTACH:
+        case DLL_THREAD_DETACH:
+        case DLL_PROCESS_DETACH:
+            default:
+            break;
+    }
 
     return TRUE;
 }
@@ -86,7 +86,9 @@ STDAPI DllUnregisterServer()
 
     //assert(SUCCEEDED(hr));
 
-    hr = ComReg::UnRegisterCustomFileType(L".webm", WebmTypes::CLSID_WebmSource);
+    hr = ComReg::UnRegisterCustomFileType(
+            L".webm",
+            WebmTypes::CLSID_WebmSource);
     assert(SUCCEEDED(hr));
 
     hr = ComReg::UnRegisterCoclass(WebmTypes::CLSID_WebmSource);

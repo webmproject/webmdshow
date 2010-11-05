@@ -35,7 +35,7 @@ namespace WebmSource
 
 Outpin::Outpin(
     Filter* pFilter,
-    MkvParser::Stream* pStream) :
+    mkvparser::Stream* pStream) :
     Pin(pFilter, PINDIR_OUTPUT, pStream->GetId().c_str()),
     m_pStream(pStream),
     m_hThread(0)
@@ -710,7 +710,8 @@ HRESULT Outpin::SetPositions(
            << dec << (pStop ? *pStop : -1)
            << " dwStop=0x"
            << hex << dwStop_
-           << "; BEGIN FLUSH: released filter lock; connection->calling BeginFlush"
+           << "; BEGIN FLUSH: released filter lock; "
+           << "connection->calling BeginFlush"
            << endl;
 #endif
 
@@ -725,7 +726,9 @@ HRESULT Outpin::SetPositions(
            << dec << (pStop ? *pStop : -1)
            << " dwStop=0x"
            << hex << dwStop_
-           << "; BEGIN FLUSH: released filter lock; connection->called BeginFlush; waiting for thread termination"
+           << "; BEGIN FLUSH: released filter lock; "
+           << "connection->called BeginFlush; "
+           << "waiting for thread termination"
            << endl;
 #endif
 
@@ -955,85 +958,41 @@ unsigned Outpin::Main()
     //TODO: we need duration to send NewSegment
     //HRESULT hr = m_connection->NewSegment(st, sp, 1);
 
-#ifdef _DEBUG
-    wodbgstream os;
-#endif
-
     for (;;)
     {
         GraphUtil::IMediaSamplePtr pSample;
 
-#if 0 //def _DEBUG
-        os << "\nOutpin::Main: calling GetBuffer" << endl;
-#endif
-
         HRESULT hr = m_pAllocator->GetBuffer(&pSample, 0, 0, 0);
-
-#if 0 //def _DEBUG
-        os << "Outpin::Main: called GetBuffer: hr=0x"
-           << hex << hr << dec
-           << endl;
-#endif
 
         if (hr != S_OK)
             return 0;
 
         assert(bool(pSample));
 
-#if 0 //def _DEBUG
-        os << "Outpin::Main: calling PopulateSample" << endl;
-#endif
-
         const bool bEOS = PopulateSample(pSample);
-
-#if 0 //def _DEBUG
-        os << "Outpin::Main: called PopulateSample: bEOS="
-           << boolalpha << bEOS
-           << endl;
-#endif
 
         if (bEOS)
         {
-#ifdef _DEBUG
-        os << "webmsource::Outpin[" << m_id << "]::Main: calling EndOfStream" << endl;
-#endif
-
             hr = m_connection->EndOfStream();
-
-#ifdef _DEBUG
-        os << "webmsource::Outpin[" << m_id << "]::Main: called EndOfStream; hr=0x"
-           << hex << hr << dec
-           << endl;
-#endif
             return 0;
         }
 
-#if 0 //def _DEBUG
-        os << "Outpin::Main: calling Receive" << endl;
-#endif
-
         hr = m_pInputPin->Receive(pSample);
 
-#if 0 //def _DEBUG
-        os << "Outpin::Main: called Receive; hr=0x"
-           << hex << hr << dec
-           << '\n'
-           << endl;
-#endif
-
         //TODO: there is a potential problem here.  If the upstream decoder
-        //rejects the sample (problem with bitstream, etc), then this terminates
-        //this streaming thread, but the filter isn't in the Stopped state.
+        //rejects the sample (problem with bitstream, etc), then this
+        //terminates this streaming thread, but the filter isn't in the
+        //Stopped state.
         //Now say the use notices that the window isn't displaying any video.
         //He closes the window to stop play, but this causes the FGM to
         //call IMediaSeeking::SetPosition to reset the position back to 0.
         //But since we weren't stopped when that happened, we restart the
-        //thread, thinking that a play had been interrupted by a seek request --
-        //but that's not the case, because the thread had already been interrupted
-        //much earlier, because the bitstream failed to decode.  We probably need
-        //a stronger test: instead of testing whether we were stopped or not stopped,
-        //we need to test whether we we not stopped and thread wasn't already
-        //terminated.
+        //thread, thinking that a play had been interrupted by a seek request,
+        //but that's not the case, because the thread had already been
+        //interrupted much earlier, because the bitstream failed to decode.
+        //We probably need a stronger test: instead of testing whether we
+        //were stopped or not stopped, we need to test whether we we not
+        //stopped and thread wasn't already terminated.
 
         if (hr != S_OK)
             return 0;
@@ -1058,20 +1017,8 @@ bool Outpin::PopulateSample(IMediaSample* pSample)
 
         if (hr == VFW_E_BUFFER_UNDERFLOW)
         {
-#ifdef _DEBUG
-            MkvParser::Track* const pTrack = m_pStream->m_pTrack;
-            MkvParser::Segment* const pSegment = pTrack->m_pSegment;
-
-            const ULONG n0 = pSegment->GetCount();
-#endif
-
             hr = m_pStream->Preload();
             assert(SUCCEEDED(hr));
-
-#ifdef _DEBUG
-            const ULONG n = pSegment->GetCount();
-            assert((n > n0) || (hr == S_FALSE));
-#endif
 
             continue;
         }
