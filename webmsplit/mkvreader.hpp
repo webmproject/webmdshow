@@ -13,7 +13,7 @@
 namespace WebmSplit
 {
 
-class MkvReader : public MkvParser::IMkvFile
+class MkvReader : public mkvparser::IMkvReader
 {
     MkvReader(const MkvReader&);
     MkvReader& operator=(const MkvReader&);
@@ -25,6 +25,10 @@ public:
     void SetSource(IAsyncReader*);
     bool IsOpen() const;
 
+    int Read(long long pos, long len, unsigned char* buf);
+    int Length(long long* total, long long* available);
+
+#if 0
     HRESULT MkvRead(
         LONGLONG,
         LONG,
@@ -33,6 +37,7 @@ public:
     HRESULT MkvLength(
         LONGLONG*,
         LONGLONG*);
+#endif
 
 private:
     GraphUtil::IAsyncReaderPtr m_pSource;

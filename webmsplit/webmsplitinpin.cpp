@@ -241,14 +241,9 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
 
 HRESULT Inpin::OnDisconnect()
 {
-    //odbgstream os;
-    //os << "WebmSplit::Inpin::OnDisconnect: calling OnDisconnectInpin" << endl;
-
     const HRESULT hr = m_pFilter->OnDisconnectInpin();
     hr;
     assert(SUCCEEDED(hr));  //TODO
-
-    //os << "WebmSplit::Inpin::OnDisconnect: called OnDisconnectInpin" << endl;
 
     m_reader.SetSource(0);
 

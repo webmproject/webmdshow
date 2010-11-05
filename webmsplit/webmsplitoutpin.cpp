@@ -35,7 +35,7 @@ namespace WebmSplit
 
 Outpin::Outpin(
     Filter* pFilter,
-    MkvParser::Stream* pStream) :
+    mkvparser::Stream* pStream) :
     Pin(pFilter, PINDIR_OUTPUT, pStream->GetId().c_str()),
     m_pStream(pStream),
     m_hThread(0),
@@ -64,7 +64,7 @@ Outpin::~Outpin()
 }
 
 
-Outpin* Outpin::Create(Filter* f, MkvParser::Stream* s)
+Outpin* Outpin::Create(Filter* f, mkvparser::Stream* s)
 {
     Outpin* const p = new (std::nothrow) Outpin(f, s);
     assert(p);  //TODO
@@ -1179,8 +1179,6 @@ unsigned Outpin::Main()
     //UPDATE: but if IMediaSeeking::GetCapabilities does NOT indicate
     //that it supports segments, then do we still need to send NewSegment?
 
-    //wodbgstream os;
-
     for (;;)
     {
         GraphUtil::IMediaSamplePtr pSample;
@@ -1188,39 +1186,25 @@ unsigned Outpin::Main()
         HRESULT hr = m_pAllocator->GetBuffer(&pSample, 0, 0, 0);
 
         if (hr != S_OK)
-        {
-            //os << "WebmSplit::outpin[" << m_id << "]::main: GetBuffer failed" << endl;
             return 0;
-        }
 
         assert(bool(pSample));
 
         const int status = PopulateSample(pSample);
 
         if (status < 0)
-        {
-            //os << "WebmSplit::outpin[" << m_id << "]::main: PopulateSample returned STOP" << endl;
             return 0;
-        }
 
         if (status == 0)  //EOS
         {
-            //os << "WebmSplit::outpin[" << m_id << "]::main: PopulateSample return EOS" << endl;
             hr = m_pPinConnection->EndOfStream();
             return 0;
         }
 
-        //os << "WebmSplit::outpin[" << m_id << "]::main: calling pInpinPin->Receive" << endl;
-
         hr = m_pInputPin->Receive(pSample);
 
         if (hr != S_OK)
-        {
-            //os << "WebmSplit::outpin[" << m_id << "]::main: pInpinPin->Receive returned error; EXITING" << endl;
             return 0;
-        }
-
-        //os << "WebmSplit::outpin[" << m_id << "]::main: pInpinPin->Receive returned OK; getting new buffer" << endl;
     }
 }
 
@@ -1256,9 +1240,6 @@ int Outpin::PopulateSample(IMediaSample* pSample)
 
         m_pFilter->OnStarvation(m_pStream->GetClusterCount());
 
-        //odbgstream os;
-        //os << "WebmSplit::outpin::PopulateSample: releasing filter lock and waiting for new cluster" << endl;
-
         lock.Release();
 
         enum { nh = 2 };
@@ -1272,13 +1253,11 @@ int Outpin::PopulateSample(IMediaSample* pSample)
             return -1;  //NOTE: this return here is not an error
 
         assert(dw == (WAIT_OBJECT_0 + 1));  //hNewCluster
-
-        //os << "WebmSplit::outpin::PopulateSample: new cluster signalled" << endl;
     }
 }
 
 
-MkvParser::Stream* Outpin::GetStream() const
+mkvparser::Stream* Outpin::GetStream() const
 {
     return m_pStream;
 }
