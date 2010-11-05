@@ -453,7 +453,7 @@ HRESULT WebmMfVorbisDec::SetInputType(DWORD dwInputStreamID,
     if (FAILED(hr))
         return hr;
 
-    if (m_wave_format.nChannels > 1 && m_wave_format.nChannels < 9)
+    if (m_wave_format.nChannels < 9)
     {
         const UINT32 mask = m_vorbis_decoder.GetChannelMask();
         hr = m_output_mediatype->SetUINT32(MF_MT_AUDIO_CHANNEL_MASK, mask);
