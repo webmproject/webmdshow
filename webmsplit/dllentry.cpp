@@ -87,9 +87,6 @@ STDAPI DllUnregisterServer()
 
     //assert(SUCCEEDED(hr));
 
-    //hr = ComReg::UnRegisterCustomFileType(L".mkv", WebmSplit::CLSID_WebmSplit);
-    //assert(SUCCEEDED(hr));
-
     hr = ComReg::UnRegisterCoclass(WebmTypes::CLSID_WebmSplit);
 
     return SUCCEEDED(hr) ? S_OK : S_FALSE;

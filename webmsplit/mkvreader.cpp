@@ -35,6 +35,7 @@ bool MkvReader::IsOpen() const
 }
 
 
+#if 0
 HRESULT MkvReader::MkvRead(
     LONGLONG start,
     LONG len,
@@ -43,14 +44,40 @@ HRESULT MkvReader::MkvRead(
     //TODO: use aligned read so we can timeout the read
     return m_pSource->SyncRead(start, len, ptr);
 }
+#else
+int MkvReader::Read(
+    long long pos,
+    long len,
+    unsigned char* buf)
+{
+    if (!IsOpen())
+        return -1;
+
+    const HRESULT hr = m_pSource->SyncRead(pos, len, buf);
+    return SUCCEEDED(hr) ? 0 : -1;
+}
+#endif
 
 
+#if 0
 HRESULT MkvReader::MkvLength(
     LONGLONG* pTotal,
     LONGLONG* pAvailable)
 {
     return m_pSource->Length(pTotal, pAvailable);
 }
+#else
+int MkvReader::Length(
+    long long* pTotal,
+    long long* pAvailable)
+{
+    if (!IsOpen())
+        return -1;
+
+    const HRESULT hr = m_pSource->Length(pTotal, pAvailable);
+    return SUCCEEDED(hr) ? 0 : -1;
+}
+#endif
 
 
 } //end namespace WebmSplit

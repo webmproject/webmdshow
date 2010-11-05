@@ -11,9 +11,9 @@
 #include <comdef.h>
 #include "graphutil.hpp"
 
-namespace MkvParser
+namespace mkvparser
 {
-    class Stream;
+class Stream;
 }
 
 namespace WebmSplit
@@ -26,7 +26,7 @@ class Outpin : public Pin,
     Outpin& operator=(const Outpin&);
 
 protected:
-    Outpin(Filter*, MkvParser::Stream*);
+    Outpin(Filter*, mkvparser::Stream*);
     virtual ~Outpin();
 
     void Final();
@@ -34,7 +34,7 @@ protected:
     HRESULT GetName(PIN_INFO&) const;
     int PopulateSample(IMediaSample*);
 
-    MkvParser::Stream* m_pStream;
+    mkvparser::Stream* m_pStream;
     GraphUtil::IMemAllocatorPtr m_pAllocator;
     GraphUtil::IMemInputPinPtr m_pInputPin;
     HANDLE m_hThread;
@@ -43,7 +43,7 @@ protected:
     ULONG m_cRef;
 
 public:
-    static Outpin* Create(Filter*, MkvParser::Stream*);
+    static Outpin* Create(Filter*, mkvparser::Stream*);
     ULONG Destroy();  //when inpin becomes disconnected
 
     HRESULT Start();  //from stopped to running/paused
@@ -120,7 +120,7 @@ public:
     HRESULT STDMETHODCALLTYPE GetRate(double*);
     HRESULT STDMETHODCALLTYPE GetPreroll(LONGLONG*);
 
-    MkvParser::Stream* GetStream() const;
+    mkvparser::Stream* GetStream() const;
     void OnNewCluster();
 
 private:
