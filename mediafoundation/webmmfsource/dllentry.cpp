@@ -86,6 +86,16 @@ STDAPI DllUnregisterServer()
                     WebmTypes::CLSID_WebmMfByteStreamHandler);
     assert(SUCCEEDED(hr));  //TODO
 
+    hr = ComReg::UnRegisterCustomFileType(
+                    L"video/webm",
+                    WebmTypes::CLSID_WebmMfByteStreamHandler);
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = ComReg::UnRegisterCustomFileType(
+                    L"audio/webm",
+                    WebmTypes::CLSID_WebmMfByteStreamHandler);
+    assert(SUCCEEDED(hr));  //TODO
+
     hr = ComReg::UnRegisterCoclass(WebmTypes::CLSID_WebmMfByteStreamHandler);
     assert(SUCCEEDED(hr));  //TODO
 
@@ -145,6 +155,20 @@ static void RegisterHandler(const wchar_t* filename)
 
     hr = ComReg::RegisterByteStreamHandler(
             L".webm",
+            WebmTypes::CLSID_WebmMfByteStreamHandler,
+            friendly_name);
+
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = ComReg::RegisterByteStreamHandler(
+            L"video/webm",
+            WebmTypes::CLSID_WebmMfByteStreamHandler,
+            friendly_name);
+
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = ComReg::RegisterByteStreamHandler(
+            L"audio/webm",
             WebmTypes::CLSID_WebmMfByteStreamHandler,
             friendly_name);
 
