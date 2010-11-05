@@ -10,6 +10,7 @@
 #include "mkvparserstreamaudio.hpp"
 #include "mkvparser.hpp"
 #include "vorbistypes.hpp"
+#include "cmediatypes.hpp"
 #include <cassert>
 #include <limits>
 #include <uuids.h>
@@ -21,10 +22,10 @@ using std::endl;
 #endif
 
 
-namespace MkvParser
+namespace mkvparser
 {
 
-AudioStream* AudioStream::CreateInstance(AudioTrack* pTrack)
+AudioStream* AudioStream::CreateInstance(const AudioTrack* pTrack)
 {
     assert(pTrack);
 
@@ -45,7 +46,7 @@ AudioStream* AudioStream::CreateInstance(AudioTrack* pTrack)
 }
 
 
-AudioStream::AudioStream(AudioTrack* pTrack) :
+AudioStream::AudioStream(const AudioTrack* pTrack) :
     Stream(pTrack)
     //m_preroll(0)
 {
@@ -60,7 +61,7 @@ std::wostream& AudioStream::GetKind(std::wostream& os) const
 
 BYTE AudioStream::GetChannels() const
 {
-    const AudioTrack* const pTrack = static_cast<AudioTrack*>(m_pTrack);
+    const AudioTrack* const pTrack = static_cast<const AudioTrack*>(m_pTrack);
 
     const __int64 channels = pTrack->GetChannels();
     assert(channels > 0);
@@ -73,7 +74,7 @@ BYTE AudioStream::GetChannels() const
 
 ULONG AudioStream::GetSamplesPerSec() const
 {
-    const AudioTrack* const pTrack = static_cast<AudioTrack*>(m_pTrack);
+    const AudioTrack* const pTrack = static_cast<const AudioTrack*>(m_pTrack);
 
     const double rate = pTrack->GetSamplingRate();
     assert(rate > 0);
@@ -90,7 +91,7 @@ ULONG AudioStream::GetSamplesPerSec() const
 
 BYTE AudioStream::GetBitsPerSample() const
 {
-    const AudioTrack* const pTrack = static_cast<AudioTrack*>(m_pTrack);
+    const AudioTrack* const pTrack = static_cast<const AudioTrack*>(m_pTrack);
 
     const __int64 val = pTrack->GetBitDepth();
 
@@ -121,10 +122,10 @@ void AudioStream::GetMediaTypes(CMediaTypes& mtv) const
 
 void AudioStream::GetVorbisMediaTypes(CMediaTypes& mtv) const
 {
-    const bytes_t& cp = m_pTrack->GetCodecPrivate();
-    assert(!cp.empty());
+    size_t cp_size;
 
-    const ULONG cp_size = static_cast<ULONG>(cp.size());
+    const BYTE* const cp = m_pTrack->GetCodecPrivate(cp_size);
+    assert(cp);
     assert(cp_size > 0);
 
     const BYTE* const begin = &cp[0];
@@ -278,7 +279,7 @@ HRESULT AudioStream::UpdateAllocatorProperties(
 
 long AudioStream::GetBufferSize() const
 {
-    const AudioTrack* const pTrack = static_cast<AudioTrack*>(m_pTrack);
+    const AudioTrack* const pTrack = static_cast<const AudioTrack*>(m_pTrack);
 
     const double rr = pTrack->GetSamplingRate();
     const long nSamplesPerSec = static_cast<long>(rr);
@@ -308,9 +309,9 @@ HRESULT AudioStream::OnPopulateSample(
 
     const Block* const pCurrBlock = m_pCurr->GetBlock();
     assert(pCurrBlock);
-    assert(pCurrBlock->GetNumber() == m_pTrack->GetNumber());
+    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
 
-    Cluster* const pCurrCluster = m_pCurr->GetCluster();
+    const Cluster* const pCurrCluster = m_pCurr->GetCluster();
     assert(pCurrCluster);
 
     const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
@@ -348,7 +349,12 @@ HRESULT AudioStream::OnPopulateSample(
         return S_FALSE;  //throw away this sample
     }
 
-    const LONG srcsize = pCurrBlock->GetSize();
+    const int nFrames = pCurrBlock->GetFrameCount();
+    assert(nFrames == 1);  //TODO: support lacing
+
+    const Block::Frame& f = pCurrBlock->GetFrame(0);
+
+    const LONG srcsize = f.len;
     assert(srcsize >= 0);
 
     const long tgtsize = pSample->GetSize();
@@ -356,7 +362,7 @@ HRESULT AudioStream::OnPopulateSample(
     assert(tgtsize >= 0);
     assert(tgtsize >= srcsize);
 
-    IMkvFile* const pFile = pCurrCluster->m_pSegment->m_pFile;
+    IMkvReader* const pFile = pCurrCluster->m_pSegment->m_pReader;
 
     BYTE* ptr;
 
@@ -364,8 +370,8 @@ HRESULT AudioStream::OnPopulateSample(
     assert(SUCCEEDED(hr));
     assert(ptr);
 
-    hr = pCurrBlock->Read(pFile, ptr);
-    assert(hr == S_OK);  //all bytes were read
+    const long status = f.Read(pFile, ptr);
+    assert(status == 0);  //all bytes were read
 
     hr = pSample->SetActualDataLength(srcsize);
 
@@ -408,7 +414,7 @@ HRESULT AudioStream::OnPopulateSample(
         const Block* const pNextBlock = pNextEntry->GetBlock();
         assert(pNextBlock);
 
-        Cluster* const pNextCluster = pNextEntry->GetCluster();
+        const Cluster* const pNextCluster = pNextEntry->GetCluster();
 
         const __int64 stop_ns = pNextBlock->GetTime(pNextCluster);
         assert(stop_ns > start_ns);
@@ -720,4 +726,4 @@ bool AudioStream::SendOggSetupPacket(IMediaSample* pSample)
 #endif
 
 
-}  //end namespace MkvParser
+}  //end namespace mkvparser
