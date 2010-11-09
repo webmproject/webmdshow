@@ -40,6 +40,7 @@ protected:
 
     const mkvparser::BlockEntry* GetCurrBlock() const;
     HRESULT PopulateSample(IMFSample*);
+    void OnStop();
 
 private:
 

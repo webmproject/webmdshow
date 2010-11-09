@@ -288,6 +288,8 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     m_curr.pBE = 0;
     m_curr.pCP = 0;
     m_curr.pTP = 0;
+
+    m_pLocked = 0;
 }
 
 
@@ -356,6 +358,12 @@ HRESULT WebmMfStreamVideo::Seek(
     assert(reftime >= 0);
 
     const mkvparser::BlockEntry* const pBE = info.pBE;
+
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = pBE;
+    f.LockPage(m_pLocked);
 
     if ((pBE != 0) && !pBE->EOS())
     {
@@ -726,8 +734,34 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
     m_curr = next;
 
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = next.pBE;
+    f.LockPage(m_pLocked);
+
+#if 0 //def _DEBUG
+    odbgstream os;
+    os << "WebmMfStreamVideo::RequestSample: time[sec]="
+       << (double(curr_ns) / 1000000000)
+       << "; ABOUT TO PURGE"
+       << endl;
+#endif
+
+    //f.Purge();
+
     return S_OK;
 }
+
+
+void WebmMfStreamVideo::OnStop()
+{
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = 0;
+}
+
 
 
 const mkvparser::BlockEntry* WebmMfStreamVideo::GetCurrBlock() const
@@ -779,6 +813,12 @@ void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
     i.pBE = pCues->GetBlock(i.pCP, i.pTP);
     assert(i.pBE);  //TODO
     assert(!i.pBE->EOS());
+
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = i.pBE;
+    f.LockPage(m_pLocked);
 
     pBlock = i.pBE->GetBlock();
     assert(pBlock);

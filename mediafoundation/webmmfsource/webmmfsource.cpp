@@ -1196,7 +1196,7 @@ HRESULT WebmMfSource::Stop()
 {
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource::Stop" << endl;
+    os << L"WebmMfSource::Stop (begin)" << endl;
 #endif
 
     Lock lock;
@@ -1229,6 +1229,12 @@ HRESULT WebmMfSource::Stop()
 
     hr = QueueEvent(MESourceStopped, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
+
+    //m_file.Clear();
+
+#ifdef _DEBUG
+    os << L"WebmMfSource::Stop (end)" << endl;
+#endif
 
     return S_OK;
 }
@@ -1855,6 +1861,9 @@ void WebmMfSource::Seek(
     typedef std::vector<WebmMfStreamAudio*> as_t;
     as_t as;
 
+    //TODO: here all page refcounts should be set to 0.
+    //We should also
+
     typedef streams_t::iterator iter_t;
 
     iter_t iter = m_streams.begin();
@@ -1912,6 +1921,8 @@ void WebmMfSource::Seek(
                 base = static_cast<LONG>(idx);
         }
     }
+
+    //m_file.Clear();
 
     const vs_t::size_type nvs = vs.size();
 
@@ -1973,14 +1984,18 @@ HRESULT WebmMfSource::StartStreams(const PROPVARIANT& var)
             ++m_cEOS;  //to send event when all streams send EOS
     }
 
+    //m_file.Clear();
     Seek(var, true);  //start
+
     return S_OK;
 }
 
 
 HRESULT WebmMfSource::SeekStreams(const PROPVARIANT& var)
 {
+    //m_file.Clear();
     Seek(var, false);  //seek
+
     return S_OK;
 }
 

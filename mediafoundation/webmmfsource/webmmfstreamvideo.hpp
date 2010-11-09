@@ -49,6 +49,7 @@ protected:
 
     const mkvparser::BlockEntry* GetCurrBlock() const;
     HRESULT PopulateSample(IMFSample*);
+    void OnStop();
 
 private:
 
@@ -61,6 +62,8 @@ private:
         const mkvparser::VideoTrack*,
         UINT32&,
         UINT32&);
+
+    const mkvparser::BlockEntry* m_pLocked;
 
 };
 

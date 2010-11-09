@@ -101,7 +101,6 @@ private:
 
     IClassFactory* const m_pClassFactory;
     LONG m_cRef;
-    MkvReader m_file;
     IMFMediaEventQueue* m_pEvents;
 
     typedef std::vector<IMFStreamDescriptor*> stream_descriptors_t;
@@ -130,6 +129,7 @@ private:
 
 public:
 
+    MkvReader m_file;
     mkvparser::Segment* m_pSegment;
 
     enum State { kStateStopped, kStatePaused, kStateStarted };

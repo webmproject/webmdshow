@@ -8,7 +8,7 @@
 #include <cmath>
 #include <comdef.h>
 #include <vfwmsgs.h>
-#if 0 //def _DEBUG
+#ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
 #endif
@@ -250,7 +250,9 @@ HRESULT WebmMfStreamAudio::Seek(
     bool bStart)
 {
     m_bDiscontinuity = true;
+
     m_pCurr = pCurr;
+    m_pSource->m_file.LockPage(m_pCurr);
 
     if (bStart)
         return OnStart(var);
@@ -445,9 +447,30 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
 #endif
 #endif
 
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pCurr);
     m_pCurr = pNextEntry;
+    f.LockPage(m_pCurr);
+
+#if 0 //def _DEBUG
+    odbgstream os;
+    os << "WebmMfStreamAudio::RequestSample: time[sec]="
+       << (double(curr_ns) / 1000000000)
+       << "; ABOUT TO PURGE"
+       << endl;
+#endif
+
+    //f.Purge();
 
     return S_OK;
+}
+
+
+void WebmMfStreamAudio::OnStop()
+{
+    MkvReader& f = m_pSource->m_file;
+    f.UnlockPage(m_pCurr);
 }
 
 

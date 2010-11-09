@@ -447,6 +447,7 @@ HRESULT WebmMfStream::Stop()
     const HRESULT hr = QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
 
+    OnStop();
     return S_OK;
 }
 

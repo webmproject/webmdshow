@@ -78,6 +78,7 @@ protected:
 
     HRESULT OnStart(const PROPVARIANT& time);
     HRESULT OnSeek(const PROPVARIANT& time);
+    virtual void OnStop() = 0;
 
     virtual const mkvparser::BlockEntry* GetCurrBlock() const = 0;
     virtual HRESULT PopulateSample(IMFSample*) = 0;
