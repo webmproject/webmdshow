@@ -154,7 +154,8 @@ int VorbisDecoder::GetOutputSamplesAvailable(UINT32* ptr_num_samples_available)
     if (!ptr_num_samples_available)
         return E_INVALIDARG;
 
-    const UINT32 total_samples_available = m_output_samples.size();
+    const pcm_samples_t::size_type samples_size = m_output_samples.size();
+    const UINT32 total_samples_available = static_cast<UINT32>(samples_size);
     const UINT32 channels = m_vorbis_info.channels;
 
     if (channels > 1)

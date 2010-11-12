@@ -276,7 +276,7 @@ void MkvReader::Read(
     assert(page_off < page_size);
 
     const LONG page_len = page_size - page_off;  //what remains on page
-    const size_t len = (requested_len <= page_len) ? requested_len : page_len;
+    const long len = (requested_len <= page_len) ? requested_len : page_len;
 
     if (pdst)
     {
