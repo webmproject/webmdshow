@@ -931,7 +931,9 @@ void Filter::SetCurrPosition(
     assert(pOutpin);
     assert(pOutpin->m_connection);
 
-    mkvparser::Stream* const pOutpinStream = pOutpin->m_pStream;
+    using namespace mkvparser;
+
+    Stream* const pOutpinStream = pOutpin->m_pStream;
 
     if (m_seekTime == currTime)
     {
@@ -939,6 +941,7 @@ void Filter::SetCurrPosition(
         return;
     }
 
+    m_seekTime = currTime;
     const LONGLONG ns = pOutpinStream->GetSeekTime(currTime, dwCurr);
 
     if (pOutpinStream->m_pTrack->GetType() == 1)  //video
@@ -948,12 +951,40 @@ void Filter::SetCurrPosition(
         bVideo;
         assert(bVideo);
 
-#if 0  //TODO: I think this goes away by using libwebm
-        pOutpinStream->PreloadSeek(ns);
-#endif
+        const Track* const pTrack = pOutpinStream->m_pTrack;
 
-        m_pSeekBase = pOutpinStream->Seek(ns, true);
-        m_seekTime = currTime;
+        if (const Cues* pCues = m_pSegment->GetCues())
+        {
+            const CuePoint* pCP;
+            const CuePoint::TrackPosition* pTP;
+
+            const bool bFound = pCues->Find(ns, pTrack, pCP, pTP);
+
+            if (bFound)
+            {
+                const BlockEntry* const pCurr = pCues->GetBlock(pCP, pTP);
+                assert(pCurr);
+                assert(!pCurr->EOS());
+
+                m_pSeekBase = pCurr->GetCluster();
+
+                pOutpinStream->SetCurrPosition(m_pSeekBase, pCurr);
+                return;
+            }
+        }
+
+        const long status = m_pSegment->LoadCluster();
+        assert(status == 0);
+
+        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+        assert(pCurr);
+
+        if (pCurr->EOS())  //pathological
+            m_pSeekBase = m_pSegment->GetFirst();
+        else
+            m_pSeekBase = pCurr->GetCluster();
+
+        pOutpinStream->SetCurrPosition(m_pSeekBase, pCurr);
         return;
     }
 
@@ -976,26 +1007,65 @@ void Filter::SetCurrPosition(
         if (!bVideo)
             continue;
 
-        mkvparser::Stream* const pStream = pin->m_pStream;
+        Stream* const pStream = pin->m_pStream;
         assert(pStream);
         assert(pStream != pOutpinStream);
-        assert(pStream->m_pTrack->GetType() == 1);  //video
 
-#if 0  //TODO: I think this goes away by using libwebm
-        pStream->PreloadSeek(ns);
-#endif
+        const Track* const pTrack = pStream->m_pTrack;
+        assert(pTrack->GetType() == 1);  //video
 
-        m_pSeekBase = pStream->GetSeekBase(ns, true);
-        m_seekTime = currTime;
+        if (const Cues* pCues = m_pSegment->GetCues())
+        {
+            const CuePoint* pCP;
+            const CuePoint::TrackPosition* pTP;
+
+            const bool bFound = pCues->Find(ns, pTrack, pCP, pTP);
+
+            if (bFound)
+            {
+                const BlockEntry* const pCurr = pCues->GetBlock(pCP, pTP);
+                assert(pCurr);
+                assert(!pCurr->EOS());
+
+                m_pSeekBase = pCurr->GetCluster();
+                pOutpinStream->SetCurrPosition(m_pSeekBase);
+
+                return;
+            }
+        }
+
+        const long status = m_pSegment->LoadCluster();
+        assert(status == 0);
+
+        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+        assert(pCurr);
+
+        if (pCurr->EOS())  //pathological
+            m_pSeekBase = m_pSegment->GetFirst();
+        else
+            m_pSeekBase = pCurr->GetCluster();
 
         pOutpinStream->SetCurrPosition(m_pSeekBase);
         return;
     }
 
-    m_pSeekBase = pOutpinStream->Seek(ns, true);
-    m_seekTime = currTime;
-}
+    //TODO: use cues for audio too
 
+    const long status = m_pSegment->LoadCluster();
+    assert(status == 0);
+
+    const Track* const pTrack = pOutpinStream->m_pTrack;
+
+    const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+    assert(pCurr);
+
+    if (pCurr->EOS())  //pathological
+        m_pSeekBase = m_pSegment->GetFirst();
+    else
+        m_pSeekBase = pCurr->GetCluster();
+
+    pOutpinStream->SetCurrPosition(m_pSeekBase, pCurr);
+}
 
 
 } //end namespace WebmSource

@@ -50,38 +50,13 @@ public:
     LONGLONG GetSeekTime(LONGLONG currTime, DWORD dwCurr) const;
     //convert from reftime to ns
 
-    const Cluster* GetSeekBase(LONGLONG ns, bool use_cues) const;
-    //find the cluster that corresponds to this seek time
-
-    //void PreloadSeek(LONGLONG ns);
-    //(pre)load a few clusters, an anticpation of seek request
-
-    const Cluster* Seek(LONGLONG ns, bool use_cues);
     void SetCurrPosition(const Cluster*);
+    void SetCurrPosition(const Cluster*, const BlockEntry*);
 
     void SetStopPosition(LONGLONG, DWORD);
     void SetStopPositionEOS();
 
     ULONG GetClusterCount() const;
-
-#if 0
-    template<typename T, typename S, typename F>
-    struct TCreateOutpins
-    {
-        F* f;
-
-        typedef S* (*pfn_t)(T*);
-        pfn_t pfn;
-
-        TCreateOutpins(F* f_, pfn_t pfn_) : f(f_), pfn(pfn_) {}
-
-        void operator()(T* t) const
-        {
-            if (S* s = (*pfn)(t))
-                f->CreateOutpin(s);
-        }
-    };
-#endif
 
     const Track* const m_pTrack;
     static std::wstring ConvertFromUTF8(const char*);

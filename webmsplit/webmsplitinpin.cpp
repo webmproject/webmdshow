@@ -253,7 +253,7 @@ HRESULT Inpin::OnDisconnect()
 
 HRESULT Inpin::GetName(PIN_INFO& info) const
 {
-    const wchar_t name[] = L"MKV";  //TODO
+    const wchar_t name[] = L"WebM";
 
 #if _MSC_VER >= 1400
     enum { namelen = sizeof(info.achName) / sizeof(WCHAR) };

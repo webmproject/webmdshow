@@ -234,179 +234,6 @@ LONGLONG Stream::GetSeekTime(
 }
 
 
-const Cluster* Stream::GetSeekBase(LONGLONG tCurr_ns, bool use_cues) const
-{
-    Segment* const pSegment = m_pTrack->m_pSegment;
-
-    if (pSegment->GetCount() == 0)
-    {
-        if (pSegment->Unparsed() <= 0)
-            return &pSegment->m_eos;
-
-        return 0;  //lazy init later when we have data
-    }
-
-    if (tCurr_ns <= 0)
-        return 0;
-
-    if (tCurr_ns >= pSegment->GetDuration())
-        return &pSegment->m_eos;
-
-    if (!use_cues)
-        __noop;
-    else if (const Cues* pCues = pSegment->GetCues())
-    {
-        const mkvparser::CuePoint* pCP;
-        const mkvparser::CuePoint::TrackPosition* pTP;
-
-        const bool bFound = pCues->Find(tCurr_ns, m_pTrack, pCP, pTP);
-
-        if (bFound)
-        {
-            const BlockEntry* const pBE = pCues->GetBlock(pCP, pTP);
-            assert(pBE);
-            assert(!pBE->EOS());
-
-            return pBE->GetCluster();
-        }
-
-        //yes, fall through
-    }
-
-    //TODO: use Segment::FindCluster instead?
-    const BlockEntry* const pBE = pSegment->Seek(tCurr_ns, m_pTrack);
-    assert(pBE);
-    assert(!pBE->EOS());
-
-    return pBE->GetCluster();
-}
-
-
-#if 0
-void Stream::PreloadSeek(LONGLONG seek_ns)
-{
-    Segment* const pSegment = m_pTrack->m_pSegment;
-
-    const Cues* const pCues = pSegment->GetCues();
-
-    if (pCues == 0)
-        return;  //TODO: try a diffent method of pre-loading clusters
-
-    if (pSegment->Unparsed() <= 0)
-        return;  //nothing needs to be done
-
-    HRESULT hr = Preload();  //ensure we have at least one cluster
-
-    Cluster* pCluster = pSegment->GetLast();
-    assert(pCluster);
-
-    if (pCluster->EOS())
-        return;  //weird: no clusters
-
-    const LONGLONG last_ns = pCluster->GetTime();
-
-    if (seek_ns <= last_ns)
-        return;  //nothing else needs to be done
-
-    const CuePoint* pCP;
-    const CuePoint::TrackPosition* pTP;
-
-    if (!pCues->FindNext(last_ns, m_pTrack, pCP, pTP))
-        return;
-
-    assert(pCP);
-    assert(pTP);
-
-    while (pSegment->Unparsed() > 0)
-    {
-        hr = Preload();
-
-        pCluster = pSegment->GetLast();
-        assert(pCluster);
-        assert(!pCluster->EOS());
-
-        const __int64 pos = _abs64(pCluster->m_pos);
-
-        if (pos >= pTP->m_pos)
-            return;
-    }
-}
-#endif
-
-
-const Cluster* Stream::Seek(LONGLONG tCurr_ns, bool use_cues)
-{
-    Segment* const pSegment = m_pTrack->m_pSegment;
-
-    const __int64 duration_ns = pSegment->GetDuration();
-    assert(duration_ns >= 0);
-
-    m_bDiscontinuity = true;
-
-    if (pSegment->GetCount() == 0)
-    {
-        //TODO: we can probably do better here.
-
-        if (pSegment->Unparsed() <= 0)
-        {
-            m_pBase = &pSegment->m_eos;
-            m_pCurr = m_pTrack->GetEOS();
-        }
-        else
-        {
-            m_pBase = 0;
-            m_pCurr = 0;  //lazy init later when we have data
-        }
-
-        return m_pBase;
-    }
-
-    if (tCurr_ns <= 0)
-    {
-        m_pBase = 0;
-        m_pCurr = 0;  //lazy init later
-
-        return m_pBase;
-    }
-
-    if (tCurr_ns >= duration_ns)
-    {
-        m_pBase = &pSegment->m_eos;
-        m_pCurr = m_pTrack->GetEOS();
-
-        return m_pBase;
-    }
-
-    if (!use_cues)
-        __noop;
-    else if (const Cues* pCues = pSegment->GetCues())
-    {
-        const mkvparser::CuePoint* pCP;
-        const mkvparser::CuePoint::TrackPosition* pTP;
-
-        const bool bFound = pCues->Find(tCurr_ns, m_pTrack, pCP, pTP);
-
-        if (bFound)
-        {
-            m_pCurr = pCues->GetBlock(pCP, pTP);
-            assert(m_pCurr);
-            assert(!m_pCurr->EOS());
-
-            m_pBase = m_pCurr->GetCluster();
-            return m_pBase;
-        }
-    }
-
-    //TODO: use Segment::FindCluster instead?
-    m_pCurr = pSegment->Seek(tCurr_ns, m_pTrack);
-    assert(m_pCurr);
-    assert(!m_pCurr->EOS());
-
-    m_pBase = m_pCurr->GetCluster();
-    return m_pBase;
-}
-
-
 void Stream::SetCurrPosition(const Cluster* pBase)
 {
     if (pBase == 0)
@@ -415,6 +242,14 @@ void Stream::SetCurrPosition(const Cluster* pBase)
         m_pCurr = pBase->GetEntry(m_pTrack);
 
     m_pBase = pBase;
+    m_bDiscontinuity = true;
+}
+
+
+void Stream::SetCurrPosition(const Cluster* pBase, const BlockEntry* pCurr)
+{
+    m_pBase = pBase;
+    m_pCurr = pCurr;
     m_bDiscontinuity = true;
 }
 
@@ -538,25 +373,12 @@ HRESULT Stream::Preload()
 {
     Segment* const pSegment = m_pTrack->m_pSegment;
 
-#if 0
-    Cluster* pCluster;
-    __int64 pos;
-
-    const HRESULT hr = pSegment->ParseCluster(pCluster, pos);
-    hr;
-    assert(SUCCEEDED(hr));  //file-based load is assumed here
-
-    const bool bDone = pSegment->AddCluster(pCluster, pos);
-
-    return bDone ? S_FALSE : S_OK;
-#else
     const int status = pSegment->LoadCluster();
 
     if (status < 0)  //error
         return E_FAIL;
 
     return S_OK;
-#endif
 }
 
 
@@ -570,6 +392,17 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
 
     if (m_pCurr == 0)  //lazy-init of first block
     {
+        assert(m_pBase == 0);
+
+        Segment* const pSegment = m_pTrack->m_pSegment;
+
+        if (pSegment->GetCount() <= 0)
+            return VFW_E_BUFFER_UNDERFLOW;
+
+        m_pBase = pSegment->GetFirst();
+        assert(m_pBase);
+        assert(!m_pBase->EOS());
+
         const long status = m_pTrack->GetFirst(m_pCurr);
 
         if (status == E_BUFFER_NOT_FULL)
@@ -577,9 +410,6 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
 
         assert(status >= 0);  //success
         assert(m_pCurr);
-
-        m_pBase = m_pTrack->m_pSegment->GetFirst();
-        assert(m_pBase);
     }
 
     if (m_pStop == 0)  //TODO: this test might not be req'd

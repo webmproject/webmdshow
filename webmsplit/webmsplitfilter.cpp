@@ -1017,6 +1017,17 @@ unsigned Filter::Main()
 
         const bool bDone = m_pSegment->AddCluster(cluster_pos, new_pos);
 
+        //odbgstream os;
+        //os << "webmsplit::filter::main: ParseCluster; cluster_pos="
+        //   << cluster_pos
+        //   << " new_pos="
+        //   << new_pos
+        //   << " count="
+        //   << m_pSegment->GetCount()
+        //   << " unparsed="
+        //   << m_pSegment->Unparsed()
+        //   << endl;
+
         OnNewCluster();
 
         if (bDone)
@@ -1117,12 +1128,24 @@ void Filter::SetCurrPosition(
     assert(pOutpin);
     assert(bool(pOutpin->m_pPinConnection));
 
-    mkvparser::Stream* const pSeekStream = pOutpin->GetStream();
+    using namespace mkvparser;
+
+    Stream* const pSeekStream = pOutpin->GetStream();
     assert(pSeekStream);
 
     if (m_seekTime == currTime)
     {
         pSeekStream->SetCurrPosition(m_pSeekBase);
+        return;
+    }
+
+    m_seekTime = currTime;
+
+    if (m_pSegment->GetCount() <= 0)  //no clusters loaded yet
+    {
+        m_pSeekBase = 0;  //best we can do is to assume first cluster
+        pSeekStream->SetCurrPosition(0, 0);  //lazy init
+
         return;
     }
 
@@ -1135,8 +1158,17 @@ void Filter::SetCurrPosition(
         bVideo;
         assert(bVideo);
 
-        m_pSeekBase = pSeekStream->Seek(ns, false);
-        m_seekTime = currTime;
+        const Track* const pTrack = pSeekStream->m_pTrack;
+
+        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+        assert(pCurr);
+
+        if (pCurr->EOS())  //weird: no keyframe found
+            m_pSeekBase = m_pSegment->GetFirst();
+        else
+            m_pSeekBase = pCurr->GetCluster();
+
+        pSeekStream->SetCurrPosition(m_pSeekBase, pCurr);
         return;
     }
 
@@ -1162,17 +1194,33 @@ void Filter::SetCurrPosition(
         mkvparser::Stream* const pStream = pin->GetStream();
         assert(pStream);
         assert(pStream != pSeekStream);
-        assert(pStream->m_pTrack->GetType() == 1);  //video
 
-        m_pSeekBase = pStream->GetSeekBase(ns, false);
-        m_seekTime = currTime;
+        const Track* const pTrack = pStream->m_pTrack;
+        assert(pTrack->GetType() == 1);  //video
+
+        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+        assert(pCurr);
+
+        if (pCurr->EOS())  //weird: no keyframe found
+            m_pSeekBase = m_pSegment->GetFirst();
+        else
+            m_pSeekBase = pCurr->GetCluster();
 
         pSeekStream->SetCurrPosition(m_pSeekBase);
         return;
     }
 
-    m_pSeekBase = pSeekStream->Seek(ns, false);
-    m_seekTime = currTime;
+    const Track* const pTrack = pSeekStream->m_pTrack;
+
+    const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+    assert(pCurr);
+
+    if (pCurr->EOS())  //weird: no audio found
+        m_pSeekBase = m_pSegment->GetFirst();
+    else
+        m_pSeekBase = pCurr->GetCluster();
+
+    pSeekStream->SetCurrPosition(m_pSeekBase, pCurr);
 }
 
 
