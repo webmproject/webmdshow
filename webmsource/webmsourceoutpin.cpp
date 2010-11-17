@@ -584,7 +584,7 @@ HRESULT Outpin::SetPositions(
     if (FAILED(hr))
         return hr;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     wodbgstream os;
     os << "\nwebmsource::Outpin[" << m_id << "]::SetPos(begin): pCurr="
        << dec << (pCurr ? *pCurr : -1)
@@ -685,7 +685,7 @@ HRESULT Outpin::SetPositions(
 
     if (m_pFilter->m_state != State_Stopped)
     {
-#ifdef _DEBUG
+#if 0 //def _DEBUG
         os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
            << dec << (pCurr ? tCurr : -1)
            << " dwCurr=0x"
@@ -701,7 +701,7 @@ HRESULT Outpin::SetPositions(
 
         lock.Release();
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
         os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
            << dec << (pCurr ? tCurr : -1)
            << " dwCurr=0x"
@@ -717,7 +717,7 @@ HRESULT Outpin::SetPositions(
 
         hr = m_connection->BeginFlush();
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
         os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
            << dec << (pCurr ? tCurr : -1)
            << " dwCurr=0x"
@@ -744,7 +744,7 @@ HRESULT Outpin::SetPositions(
 
         m_hThread = 0;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
         os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
            << dec << (pCurr ? tCurr : -1)
            << " dwCurr=0x"
@@ -759,7 +759,7 @@ HRESULT Outpin::SetPositions(
 
         hr = m_connection->EndFlush();
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
         os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
            << dec << (pCurr ? tCurr : -1)
            << " dwCurr=0x"
@@ -775,7 +775,7 @@ HRESULT Outpin::SetPositions(
         hr = lock.Seize(m_pFilter);
         assert(SUCCEEDED(hr));  //TODO
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
         os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
            << dec << (pCurr ? tCurr : -1)
            << " dwCurr=0x"
@@ -790,7 +790,7 @@ HRESULT Outpin::SetPositions(
     }
 
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
        << dec << (pCurr ? tCurr : -1)
        << " pStop="
@@ -817,7 +817,7 @@ HRESULT Outpin::SetPositions(
         m_pStream->SetStopPosition(*pStop, dwStop_);
     }
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     os << "webmsource::Outpin[" << m_id << "]::SetPos(cont'd): pCurr="
        << dec << (pCurr ? tCurr : -1)
        << " pStop="
@@ -838,7 +838,7 @@ HRESULT Outpin::SetPositions(
     if (m_pFilter->m_state != State_Stopped)
         StartThread();
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     os << "webmsource::Outpin[" << m_id << "]::SetPos(end): pCurr="
        << dec << (pCurr ? tCurr : -1)
        << " pStop="

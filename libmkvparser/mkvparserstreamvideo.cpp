@@ -341,14 +341,17 @@ HRESULT VideoStream::OnPopulateSample(
              pCurrBlock->GetTimeCode(pCurrCluster)));
 
 #if 0
-    const __int64 basetime_ns = m_pBase->GetTime();
-    assert(basetime_ns >= 0);
-    assert((basetime_ns % 100) == 0);
-#else
     const __int64 basetime_ns = m_pBase->GetFirstTime();
     assert(basetime_ns >= 0);
     assert((basetime_ns % 100) == 0);
+#else
+    const LONGLONG basetime_ns = m_base_time_ns;
+    assert(basetime_ns >= 0);
 #endif
+
+    const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(start_ns >= basetime_ns);
+    assert((start_ns % 100) == 0);
 
     const int nFrames = pCurrBlock->GetFrameCount();
     assert(nFrames == 1);  //TODO: support lacing
@@ -396,54 +399,40 @@ HRESULT VideoStream::OnPopulateSample(
     hr = pSample->SetSyncPoint(bKey ? TRUE : FALSE);
     assert(SUCCEEDED(hr));
 
-    //TODO: is there a better way to make this test?
-    //We could genericize this, e.g. BlockEntry::HasTime().
-#if 0  //TODO
-    if (m_pCurr->IsBFrame())
-    {
-        assert(!bKey);
+    __int64 ns = start_ns - basetime_ns;
+    assert(ns >= 0);
+    assert((ns % 100) == 0);
 
-        hr = pSample->SetTime(0, 0);
-        assert(SUCCEEDED(hr));
-    }
+    __int64 start_reftime = ns / 100;
+
+    __int64 stop_reftime;
+    __int64* pstop_reftime;
+
+    if ((pNextEntry == 0) || pNextEntry->EOS())
+        pstop_reftime = 0;  //TODO: use duration of curr block
     else
-#endif
     {
-        const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
-        assert(start_ns >= basetime_ns);
-        assert((start_ns % 100) == 0);
+        const Block* const pNextBlock = pNextEntry->GetBlock();
+        assert(pNextBlock);
 
-        __int64 ns = start_ns - basetime_ns;
-        __int64 start_reftime = ns / 100;
+        const Cluster* const pNextCluster = pNextEntry->GetCluster();
 
-        __int64 stop_reftime;
-        __int64* pstop_reftime;
+        const __int64 stop_ns = pNextBlock->GetTime(pNextCluster);
+        assert(stop_ns > start_ns);
+        assert((stop_ns % 100) == 0);
 
-        if ((pNextEntry == 0) || pNextEntry->EOS())
-            pstop_reftime = 0;  //TODO: use duration of curr block
-        else
-        {
-            const Block* const pNextBlock = pNextEntry->GetBlock();
-            assert(pNextBlock);
+        ns = stop_ns - basetime_ns;
+        assert(ns >= 0);
 
-            const Cluster* const pNextCluster = pNextEntry->GetCluster();
+        stop_reftime = ns / 100;
+        assert(stop_reftime > start_reftime);
 
-            const __int64 stop_ns = pNextBlock->GetTime(pNextCluster);
-            assert(stop_ns > start_ns);
-            assert((stop_ns % 100) == 0);
-
-            ns = stop_ns - basetime_ns;
-            stop_reftime = ns / 100;
-            assert(stop_reftime > start_reftime);
-
-            pstop_reftime = &stop_reftime;
-        }
-
-        hr = pSample->SetTime(&start_reftime, pstop_reftime);
-        assert(SUCCEEDED(hr));
+        pstop_reftime = &stop_reftime;
     }
 
-    //m_pCurr = pNextBlock;
+    hr = pSample->SetTime(&start_reftime, pstop_reftime);
+    assert(SUCCEEDED(hr));
+
     return S_OK;
 }
 

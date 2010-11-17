@@ -36,6 +36,7 @@ Stream::~Stream()
 
 void Stream::Init()
 {
+    m_base_time_ns = -1;
     m_pBase = 0;
     m_pCurr = 0;  //lazy init this later
     m_pStop = m_pTrack->GetEOS();  //means play entire stream
@@ -234,22 +235,30 @@ LONGLONG Stream::GetSeekTime(
 }
 
 
-void Stream::SetCurrPosition(const Cluster* pBase)
+//void Stream::SetCurrPosition(const Cluster* pBase)
+//{
+//    if (pBase == 0)
+//        m_pCurr = 0;  //lazy init
+//    else
+//        m_pCurr = pBase->GetEntry(m_pTrack);
+//
+//    m_pBase = pBase;
+//    m_bDiscontinuity = true;
+//}
+
+
+void Stream::SetCurrPosition(
+    const Cluster* pBase,
+    LONGLONG base_time_ns,
+    const BlockEntry* pCurr)
 {
-    if (pBase == 0)
-        m_pCurr = 0;  //lazy init
-    else
-        m_pCurr = pBase->GetEntry(m_pTrack);
+    assert((pBase == 0) ||
+           pBase->EOS() ||
+           (base_time_ns >= pBase->GetTime()));
 
-    m_pBase = pBase;
-    m_bDiscontinuity = true;
-}
-
-
-void Stream::SetCurrPosition(const Cluster* pBase, const BlockEntry* pCurr)
-{
     m_pBase = pBase;
     m_pCurr = pCurr;
+    m_base_time_ns = base_time_ns;
     m_bDiscontinuity = true;
 }
 
@@ -392,16 +401,10 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
 
     if (m_pCurr == 0)  //lazy-init of first block
     {
-        assert(m_pBase == 0);
-
         Segment* const pSegment = m_pTrack->m_pSegment;
 
         if (pSegment->GetCount() <= 0)
             return VFW_E_BUFFER_UNDERFLOW;
-
-        m_pBase = pSegment->GetFirst();
-        assert(m_pBase);
-        assert(!m_pBase->EOS());
 
         const long status = m_pTrack->GetFirst(m_pCurr);
 
@@ -410,6 +413,12 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
 
         assert(status >= 0);  //success
         assert(m_pCurr);
+
+        m_pBase = pSegment->GetFirst();
+        assert(m_pBase);
+        assert(!m_pBase->EOS());
+
+        m_base_time_ns = m_pBase->GetFirstTime();
     }
 
     if (m_pStop == 0)  //TODO: this test might not be req'd

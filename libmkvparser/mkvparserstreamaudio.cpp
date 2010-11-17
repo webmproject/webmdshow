@@ -319,31 +319,24 @@ HRESULT AudioStream::OnPopulateSample(
     assert((start_ns % 100) == 0);
 
 #if 0
-    const __int64 basetime_ns = m_pBase->GetTime();
-    assert(basetime_ns >= 0);
-    assert((basetime_ns % 100) == 0);
-#else
     const __int64 basetime_ns = m_pBase->GetFirstTime();
     assert(basetime_ns >= 0);
     assert((basetime_ns % 100) == 0);
+#else
+    const LONGLONG basetime_ns = m_base_time_ns;
+    assert(basetime_ns >= 0);
 #endif
 
     if (start_ns < basetime_ns)
     {
 #ifdef _DEBUG
         odbgstream os;
-        os << "webmsource::AudioStream::OnPopulateSample: start_ns="
+        os << "webmsplit::AudioStream::OnPopulateSample: start_ns="
            << start_ns
            << " basetime_ns="
            << basetime_ns
-           << " start_ns-basetime_ns="
-           << (start_ns - basetime_ns)
-           << " dt[ms]="
-           << (double(start_ns - basetime_ns) / 1000000)
            << "; THROWING AWAY AUDIO SAMPLE"
            << endl;
-
-        assert(m_bDiscontinuity);
 #endif
 
         return S_FALSE;  //throw away this sample
@@ -392,10 +385,6 @@ HRESULT AudioStream::OnPopulateSample(
     hr = pSample->SetMediaTime(0, 0);
     assert(SUCCEEDED(hr));
 
-    //const BlockGroup* const pGroup = m_pCurr->m_pGroup;
-    //pGroup;
-    //assert(pGroup);
-
     hr = pSample->SetSyncPoint(TRUE);
     assert(SUCCEEDED(hr));
 
@@ -432,8 +421,6 @@ HRESULT AudioStream::OnPopulateSample(
     hr = pSample->SetTime(&start_reftime, pstop_reftime);
     assert(SUCCEEDED(hr));
 
-    //set by caller:
-    //m_pCurr = pNextBlock;
     return S_OK;
 }
 

@@ -117,7 +117,9 @@ public:
     std::wstring m_filename;
     mkvparser::Segment* m_pSegment;
     const mkvparser::Cluster* m_pSeekBase;
-    __int64 m_seekTime;
+    LONGLONG m_seekBase_ns;
+    __int64 m_currTime;  //requested seek time (reftime units)
+    LONGLONG m_seekTime_ns;  //actual seek time (normalized)
 
     typedef std::vector<Outpin*> pins_t;
     pins_t m_pins;

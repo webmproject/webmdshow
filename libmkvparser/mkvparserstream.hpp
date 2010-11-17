@@ -50,8 +50,12 @@ public:
     LONGLONG GetSeekTime(LONGLONG currTime, DWORD dwCurr) const;
     //convert from reftime to ns
 
-    void SetCurrPosition(const Cluster*);
-    void SetCurrPosition(const Cluster*, const BlockEntry*);
+    //void SetCurrPosition(const Cluster*, LONGLONG base_time_ns);
+
+    void SetCurrPosition(
+        const Cluster*,
+        LONGLONG base_time_ns,
+        const BlockEntry*);
 
     void SetStopPosition(LONGLONG, DWORD);
     void SetStopPositionEOS();
@@ -67,6 +71,7 @@ protected:
     const BlockEntry* m_pCurr;
     const BlockEntry* m_pStop;
     const Cluster* m_pBase;
+    LONGLONG m_base_time_ns;
 
     virtual std::wostream& GetKind(std::wostream&) const = 0;
 

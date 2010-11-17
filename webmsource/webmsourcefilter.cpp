@@ -84,7 +84,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_clock(0),
       m_pSegment(0),
       m_pSeekBase(0),
-      m_seekTime(kNoSeek)
+      m_seekBase_ns(-1),
+      m_currTime(kNoSeek)
 {
     m_pClassFactory->LockServer(TRUE);
 
@@ -803,7 +804,8 @@ HRESULT Filter::CreateSegment()
 
     m_pSegment = pSegment.release();
     m_pSeekBase = 0;
-    m_seekTime = kNoSeek;
+    m_seekBase_ns = -1;
+    m_currTime = kNoSeek;
 
     return S_OK;
 }
@@ -934,57 +936,77 @@ void Filter::SetCurrPosition(
     using namespace mkvparser;
 
     Stream* const pOutpinStream = pOutpin->m_pStream;
+    const Track* const pOutpinTrack = pOutpinStream->m_pTrack;
 
-    if (m_seekTime == currTime)
+    if (m_currTime == currTime)
     {
-        pOutpinStream->SetCurrPosition(m_pSeekBase);
+       const BlockEntry* pCurr;
+
+        if (m_pSeekBase == 0)  //lazy init
+            pCurr = 0;
+        else if (m_pSeekBase->EOS())
+            pCurr = pOutpinTrack->GetEOS();
+        else
+            pCurr = m_pSeekBase->GetEntry(pOutpinTrack, m_seekTime_ns);
+
+        pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
         return;
     }
 
-    m_seekTime = currTime;
+    m_currTime = currTime;
     const LONGLONG ns = pOutpinStream->GetSeekTime(currTime, dwCurr);
 
-    if (pOutpinStream->m_pTrack->GetType() == 1)  //video
+    const long status = m_pSegment->LoadCluster();
+    assert(status >= 0);  //TODO
+
+    if (pOutpinTrack->GetType() == 1)  //video
     {
         const AM_MEDIA_TYPE& mt = pOutpin->m_connection_mtv[0];
         const BOOL bVideo = (mt.majortype == MEDIATYPE_Video);
         bVideo;
         assert(bVideo);
 
-        const Track* const pTrack = pOutpinStream->m_pTrack;
-
         if (const Cues* pCues = m_pSegment->GetCues())
         {
             const CuePoint* pCP;
             const CuePoint::TrackPosition* pTP;
 
-            const bool bFound = pCues->Find(ns, pTrack, pCP, pTP);
-
-            if (bFound)
+            if (pCues->Find(ns, pOutpinTrack, pCP, pTP))
             {
                 const BlockEntry* const pCurr = pCues->GetBlock(pCP, pTP);
                 assert(pCurr);
                 assert(!pCurr->EOS());
 
                 m_pSeekBase = pCurr->GetCluster();
+                m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+                m_seekTime_ns = m_seekBase_ns;
 
-                pOutpinStream->SetCurrPosition(m_pSeekBase, pCurr);
+                pOutpinStream->SetCurrPosition(
+                    m_pSeekBase,
+                    m_seekBase_ns,
+                    pCurr);
+
                 return;
             }
         }
 
-        const long status = m_pSegment->LoadCluster();
-        assert(status == 0);
-
-        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pOutpinTrack);
         assert(pCurr);
 
         if (pCurr->EOS())  //pathological
-            m_pSeekBase = m_pSegment->GetFirst();
+        {
+            m_pSeekBase = &m_pSegment->m_eos;
+            m_seekBase_ns = -1;
+            m_seekTime_ns = -1;
+        }
         else
+        {
             m_pSeekBase = pCurr->GetCluster();
+            m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+            m_seekTime_ns = m_seekBase_ns;
+        }
 
-        pOutpinStream->SetCurrPosition(m_pSeekBase, pCurr);
+        pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
         return;
     }
 
@@ -1011,60 +1033,85 @@ void Filter::SetCurrPosition(
         assert(pStream);
         assert(pStream != pOutpinStream);
 
-        const Track* const pTrack = pStream->m_pTrack;
-        assert(pTrack->GetType() == 1);  //video
+        const Track* const pVideoTrack = pStream->m_pTrack;
+        assert(pVideoTrack->GetType() == 1);  //video
 
         if (const Cues* pCues = m_pSegment->GetCues())
         {
             const CuePoint* pCP;
             const CuePoint::TrackPosition* pTP;
 
-            const bool bFound = pCues->Find(ns, pTrack, pCP, pTP);
-
-            if (bFound)
+            if (pCues->Find(ns, pVideoTrack, pCP, pTP))
             {
-                const BlockEntry* const pCurr = pCues->GetBlock(pCP, pTP);
+                const BlockEntry* pCurr = pCues->GetBlock(pCP, pTP);
                 assert(pCurr);
                 assert(!pCurr->EOS());
 
                 m_pSeekBase = pCurr->GetCluster();
-                pOutpinStream->SetCurrPosition(m_pSeekBase);
+                m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+                m_seekTime_ns = m_seekBase_ns;  //to find same block later
+
+                pCurr = m_pSeekBase->GetEntry(pOutpinTrack, m_seekBase_ns);
+                assert(pCurr);
+
+                if (!pCurr->EOS())
+                    m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+
+                pOutpinStream->SetCurrPosition(
+                    m_pSeekBase,
+                    m_seekBase_ns,
+                    pCurr);
 
                 return;
             }
         }
 
-        const long status = m_pSegment->LoadCluster();
-        assert(status == 0);
-
-        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+        const BlockEntry* pCurr = m_pSegment->Seek(ns, pVideoTrack);
         assert(pCurr);
 
         if (pCurr->EOS())  //pathological
-            m_pSeekBase = m_pSegment->GetFirst();
-        else
-            m_pSeekBase = pCurr->GetCluster();
+        {
+            m_pSeekBase = &m_pSegment->m_eos;
+            m_seekBase_ns = -1;
+            m_seekTime_ns = -1;
 
-        pOutpinStream->SetCurrPosition(m_pSeekBase);
+            pCurr = pOutpinTrack->GetEOS();
+
+            pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+            return;
+        }
+
+        m_pSeekBase = pCurr->GetCluster();
+        m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+        m_seekTime_ns = m_seekBase_ns;  //to find same block later
+
+        pCurr = m_pSeekBase->GetEntry(pOutpinTrack, m_seekBase_ns);
+        assert(pCurr);
+
+        if (!pCurr->EOS())
+            m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+
+        pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
         return;
     }
 
-    //TODO: use cues for audio too
-
-    const long status = m_pSegment->LoadCluster();
-    assert(status == 0);
-
-    const Track* const pTrack = pOutpinStream->m_pTrack;
-
-    const BlockEntry* const pCurr = m_pSegment->Seek(ns, pTrack);
+    const BlockEntry* const pCurr = m_pSegment->Seek(ns, pOutpinTrack);
     assert(pCurr);
 
     if (pCurr->EOS())  //pathological
-        m_pSeekBase = m_pSegment->GetFirst();
+    {
+        m_pSeekBase = &m_pSegment->m_eos;
+        m_seekBase_ns = -1;
+        m_seekTime_ns = -1;
+    }
     else
+    {
         m_pSeekBase = pCurr->GetCluster();
+        m_seekBase_ns = m_pSeekBase->GetFirstTime();
+        m_seekTime_ns = ns;
+    }
 
-    pOutpinStream->SetCurrPosition(m_pSeekBase, pCurr);
+    pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
 }
 
 
