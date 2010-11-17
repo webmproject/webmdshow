@@ -792,7 +792,7 @@ HRESULT Outpin::SetPositions(
     if (m_pStream == 0)
         return E_FAIL;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     odbgstream os;
     os << "Outpin::SetPos(begin): pCurr="
        << dec << (pCurr ? *pCurr : -1)
@@ -1054,7 +1054,7 @@ HRESULT Outpin::SetPositions(
     if (m_pFilter->m_state != State_Stopped)
         StartThread();
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     os << "Outpin::SetPos(end): pCurr="
        << dec << (pCurr ? *pCurr : -1)
        << " pStop="
@@ -1225,18 +1225,57 @@ int Outpin::PopulateSample(IMediaSample* pSample)
         hr = m_pStream->PopulateSample(pSample);
 
         if (hr == S_OK)
+        {
+#if 0 //def _DEBUG
+            wodbgstream os;
+            os << "webmsplit::outpin::populatesample: id="
+               << m_id
+               << "; NEW SAMPLE"
+               << endl;
+#endif
+
             return 1;
+        }
 
         if (hr == S_FALSE)  //EOS
+        {
+#if 0 //def _DEBUG
+            wodbgstream os;
+            os << "webmsplit::outpin::populatesample: id="
+               << m_id
+               << "; EOS detected"
+               << endl;
+#endif
+
             return 0;
+        }
 
         if (hr == 2)  //pre-seek block
+        {
+#if 0 //def _DEBUG
+            wodbgstream os;
+            os << "webmsplit::outpin::populatesample: id="
+               << m_id
+               << "; THROW AWAY SAMPLE DETECTED"
+               << endl;
+#endif
+
+            lock.Release();
             continue;
+        }
 
         assert(FAILED(hr));
 
         if (hr != VFW_E_BUFFER_UNDERFLOW)  //pathological
             return -1;  //TODO: announce error somehow
+
+#if 0 //def _DEBUG
+        wodbgstream os;
+        os << "webmsplit::outpin::populatesample: id="
+           << m_id
+           << "; STARVATION detected"
+           << endl;
+#endif
 
         m_pFilter->OnStarvation(m_pStream->GetClusterCount());
 
