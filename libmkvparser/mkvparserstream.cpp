@@ -235,27 +235,11 @@ LONGLONG Stream::GetSeekTime(
 }
 
 
-//void Stream::SetCurrPosition(const Cluster* pBase)
-//{
-//    if (pBase == 0)
-//        m_pCurr = 0;  //lazy init
-//    else
-//        m_pCurr = pBase->GetEntry(m_pTrack);
-//
-//    m_pBase = pBase;
-//    m_bDiscontinuity = true;
-//}
-
-
 void Stream::SetCurrPosition(
     const Cluster* pBase,
     LONGLONG base_time_ns,
     const BlockEntry* pCurr)
 {
-    assert((pBase == 0) ||
-           pBase->EOS() ||
-           (base_time_ns >= pBase->GetTime()));
-
     m_pBase = pBase;
     m_pCurr = pCurr;
     m_base_time_ns = base_time_ns;
@@ -391,35 +375,90 @@ HRESULT Stream::Preload()
 }
 
 
-HRESULT Stream::PopulateSample(IMediaSample* pSample)
+HRESULT Stream::InitCurr()
 {
-    if (pSample == 0)
-        return E_INVALIDARG;
-
-    if (SendPreroll(pSample))
+    if (m_pCurr)
         return S_OK;
 
-    if (m_pCurr == 0)  //lazy-init of first block
+    //lazy-init of first block
+
+    Segment* const pSegment = m_pTrack->m_pSegment;
+
+    if (pSegment->GetCount() <= 0)
+        return VFW_E_BUFFER_UNDERFLOW;
+
+    const long status = m_pTrack->GetFirst(m_pCurr);
+
+    if (status == E_BUFFER_NOT_FULL)
+        return VFW_E_BUFFER_UNDERFLOW;
+
+    assert(status >= 0);  //success
+    assert(m_pCurr);
+
+    m_pBase = pSegment->GetFirst();
+    assert(m_pBase);
+    assert(!m_pBase->EOS());
+
+    m_base_time_ns = m_pBase->GetFirstTime();
+
+    return S_OK;
+}
+
+
+void Stream::Clear(samples_t& samples)
+{
+    while (!samples.empty())
     {
-        Segment* const pSegment = m_pTrack->m_pSegment;
+        IMediaSample* const p = samples.back();
+        assert(p);
 
-        if (pSegment->GetCount() <= 0)
-            return VFW_E_BUFFER_UNDERFLOW;
+        samples.pop_back();
 
-        const long status = m_pTrack->GetFirst(m_pCurr);
-
-        if (status == E_BUFFER_NOT_FULL)
-            return VFW_E_BUFFER_UNDERFLOW;
-
-        assert(status >= 0);  //success
-        assert(m_pCurr);
-
-        m_pBase = pSegment->GetFirst();
-        assert(m_pBase);
-        assert(!m_pBase->EOS());
-
-        m_base_time_ns = m_pBase->GetFirstTime();
+        p->Release();
     }
+}
+
+
+HRESULT Stream::GetSampleCount(long& count)
+{
+    count = 0;
+
+    HRESULT hr = InitCurr();
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pStop == 0)  //TODO: this test might not be req'd
+    {
+        if (m_pCurr->EOS())
+            return S_FALSE;  //send EOS downstream
+    }
+    else if (m_pCurr == m_pStop)
+    {
+        return S_FALSE;  //EOS
+    }
+
+    const Block* const pCurrBlock = m_pCurr->GetBlock();
+    assert(pCurrBlock);
+    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
+
+    count = pCurrBlock->GetFrameCount();
+    return S_OK;
+}
+
+
+HRESULT Stream::PopulateSamples(const samples_t& samples)
+{
+    if (samples.empty())
+        return E_INVALIDARG;
+
+    //if (SendPreroll(pSample))
+    //    return S_OK;
+
+    HRESULT hr = InitCurr();
+
+    if (FAILED(hr))
+        return hr;
 
     if (m_pStop == 0)  //TODO: this test might not be req'd
     {
@@ -441,19 +480,7 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
     assert(status >= 0);  //success
     assert(pNextBlock);
 
-#if 0  //TODO: keep this?
-    const BlockEntry* pNextTime;
-
-    status = m_pTrack->GetNextTime(m_pCurr, pNextBlock, pNextTime);
-
-    if (status == E_BUFFER_NOT_FULL)
-        return VFW_E_BUFFER_UNDERFLOW;
-
-    assert(status >= 0);  //success
-    assert(pNextTime);
-#endif
-
-    const HRESULT hr = OnPopulateSample( /* pNextTime */ pNextBlock, pSample);
+    hr = OnPopulateSample(pNextBlock, samples);
     assert(SUCCEEDED(hr));  //TODO
 
     m_pCurr = pNextBlock;
@@ -467,10 +494,10 @@ HRESULT Stream::PopulateSample(IMediaSample* pSample)
 }
 
 
-bool Stream::SendPreroll(IMediaSample*)
-{
-    return false;
-}
+//bool Stream::SendPreroll(IMediaSample*)
+//{
+//    return false;
+//}
 
 
 ULONG Stream::GetClusterCount() const

@@ -35,7 +35,8 @@ public:
 
 protected:
     std::wostream& GetKind(std::wostream&) const;
-    HRESULT OnPopulateSample(const BlockEntry* pNext, IMediaSample* pSample);
+
+    HRESULT OnPopulateSample(const BlockEntry*, const samples_t&);
 
     void GetVorbisMediaTypes(CMediaTypes&) const;
 

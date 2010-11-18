@@ -33,7 +33,7 @@ protected:
     GraphUtil::IMemInputPinPtr m_pInputPin;
     HANDLE m_hThread;
 
-    bool PopulateSample(IMediaSample*);
+    HRESULT PopulateSamples(mkvparser::Stream::samples_t&);
 
 public:
     Outpin(Filter*, mkvparser::Stream*);

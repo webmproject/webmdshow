@@ -9,11 +9,10 @@
 #include <strmif.h>
 #include <comdef.h>
 #include <uuids.h>
+#include "mkvparserstream.hpp"
 #include "webmsplitfilter.hpp"
 #include "webmsplitoutpin.hpp"
-//#include "cmemallocator.hpp"
 #include "cmediasample.hpp"
-#include "mkvparserstream.hpp"
 #include "mkvparser.hpp"
 #include <vfwmsgs.h>
 #include <cassert>
@@ -1179,107 +1178,117 @@ unsigned Outpin::Main()
     //UPDATE: but if IMediaSeeking::GetCapabilities does NOT indicate
     //that it supports segments, then do we still need to send NewSegment?
 
+    typedef mkvparser::Stream::samples_t samples_t;
+    samples_t samples;
+
     for (;;)
     {
-        GraphUtil::IMediaSamplePtr pSample;
+        HRESULT hr = PopulateSamples(samples);
 
-        HRESULT hr = m_pAllocator->GetBuffer(&pSample, 0, 0, 0);
+        if (FAILED(hr))
+            break;
 
-        if (hr != S_OK)
-            return 0;
-
-        assert(bool(pSample));
-
-        const int status = PopulateSample(pSample);
-
-        if (status < 0)
-            return 0;
-
-        if (status == 0)  //EOS
+        if (hr != S_OK)  //EOS
         {
             hr = m_pPinConnection->EndOfStream();
-            return 0;
+            break;
         }
 
-        hr = m_pInputPin->Receive(pSample);
+        assert(!samples.empty());
 
-        if (hr != S_OK)
-            return 0;
+        IMediaSample** const pSamples = &samples[0];
+
+        const samples_t::size_type nSamples_ = samples.size();
+        const long nSamples = static_cast<long>(nSamples_);
+
+        long nProcessed;
+
+        hr = m_pInputPin->ReceiveMultiple(pSamples, nSamples, &nProcessed);
+
+        if (hr != S_OK)  //downstream filter says we're done
+            break;
+
+        mkvparser::Stream::Clear(samples);
+        Sleep(0);
     }
+
+    mkvparser::Stream::Clear(samples);
+    return 0;
 }
 
 
-int Outpin::PopulateSample(IMediaSample* pSample)
+HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 {
-    assert(pSample);
-
-    Filter::Lock lock;
-
     for (;;)
     {
+        assert(samples.empty());
+
+        Filter::Lock lock;
+
         HRESULT hr = lock.Seize(m_pFilter);
 
         if (FAILED(hr))
-            return -1;  //TODO: announce error somehow
+            return hr;
 
-        hr = m_pStream->PopulateSample(pSample);
+        long count;
 
-        if (hr == S_OK)
+        hr = m_pStream->GetSampleCount(count);
+
+        if (SUCCEEDED(hr))
         {
-#if 0 //def _DEBUG
-            wodbgstream os;
-            os << "webmsplit::outpin::populatesample: id="
-               << m_id
-               << "; NEW SAMPLE"
-               << endl;
-#endif
+            if (hr != S_OK)  //EOS
+                return hr;
 
-            return 1;
+            hr = lock.Release();
+            assert(SUCCEEDED(hr));
+
+            //We have a count.  Now get some (empty) buffers.
+
+            samples.reserve(count);
+
+            for (long idx = 0; idx < count; ++idx)
+            {
+                IMediaSample* sample;
+
+                hr = m_pAllocator->GetBuffer(&sample, 0, 0, 0);
+
+                if (hr != S_OK)
+                    return E_FAIL;  //we're done
+
+                samples.push_back(sample);
+            }
+
+            hr = lock.Seize(m_pFilter);
+
+            if (FAILED(hr))
+                return hr;
+
+            //We have buffers.  Now populate them.
+
+            hr = m_pStream->PopulateSamples(samples);
+
+            if (SUCCEEDED(hr))
+            {
+                if (hr != 2)
+                    return hr;
+
+                hr = lock.Release();
+                assert(SUCCEEDED(hr));
+
+                //We're throwing this block away.
+
+                mkvparser::Stream::Clear(samples);
+                continue;
+            }
         }
 
-        if (hr == S_FALSE)  //EOS
-        {
-#if 0 //def _DEBUG
-            wodbgstream os;
-            os << "webmsplit::outpin::populatesample: id="
-               << m_id
-               << "; EOS detected"
-               << endl;
-#endif
-
-            return 0;
-        }
-
-        if (hr == 2)  //pre-seek block
-        {
-#if 0 //def _DEBUG
-            wodbgstream os;
-            os << "webmsplit::outpin::populatesample: id="
-               << m_id
-               << "; THROW AWAY SAMPLE DETECTED"
-               << endl;
-#endif
-
-            lock.Release();
-            continue;
-        }
-
-        assert(FAILED(hr));
-
-        if (hr != VFW_E_BUFFER_UNDERFLOW)  //pathological
-            return -1;  //TODO: announce error somehow
-
-#if 0 //def _DEBUG
-        wodbgstream os;
-        os << "webmsplit::outpin::populatesample: id="
-           << m_id
-           << "; STARVATION detected"
-           << endl;
-#endif
+        if (hr != VFW_E_BUFFER_UNDERFLOW)
+            return hr;
 
         m_pFilter->OnStarvation(m_pStream->GetClusterCount());
 
-        lock.Release();
+        hr = lock.Release();
+        assert(SUCCEEDED(hr));
 
         enum { nh = 2 };
         const HANDLE hh[nh] = { m_hStop, m_hNewCluster };
@@ -1289,7 +1298,7 @@ int Outpin::PopulateSample(IMediaSample* pSample)
         assert(dw < (WAIT_OBJECT_0 + nh));
 
         if (dw == WAIT_OBJECT_0)  //hStop
-            return -1;  //NOTE: this return here is not an error
+            return E_FAIL;  //NOTE: this return here is not an error
 
         assert(dw == (WAIT_OBJECT_0 + 1));  //hNewCluster
     }

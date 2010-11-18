@@ -7,10 +7,10 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include "webmsplitfilter.hpp"
-#include "webmsplitoutpin.hpp"
 #include "mkvparser.hpp"
 #include "mkvparserstreamvideo.hpp"
 #include "mkvparserstreamaudio.hpp"
+#include "webmsplitoutpin.hpp"
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <cassert>

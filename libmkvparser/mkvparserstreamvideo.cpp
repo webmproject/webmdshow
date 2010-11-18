@@ -312,21 +312,14 @@ long VideoStream::GetBufferSize() const
 
 HRESULT VideoStream::OnPopulateSample(
     const BlockEntry* pNextEntry,
-    IMediaSample* pSample)
+    const samples_t& samples)
 {
-    assert(pSample);
+    assert(!samples.empty());
     assert(m_pBase);
     assert(!m_pBase->EOS());
-    //assert(m_baseTime >= 0);
-    //assert((m_baseTime % 100) == 0);
     assert(m_pCurr);
     assert(m_pCurr != m_pStop);
     assert(!m_pCurr->EOS());
-#if 0
-    assert((pNextEntry == 0) ||
-           pNextEntry->EOS() ||
-           !pNextEntry->IsBFrame());
-#endif
 
     const Block* const pCurrBlock = m_pCurr->GetBlock();
     assert(pCurrBlock);
@@ -340,76 +333,52 @@ HRESULT VideoStream::OnPopulateSample(
            (m_pStop->GetBlock()->GetTimeCode(m_pStop->GetCluster()) >
              pCurrBlock->GetTimeCode(pCurrCluster)));
 
-#if 0
-    const __int64 basetime_ns = m_pBase->GetFirstTime();
-    assert(basetime_ns >= 0);
-    assert((basetime_ns % 100) == 0);
-#else
+    const int nFrames = pCurrBlock->GetFrameCount();
+
+    if (nFrames <= 0)      //should never happen
+        return S_FALSE;    //throw this block away
+
+    if (samples.size() != samples_t::size_type(nFrames))
+        return E_INVALIDARG;
+
     const LONGLONG basetime_ns = m_base_time_ns;
     assert(basetime_ns >= 0);
-#endif
 
-    const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
-    assert(start_ns >= basetime_ns);
-    assert((start_ns % 100) == 0);
-
-    const int nFrames = pCurrBlock->GetFrameCount();
-    assert(nFrames == 1);  //TODO: support lacing
-
-    const Block::Frame& f = pCurrBlock->GetFrame(0);
-
-    const LONG srcsize = f.len;
-    assert(srcsize >= 0);
-
-    const long tgtsize = pSample->GetSize();
-    tgtsize;
-    assert(tgtsize >= 0);
-    assert(tgtsize >= srcsize);
-
-    BYTE* ptr;
-
-    HRESULT hr = pSample->GetPointer(&ptr);  //read srcsize bytes
-    assert(SUCCEEDED(hr));
-    assert(ptr);
-
-    IMkvReader* const pFile = pCurrCluster->m_pSegment->m_pReader;
-
-    const long status = f.Read(pFile, ptr);
-    assert(status == 0);  //all bytes were read
-
-    hr = pSample->SetActualDataLength(srcsize);
-
-    hr = pSample->SetPreroll(0);
-    assert(SUCCEEDED(hr));
-
-    hr = pSample->SetMediaType(0);
-    assert(SUCCEEDED(hr));
-
-    hr = pSample->SetDiscontinuity(m_bDiscontinuity);
-    assert(SUCCEEDED(hr));
-
-    //set by caller:
-    //m_bDiscontinuity = false;
-
-    hr = pSample->SetMediaTime(0, 0);
-    assert(SUCCEEDED(hr));
+    Segment* const pSegment = m_pTrack->m_pSegment;
+    IMkvReader* const pFile = pSegment->m_pReader;
 
     const bool bKey = pCurrBlock->IsKey();
 
-    hr = pSample->SetSyncPoint(bKey ? TRUE : FALSE);
-    assert(SUCCEEDED(hr));
+    const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(start_ns >= basetime_ns);
+    //assert((start_ns % 100) == 0);
 
-    __int64 ns = start_ns - basetime_ns;
-    assert(ns >= 0);
-    assert((ns % 100) == 0);
-
-    __int64 start_reftime = ns / 100;
-
-    __int64 stop_reftime;
-    __int64* pstop_reftime;
+    __int64 stop_ns;
 
     if ((pNextEntry == 0) || pNextEntry->EOS())
-        pstop_reftime = 0;  //TODO: use duration of curr block
+    {
+        //TODO: read duration from block group, if present
+
+        const LONGLONG duration_ns = pSegment->GetDuration();
+
+        if ((duration_ns >= 0) && (duration_ns > start_ns))
+            stop_ns = duration_ns;
+        else
+        {
+            typedef mkvparser::VideoTrack VT;
+            const VT* const pVT = static_cast<const VT*>(m_pTrack);
+
+            double frame_rate = pVT->GetFrameRate();
+
+            if (frame_rate <= 0)
+                frame_rate = 10;  //100ms
+
+            const double ns = 1000000000.0 / frame_rate;
+            const LONGLONG ns_per_frame = static_cast<LONGLONG>(ns);
+
+            stop_ns = start_ns + LONGLONG(nFrames) * ns_per_frame;
+        }
+    }
     else
     {
         const Block* const pNextBlock = pNextEntry->GetBlock();
@@ -417,21 +386,75 @@ HRESULT VideoStream::OnPopulateSample(
 
         const Cluster* const pNextCluster = pNextEntry->GetCluster();
 
-        const __int64 stop_ns = pNextBlock->GetTime(pNextCluster);
+        stop_ns = pNextBlock->GetTime(pNextCluster);
         assert(stop_ns > start_ns);
-        assert((stop_ns % 100) == 0);
-
-        ns = stop_ns - basetime_ns;
-        assert(ns >= 0);
-
-        stop_reftime = ns / 100;
-        assert(stop_reftime > start_reftime);
-
-        pstop_reftime = &stop_reftime;
+        //assert((stop_ns % 100) == 0);
     }
 
-    hr = pSample->SetTime(&start_reftime, pstop_reftime);
-    assert(SUCCEEDED(hr));
+    __int64 start_reftime = (start_ns - basetime_ns) / 100;
+
+    const __int64 block_stop_reftime = (stop_ns - basetime_ns) / 100;
+    assert(block_stop_reftime > start_reftime);
+
+    const __int64 block_duration = block_stop_reftime - start_reftime;
+    assert(block_duration > 0);
+
+    __int64 frame_duration = block_duration / nFrames;  //reftime units
+
+    if (frame_duration <= 0)  //weird: block duration is very small
+        frame_duration = 1;
+
+    BOOL bDiscontinuity = m_bDiscontinuity ? TRUE : FALSE;
+
+    for (int idx = 0; idx < nFrames; ++idx)
+    {
+        IMediaSample* const pSample = samples[idx];
+
+        const Block::Frame& f = pCurrBlock->GetFrame(idx);
+
+        const LONG srcsize = f.len;
+        assert(srcsize >= 0);
+
+        const long tgtsize = pSample->GetSize();
+        tgtsize;
+        assert(tgtsize >= 0);
+        assert(tgtsize >= srcsize);
+
+        BYTE* ptr;
+
+        HRESULT hr = pSample->GetPointer(&ptr);  //read srcsize bytes
+        assert(SUCCEEDED(hr));
+        assert(ptr);
+
+        const long status = f.Read(pFile, ptr);
+        assert(status == 0);  //all bytes were read
+
+        hr = pSample->SetActualDataLength(srcsize);
+
+        hr = pSample->SetPreroll(0);
+        assert(SUCCEEDED(hr));
+
+        hr = pSample->SetMediaType(0);
+        assert(SUCCEEDED(hr));
+
+        hr = pSample->SetDiscontinuity(bDiscontinuity);
+        assert(SUCCEEDED(hr));
+
+        bDiscontinuity = FALSE;
+
+        hr = pSample->SetMediaTime(0, 0);
+        assert(SUCCEEDED(hr));
+
+        hr = pSample->SetSyncPoint(bKey ? TRUE : FALSE);
+        assert(SUCCEEDED(hr));
+
+        LONGLONG stop_reftime = start_reftime + frame_duration;
+
+        hr = pSample->SetTime(&start_reftime, &stop_reftime);
+        assert(SUCCEEDED(hr));
+
+        start_reftime = stop_reftime;
+    }
 
     return S_OK;
 }

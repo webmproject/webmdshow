@@ -32,7 +32,8 @@ protected:
     void Final();
     HRESULT OnDisconnect();
     HRESULT GetName(PIN_INFO&) const;
-    int PopulateSample(IMediaSample*);
+
+    HRESULT PopulateSamples(mkvparser::Stream::samples_t&);
 
     mkvparser::Stream* m_pStream;
     GraphUtil::IMemAllocatorPtr m_pAllocator;
@@ -133,4 +134,3 @@ private:
 };
 
 }  //end namespace WebmSplit
-

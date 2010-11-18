@@ -9,6 +9,7 @@
 #pragma once
 #include <string>
 #include <iosfwd>
+#include <vector>
 
 class CMediaTypes;
 
@@ -37,7 +38,13 @@ public:
     virtual HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const = 0;
 
     HRESULT Preload();  //exactly one cluster
-    HRESULT PopulateSample(IMediaSample*);
+
+    HRESULT GetSampleCount(long&);
+
+    typedef std::vector<IMediaSample*> samples_t;
+
+    HRESULT PopulateSamples(const samples_t&);
+    static void Clear(samples_t&);
 
     __int64 GetDuration() const;
     __int64 GetCurrPosition() const;
@@ -49,8 +56,6 @@ public:
 
     LONGLONG GetSeekTime(LONGLONG currTime, DWORD dwCurr) const;
     //convert from reftime to ns
-
-    //void SetCurrPosition(const Cluster*, LONGLONG base_time_ns);
 
     void SetCurrPosition(
         const Cluster*,
@@ -75,11 +80,10 @@ protected:
 
     virtual std::wostream& GetKind(std::wostream&) const = 0;
 
-    virtual bool SendPreroll(IMediaSample*);
+    //virtual bool SendPreroll(IMediaSample*);
 
-    virtual HRESULT OnPopulateSample(
-                const BlockEntry* pNext,
-                IMediaSample* pSample) = 0;
+    HRESULT InitCurr();
+    virtual HRESULT OnPopulateSample(const BlockEntry*, const samples_t&) = 0;
 
 };
 

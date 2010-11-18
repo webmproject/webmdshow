@@ -10,10 +10,10 @@
 #include <comdef.h>
 #include <uuids.h>
 #include "webmsourcefilter.hpp"
+#include "mkvparserstream.hpp"
 #include "webmsourceoutpin.hpp"
 //#include "cmemallocator.hpp"
 #include "cmediasample.hpp"
-#include "mkvparserstream.hpp"
 #include <vfwmsgs.h>
 #include <cassert>
 #include <sstream>
@@ -958,26 +958,32 @@ unsigned Outpin::Main()
     //TODO: we need duration to send NewSegment
     //HRESULT hr = m_connection->NewSegment(st, sp, 1);
 
+    typedef mkvparser::Stream::samples_t samples_t;
+    samples_t samples;
+
     for (;;)
     {
-        GraphUtil::IMediaSamplePtr pSample;
+        HRESULT hr = PopulateSamples(samples);
 
-        HRESULT hr = m_pAllocator->GetBuffer(&pSample, 0, 0, 0);
+        if (FAILED(hr))
+            break;
 
-        if (hr != S_OK)
-            return 0;
-
-        assert(bool(pSample));
-
-        const bool bEOS = PopulateSample(pSample);
-
-        if (bEOS)
+        if (hr != S_OK)  //EOS
         {
             hr = m_connection->EndOfStream();
-            return 0;
+            break;
         }
 
-        hr = m_pInputPin->Receive(pSample);
+        assert(!samples.empty());
+
+        IMediaSample** const pSamples = &samples[0];
+
+        const samples_t::size_type nSamples_ = samples.size();
+        const long nSamples = static_cast<long>(nSamples_);
+
+        long nProcessed;
+
+        hr = m_pInputPin->ReceiveMultiple(pSamples, nSamples, &nProcessed);
 
         //TODO: there is a potential problem here.  If the upstream decoder
         //rejects the sample (problem with bitstream, etc), then this
@@ -995,43 +1001,98 @@ unsigned Outpin::Main()
         //stopped and thread wasn't already terminated.
 
         if (hr != S_OK)
-            return 0;
+            break;
 
-        Sleep(0);  //TODO: find a better way to do this
+        mkvparser::Stream::Clear(samples);
+        Sleep(0);       //better way to do this?
     }
+
+    mkvparser::Stream::Clear(samples);
+    return 0;
 }
 
 
-bool Outpin::PopulateSample(IMediaSample* pSample)
+HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 {
-    assert(pSample);
-
-    Filter::Lock lock;
-
-    HRESULT hr = lock.Seize(m_pFilter);
-    assert(SUCCEEDED(hr));  //TODO
-
     for (;;)
     {
-        hr = m_pStream->PopulateSample(pSample);
+        assert(samples.empty());
 
-        if (hr == VFW_E_BUFFER_UNDERFLOW)
+        Filter::Lock lock;
+
+        HRESULT hr = lock.Seize(m_pFilter);
+
+        if (FAILED(hr))
+            return hr;
+
+        long count;
+
+        for (;;)
         {
-            hr = m_pStream->Preload();
-            assert(SUCCEEDED(hr));
+            hr = m_pStream->GetSampleCount(count);
 
-            continue;
+            if (SUCCEEDED(hr))
+                break;
+
+            if (hr != VFW_E_BUFFER_UNDERFLOW)
+                return hr;
+
+            hr = m_pStream->Preload();
+
+            if (FAILED(hr))
+                return hr;
         }
 
+        if (hr != S_OK)      //EOS
+            return S_FALSE;  //report EOS
+
+        hr = lock.Release();
         assert(SUCCEEDED(hr));
 
-        if (hr == S_OK)    //0
-            return false;  //no, not EOS yet
+        samples.reserve(count);
 
-        if (hr == S_FALSE)  //1
-            return true;    //yes, EOS
+        for (long idx = 0; idx < count; ++idx)
+        {
+            IMediaSample* sample;
 
-        assert(hr == 2);  //throw away this sample
+            hr = m_pAllocator->GetBuffer(&sample, 0, 0, 0);
+
+            if (hr != S_OK)
+                return E_FAIL;  //we're done
+
+            samples.push_back(sample);
+        }
+
+        hr = lock.Seize(m_pFilter);
+
+        if (FAILED(hr))
+            return hr;
+
+        for (;;)
+        {
+            hr = m_pStream->PopulateSamples(samples);
+
+            if (SUCCEEDED(hr))
+                break;
+
+            if (hr != VFW_E_BUFFER_UNDERFLOW)
+                return hr;
+
+            hr = m_pStream->Preload();
+
+            if (FAILED(hr))
+                return hr;
+        }
+
+        if (hr != 2)
+            return hr;  //either have samples, or EOS
+
+        hr = lock.Release();
+        assert(SUCCEEDED(hr));
+
+        //we're throwing this block away
+
+        mkvparser::Stream::Clear(samples);
     }
 }
 
