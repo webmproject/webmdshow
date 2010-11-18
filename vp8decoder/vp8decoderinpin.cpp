@@ -246,7 +246,7 @@ HRESULT Inpin::BeginFlush()
     //if (m_bFlush)
     //    return S_FALSE;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     odbgstream os;
     os << "vp8decoder::inpin::beginflush" << endl;
 #endif
@@ -277,7 +277,7 @@ HRESULT Inpin::EndFlush()
     if (!bool(m_pPinConnection))
         return VFW_E_NOT_CONNECTED;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     odbgstream os;
     os << "vp8decoder::inpin::endflush" << endl;
 #endif
@@ -499,10 +499,13 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         {
             lock.Release();
 
-            hr = pSink->Notify(EC_STREAM_ERROR_STOPPED, VFW_E_SAMPLE_REJECTED, err);
+            hr = pSink->Notify(
+                    EC_STREAM_ERROR_STOPPED,
+                    VFW_E_SAMPLE_REJECTED,
+                    err);
         }
 
-        m_bEndOfStream = true;  //clear this out when we stop and then start again
+        m_bEndOfStream = true;  //clear this when we stop and then start again
         return S_FALSE;
     }
 
@@ -816,7 +819,10 @@ HRESULT Inpin::OnApplyPostProcessing()
     tgt.deblocking_level = src.deblock;
     tgt.noise_level = src.noise;
 
-    const vpx_codec_err_t err = vpx_codec_control(&m_ctx, VP8_SET_POSTPROC, &tgt);
+    const vpx_codec_err_t err = vpx_codec_control(
+                                    &m_ctx,
+                                    VP8_SET_POSTPROC,
+                                    &tgt);
 
     return (err == VPX_CODEC_OK) ? S_OK : E_FAIL;
 }
