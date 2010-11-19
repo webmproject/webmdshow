@@ -949,7 +949,11 @@ void Filter::SetCurrPosition(
         else
             pCurr = m_pSeekBase->GetEntry(pOutpinTrack, m_seekTime_ns);
 
-        pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+        pOutpinStream->SetCurrPosition(
+            //m_pSeekBase,
+            m_seekBase_ns,
+            pCurr);
+
         return;
     }
 
@@ -982,7 +986,7 @@ void Filter::SetCurrPosition(
                 m_seekTime_ns = m_seekBase_ns;
 
                 pOutpinStream->SetCurrPosition(
-                    m_pSeekBase,
+                    //m_pSeekBase,
                     m_seekBase_ns,
                     pCurr);
 
@@ -1006,7 +1010,11 @@ void Filter::SetCurrPosition(
             m_seekTime_ns = m_seekBase_ns;
         }
 
-        pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+        pOutpinStream->SetCurrPosition(
+            //m_pSeekBase,
+            m_seekBase_ns,
+            pCurr);
+
         return;
     }
 
@@ -1058,7 +1066,7 @@ void Filter::SetCurrPosition(
                     m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
 
                 pOutpinStream->SetCurrPosition(
-                    m_pSeekBase,
+                    //m_pSeekBase,
                     m_seekBase_ns,
                     pCurr);
 
@@ -1077,7 +1085,11 @@ void Filter::SetCurrPosition(
 
             pCurr = pOutpinTrack->GetEOS();
 
-            pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+            pOutpinStream->SetCurrPosition(
+                //m_pSeekBase,
+                m_seekBase_ns,
+                pCurr);
+
             return;
         }
 
@@ -1091,7 +1103,11 @@ void Filter::SetCurrPosition(
         if (!pCurr->EOS())
             m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
 
-        pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+        pOutpinStream->SetCurrPosition(
+            //m_pSeekBase,
+            m_seekBase_ns,
+            pCurr);
+
         return;
     }
 
@@ -1111,7 +1127,7 @@ void Filter::SetCurrPosition(
         m_seekTime_ns = ns;
     }
 
-    pOutpinStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+    pOutpinStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
 }
 
 

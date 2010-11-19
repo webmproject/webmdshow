@@ -296,13 +296,13 @@ long AudioStream::GetBufferSize() const
 }
 
 
-HRESULT AudioStream::OnPopulateSample(
+void AudioStream::OnPopulateSample(
     const BlockEntry* pNextEntry,
-    const samples_t& samples)
+    const samples_t& samples) const
 {
     assert(!samples.empty());
-    assert(m_pBase);
-    assert(!m_pBase->EOS());
+    //assert(m_pBase);
+    //assert(!m_pBase->EOS());
     assert(m_pCurr);
     assert(m_pCurr != m_pStop);
     assert(!m_pCurr->EOS());
@@ -312,12 +312,8 @@ HRESULT AudioStream::OnPopulateSample(
     assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
 
     const int nFrames = pCurrBlock->GetFrameCount();
-
-    if (nFrames <= 0)     //should never happen
-        return S_FALSE;   //throw this block away
-
-    if (samples.size() != samples_t::size_type(nFrames))
-        return E_INVALIDARG;
+    assert(nFrames > 0);  //checked by caller
+    assert(samples.size() == samples_t::size_type(nFrames));
 
     const Cluster* const pCurrCluster = m_pCurr->GetCluster();
     assert(pCurrCluster);
@@ -326,23 +322,9 @@ HRESULT AudioStream::OnPopulateSample(
     assert(start_ns >= 0);
     //assert((start_ns % 100) == 0);
 
-    const LONGLONG basetime_ns = m_base_time_ns;
-    assert(basetime_ns >= 0);
-
-    if (start_ns < basetime_ns)
-    {
-#ifdef _DEBUG
-        odbgstream os;
-        os << "webmsplit::AudioStream::OnPopulateSample: start_ns="
-           << start_ns
-           << " basetime_ns="
-           << basetime_ns
-           << "; THROWING AWAY AUDIO SAMPLE"
-           << endl;
-#endif
-
-        return S_FALSE;  //throw away this sample
-    }
+    const LONGLONG base_ns = m_base_time_ns;
+    assert(base_ns >= 0);
+    assert(start_ns >= base_ns);
 
     Segment* const pSegment = m_pTrack->m_pSegment;
     IMkvReader* const pFile = pSegment->m_pReader;
@@ -373,10 +355,10 @@ HRESULT AudioStream::OnPopulateSample(
         //assert((stop_ns % 100) == 0);
     }
 
-    __int64 start_reftime = (start_ns - basetime_ns) / 100;
+    __int64 start_reftime = (start_ns - base_ns) / 100;
     assert(start_ns >= 0);
 
-    const __int64 block_stop_reftime = (stop_ns - basetime_ns) / 100;
+    const __int64 block_stop_reftime = (stop_ns - base_ns) / 100;
     assert(block_stop_reftime > start_reftime);
 
     const __int64 block_duration = block_stop_reftime - start_reftime;
@@ -438,8 +420,6 @@ HRESULT AudioStream::OnPopulateSample(
 
         start_reftime = stop_reftime;
     }
-
-    return S_OK;
 }
 
 

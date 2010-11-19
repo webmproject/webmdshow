@@ -1090,8 +1090,6 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
         hr = lock.Release();
         assert(SUCCEEDED(hr));
 
-        //we're throwing this block away
-
         mkvparser::Stream::Clear(samples);
     }
 }

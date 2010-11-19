@@ -37,7 +37,7 @@ Stream::~Stream()
 void Stream::Init()
 {
     m_base_time_ns = -1;
-    m_pBase = 0;
+    //m_pBase = 0;
     m_pCurr = 0;  //lazy init this later
     m_pStop = m_pTrack->GetEOS();  //means play entire stream
     m_bDiscontinuity = true;
@@ -236,11 +236,11 @@ LONGLONG Stream::GetSeekTime(
 
 
 void Stream::SetCurrPosition(
-    const Cluster* pBase,
+    //const Cluster* pBase,
     LONGLONG base_time_ns,
     const BlockEntry* pCurr)
 {
-    m_pBase = pBase;
+    //m_pBase = pBase;
     m_pCurr = pCurr;
     m_base_time_ns = base_time_ns;
     m_bDiscontinuity = true;
@@ -280,15 +280,15 @@ void Stream::SetStopPosition(
         assert(tCurr_ns >= 0);
     }
 
-    const Cluster* const pFirst = pSegment->GetFirst();
-    const Cluster* const pCurrCluster = m_pBase ? m_pBase : pFirst;
-    pCurrCluster;
-    assert(pCurrCluster);
-    assert(!pCurrCluster->EOS());
-    assert(tCurr_ns >= pCurrCluster->GetTime());
+    //const Cluster* const pFirst = pSegment->GetFirst();
+    //const Cluster* const pCurrCluster = m_pBase ? m_pBase : pFirst;
+    //pCurrCluster;
+    //assert(pCurrCluster);
+    //assert(!pCurrCluster->EOS());
+    //assert(tCurr_ns >= pCurrCluster->GetTime());
 
-    const __int64 duration_ns = pSegment->GetDuration();
-    assert(duration_ns >= 0);
+    //const __int64 duration_ns = pSegment->GetDuration();
+    //assert(duration_ns >= 0);
 
     const __int64 stoppos_ns = stoppos_reftime * 100;
     __int64 tStop_ns;
@@ -306,8 +306,18 @@ void Stream::SetStopPosition(
         }
         case AM_SEEKING_RelativePositioning:
         {
+            const __int64 duration_ns = pSegment->GetDuration();
+
             if ((m_pStop == 0) || m_pStop->EOS())
+            {
+                if (duration_ns <= 0)  //don't have a duration
+                {
+                    m_pStop = m_pTrack->GetEOS();  //means "play to end"
+                    return;
+                }
+
                 tStop_ns = duration_ns + stoppos_ns;
+            }
             else
             {
                 const Block* const pBlock = m_pStop->GetBlock();
@@ -337,16 +347,20 @@ void Stream::SetStopPosition(
         return;
     }
 
-    if (tStop_ns >= duration_ns)
-    {
-        m_pStop = m_pTrack->GetEOS();
-        return;
-    }
+    //if (tStop_ns >= duration_ns)
+    //{
+    //    m_pStop = m_pTrack->GetEOS();
+    //    return;
+    //}
 
-    const Cluster* pStopCluster = pSegment->FindCluster(tStop_ns);  //TODO
+    //TODO: here we find a stop block whose time is aligned with
+    //a cluster time.  We should really do better here, and find
+    //the exact block that corresponds to the requested time.
+
+    const Cluster* pStopCluster = pSegment->FindCluster(tStop_ns);
     assert(pStopCluster);
 
-    if (pStopCluster == pCurrCluster)
+    if (pStopCluster == m_pCurr->GetCluster())
         pStopCluster = pSegment->GetNext(pStopCluster);
 
     m_pStop = pStopCluster->GetEntry(m_pTrack);
@@ -395,11 +409,11 @@ HRESULT Stream::InitCurr()
     assert(status >= 0);  //success
     assert(m_pCurr);
 
-    m_pBase = pSegment->GetFirst();
-    assert(m_pBase);
-    assert(!m_pBase->EOS());
+    const Cluster* const pBase = pSegment->GetFirst();
+    assert(pBase);
+    assert(!pBase->EOS());
 
-    m_base_time_ns = m_pBase->GetFirstTime();
+    m_base_time_ns = pBase->GetFirstTime();
 
     return S_OK;
 }
@@ -449,9 +463,6 @@ HRESULT Stream::GetSampleCount(long& count)
 
 HRESULT Stream::PopulateSamples(const samples_t& samples)
 {
-    if (samples.empty())
-        return E_INVALIDARG;
-
     //if (SendPreroll(pSample))
     //    return S_OK;
 
@@ -470,24 +481,48 @@ HRESULT Stream::PopulateSamples(const samples_t& samples)
         return S_FALSE;  //EOS
     }
 
-    const BlockEntry* pNextBlock;
+    assert(!m_pCurr->EOS());
 
-    long status = m_pTrack->GetNext(m_pCurr, pNextBlock);
+    const BlockEntry* pNext;
+    const long status = m_pTrack->GetNext(m_pCurr, pNext);
 
     if (status == E_BUFFER_NOT_FULL)
         return VFW_E_BUFFER_UNDERFLOW;
 
     assert(status >= 0);  //success
-    assert(pNextBlock);
+    assert(pNext);
 
-    hr = OnPopulateSample(pNextBlock, samples);
-    assert(SUCCEEDED(hr));  //TODO
+    const Block* const pCurrBlock = m_pCurr->GetBlock();
 
-    m_pCurr = pNextBlock;
+    const Cluster* const pCurrCluster = m_pCurr->GetCluster();
+    assert(pCurrCluster);
 
-    if (hr != S_OK)  //TODO: do we still need to do this?
-        return 2;    //throw away this sample
+    const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(start_ns >= 0);
 
+    const LONGLONG base_ns = m_base_time_ns;
+    assert(base_ns >= 0);
+
+    if (start_ns < base_ns)
+    {
+        m_pCurr = pNext;  //throw curr block away
+        return 2;  //no samples, but not EOS either
+    }
+
+    const int nFrames = pCurrBlock->GetFrameCount();
+
+    if (nFrames <= 0)   //should never happen
+    {
+        m_pCurr = pNext;  //throw curr block away
+        return 2;  //no samples, but not EOS either
+    }
+
+    if (samples.size() != samples_t::size_type(nFrames))
+        return 2;   //try again
+
+    OnPopulateSample(pNext, samples);
+
+    m_pCurr = pNext;
     m_bDiscontinuity = false;
 
     return S_OK;

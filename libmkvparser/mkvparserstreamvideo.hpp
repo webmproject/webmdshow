@@ -31,7 +31,7 @@ public:
 protected:
     std::wostream& GetKind(std::wostream&) const;
 
-    HRESULT OnPopulateSample(const BlockEntry*, const samples_t&);
+    void OnPopulateSample(const BlockEntry*, const samples_t&) const;
 
     void GetVp8MediaTypes(CMediaTypes&) const;
     void GetVfwMediaTypes(CMediaTypes&) const;

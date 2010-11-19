@@ -58,7 +58,7 @@ public:
     //convert from reftime to ns
 
     void SetCurrPosition(
-        const Cluster*,
+        //const Cluster*,
         LONGLONG base_time_ns,
         const BlockEntry*);
 
@@ -75,7 +75,7 @@ protected:
     bool m_bDiscontinuity;
     const BlockEntry* m_pCurr;
     const BlockEntry* m_pStop;
-    const Cluster* m_pBase;
+    //const Cluster* m_pBase;
     LONGLONG m_base_time_ns;
 
     virtual std::wostream& GetKind(std::wostream&) const = 0;
@@ -83,7 +83,10 @@ protected:
     //virtual bool SendPreroll(IMediaSample*);
 
     HRESULT InitCurr();
-    virtual HRESULT OnPopulateSample(const BlockEntry*, const samples_t&) = 0;
+
+    virtual void OnPopulateSample(
+                const BlockEntry*,
+                const samples_t&) const = 0;
 
 };
 

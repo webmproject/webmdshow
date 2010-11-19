@@ -1148,18 +1148,25 @@ void Filter::SetCurrPosition(
         else if (m_pSeekBase->EOS())
             pCurr = pSeekTrack->GetEOS();
 
-        //else if (pSeekTrack->GetType() == 2)  //audio
-        //    pCurr = m_pSeekBase->GetEntry(pSeekTrack);  //just find first
-
         else
         {
-            //TODO: we can do better here: we don't want to throw away
-            //video, since that means we'll probably throw away a keyframe
-            //which would break decode.  Better to check here if
-            //pCurr.time is less than m_seekBase_ns, and if so, find
-            //the next GOP.
-
             pCurr = m_pSeekBase->GetEntry(pSeekTrack, m_seekTime_ns);
+
+#ifdef _DEBUG
+            if (pCurr == 0)
+                __noop;
+
+            else if (pCurr->EOS())
+                __noop;
+
+            else if (pSeekTrack->GetType() == 1)  //video
+            {
+                const Block* const pCurrBlock = pCurr->GetBlock();
+                const LONGLONG ns = pCurrBlock->GetTime(pCurr->GetCluster());
+                assert(ns >= m_seekBase_ns);
+                assert(pCurrBlock->IsKey());
+            }
+#endif
         }
 
 #if 0 //def _DEBUG
@@ -1187,7 +1194,7 @@ void Filter::SetCurrPosition(
         os << endl;
 #endif
 
-        pSeekStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+        pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
         return;
     }
 
@@ -1199,7 +1206,7 @@ void Filter::SetCurrPosition(
         m_seekBase_ns = -1;
         m_seekTime_ns = -1;
 
-        pSeekStream->SetCurrPosition(0, -1, 0);  //lazy init
+        pSeekStream->SetCurrPosition(/* 0, */ -1, 0);  //lazy init
         return;
     }
 
@@ -1228,7 +1235,7 @@ void Filter::SetCurrPosition(
             m_seekTime_ns = m_seekBase_ns;
         }
 
-        pSeekStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+        pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
         return;
     }
 
@@ -1269,7 +1276,7 @@ void Filter::SetCurrPosition(
 
             pCurr = pSeekTrack->GetEOS();
 
-            pSeekStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+            pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
             return;
         }
 
@@ -1294,7 +1301,7 @@ void Filter::SetCurrPosition(
            << endl;
 #endif
 
-        pSeekStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+        pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
         return;
     }
 
@@ -1314,7 +1321,7 @@ void Filter::SetCurrPosition(
         m_seekTime_ns = ns;
     }
 
-    pSeekStream->SetCurrPosition(m_pSeekBase, m_seekBase_ns, pCurr);
+    pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
 }
 
 

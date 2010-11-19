@@ -310,13 +310,13 @@ long VideoStream::GetBufferSize() const
 }
 
 
-HRESULT VideoStream::OnPopulateSample(
+void VideoStream::OnPopulateSample(
     const BlockEntry* pNextEntry,
-    const samples_t& samples)
+    const samples_t& samples) const
 {
     assert(!samples.empty());
-    assert(m_pBase);
-    assert(!m_pBase->EOS());
+    //assert(m_pBase);
+    //assert(!m_pBase->EOS());
     assert(m_pCurr);
     assert(m_pCurr != m_pStop);
     assert(!m_pCurr->EOS());
@@ -334,23 +334,20 @@ HRESULT VideoStream::OnPopulateSample(
              pCurrBlock->GetTimeCode(pCurrCluster)));
 
     const int nFrames = pCurrBlock->GetFrameCount();
+    assert(nFrames > 0);  //checked by caller
+    assert(samples.size() == samples_t::size_type(nFrames));
 
-    if (nFrames <= 0)      //should never happen
-        return S_FALSE;    //throw this block away
-
-    if (samples.size() != samples_t::size_type(nFrames))
-        return E_INVALIDARG;
-
-    const LONGLONG basetime_ns = m_base_time_ns;
-    assert(basetime_ns >= 0);
+    const LONGLONG base_ns = m_base_time_ns;
+    assert(base_ns >= 0);
 
     Segment* const pSegment = m_pTrack->m_pSegment;
     IMkvReader* const pFile = pSegment->m_pReader;
 
     const bool bKey = pCurrBlock->IsKey();
+    assert(!m_bDiscontinuity || bKey);
 
     const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
-    assert(start_ns >= basetime_ns);
+    assert(start_ns >= base_ns);
     //assert((start_ns % 100) == 0);
 
     __int64 stop_ns;
@@ -391,9 +388,9 @@ HRESULT VideoStream::OnPopulateSample(
         //assert((stop_ns % 100) == 0);
     }
 
-    __int64 start_reftime = (start_ns - basetime_ns) / 100;
+    __int64 start_reftime = (start_ns - base_ns) / 100;
 
-    const __int64 block_stop_reftime = (stop_ns - basetime_ns) / 100;
+    const __int64 block_stop_reftime = (stop_ns - base_ns) / 100;
     assert(block_stop_reftime > start_reftime);
 
     const __int64 block_duration = block_stop_reftime - start_reftime;
@@ -455,8 +452,6 @@ HRESULT VideoStream::OnPopulateSample(
 
         start_reftime = stop_reftime;
     }
-
-    return S_OK;
 }
 
 
