@@ -1194,7 +1194,7 @@ void Filter::SetCurrPosition(
         os << endl;
 #endif
 
-        pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
+        pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
         return;
     }
 
@@ -1206,7 +1206,7 @@ void Filter::SetCurrPosition(
         m_seekBase_ns = -1;
         m_seekTime_ns = -1;
 
-        pSeekStream->SetCurrPosition(/* 0, */ -1, 0);  //lazy init
+        pSeekStream->SetCurrPosition(-1, 0);  //lazy init
         return;
     }
 
@@ -1219,10 +1219,11 @@ void Filter::SetCurrPosition(
         bVideo;
         assert(bVideo);
 
-        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pSeekTrack);
-        assert(pCurr);
+        const BlockEntry* pCurr;
 
-        if (pCurr->EOS())  //weird: no keyframe found
+        const long status = pSeekTrack->Seek(ns, pCurr);
+
+        if ((status < 0) || pCurr->EOS())
         {
             m_pSeekBase = &m_pSegment->m_eos;
             m_seekBase_ns = -1;
@@ -1235,7 +1236,7 @@ void Filter::SetCurrPosition(
             m_seekTime_ns = m_seekBase_ns;
         }
 
-        pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
+        pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
         return;
     }
 
@@ -1265,18 +1266,18 @@ void Filter::SetCurrPosition(
         const Track* const pVideoTrack = pStream->m_pTrack;
         assert(pVideoTrack->GetType() == 1);  //video
 
-        const BlockEntry* pCurr = m_pSegment->Seek(ns, pVideoTrack);
-        assert(pCurr);
+        const BlockEntry* pCurr;
 
-        if (pCurr->EOS())  //weird: no keyframe found
+        const long status = pVideoTrack->Seek(ns, pCurr);
+
+        if ((status < 0) || pCurr->EOS())
         {
             m_pSeekBase = &m_pSegment->m_eos;
             m_seekBase_ns = -1;
             m_seekTime_ns = -1;
 
             pCurr = pSeekTrack->GetEOS();
-
-            pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
+            pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
             return;
         }
 
@@ -1301,14 +1302,15 @@ void Filter::SetCurrPosition(
            << endl;
 #endif
 
-        pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
+        pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
         return;
     }
 
-    const BlockEntry* const pCurr = m_pSegment->Seek(ns, pSeekTrack);
-    assert(pCurr);
+    const BlockEntry* pCurr;
 
-    if (pCurr->EOS())  //weird: no audio found
+    const long status = pSeekTrack->Seek(ns, pCurr);
+
+    if ((status < 0) || pCurr->EOS())
     {
         m_pSeekBase = &m_pSegment->m_eos;
         m_seekBase_ns = -1;
@@ -1321,7 +1323,7 @@ void Filter::SetCurrPosition(
         m_seekTime_ns = ns;
     }
 
-    pSeekStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
+    pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
 }
 
 

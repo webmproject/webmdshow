@@ -408,12 +408,30 @@ HRESULT Stream::InitCurr()
 
     assert(status >= 0);  //success
     assert(m_pCurr);
+    assert(m_pCurr->EOS() ||
+           (m_pTrack->GetType() == 2) ||
+           m_pCurr->GetBlock()->IsKey());
 
     const Cluster* const pBase = pSegment->GetFirst();
     assert(pBase);
     assert(!pBase->EOS());
 
     m_base_time_ns = pBase->GetFirstTime();
+
+#ifdef _DEBUG
+    if (!m_pCurr->EOS())
+    {
+        const Block* const pBlock = m_pCurr->GetBlock();
+
+        const LONGLONG time_ns = pBlock->GetTime(m_pCurr->GetCluster());
+
+        const LONGLONG dt_ns = time_ns - m_base_time_ns;
+        assert(dt_ns >= 0);
+
+        const double dt_sec = double(dt_ns) / 1000000000;
+        assert(dt_sec >= 0);
+    }
+#endif
 
     return S_OK;
 }

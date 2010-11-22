@@ -949,18 +949,14 @@ void Filter::SetCurrPosition(
         else
             pCurr = m_pSeekBase->GetEntry(pOutpinTrack, m_seekTime_ns);
 
-        pOutpinStream->SetCurrPosition(
-            //m_pSeekBase,
-            m_seekBase_ns,
-            pCurr);
-
+        pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
         return;
     }
 
     m_currTime = currTime;
     const LONGLONG ns = pOutpinStream->GetSeekTime(currTime, dwCurr);
 
-    const long status = m_pSegment->LoadCluster();
+    long status = m_pSegment->LoadCluster();
     assert(status >= 0);  //TODO
 
     if (pOutpinTrack->GetType() == 1)  //video
@@ -985,16 +981,26 @@ void Filter::SetCurrPosition(
                 m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
                 m_seekTime_ns = m_seekBase_ns;
 
-                pOutpinStream->SetCurrPosition(
-                    //m_pSeekBase,
-                    m_seekBase_ns,
-                    pCurr);
-
+                pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
                 return;
             }
         }
 
-        const BlockEntry* const pCurr = m_pSegment->Seek(ns, pOutpinTrack);
+        const BlockEntry* pCurr;
+
+        for (;;)
+        {
+            status = pOutpinTrack->Seek(ns, pCurr);
+
+            if (status >= 0)
+                break;
+
+            assert(status == mkvparser::E_BUFFER_NOT_FULL);
+
+            status = m_pSegment->LoadCluster();
+            assert(status >= 0);
+        }
+
         assert(pCurr);
 
         if (pCurr->EOS())  //pathological
@@ -1010,11 +1016,7 @@ void Filter::SetCurrPosition(
             m_seekTime_ns = m_seekBase_ns;
         }
 
-        pOutpinStream->SetCurrPosition(
-            //m_pSeekBase,
-            m_seekBase_ns,
-            pCurr);
-
+        pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
         return;
     }
 
@@ -1065,17 +1067,25 @@ void Filter::SetCurrPosition(
                 if (!pCurr->EOS())
                     m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
 
-                pOutpinStream->SetCurrPosition(
-                    //m_pSeekBase,
-                    m_seekBase_ns,
-                    pCurr);
-
+                pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
                 return;
             }
         }
 
-        const BlockEntry* pCurr = m_pSegment->Seek(ns, pVideoTrack);
-        assert(pCurr);
+        const BlockEntry* pCurr;
+
+        for (;;)
+        {
+            status = pVideoTrack->Seek(ns, pCurr);
+
+            if (status >= 0)
+                break;
+
+            assert(status == mkvparser::E_BUFFER_NOT_FULL);
+
+            status = m_pSegment->LoadCluster();
+            assert(status >= 0);
+        }
 
         if (pCurr->EOS())  //pathological
         {
@@ -1084,12 +1094,7 @@ void Filter::SetCurrPosition(
             m_seekTime_ns = -1;
 
             pCurr = pOutpinTrack->GetEOS();
-
-            pOutpinStream->SetCurrPosition(
-                //m_pSeekBase,
-                m_seekBase_ns,
-                pCurr);
-
+            pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
             return;
         }
 
@@ -1103,15 +1108,25 @@ void Filter::SetCurrPosition(
         if (!pCurr->EOS())
             m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
 
-        pOutpinStream->SetCurrPosition(
-            //m_pSeekBase,
-            m_seekBase_ns,
-            pCurr);
-
+        pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
         return;
     }
 
-    const BlockEntry* const pCurr = m_pSegment->Seek(ns, pOutpinTrack);
+    const BlockEntry* pCurr;
+
+    for (;;)
+    {
+        status = pOutpinTrack->Seek(ns, pCurr);
+
+        if (status >= 0)
+            break;
+
+        assert(status == mkvparser::E_BUFFER_NOT_FULL);
+
+        status = m_pSegment->LoadCluster();
+        assert(status >= 0);
+    }
+
     assert(pCurr);
 
     if (pCurr->EOS())  //pathological
@@ -1127,7 +1142,7 @@ void Filter::SetCurrPosition(
         m_seekTime_ns = ns;
     }
 
-    pOutpinStream->SetCurrPosition(/* m_pSeekBase, */ m_seekBase_ns, pCurr);
+    pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
 }
 
 
