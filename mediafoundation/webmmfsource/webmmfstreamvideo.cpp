@@ -391,6 +391,7 @@ void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
 {
     mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
 
+#if 1
     if (const mkvparser::Cues* pCues = pSegment->GetCues())
     {
         const bool bFound = pCues->Find(time_ns, m_pTrack, i.pCP, i.pTP);
@@ -403,10 +404,23 @@ void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
                 return;
         }
     }
+#endif
 
-    i.pBE = pSegment->Seek(time_ns, m_pTrack);
     i.pCP = 0;
     i.pTP = 0;
+
+    for (;;)
+    {
+        long status = m_pTrack->Seek(time_ns, i.pBE);
+
+        if (status >= 0)
+            return;
+
+        assert(status == mkvparser::E_BUFFER_NOT_FULL);
+
+        status = m_pTrack->m_pSegment->LoadCluster();
+        assert(status >= 0);
+    }
 }
 
 
