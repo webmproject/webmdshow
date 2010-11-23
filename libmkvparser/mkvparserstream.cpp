@@ -195,11 +195,8 @@ LONGLONG Stream::GetSeekTime(
 
     Segment* const pSegment = m_pTrack->m_pSegment;
 
-    const __int64 duration_ns = pSegment->GetDuration();
-    assert(duration_ns >= 0);
-
     const __int64 currpos_ns = currpos_reftime * 100;
-    __int64 tCurr_ns;
+    //__int64 tCurr_ns;
 
     switch (dwCurrPos)
     {
@@ -209,29 +206,31 @@ LONGLONG Stream::GetSeekTime(
             return 0;
 
         case AM_SEEKING_AbsolutePositioning:
-        {
-            tCurr_ns = currpos_ns;
-            break;
-        }
+            return currpos_ns;
+
         case AM_SEEKING_RelativePositioning:
         {
-            if (m_pCurr == 0)
-                tCurr_ns = currpos_ns;  //t=0 is assumed here
+            if (m_pCurr == 0)  //lazy init
+                return currpos_ns;  //t=0 is assumed here
+
             else if (m_pCurr->EOS())
-                tCurr_ns = duration_ns + currpos_ns;
+            {
+                const __int64 duration_ns = pSegment->GetDuration();
+
+                if (duration_ns >= 0)  //actually have a duration
+                    return duration_ns + currpos_ns;
+
+                return 0;  //TODO: is there a better value we can return here?
+            }
             else
             {
                 const Block* const pBlock = m_pCurr->GetBlock();
                 assert(pBlock);
 
-                tCurr_ns = pBlock->GetTime(m_pCurr->GetCluster()) + currpos_ns;
+                return pBlock->GetTime(m_pCurr->GetCluster()) + currpos_ns;
             }
-
-            break;
         }
     }
-
-    return tCurr_ns;
 }
 
 
@@ -306,10 +305,10 @@ void Stream::SetStopPosition(
         }
         case AM_SEEKING_RelativePositioning:
         {
-            const __int64 duration_ns = pSegment->GetDuration();
-
             if ((m_pStop == 0) || m_pStop->EOS())
             {
+                const __int64 duration_ns = pSegment->GetDuration();
+
                 if (duration_ns <= 0)  //don't have a duration
                 {
                     m_pStop = m_pTrack->GetEOS();  //means "play to end"
