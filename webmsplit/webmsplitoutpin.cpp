@@ -686,6 +686,9 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
     if (p == 0)
         return E_POINTER;
 
+    LONGLONG& reftime = *p;
+    reftime = -1;
+
     Filter::Lock lock;
 
     const HRESULT hr = lock.Seize(m_pFilter);
@@ -696,10 +699,117 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
     if (m_pStream == 0)
         return E_FAIL;
 
-    LONGLONG& d = *p;
-    d = m_pStream->GetDuration();
+    using namespace mkvparser;
 
-    return S_OK;
+    Segment* const pSegment = m_pStream->m_pTrack->m_pSegment;
+    assert(pSegment);
+
+    LONGLONG duration_ns = pSegment->GetDuration();
+
+    if (duration_ns >= 0)  //actually have a duration in file
+    {
+        reftime = duration_ns / 100;
+        return S_OK;
+    }
+
+    if (pSegment->Unparsed() <= 0)  //done parsing
+    {
+        const Cluster* const pCluster = pSegment->GetLast();
+
+        if ((pCluster == 0) || pCluster->EOS())
+        {
+            reftime = 0;
+            return S_OK;
+        }
+
+        duration_ns = pCluster->GetLastTime();
+        assert(duration_ns >= 0);
+
+        reftime = duration_ns / 100;
+
+        return S_OK;
+    }
+
+#if 0  //TODO: do this when avail >= length
+    if (const Cues* pCues = pSegment->GetCues())
+    {
+        const CuePoint* const pCP = pCues->GetLast();
+        assert(pCP);  //TODO
+
+        const Tracks* const pTracks = pSegment->GetTracks();
+        const ULONG count = pTracks->GetTracksCount();
+
+        for (ULONG idx = 0; idx < count; ++idx)
+        {
+            const Track* const pTrack = pTracks->GetTrackByIndex(idx);
+
+            if (pTrack == 0)
+                continue;
+
+            const CuePoint::TrackPosition* const pTP = pCP->Find(pTrack);
+
+            if (pTP == 0)
+                continue;
+
+            const BlockEntry* const pBE = pCues->GetBlock(pCP, pTP);
+
+            if ((pBE == 0) || pBE->EOS())
+                continue;
+
+            const Cluster* pCluster = pBE->GetCluster();
+            assert(pCluster);
+            assert(!pCluster->EOS());
+
+            if (pCluster->m_index >= 0)  //loaded
+            {
+                const Cluster* const p = pSegment->GetLast();
+                assert(p);
+                assert(p->m_index >= 0);
+
+                pCluster = p;
+            }
+            else //pre-loaded
+            {
+                for (int i = 0; i < 10; ++i)
+                {
+                    const Cluster* const p = pSegment->GetNext(pCluster);
+
+                    if ((p == 0) || p->EOS())
+                        break;
+
+                    pCluster = p;
+                }
+            }
+
+            duration_ns = pCluster->GetLastTime();
+            assert(duration_ns >= 0);
+
+            reftime = duration_ns / 100;  //reftime
+
+            return S_OK;
+        }
+    }
+#endif
+
+    //const long status = pSegment->LoadCluster();
+    //assert(status >= 0);
+
+    {
+        const Cluster* const pCluster = pSegment->GetLast();  //best we can do
+
+        if ((pCluster == 0) || pCluster->EOS())
+        {
+            reftime = 0;
+            return S_OK;
+        }
+
+        duration_ns = pCluster->GetLastTime();
+        assert(duration_ns >= 0);
+
+        reftime = duration_ns / 100;
+
+        return S_OK;
+    }
 }
 
 
@@ -710,7 +820,7 @@ HRESULT Outpin::GetStopPosition(LONGLONG* p)
 
     Filter::Lock lock;
 
-    const HRESULT hr = lock.Seize(m_pFilter);
+    HRESULT hr = lock.Seize(m_pFilter);
 
     if (FAILED(hr))
         return hr;
@@ -719,7 +829,15 @@ HRESULT Outpin::GetStopPosition(LONGLONG* p)
         return E_FAIL;
 
     LONGLONG& pos = *p;
-    pos = m_pStream->GetStopPosition();
+    pos = m_pStream->GetStopTime();
+
+    if (pos < 0)  //means "use duration"
+    {
+        hr = GetDuration(&pos);
+
+        if (FAILED(hr) || (pos < 0))
+            return E_FAIL;  //?
+    }
 
     return S_OK;
 }
@@ -732,7 +850,7 @@ HRESULT Outpin::GetCurrentPosition(LONGLONG* p)
 
     Filter::Lock lock;
 
-    const HRESULT hr = lock.Seize(m_pFilter);
+    HRESULT hr = lock.Seize(m_pFilter);
 
     if (FAILED(hr))
         return hr;
@@ -741,7 +859,15 @@ HRESULT Outpin::GetCurrentPosition(LONGLONG* p)
         return E_FAIL;
 
     LONGLONG& pos = *p;
-    pos = m_pStream->GetCurrPosition();
+    pos = m_pStream->GetCurrTime();
+
+    if (pos < 0)  //means "use duration"
+    {
+        hr = GetDuration(&pos);
+
+        if (FAILED(hr) || (pos < 0))
+            return E_FAIL;
+    }
 
     return S_OK;
 }
@@ -818,6 +944,14 @@ HRESULT Outpin::SetPositions(
                 return E_POINTER;
 
             *pCurr = m_pStream->GetCurrTime();
+
+            if (*pCurr < 0)  //means "use duration"
+            {
+                hr = GetDuration(pCurr);
+
+                if (FAILED(hr) || (*pCurr < 0))
+                    *pCurr = 0;  //?
+            }
         }
 
         if (dwStopPos == AM_SEEKING_NoPositioning)
@@ -828,6 +962,14 @@ HRESULT Outpin::SetPositions(
                     return E_POINTER;
 
                 *pStop = m_pStream->GetStopTime();
+
+                if (*pStop < 0) //means "use duration"
+                {
+                    hr = GetDuration(pStop);
+
+                    if (FAILED(hr) || (*pStop < 0))
+                        *pStop = 0;  //?
+                }
             }
 
             return S_FALSE;  //no position change
@@ -851,7 +993,17 @@ HRESULT Outpin::SetPositions(
         m_pStream->SetStopPosition(tStop, dwStop_);
 
         if (dwStop_ & AM_SEEKING_ReturnTime)
+        {
             tStop = m_pStream->GetStopTime();
+
+            if (tStop < 0)  //means "use duration"
+            {
+                hr = GetDuration(&tStop);
+
+                if (FAILED(hr) || (tStop < 0))
+                    tStop = 0;  //?
+            }
+        }
 
         //TODO: You're supposed to return S_FALSE if there has
         //been no change in position.  Does changing only the stop
@@ -1042,12 +1194,30 @@ HRESULT Outpin::SetPositions(
     }
 
     if (dwCurr_ & AM_SEEKING_ReturnTime)
+    {
         tCurr = m_pStream->GetCurrTime();
+
+        if (tCurr < 0)
+        {
+            hr = GetDuration(&tCurr);
+
+            if (FAILED(hr) || (tCurr < 0))
+                tCurr = 0;  //?
+        }
+    }
 
     if (dwStop_ & AM_SEEKING_ReturnTime)
     {
         assert(pStop);  //we checked this above
         *pStop = m_pStream->GetStopTime();
+
+        if (*pStop < 0)
+        {
+            hr = GetDuration(pStop);
+
+            if (FAILED(hr) || (*pStop < 0))
+                *pStop = 0;  //?
+        }
     }
 
     if (m_pFilter->m_state != State_Stopped)
@@ -1071,7 +1241,7 @@ HRESULT Outpin::GetPositions(
 {
     Filter::Lock lock;
 
-    const HRESULT hr = lock.Seize(m_pFilter);
+    HRESULT hr = lock.Seize(m_pFilter);
 
     if (FAILED(hr))
         return hr;
@@ -1080,10 +1250,10 @@ HRESULT Outpin::GetPositions(
         return E_FAIL;
 
     if (pCurrPos)
-        *pCurrPos = m_pStream->GetCurrPosition();
+        hr = GetCurrentPosition(pCurrPos);
 
     if (pStopPos)
-        *pStopPos = m_pStream->GetStopPosition();
+        hr = GetStopPosition(pStopPos);
 
     return S_OK;
 }
@@ -1096,17 +1266,7 @@ HRESULT Outpin::GetAvailable(
     if (pEarliest)
         *pEarliest = 0;
 
-    Filter::Lock lock;
-
-    HRESULT hr = lock.Seize(m_pFilter);
-
-    if (FAILED(hr))
-        return hr;
-
-    if (m_pStream == 0)
-        return E_FAIL;
-
-    return m_pStream->GetAvailable(pLatest);
+    return GetDuration(pLatest);
 }
 
 

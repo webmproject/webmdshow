@@ -90,6 +90,7 @@ std::wstring Stream::GetName() const
 }
 
 
+#if 0
 __int64 Stream::GetDuration() const
 {
     Segment* const pSegment = m_pTrack->m_pSegment;
@@ -102,8 +103,10 @@ __int64 Stream::GetDuration() const
 
     return d;
 }
+#endif
 
 
+#if 0
 HRESULT Stream::GetAvailable(LONGLONG* pLatest) const
 {
     if (pLatest == 0)
@@ -130,12 +133,13 @@ HRESULT Stream::GetAvailable(LONGLONG* pLatest) const
 
     return S_OK;
 }
+#endif
 
 
-__int64 Stream::GetCurrPosition() const
-{
-    return GetCurrTime();  //TODO: for now only support reftime units
-}
+//__int64 Stream::GetCurrPosition() const
+//{
+//    return GetCurrTime();  //TODO: for now only support reftime units
+//}
 
 
 __int64 Stream::GetCurrTime() const
@@ -144,42 +148,40 @@ __int64 Stream::GetCurrTime() const
         return 0;      //TODO: assumes track starts with t=0
 
     if (m_pCurr->EOS())
-        return GetDuration();
+        return -1;
 
     const Block* const pBlock = m_pCurr->GetBlock();
     assert(pBlock);
 
-    //TODO: This is not quite right for the B-frame case.  DirectShow
-    //sort of assumes media times always increase, but that's not the
-    //case for B-frames.  In fact for B-Frames we don't even set
-    //the media time.  Ideally we shouldn't even see a B-frame (when we
-    //populate a media sample, just send the B-frames as part of
-    //the same sample as the preceding I- or P-frame).
     const __int64 ns = pBlock->GetTime(m_pCurr->GetCluster());
+    assert(ns >= 0);
+
     const __int64 reftime = ns / 100;  //100-ns ticks
 
     return reftime;
 }
 
 
-__int64 Stream::GetStopPosition() const
-{
-    return GetStopTime();  //TODO: for now we only support reftime units
-}
+//__int64 Stream::GetStopPosition() const
+//{
+//    return GetStopTime();  //TODO: for now we only support reftime units
+//}
 
 
 __int64 Stream::GetStopTime() const
 {
     if (m_pStop == 0)  //interpreted to mean "play to end of stream"
-        return GetDuration();
+        return -1;
 
     if (m_pStop->EOS())
-        return GetDuration();
+        return -1;
 
     const Block* const pBlock = m_pStop->GetBlock();
     assert(pBlock);
 
     const __int64 ns = pBlock->GetTime(m_pStop->GetCluster());
+    assert(ns >= 0);
+
     const __int64 reftime = ns / 100;  //100-ns ticks
 
     return reftime;

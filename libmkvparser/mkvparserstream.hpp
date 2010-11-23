@@ -46,13 +46,13 @@ public:
     HRESULT PopulateSamples(const samples_t&);
     static void Clear(samples_t&);
 
-    __int64 GetDuration() const;
-    __int64 GetCurrPosition() const;
-    __int64 GetStopPosition() const;
+    //__int64 GetDuration() const;
+    //__int64 GetCurrPosition() const;
+    //__int64 GetStopPosition() const;
     __int64 GetCurrTime() const;
     __int64 GetStopTime() const;
 
-    HRESULT GetAvailable(LONGLONG*) const;
+    //HRESULT GetAvailable(LONGLONG*) const;
 
     LONGLONG GetSeekTime(LONGLONG currTime, DWORD dwCurr) const;
     //convert from reftime to ns
