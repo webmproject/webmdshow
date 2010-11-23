@@ -560,24 +560,6 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         }
     }
 
-#if 0
-    const long cbBuffer = pCurrBlock->GetSize();
-    assert(cbBuffer >= 0);
-
-    mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
-
-    long status = pCurrBlock->Read(pReader, ptr);
-    assert(status == 0);  //all bytes were read
-
-    hr = pBuffer->SetCurrentLength(cbBuffer);
-    assert(SUCCEEDED(hr));
-
-    hr = pBuffer->Unlock();
-    assert(SUCCEEDED(hr));
-
-    hr = pSample->AddBuffer(pBuffer);
-    assert(SUCCEEDED(hr));
-#else
     HRESULT hr;
 
     mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
@@ -618,7 +600,6 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         hr = pSample->AddBuffer(pBuffer);
         assert(SUCCEEDED(hr));
     }
-#endif
 
     const bool bKey = pCurrBlock->IsKey();
 
@@ -660,21 +641,6 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
         hr = pSample->SetUINT32(WebmTypes::WebMSample_Preroll, TRUE);
         assert(SUCCEEDED(hr));
-
-#if 0  //def _DEBUG
-        odbgstream os;
-        os << "WebmMfSource::WebmMfStreamVideo:"
-           << " sending PREROLL sample: preroll[sec]="
-           << (double(preroll_ns) / 1000000000)
-           << " curr[sec]="
-           << (double(curr_ns) / 1000000000)
-           << " cluster_idx=" << pCurrCluster->m_index;
-
-        if (bKey)
-            os << " KEY";
-
-        os << endl;
-#endif
     }
 
     //TODO: list of attributes here:
@@ -690,6 +656,8 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
     const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
 
+    LONGLONG duration_ns = -1;
+
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
         const mkvparser::Block* const b = pNextEntry->GetBlock();
@@ -700,51 +668,41 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         const LONGLONG next_ns = b->GetTime(c);
         assert(next_ns >= curr_ns);
 
-        const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
-
-        hr = pSample->SetSampleDuration(sample_duration);
-        assert(SUCCEEDED(hr));
+        duration_ns = next_ns - curr_ns;
+        assert(duration_ns >= 0);
     }
     else if (pInfo)
     {
         const LONGLONG next_ns = pInfo->GetDuration();
 
-#ifdef _DEBUG
-        odbgstream os;
-        os << "WebmMfStreamVideo::PopulateSample: last block; curr_ns="
-           << curr_ns
-           << " next_ns="
-           << next_ns
-           << " next-curr="
-           << (next_ns - curr_ns)
-           << endl;
-#endif
-
-        if (next_ns > curr_ns)  //have duration, and it's suitable
-        {
-            const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
-
-            if (sample_duration > 0)
-            {
-#ifdef _DEBUG
-                os << "sample_duration[sec]="
-                   << (double(sample_duration) / 10000000)
-                   << endl;
-#endif
-
-                hr = pSample->SetSampleDuration(sample_duration);
-                assert(SUCCEEDED(hr));
-            }
-        }
+        if ((next_ns >= 0) && (next_ns > curr_ns))
+            duration_ns = next_ns - curr_ns;
     }
-#ifdef _DEBUG
-    else
+
+    if (duration_ns < 0)
     {
-        odbgstream os;
-        os << "WebmMfStreamVideo::PopulateSample: last block; no duration"
-           << endl;
+        typedef mkvparser::VideoTrack VT;
+        const VT* const pVT = static_cast<const VT*>(m_pTrack);
+
+        double frame_rate = pVT->GetFrameRate();
+
+        if (frame_rate <= 0)
+            frame_rate = 10;  //100ms
+
+        const double ns = 1000000000.0 / frame_rate;
+        const LONGLONG ns_per_frame = static_cast<LONGLONG>(ns);
+
+        duration_ns = LONGLONG(frame_count) * ns_per_frame;
     }
-#endif
+
+    if (duration_ns >= 0)
+    {
+        const LONGLONG sample_duration = duration_ns / 100;
+        assert(sample_duration >= 0);
+
+        hr = pSample->SetSampleDuration(sample_duration);
+        assert(SUCCEEDED(hr));
+    }
 
     m_curr = next;
 
@@ -753,16 +711,6 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
     f.UnlockPage(m_pLocked);
     m_pLocked = next.pBE;
     f.LockPage(m_pLocked);
-
-#if 0 //def _DEBUG
-    odbgstream os;
-    os << "WebmMfStreamVideo::RequestSample: time[sec]="
-       << (double(curr_ns) / 1000000000)
-       << "; ABOUT TO PURGE"
-       << endl;
-#endif
-
-    //f.Purge();
 
     return S_OK;
 }

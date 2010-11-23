@@ -287,38 +287,6 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(curr_ns >= 0);
 
-#if 0
-    const long cbBuffer = pCurrBlock->GetSize();
-    assert(cbBuffer >= 0);
-
-    IMFMediaBufferPtr pBuffer;
-
-    HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
-    assert(SUCCEEDED(hr));
-    assert(pBuffer);
-
-    BYTE* ptr;
-    DWORD cbMaxLength;
-
-    hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
-    assert(SUCCEEDED(hr));
-    assert(ptr);
-    assert(cbMaxLength >= DWORD(cbBuffer));
-
-    mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
-
-    long status = pCurrBlock->Read(pReader, ptr);
-    assert(status == 0);  //all bytes were read
-
-    hr = pBuffer->SetCurrentLength(cbBuffer);
-    assert(SUCCEEDED(hr));
-
-    hr = pBuffer->Unlock();
-    assert(SUCCEEDED(hr));
-
-    hr = pSample->AddBuffer(pBuffer);
-    assert(SUCCEEDED(hr));
-#else
     HRESULT hr;
 
     const int frame_count = pCurrBlock->GetFrameCount();
@@ -359,7 +327,6 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
         hr = pSample->AddBuffer(pBuffer);
         assert(SUCCEEDED(hr));
     }
-#endif
 
     hr = pSample->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
     assert(SUCCEEDED(hr));
@@ -383,10 +350,10 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
     //TODO: this might not be accurate, if there are gaps in the
     //audio blocks.  (How do we detect gaps?)
 
-#if 0
     const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
     const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
-#endif
+
+    LONGLONG duration_ns = -1;  //duration of sample
 
     if ((pNextEntry != 0) && !pNextEntry->EOS())
     {
@@ -399,69 +366,37 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
         const __int64 next_ns = b->GetTime(c);
         assert(next_ns >= curr_ns);
 
-        const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
-
-        hr = pSample->SetSampleDuration(sample_duration);
-        assert(SUCCEEDED(hr));
+        duration_ns = (next_ns - curr_ns);
+        assert(duration_ns >= 0);
     }
-#if 0
     else if (pInfo)
     {
         const LONGLONG next_ns = pInfo->GetDuration();
 
-#ifdef _DEBUG
-        odbgstream os;
-        os << "WebmMfStreamAudio::PopulateSample: last block; curr_ns="
-           << curr_ns
-           << " next_ns="
-           << next_ns
-           << " next-curr="
-           << (next_ns - curr_ns)
-           << endl;
-#endif
-
-        if (next_ns > curr_ns)  //have duration, and it's suitable
-        {
-            const LONGLONG sample_duration = (next_ns - curr_ns) / 100;
-
-            if (sample_duration > 0)
-            {
-#ifdef _DEBUG
-                os << "sample_duration[sec]="
-                   << (double(sample_duration) / 10000000)
-                   << endl;
-#endif
-
-                hr = pSample->SetSampleDuration(sample_duration);
-                assert(SUCCEEDED(hr));
-            }
-        }
+        if ((next_ns >= 0) && (next_ns > curr_ns))  //have duration
+            duration_ns = next_ns - curr_ns;
     }
-#ifdef _DEBUG
-    else
+
+    if (duration_ns < 0)
     {
-        odbgstream os;
-        os << "WebmMfStreamAudio::PopulateSample: last block; no duration"
-           << endl;
+        const LONGLONG ns_per_frame = 10000000;  //10ms
+        duration_ns = LONGLONG(frame_count) * ns_per_frame;
     }
-#endif
-#endif
+
+    if (duration_ns >= 0)
+    {
+        const LONGLONG sample_duration = duration_ns / 100;
+        assert(sample_duration >= 0);
+
+        hr = pSample->SetSampleDuration(sample_duration);
+        assert(SUCCEEDED(hr));
+    }
 
     MkvReader& f = m_pSource->m_file;
 
     f.UnlockPage(m_pCurr);
     m_pCurr = pNextEntry;
     f.LockPage(m_pCurr);
-
-#if 0 //def _DEBUG
-    odbgstream os;
-    os << "WebmMfStreamAudio::RequestSample: time[sec]="
-       << (double(curr_ns) / 1000000000)
-       << "; ABOUT TO PURGE"
-       << endl;
-#endif
-
-    //f.Purge();
 
     return S_OK;
 }
