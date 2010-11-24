@@ -49,12 +49,12 @@ App::App()
 
 int App::operator()(int argc, wchar_t* argv[])
 {
-    const bool bVerbose = m_cmdline.GetVerbose();
-
     int status = m_cmdline.Parse(argc, argv);
 
     if (status)
         return status;
+
+    const bool bVerbose = m_cmdline.GetVerbose();
 
     assert(!bool(m_pGraph));
 
@@ -2040,8 +2040,20 @@ HRESULT App::TranscodeAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
             hr = ConnectVorbisEncoder(pDemuxOutpin, pMuxInpin);
 
         else if (pmt->formattype == FORMAT_WaveFormatEx)  //TODO: liberalize
-            hr = TranscodeAudio(*pmt, pDemuxOutpin, pMuxInpin);
+        {
+            hr = TranscodeAudio(
+                    *pmt,
+                    pDemuxOutpin,
+                    pMuxInpin,
+                    MERIT_NORMAL);
 
+            if (FAILED(hr))
+                hr = TranscodeAudio(
+                        *pmt,
+                        pDemuxOutpin,
+                        pMuxInpin,
+                        MERIT_UNLIKELY);
+        }
         else
             hr = E_FAIL;
 
@@ -2057,7 +2069,8 @@ HRESULT App::TranscodeAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
 HRESULT App::TranscodeAudio(
     const AM_MEDIA_TYPE& mt_demux,
     IPin* pDemuxOutpin,
-    IPin* pMuxInpin) const
+    IPin* pMuxInpin,
+    DWORD dwMerit) const
 {
     assert(mt_demux.formattype == FORMAT_WaveFormatEx);
     assert(mt_demux.pbFormat);
@@ -2079,17 +2092,26 @@ HRESULT App::TranscodeAudio(
         mt_demux.majortype, mt_demux.subtype
     };
 
+#if 0
+    enum { cOutputTypes = 2 };
+    const GUID outputTypes[2 * cOutputTypes] =
+    {
+        MEDIATYPE_Audio, MEDIASUBTYPE_PCM,
+        MEDIATYPE_Audio, MEDIASUBTYPE_IEEE_FLOAT
+    };
+#else
     enum { cOutputTypes = 1 };
     const GUID outputTypes[2 * cOutputTypes] =
     {
         MEDIATYPE_Audio, MEDIASUBTYPE_PCM
     };
+#endif
 
     HRESULT hr = pMapper->EnumMatchingFilters(
                     &e,
                     0,  //flags (reserved -- must be 0)
                     TRUE,  //yes, require exact match
-                    MERIT_NORMAL,
+                    dwMerit,
                     TRUE,   //input needed
                     cInputTypes,
                     inputTypes,

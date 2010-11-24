@@ -501,8 +501,10 @@ int CmdLine::ParseShort(wchar_t** i)
                 if (_wcsnicmp(arg, L"version", len) != 0)
                 {
                     wcout << "Unknown switch: " << *i
-                          << L"\nIf version info was desired, specify the -v or --version switches."
-                          << L"\nIf verbosity was desired, specify the -V or --verbose switches."
+                          << L"\nIf version info was desired, "
+                          << L"specify the -v or --version switches."
+                          << L"\nIf verbosity was desired, "
+                          << L"specify the -V or --verbose switches."
                           << endl;
 
                     return -1;  //error
@@ -520,8 +522,10 @@ int CmdLine::ParseShort(wchar_t** i)
                 if (_wcsnicmp(arg, L"verbose", len) != 0)
                 {
                     wcout << "Unknown switch: " << *i
-                          << L"\nIf verbosity was desired, specify the -V or --verbose switches."
-                          << L"\nIf version info was desired, specify the -v or --version switches."
+                          << L"\nIf verbosity was desired, "
+                          << L"specify the -V or --verbose switches."
+                          << L"\nIf version info was desired, "
+                          << L"specify the -v or --version switches."
                           << endl;
 
                     return -1;  //error
@@ -741,7 +745,9 @@ int CmdLine::ParseLongPost(
 
             if (wcslen(m_input) == 0)
             {
-                wcout << "Empty value specified for input filename switch." << endl;
+                wcout << "Empty value specified for input filename switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -767,7 +773,10 @@ int CmdLine::ParseLongPost(
 
             if (wcslen(m_audio_input) == 0)
             {
-                wcout << "Empty value specified for audio input filename switch." << endl;
+                wcout << "Empty value specified for audio input "
+                      << "filename switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -793,7 +802,9 @@ int CmdLine::ParseLongPost(
 
             if (wcslen(m_output) == 0)
             {
-                wcout << "Empty value specified for output filename switch." << endl;
+                wcout << "Empty value specified for output filename switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -870,7 +881,10 @@ int CmdLine::ParseLongPost(
 
             if (m_deadline < 0)
             {
-                wcout << "Value specified for deadline out-of-range (too small)." << endl;
+                wcout << "Value specified for deadline out-of-range "
+                      << "(too small)."
+                      << endl;
+
                 return -1;  //error
             }
         }
@@ -878,22 +892,50 @@ int CmdLine::ParseLongPost(
         return n;
     }
 
-    int status = ParseOpt(i, arg, len, L"decoder-buffer-size", m_decoder_buffer_size, 0, -1);
+    int status = ParseOpt(
+                    i,
+                    arg,
+                    len,
+                    L"decoder-buffer-size",
+                    m_decoder_buffer_size,
+                    0,
+                    -1);
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"decoder-buffer-initial-size", m_decoder_buffer_initial_size, 0, -1);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"decoder-buffer-initial-size",
+                m_decoder_buffer_initial_size,
+                0,
+                -1);
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"decoder-buffer-optimal-size", m_decoder_buffer_optimal_size, 0, -1);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"decoder-buffer-optimal-size",
+                m_decoder_buffer_optimal_size,
+                0,
+                -1);
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"dropframe-threshold", m_dropframe_thresh, 0, 100);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"dropframe-threshold",
+                m_dropframe_thresh,
+                0,
+                100);
 
     if (status)
         return status;
@@ -911,7 +953,9 @@ int CmdLine::ParseLongPost(
 
             if (value_length == 0)
             {
-                wcout << "Empty value specified for end-usage switch." << endl;
+                wcout << "Empty value specified for end-usage switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -954,13 +998,19 @@ int CmdLine::ParseLongPost(
 
             if (m_end_usage < 0)
             {
-                wcout << "Value specified for end-usage switch out-of-range (too small)." << endl;
+                wcout << "Value specified for end-usage switch out-of-range "
+                      << "(too small)."
+                      << endl;
+
                 return -1;  //error
             }
 
             if (m_end_usage > 1)
             {
-                wcout << "Value specified for end-usage switch out-of-range (too large)." << endl;
+                wcout << "Value specified for end-usage switch out-of-range "
+                      << "(too large)."
+                      << endl;
+
                 return -1;  //error
             }
         }
@@ -981,7 +1031,9 @@ int CmdLine::ParseLongPost(
 
             if (value_length == 0)
             {
-                wcout << "Empty value specified for error-resilient switch." << endl;
+                wcout << "Empty value specified for error-resilient switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -993,7 +1045,9 @@ int CmdLine::ParseLongPost(
 
             if (value == 0)
             {
-                wcout << "No value specified for error-resilient switch." << endl;
+                wcout << "No value specified for error-resilient switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -1018,13 +1072,18 @@ int CmdLine::ParseLongPost(
 
             if (!(is >> m_error_resilient) || !is.eof())
             {
-                wcout << "Bad value specified for error-resilient switch." << endl;
+                wcout << "Bad value specified for error-resilient switch."
+                      << endl;
+
                 return -1;  //error
             }
 
             if (m_error_resilient < 0)
             {
-                wcout << "Value specified for error-resilient switch out-of-range (too small)." << endl;
+                wcout << "Value specified for error-resilient switch "
+                      << "out-of-range (too small)."
+                      << endl;
+
                 return -1;  //error
             }
         }
@@ -1045,7 +1104,10 @@ int CmdLine::ParseLongPost(
 
             if (value_length == 0)
             {
-                wcout << "Empty value specified for keyframe-frequency switch." << endl;
+                wcout << "Empty value specified for "
+                      << "keyframe-frequency switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -1057,7 +1119,9 @@ int CmdLine::ParseLongPost(
 
             if (value == 0)
             {
-                wcout << "No value specified for keyframe-frequency switch." << endl;
+                wcout << "No value specified for keyframe-frequency switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -1070,13 +1134,18 @@ int CmdLine::ParseLongPost(
 
         if (!(is >> m_keyframe_frequency) || !is.eof())
         {
-            wcout << "Bad value specified for keyframe-frequency switch." << endl;
+            wcout << "Bad value specified for keyframe-frequency switch."
+                  << endl;
+
             return -1;  //error
         }
 
         if (m_keyframe_frequency < 0)
         {
-            wcout << "Value for keyframe-frequency is out-of-range (too small)." << endl;
+            wcout << "Value for keyframe-frequency is out-of-range "
+                  << "(too small)."
+                  << endl;
+
             return -1;  //error
         }
 
@@ -1096,7 +1165,9 @@ int CmdLine::ParseLongPost(
 
             if (value_length == 0)
             {
-                wcout << "Empty value specified for keyframe-mode switch." << endl;
+                wcout << "Empty value specified for keyframe-mode switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -1108,7 +1179,9 @@ int CmdLine::ParseLongPost(
 
             if (value == 0)
             {
-                wcout << "No value specified for keyframe-mode switch." << endl;
+                wcout << "No value specified for keyframe-mode switch."
+                      << endl;
+
                 return -1;  //error
             }
 
@@ -1136,19 +1209,27 @@ int CmdLine::ParseLongPost(
 
             if (!(is >> m_keyframe_mode) || !is.eof())
             {
-                wcout << "Bad value specified for keyframe-mode switch." << endl;
+                wcout << "Bad value specified for keyframe-mode switch."
+                      << endl;
+
                 return -1;  //error
             }
 
             if (m_keyframe_mode < -1)
             {
-                wcout << "Value for keyframe-mode is out-of-range (too small)." << endl;
+                wcout << "Value for keyframe-mode is out-of-range "
+                      << "(too small)."
+                      << endl;
+
                 return -1;  //error
             }
 
             if (m_keyframe_mode > 1)
             {
-                wcout << "Value for keyframe-mode is out-of-range (too large)." << endl;
+                wcout << "Value for keyframe-mode is out-of-range "
+                      << "(too large)."
+                      << endl;
+
                 return -1;  //error
             }
         }
@@ -1156,12 +1237,26 @@ int CmdLine::ParseLongPost(
         return n;
     }
 
-    status = ParseOpt(i, arg, len, L"keyframe-min-interval", m_keyframe_min_interval, 0, -1);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"keyframe-min-interval",
+                m_keyframe_min_interval,
+                0,
+                -1);
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"keyframe-max-interval", m_keyframe_max_interval, 0, -1);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"keyframe-max-interval",
+                m_keyframe_max_interval,
+                0,
+                -1);
 
     if (status)
         return status;
@@ -1181,17 +1276,39 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"resize-allowed", m_resize_allowed, 0, 1, 1);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"resize-allowed",
+                m_resize_allowed,
+                0,
+                1,
+                1);
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"resize-up-threshold", m_resize_up_thresh, 0, 100);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"resize-up-threshold",
+                m_resize_up_thresh,
+                0,
+                100);
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"resize-down-threshold", m_resize_down_thresh, 0, 100);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"resize-down-threshold",
+                m_resize_down_thresh,
+                0,
+                100);
 
     if (status)
         return status;
@@ -1217,7 +1334,14 @@ int CmdLine::ParseLongPost(
         return 2;
     }
 
-    status = ParseOpt(i, arg, len, L"target-bitrate", m_target_bitrate, 0, -1);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"target-bitrate",
+                m_target_bitrate,
+                0,
+                -1);
 
     if (status)
         return status;
@@ -1227,7 +1351,14 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"token-partitions", m_token_partitions, 0, 3);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"token-partitions",
+                m_token_partitions,
+                0,
+                3);
 
     if (status)
         return status;
@@ -1237,22 +1368,50 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"two-pass-vbr-bias-pct", m_two_pass_vbr_bias_pct, 0, 100);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"two-pass-vbr-bias-pct",
+                m_two_pass_vbr_bias_pct,
+                0,
+                100);
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"two-pass-vbr-minsection-pct", m_two_pass_vbr_minsection_pct, 0, 1000);  //?
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"two-pass-vbr-minsection-pct",
+                m_two_pass_vbr_minsection_pct,
+                0,
+                1000);  //?
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"two-pass-vbr-maxsection-pct", m_two_pass_vbr_maxsection_pct, 0, 1000);  //?
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"two-pass-vbr-maxsection-pct",
+                m_two_pass_vbr_maxsection_pct,
+                0,
+                1000);  //?
 
     if (status)
         return status;
 
-    status = ParseOpt(i, arg, len, L"undershoot-pct", m_undershoot_pct, 0, 100);
+    status = ParseOpt(
+                i,
+                arg,
+                len,
+                L"undershoot-pct",
+                m_undershoot_pct,
+                0,
+                100);
 
     if (status)
         return status;

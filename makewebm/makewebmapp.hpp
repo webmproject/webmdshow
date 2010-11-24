@@ -72,7 +72,11 @@ private:
     bool ConnectAudio(IPin*, IPin*) const;
     HRESULT TranscodeAudio(IPin*, IPin*) const;
 
-    HRESULT TranscodeAudio(const AM_MEDIA_TYPE&, IPin*, IPin*) const;
+    HRESULT TranscodeAudio(
+        const AM_MEDIA_TYPE&,
+        IPin*,
+        IPin*,
+        DWORD) const;
 
     HRESULT ConnectVorbisEncoder(
         const WAVEFORMATEX&,
