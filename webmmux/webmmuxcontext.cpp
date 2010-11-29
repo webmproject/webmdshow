@@ -245,7 +245,12 @@ void Context::InitSegment()
     m_segment_pos = m_file.GetPosition();
 
     m_file.WriteID4(0x18538067);  //Segment ID
+
+#if 0
     m_file.Write8UInt(0);         //will need to be filled in later
+#else
+    m_file.Serialize8UInt(0x01FFFFFFFFFFFFFFLL);
+#endif
 
     InitFirstSeekHead();  //Meta Seek
     InitInfo();      //Segment Info
@@ -311,10 +316,16 @@ void Context::InitFirstSeekHead()
     //Cues (3/4)
     //2nd SeekHead (4/4)
 
-    const BYTE size = /* 4 */ 3 * 21;
+    BYTE size = /* 4 */ 3 * 21;
 
     m_file.WriteID4(0x114D9B74);  //Seek Head
     m_file.Write1UInt(size);
+
+    m_file.WriteID1(0xEC); //Void
+    --size;
+
+    m_file.Write1UInt(size);
+    --size;
 
     m_file.SetPosition(size, STREAM_SEEK_CUR);
 }
@@ -1083,8 +1094,10 @@ void Context::CreateNewCluster(const StreamVideo::VideoFrame* pvf_stop)
 
 #if 0
     m_file.Write4UInt(0);         //patch size later, during close
-#else
+#elif 0
     m_file.SetPosition(4, STREAM_SEEK_CUR);
+#else
+    m_file.Serialize4UInt(0x1FFFFFFF);
 #endif
 
     m_file.WriteID1(0xE7);
