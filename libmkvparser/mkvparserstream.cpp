@@ -9,6 +9,7 @@
 #include <strmif.h>
 #include "mkvparserstream.hpp"
 #include "mkvparser.hpp"
+#include "mkvparserstreamreader.hpp"
 #include <cassert>
 #include <sstream>
 #include <iomanip>
@@ -23,7 +24,8 @@ namespace mkvparser
 
 
 Stream::Stream(const Track* pTrack) :
-    m_pTrack(pTrack)
+    m_pTrack(pTrack),
+    m_pLocked(0)
 {
     Init();
 }
@@ -31,6 +33,7 @@ Stream::Stream(const Track* pTrack) :
 
 Stream::~Stream()
 {
+    SetCurr(0);
 }
 
 
@@ -38,9 +41,39 @@ void Stream::Init()
 {
     m_base_time_ns = -1;
     //m_pBase = 0;
-    m_pCurr = 0;  //lazy init this later
+    SetCurr(0);  //lazy init this later
     m_pStop = m_pTrack->GetEOS();  //means play entire stream
     m_bDiscontinuity = true;
+}
+
+
+void Stream::Stop()
+{
+    IMkvReader* const pReader_ = m_pTrack->m_pSegment->m_pReader;
+
+    using mkvparser::IStreamReader;
+    IStreamReader* const pReader = static_cast<IStreamReader*>(pReader_);
+
+    pReader->UnlockPages(m_pLocked);
+    m_pLocked = 0;
+}
+
+
+void Stream::SetCurr(const mkvparser::BlockEntry* pNext)
+{
+    IMkvReader* const pReader_ = m_pTrack->m_pSegment->m_pReader;
+
+    using mkvparser::IStreamReader;
+    IStreamReader* const pReader = static_cast<IStreamReader*>(pReader_);
+
+    m_pCurr = pNext;
+
+    pReader->UnlockPages(m_pLocked);
+    m_pLocked = m_pCurr;
+
+    const HRESULT hr = pReader->LockPages(m_pLocked);
+    hr;
+    assert(SUCCEEDED(hr));
 }
 
 
@@ -242,7 +275,7 @@ void Stream::SetCurrPosition(
     const BlockEntry* pCurr)
 {
     //m_pBase = pBase;
-    m_pCurr = pCurr;
+    SetCurr(pCurr);
     m_base_time_ns = base_time_ns;
     m_bDiscontinuity = true;
 }
@@ -377,17 +410,19 @@ void Stream::SetStopPositionEOS()
 }
 
 
+#if 0
 HRESULT Stream::Preload()
 {
     Segment* const pSegment = m_pTrack->m_pSegment;
 
-    const int status = pSegment->LoadCluster();
+    const long status = pSegment->LoadCluster();
 
     if (status < 0)  //error
         return E_FAIL;
 
     return S_OK;
 }
+#endif
 
 
 HRESULT Stream::InitCurr()
@@ -402,16 +437,20 @@ HRESULT Stream::InitCurr()
     if (pSegment->GetCount() <= 0)
         return VFW_E_BUFFER_UNDERFLOW;
 
-    const long status = m_pTrack->GetFirst(m_pCurr);
+    const mkvparser::BlockEntry* pCurr;
+
+    const long status = m_pTrack->GetFirst(pCurr);
 
     if (status == E_BUFFER_NOT_FULL)
         return VFW_E_BUFFER_UNDERFLOW;
 
     assert(status >= 0);  //success
-    assert(m_pCurr);
-    assert(m_pCurr->EOS() ||
+    assert(pCurr);
+    assert(pCurr->EOS() ||
            (m_pTrack->GetType() == 2) ||
-           m_pCurr->GetBlock()->IsKey());
+           pCurr->GetBlock()->IsKey());
+
+    SetCurr(pCurr);
 
     const Cluster* const pBase = pSegment->GetFirst();
     assert(pBase);
@@ -524,7 +563,7 @@ HRESULT Stream::PopulateSamples(const samples_t& samples)
 
     if (start_ns < base_ns)
     {
-        m_pCurr = pNext;  //throw curr block away
+        SetCurr(pNext);  //throw curr block away
         return 2;  //no samples, but not EOS either
     }
 
@@ -532,7 +571,7 @@ HRESULT Stream::PopulateSamples(const samples_t& samples)
 
     if (nFrames <= 0)   //should never happen
     {
-        m_pCurr = pNext;  //throw curr block away
+        SetCurr(pNext);  //throw curr block away
         return 2;  //no samples, but not EOS either
     }
 
@@ -541,7 +580,7 @@ HRESULT Stream::PopulateSamples(const samples_t& samples)
 
     OnPopulateSample(pNext, samples);
 
-    m_pCurr = pNext;
+    SetCurr(pNext);
     m_bDiscontinuity = false;
 
     return S_OK;

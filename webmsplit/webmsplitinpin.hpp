@@ -65,8 +65,6 @@ protected:
     HRESULT OnDisconnect();
 
 public:
-    GraphUtil::IMemAllocatorPtr m_pAllocator;
-    //GraphUtil::IAsyncReaderPtr m_pAsyncReader;
     MkvReader m_reader;
 
 };

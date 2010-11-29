@@ -181,7 +181,11 @@ HRESULT Inpin::ReceiveConnection(
     if (FAILED(hr))
         return hr;
 
-    m_reader.SetSource(pReader);
+    hr = m_reader.SetSource(pReader);
+
+    if (FAILED(hr))
+        return hr;
+
     hr = m_pFilter->Open(&m_reader);
 
     if (FAILED(hr))
@@ -266,6 +270,7 @@ HRESULT Inpin::GetName(PIN_INFO& info) const
 
     return S_OK;
 }
+
 
 }  //end namespace WebmSplit
 

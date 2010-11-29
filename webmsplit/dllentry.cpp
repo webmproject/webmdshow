@@ -87,6 +87,13 @@ STDAPI DllUnregisterServer()
 
     //assert(SUCCEEDED(hr));
 
+#if 0
+    hr = ComReg::UnRegisterCustomFileType(
+            L".webm",
+            CLSID_AsyncReader);
+    //assert(SUCCEEDED(hr));
+#endif
+
     hr = ComReg::UnRegisterCoclass(WebmTypes::CLSID_WebmSplit);
 
     return SUCCEEDED(hr) ? S_OK : S_FALSE;

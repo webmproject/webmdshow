@@ -167,6 +167,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\mkvparserstreamreader.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\mkvparserstreamreader.hpp"
+			>
+		</File>
+		<File
 			RelativePath=".\mkvparserstreamvideo.cpp"
 			>
 		</File>

@@ -8,11 +8,12 @@
 
 #pragma once
 #include "mkvparser.hpp"
+#include "mkvparserstreamreader.hpp"
 
 namespace WebmSource
 {
 
-class MkvFile : public mkvparser::IMkvReader
+class MkvFile : public mkvparser::IStreamReader
 {
     MkvFile(const MkvFile&);
     MkvFile& operator=(const MkvFile&);
@@ -27,17 +28,6 @@ public:
 
     int Read(long long pos, long len, unsigned char* buf);
     int Length(long long* total, long long* available);
-
-#if 0
-    HRESULT MkvRead(
-        LONGLONG,
-        LONG,
-        BYTE*);
-
-    HRESULT MkvLength(
-        LONGLONG*,
-        LONGLONG*);
-#endif
 
 private:
     HANDLE m_hFile;

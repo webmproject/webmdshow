@@ -185,6 +185,9 @@ void Filter::Final()
     //   << "waiting for thread termination"
        //<< endl;
 
+    //HRESULT hr = m_inpin.m_reader.Cancel();
+    //assert(SUCCEEDED(hr));
+
     const DWORD dw = WaitForSingleObject(m_hThread, INFINITE);
     dw;
     assert(dw == WAIT_OBJECT_0);
@@ -347,12 +350,18 @@ HRESULT Filter::Stop()
 
             m_state = State_Stopped;
 
+            hr = m_inpin.m_reader.BeginFlush();
+            assert(SUCCEEDED(hr));
+
             lock.Release();
 
             OnStop();
 
             hr = lock.Seize(this);
             assert(SUCCEEDED(hr));  //TODO
+
+            hr = m_inpin.m_reader.EndFlush();
+            assert(SUCCEEDED(hr));
 
             break;
 
@@ -846,16 +855,6 @@ HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
     if (pTracks == 0)
         return VFW_E_INVALID_FILE_FORMAT;
 
-#if 0
-    typedef Stream::TCreateOutpins<VideoTrack, VideoStream, Filter> EV;
-    typedef Stream::TCreateOutpins<AudioTrack, AudioStream, Filter> EA;
-
-    const EV ev(this, &VideoStream::CreateInstance);
-    pTracks->EnumerateVideoTracks(ev);
-
-    const EA ea(this, &AudioStream::CreateInstance);
-    pTracks->EnumerateAudioTracks(ea);
-#else
     const ULONG n = pTracks->GetTracksCount();
 
     for (ULONG i = 0; i < n; ++i)
@@ -875,6 +874,7 @@ HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
             if (VideoStream* s = VideoStream::CreateInstance(t))
                 CreateOutpin(s);
         }
+#if 1
         else if (type == 2)  //audio
         {
             typedef mkvparser::AudioTrack AT;
@@ -883,8 +883,8 @@ HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
             if (AudioStream* s = AudioStream::CreateInstance(t))
                 CreateOutpin(s);
         }
-    }
 #endif
+    }
 
     if (m_outpins.empty())
         return VFW_E_INVALID_FILE_FORMAT;  //TODO: better return value here?
@@ -909,7 +909,7 @@ void Filter::CreateOutpin(mkvparser::Stream* s)
 
 void Filter::OnStart()
 {
-    //TODO: init inpin
+    //m_inpin.Start();
 
     typedef outpins_t::iterator iter_t;
 
@@ -936,13 +936,13 @@ void Filter::OnStart()
         m_cStarvation = 0;  //temporarily enter starvation mode to force check
     }
 
-    Init();
+    Init();  //create reader thread
 }
 
 
 void Filter::OnStop()
 {
-    Final();
+    Final();  //terminate reader thread
 
     typedef outpins_t::iterator iter_t;
 
@@ -957,7 +957,7 @@ void Filter::OnStop()
         pPin->Stop();
     }
 
-    //TODO: final inpin
+    //m_inpin.Stop();
 }
 
 
@@ -1002,6 +1002,7 @@ unsigned Filter::Main()
     {
         Sleep(0);
 
+#if 0
         LONGLONG cluster_pos, new_pos;
 
         const long status = m_pSegment->ParseCluster(cluster_pos, new_pos);
@@ -1029,6 +1030,35 @@ unsigned Filter::Main()
         //   << " unparsed="
         //   << m_pSegment->Unparsed()
         //   << endl;
+#else
+        Lock lock;
+
+        HRESULT hr = lock.Seize(this);
+
+        if (FAILED(hr))
+            return 1;
+
+        for (;;)
+        {
+            LONGLONG pos;
+            LONG size;
+
+            const long status = m_pSegment->LoadCluster(pos, size);
+
+            if (status >= 0)
+                break;
+
+            if (status != mkvparser::E_BUFFER_NOT_FULL)
+                return 1;
+
+            hr = m_inpin.m_reader.Wait(*this, pos, size);
+
+            if (FAILED(hr))  //wait was cancelled
+                return 1;
+        }
+
+        const bool bDone = (m_pSegment->Unparsed() <= 0);
+#endif
 
         OnNewCluster();
 
