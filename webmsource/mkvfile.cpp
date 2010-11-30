@@ -107,7 +107,6 @@ bool MkvFile::IsOpen() const
 }
 
 
-#if 1
 int MkvFile::Read(
     long long pos,
     long len,
@@ -141,42 +140,8 @@ int MkvFile::Read(
 
     return (cbRead >= ULONG(len)) ? 0 : -1;
 }
-#else
-HRESULT MkvFile::MkvRead(
-    LONGLONG start,
-    LONG len,
-    BYTE* ptr)
-{
-    if (start < 0)
-        return E_INVALIDARG;
 
-    if (len <= 0)
-        return S_OK;
 
-    if (!IsOpen())
-        return E_UNEXPECTED;
-
-    if (start >= m_length)
-        return HRESULT_FROM_WIN32(ERROR_HANDLE_EOF);
-
-    const HRESULT hr = SetPosition(start);
-    assert(SUCCEEDED(hr));
-
-    DWORD m;
-
-    const BOOL b = ReadFile(m_hFile, ptr, len, &m, 0);
-
-    if (!b)
-    {
-        const DWORD e = GetLastError();
-        return HRESULT_FROM_WIN32(e);
-    }
-
-    return (m >= ULONG(len)) ? S_OK : S_FALSE;
-}
-#endif
-
-#if 1
 int MkvFile::Length(
     long long* pTotal,
     long long* pAvailable)
@@ -192,22 +157,5 @@ int MkvFile::Length(
 
     return 0;  //success
 }
-#else
-HRESULT MkvFile::MkvLength(
-    LONGLONG* pTotal,
-    LONGLONG* pAvailable)
-{
-    if (!IsOpen())
-        return E_UNEXPECTED;
-
-    if (pTotal)
-        *pTotal = m_length;
-
-    if (pAvailable)
-        *pAvailable = m_length;
-
-    return S_OK;
-}
-#endif
 
 } //end namespace WebmSource

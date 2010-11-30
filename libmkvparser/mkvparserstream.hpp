@@ -28,6 +28,7 @@ class Stream
 public:
     virtual ~Stream();
     void Init();
+    void Stop();
 
     std::wstring GetId() const;  //IPin::QueryId
     std::wstring GetName() const;  //IPin::QueryPinInfo
@@ -37,7 +38,7 @@ public:
     virtual HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&);
     virtual HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const = 0;
 
-    HRESULT Preload();  //exactly one cluster
+    //HRESULT Preload();  //exactly one cluster
 
     HRESULT GetSampleCount(long&);
 
@@ -80,13 +81,16 @@ protected:
 
     virtual std::wostream& GetKind(std::wostream&) const = 0;
 
-    //virtual bool SendPreroll(IMediaSample*);
-
     HRESULT InitCurr();
 
     virtual void OnPopulateSample(
                 const BlockEntry*,
                 const samples_t&) const = 0;
+
+private:
+
+    const BlockEntry* m_pLocked;
+    void SetCurr(const mkvparser::BlockEntry*);
 
 };
 

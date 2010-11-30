@@ -114,6 +114,9 @@ void Outpin::Stop()  //transition to stopped
     assert(SUCCEEDED(hr));
 
     StopThread();
+
+    if (m_pStream)
+        m_pStream->Stop();
 }
 
 

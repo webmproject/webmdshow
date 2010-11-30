@@ -1166,12 +1166,16 @@ unsigned Outpin::Main()
     }
 
     mkvparser::Stream::Clear(samples);
+    m_pStream->Stop();
+
     return 0;
 }
 
 
 HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 {
+    mkvparser::Segment* const pSegment = m_pStream->m_pTrack->m_pSegment;
+
     for (;;)
     {
         assert(samples.empty());
@@ -1194,11 +1198,15 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 
             if (hr != VFW_E_BUFFER_UNDERFLOW)
                 return hr;
-
+#if 0
             hr = m_pStream->Preload();
 
             if (FAILED(hr))
                 return hr;
+#else
+            const long status = pSegment->LoadCluster();
+            assert(status == 0);
+#endif
         }
 
         if (hr != S_OK)      //EOS
@@ -1235,11 +1243,15 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 
             if (hr != VFW_E_BUFFER_UNDERFLOW)
                 return hr;
-
+#if 0
             hr = m_pStream->Preload();
 
             if (FAILED(hr))
                 return hr;
+#else
+            const long status = pSegment->LoadCluster();
+            assert(status == 0);
+#endif
         }
 
         if (hr != 2)
