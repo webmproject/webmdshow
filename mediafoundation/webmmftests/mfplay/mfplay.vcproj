@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
@@ -124,7 +124,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
@@ -203,7 +203,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
@@ -283,7 +283,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
@@ -343,6 +343,18 @@
 	<Files>
 		<File
 			RelativePath=".\mfplayer.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\mfplayer.hpp"
+			>
+		</File>
+		<File
+			RelativePath=".\mfplayer_main.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\mfplayer_main.hpp"
 			>
 		</File>
 	</Files>
