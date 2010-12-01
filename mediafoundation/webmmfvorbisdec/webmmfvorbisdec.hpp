@@ -12,9 +12,6 @@ class WebmMfVorbisDec : public IMFTransform,
             const IID&,
             void**);
 
-    WebmMfVorbisDec(const WebmMfVorbisDec&);
-    WebmMfVorbisDec& operator=(const WebmMfVorbisDec&);
-
 public:
 
     //IUnknown
@@ -167,6 +164,8 @@ private:
     int m_audio_format_tag;
 
     VorbisDecoder m_vorbis_decoder;
+
+    DISALLOW_COPY_AND_ASSIGN(WebmMfVorbisDec);
 };
 
 }  //end namespace WebmMfVorbisDecLib

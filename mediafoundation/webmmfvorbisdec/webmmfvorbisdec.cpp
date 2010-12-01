@@ -10,31 +10,11 @@
 #include <cmath>
 
 #include "clockable.hpp"
+#include "debugutil.hpp"
 #include "vorbisdecoder.hpp"
-#include "webmtypes.hpp"
 #include "vorbistypes.hpp"
+#include "webmtypes.hpp"
 #include "webmmfvorbisdec.hpp"
-
-#ifdef _DEBUG
-#include "odbgstream.hpp"
-#include "iidstr.hpp"
-using std::endl;
-
-// keep the compiler quiet about do/while(0)'s used in log macros
-#pragma warning(disable:4127)
-
-#define DBGLOG(X) \
-do { \
-    wodbgstream wos; \
-    wos << "["__FUNCTION__"] " << X << endl; \
-} while(0)
-
-#define REFTIMETOSECONDS(X) (double(X) / 10000000.0f)
-
-#else
-#define DBGLOG(X)
-#define REFTIMETOSECONDS(X)
-#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 

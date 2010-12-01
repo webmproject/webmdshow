@@ -9,25 +9,8 @@
 #include "mmreg.h"
 #endif
 
+#include "debugutil.hpp"
 #include "vorbisdecoder.hpp"
-
-#ifdef _DEBUG
-#include "odbgstream.hpp"
-#include "iidstr.hpp"
-using std::endl;
-
-// keep the compiler quiet about do/while(0)'s used in log macros
-#pragma warning(disable:4127)
-
-#define DBGLOG(X) \
-do { \
-    wodbgstream wos; \
-    wos << "["__FUNCTION__"] " << X << endl; \
-} while(0)
-
-#else
-#define DBGLOG(X)
-#endif
 
 namespace WebmMfVorbisDecLib
 {

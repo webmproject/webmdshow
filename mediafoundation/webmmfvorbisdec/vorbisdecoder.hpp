@@ -1,12 +1,6 @@
 #ifndef _MEDIAFOUNDATION_WEBMMFVORBISDEC_VORBISDECODER_HPP_
 #define _MEDIAFOUNDATION_WEBMMFVORBISDEC_VORBISDECODER_HPP_
 
-#ifndef DISALLOW_COPY_AND_ASSIGN
-#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&);               \
-  void operator=(const TypeName&)
-#endif
-
 #include "vorbis/codec.h"
 
 namespace WebmMfVorbisDecLib
