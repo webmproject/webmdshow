@@ -85,18 +85,24 @@ STDAPI DllUnregisterServer()
                     0,
                     WebmTypes::CLSID_WebmSplit);
 
-    //assert(SUCCEEDED(hr));
+    if (FAILED(hr))
+        return hr;
 
-#if 0
+#if 1
     hr = ComReg::UnRegisterCustomFileType(
             L".webm",
             CLSID_AsyncReader);
-    //assert(SUCCEEDED(hr));
+
+    if (FAILED(hr))
+        return hr;
 #endif
 
     hr = ComReg::UnRegisterCoclass(WebmTypes::CLSID_WebmSplit);
 
-    return SUCCEEDED(hr) ? S_OK : S_FALSE;
+    if (FAILED(hr))
+        return hr;
+
+    return S_OK;
 }
 
 
@@ -117,7 +123,9 @@ STDAPI DllRegisterServer()
 #endif
 
     hr = DllUnregisterServer();
-    assert(SUCCEEDED(hr));
+
+    if (FAILED(hr))
+        return hr;
 
     hr = ComReg::RegisterCoclass(
             WebmTypes::CLSID_WebmSplit,
@@ -132,16 +140,18 @@ STDAPI DllRegisterServer()
             0,    //no version specified
             0);   //no toolbox bitmap
 
-    assert(SUCCEEDED(hr));
+    if (FAILED(hr))
+        return hr;
 
-#if 0
+#if 1
     hr = ComReg::RegisterCustomFileType(
             L".webm",
             CLSID_AsyncReader,             //source
             MEDIATYPE_Stream,              //major
             WebmTypes::MEDIASUBTYPE_WEBM); //minor
 
-    assert(SUCCEEDED(hr));
+    if (FAILED(hr))
+        return hr;
 #endif
 
     const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
