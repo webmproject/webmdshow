@@ -114,6 +114,8 @@ public:
     HRESULT Open(mkvparser::IMkvReader*);
     void CreateOutpin(mkvparser::Stream*);
 
+    bool InCache();
+
 private:
     HANDLE m_hThread;
     mkvparser::Segment* m_pSegment;
@@ -129,6 +131,10 @@ private:
     void OnStart();
     void OnNewCluster();
     void PopulateSamples(const HANDLE*, DWORD);
+
+    void SetCurrPositionUsingSameTime(mkvparser::Stream*);
+    void SetCurrPositionVideo(LONGLONG ns, mkvparser::Stream*);
+    void SetCurrPositionAudio(LONGLONG ns, mkvparser::Stream*);
 
 };
 

@@ -1166,69 +1166,19 @@ void Filter::SetCurrPosition(
     Stream* const pSeekStream = pOutpin->GetStream();
     assert(pSeekStream);
 
-    const Track* const pSeekTrack = pSeekStream->m_pTrack;
-
     if (m_currTime == currTime)
     {
-        const BlockEntry* pCurr;
-
-        if (m_pSeekBase == 0)  //lazy init
-            pCurr = 0;
-
-        else if (m_pSeekBase->EOS())
-            pCurr = pSeekTrack->GetEOS();
-
-        else
-        {
-            pCurr = m_pSeekBase->GetEntry(pSeekTrack, m_seekTime_ns);
-
-#ifdef _DEBUG
-            if (pCurr == 0)
-                __noop;
-
-            else if (pCurr->EOS())
-                __noop;
-
-            else if (pSeekTrack->GetType() == 1)  //video
-            {
-                const Block* const pCurrBlock = pCurr->GetBlock();
-                const LONGLONG ns = pCurrBlock->GetTime(pCurr->GetCluster());
-                assert(ns >= m_seekBase_ns);
-                assert(pCurrBlock->IsKey());
-            }
-#endif
-        }
-
-#if 0 //def _DEBUG
-        odbgstream os;
-        os << "webmsplit::filter::SetCurrPos: post-seek request;"
-           << " currTime[reftime]="
-           << currTime
-           << " seekTime_ns="
-           << m_seekTime_ns
-           << " track="
-           << pSeekTrack->GetNumber()
-           << " type="
-           << pSeekTrack->GetType()
-           << " seekBase_ns="
-           << m_seekBase_ns
-           << "; curr.time=";
-
-        if (pCurr == 0)
-            os << "NULL";
-        else if (pCurr->EOS())
-            os << "EOS";
-        else
-            os << pCurr->GetBlock()->GetTime(m_pSeekBase);
-
-        os << endl;
-#endif
-
-        pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
+        SetCurrPositionUsingSameTime(pSeekStream);
         return;
     }
 
     m_currTime = currTime;
+
+    if (InCache())
+    {
+        const long status = m_pSegment->LoadCluster();
+        assert(status >= 0);
+    }
 
     if (m_pSegment->GetCount() <= 0)  //no clusters loaded yet
     {
@@ -1241,39 +1191,130 @@ void Filter::SetCurrPosition(
     }
 
     const LONGLONG ns = pSeekStream->GetSeekTime(currTime, dwCurr);
+    const Track* const pSeekTrack = pSeekStream->m_pTrack;
 
     if (pSeekTrack->GetType() == 1)  //video
+        SetCurrPositionVideo(ns, pSeekStream);
+    else
+        SetCurrPositionAudio(ns, pSeekStream);
+}
+
+
+void Filter::SetCurrPositionUsingSameTime(mkvparser::Stream* pStream)
+{
+    const mkvparser::BlockEntry* pCurr;
+
+    const mkvparser::Track* const pTrack = pStream->m_pTrack;
+
+    if (m_pSeekBase == 0)  //lazy init
+        pCurr = 0;
+
+    else if (m_pSeekBase->EOS())
+        pCurr = pTrack->GetEOS();
+
+    else
     {
-        const AM_MEDIA_TYPE& mt = pOutpin->m_connection_mtv[0];
-        const BOOL bVideo = (mt.majortype == MEDIATYPE_Video);
-        bVideo;
-        assert(bVideo);
+        pCurr = m_pSeekBase->GetEntry(pTrack, m_seekTime_ns);
 
-        const BlockEntry* pCurr;
+#ifdef _DEBUG
+        if (pCurr == 0)
+            __noop;
 
-        const long status = pSeekTrack->Seek(ns, pCurr);
+        else if (pCurr->EOS())
+            __noop;
 
-        if ((status < 0) || pCurr->EOS())
+        else if (pTrack->GetType() == 1)  //video
         {
-            m_pSeekBase = &m_pSegment->m_eos;
-            m_seekBase_ns = -1;
-            m_seekTime_ns = -1;
+            const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
+            const LONGLONG ns = pCurrBlock->GetTime(pCurr->GetCluster());
+            assert(ns >= m_seekBase_ns);
+            assert(pCurrBlock->IsKey());
         }
-        else
+#endif
+    }
+
+    pStream->SetCurrPosition(m_seekBase_ns, pCurr);
+}
+
+
+void Filter::SetCurrPositionVideo(
+    LONGLONG ns,
+    mkvparser::Stream* pStream)
+{
+    using namespace mkvparser;
+    const Track* const pTrack = pStream->m_pTrack;
+
+    const bool bInCache = InCache();
+
+    if (!bInCache)
+        __noop;
+    else if (const Cues* pCues = m_pSegment->GetCues())
+    {
+        const CuePoint* pCP;
+        const CuePoint::TrackPosition* pTP;
+
+        if (pCues->Find(ns, pTrack, pCP, pTP))
         {
+            const BlockEntry* const pCurr = pCues->GetBlock(pCP, pTP);
+            assert(pCurr);
+            assert(!pCurr->EOS());
+
             m_pSeekBase = pCurr->GetCluster();
             m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
             m_seekTime_ns = m_seekBase_ns;
+
+            pStream->SetCurrPosition(m_seekBase_ns, pCurr);
+            return;
+        }
+    }
+
+    const mkvparser::BlockEntry* pCurr = 0;
+
+    for (;;)
+    {
+        long status = pTrack->Seek(ns, pCurr);
+
+        if ((status >= 0) ||
+            (status != mkvparser::E_BUFFER_NOT_FULL) ||
+            !bInCache)
+        {
+            break;
         }
 
-        pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
-        return;
+        status = m_pSegment->LoadCluster();
+        assert(status >= 0);
     }
+
+    if ((pCurr == 0) || pCurr->EOS())
+    {
+        m_pSeekBase = &m_pSegment->m_eos;
+        m_seekBase_ns = -1;
+        m_seekTime_ns = -1;
+    }
+    else
+    {
+        m_pSeekBase = pCurr->GetCluster();
+        m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+        m_seekTime_ns = m_seekBase_ns;
+    }
+
+    pStream->SetCurrPosition(m_seekBase_ns, pCurr);
+}
+
+
+void Filter::SetCurrPositionAudio(
+    LONGLONG ns,
+    mkvparser::Stream* pSeekStream)
+{
+    using namespace mkvparser;
+    const Track* const pSeekTrack = pSeekStream->m_pTrack;
 
     typedef outpins_t::const_iterator iter_t;
 
     iter_t i = m_outpins.begin();
     const iter_t j = m_outpins.end();
+
+    mkvparser::Stream* pVideoStream = 0;
 
     while (i != j)
     {
@@ -1286,76 +1327,127 @@ void Filter::SetCurrPosition(
         const AM_MEDIA_TYPE& mt = pin->m_connection_mtv[0];
         const BOOL bVideo = (mt.majortype == MEDIATYPE_Video);
 
-        if (!bVideo)
-            continue;
+        if (bVideo)
+        {
+            pVideoStream = pin->GetStream();
+            assert(pVideoStream);
+            assert(pVideoStream != pSeekStream);
 
-        mkvparser::Stream* const pStream = pin->GetStream();
-        assert(pStream);
-        assert(pStream != pSeekStream);
+            break;
+        }
+    }
 
-        const Track* const pVideoTrack = pStream->m_pTrack;
-        assert(pVideoTrack->GetType() == 1);  //video
+    if (pVideoStream == 0)  //no video tracks in this file
+    {
+        const mkvparser::BlockEntry* pCurr;
+        const long status = pSeekTrack->Seek(ns, pCurr);
 
-        const BlockEntry* pCurr;
-
-        const long status = pVideoTrack->Seek(ns, pCurr);
-
-        if ((status < 0) || pCurr->EOS())
+        if ((status < 0) || (pCurr == 0) || pCurr->EOS())
         {
             m_pSeekBase = &m_pSegment->m_eos;
             m_seekBase_ns = -1;
             m_seekTime_ns = -1;
-
-            pCurr = pSeekTrack->GetEOS();
-            pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
-            return;
         }
-
-        m_pSeekBase = pCurr->GetCluster();
-        m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
-        m_seekTime_ns = m_seekBase_ns;  //to find same block later
-
-        pCurr = m_pSeekBase->GetEntry(pSeekTrack, m_seekBase_ns);
-        assert(pCurr);
-
-        if (!pCurr->EOS())
-            m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
-
-#if 0 //def _DEBUG
-        odbgstream os;
-        os << "webmsplit::filter::SetCurrPos: seek request; currTime[reftime]="
-           << m_currTime
-           << " seekBase_ns="
-           << m_seekBase_ns
-           << " seekTime_ns="
-           << m_seekTime_ns
-           << endl;
-#endif
+        else
+        {
+            m_pSeekBase = pCurr->GetCluster();
+            m_seekBase_ns = m_pSeekBase->GetFirstTime();
+            m_seekTime_ns = ns;
+        }
 
         pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
         return;
     }
 
-    const BlockEntry* pCurr;
+    const mkvparser::Track* const pVideoTrack = pVideoStream->m_pTrack;
+    assert(pVideoTrack->GetType() == 1);  //video
 
-    const long status = pSeekTrack->Seek(ns, pCurr);
+    const bool bInCache = InCache();
 
-    if ((status < 0) || pCurr->EOS())
+    if (!bInCache)
+        __noop;
+    else if (const Cues* pCues = m_pSegment->GetCues())
+    {
+        const CuePoint* pCP;
+        const CuePoint::TrackPosition* pTP;
+
+        if (pCues->Find(ns, pVideoTrack, pCP, pTP))
+        {
+            const BlockEntry* pCurr = pCues->GetBlock(pCP, pTP);
+            assert(pCurr);
+            assert(!pCurr->EOS());
+
+            m_pSeekBase = pCurr->GetCluster();
+            m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+            m_seekTime_ns = m_seekBase_ns;  //to find same block later
+
+            pCurr = m_pSeekBase->GetEntry(pSeekTrack, m_seekBase_ns);
+            assert(pCurr);
+
+            if (!pCurr->EOS())
+                m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+
+            pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
+            return;
+        }
+    }
+
+    const BlockEntry* pCurr = 0;
+
+    for (;;)
+    {
+        long status = pVideoTrack->Seek(ns, pCurr);
+
+        if ((status >= 0) ||
+            (status != mkvparser::E_BUFFER_NOT_FULL) ||
+            !bInCache)
+        {
+            break;
+        }
+
+        status = m_pSegment->LoadCluster();
+        assert(status >= 0);
+    }
+
+    if ((pCurr == 0) || pCurr->EOS())
     {
         m_pSeekBase = &m_pSegment->m_eos;
         m_seekBase_ns = -1;
         m_seekTime_ns = -1;
+
+        pCurr = pSeekTrack->GetEOS();
+        pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
+        return;
     }
-    else
-    {
-        m_pSeekBase = pCurr->GetCluster();
-        m_seekBase_ns = m_pSeekBase->GetFirstTime();
-        m_seekTime_ns = ns;
-    }
+
+    m_pSeekBase = pCurr->GetCluster();
+    m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+    m_seekTime_ns = m_seekBase_ns;  //to find same block later
+
+    pCurr = m_pSeekBase->GetEntry(pSeekTrack, m_seekBase_ns);
+    assert(pCurr);
+
+    if (!pCurr->EOS())
+        m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
 
     pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
 }
 
+
+bool Filter::InCache()
+{
+    LONGLONG total, avail;
+
+    const int status = m_inpin.m_reader.Length(&total, &avail);
+
+    if (status < 0)
+        return false;
+
+    assert(total >= 0);
+    assert(avail <= total);
+
+    return (avail >= total);
+}
 
 
 } //end namespace WebmSplit

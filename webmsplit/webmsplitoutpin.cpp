@@ -715,26 +715,9 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
         return S_OK;
     }
 
-    if (pSegment->Unparsed() <= 0)  //done parsing
-    {
-        const Cluster* const pCluster = pSegment->GetLast();
+    const Cues* const pCues = pSegment->GetCues();
 
-        if ((pCluster == 0) || pCluster->EOS())
-        {
-            reftime = 0;
-            return S_OK;
-        }
-
-        duration_ns = pCluster->GetLastTime();
-        assert(duration_ns >= 0);
-
-        reftime = duration_ns / 100;
-
-        return S_OK;
-    }
-
-#if 0  //TODO: do this when avail >= length
-    if (const Cues* pCues = pSegment->GetCues())
+    if ((pCues != 0) && m_pFilter->InCache() && (pSegment->Unparsed() > 0))
     {
         const CuePoint* const pCP = pCues->GetLast();
         assert(pCP);  //TODO
@@ -792,13 +775,9 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
             return S_OK;
         }
     }
-#endif
-
-    //const long status = pSegment->LoadCluster();
-    //assert(status >= 0);
 
     {
-        const Cluster* const pCluster = pSegment->GetLast();  //best we can do
+        const Cluster* const pCluster = pSegment->GetLast();
 
         if ((pCluster == 0) || pCluster->EOS())
         {
