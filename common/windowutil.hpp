@@ -18,12 +18,6 @@ public:
     HRESULT SetUserData(LONG_PTR ptr_userdata);
 private:
 
-    HRESULT OnClose_();
-    HRESULT OnPaint_();
-    HRESULT OnCommand_(int id, HWND hwndCtl, UINT codeNotify);
-    HRESULT OnSize_(UINT state, int cx, int cy);
-    HRESULT OnKeyDown_(UINT vk, BOOL fDown, int cRepeat, UINT flags);
-
     HWND hwnd_;
     WNDCLASS window_class_;
     const WNDPROC ptrfn_window_proc_;

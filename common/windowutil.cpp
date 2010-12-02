@@ -127,27 +127,4 @@ HRESULT WebmMfWindow::SetUserData(LONG_PTR ptr_userdata)
     return hr;
 }
 
-#if 0
-static LRESULT CALLBACK WebmMfWindow::WindowProc(HWND hwnd, UINT msg,
-                                                 WPARAM wparam, LPARAM lparam)
-{
-    LONG_PTR ourdata = GetWindowLongPtr(hwnd, GWL_USERDATA);
-    assert(ourdata);
-    WebmMfWindow* ptr_mfwindow = reinterpret_cast<WebmMfWindow*>(ourdata);
-
-    switch(msg)
-    {
-        HANDLE_MSG(hwnd, WM_CLOSE, ptr_mfwindow->OnClose_);
-        HANDLE_MSG(hwnd, WM_PAINT, ptr_mfwindow->OnPaint_);
-        HANDLE_MSG(hwnd, WM_SIZE, ptr_mfwindow->OnSize_);
-
-    case WM_ERASEBKGND:
-        return 1;
-
-    default:
-        return DefWindowProc(hwnd, msg, wparam, lparam);
-    };
-}
-#endif
-
 } // WebmMfUtil namespace
