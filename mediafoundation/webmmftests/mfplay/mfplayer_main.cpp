@@ -49,7 +49,7 @@ void ShowErrorMessage(PCWSTR format, HRESULT hrErr)
 
 void OnClose(HWND hwnd)
 {
-    LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWL_USERDATA);
+    LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWLP_USERDATA);
     assert(ptr_ourdata);
 
     WindowedMfPlayer* ptr_player =
@@ -81,7 +81,7 @@ void OnPaint(HWND hwnd)
 
     hdc = BeginPaint(hwnd, &ps);
 
-    LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWL_USERDATA);
+    LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWLP_USERDATA);
     assert(ptr_ourdata);
 
     WindowedMfPlayer* ptr_player =
@@ -113,7 +113,7 @@ void OnSize(HWND hwnd, UINT state, int /*cx*/, int /*cy*/)
 {
     if (state == SIZE_RESTORED)
     {
-        LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWL_USERDATA);
+        LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWLP_USERDATA);
         assert(ptr_ourdata);
 
         WindowedMfPlayer* ptr_player =
@@ -142,7 +142,7 @@ void OnKeyDown(HWND hwnd, UINT vk, BOOL /*fDown*/, int /*cRepeat*/,
     {
     case VK_SPACE:
         // Toggle between playback and paused/stopped.
-        LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWL_USERDATA);
+        LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWLP_USERDATA);
         assert(ptr_ourdata);
 
         WindowedMfPlayer* ptr_player =

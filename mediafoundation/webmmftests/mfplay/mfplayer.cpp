@@ -320,6 +320,11 @@ MFP_MEDIAPLAYER_STATE MfPlayer::GetState()
     {
         HRESULT hr = ptr_mediaplayer_->GetState(&mediaplayer_state);
         assert(SUCCEEDED(hr));
+
+        if (FAILED(hr))
+        {
+            ShowErrorMessage(L"player state check failed", hr);
+        }
     }
 
     return mediaplayer_state;

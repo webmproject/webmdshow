@@ -53,7 +53,7 @@ HRESULT WebmMfWindow::Create()
 
     const LONG_PTR ourdata = reinterpret_cast<LONG_PTR>(this);
 
-    if (!SetWindowLongPtr(hwnd_, GWL_USERDATA, ourdata))
+    if (!SetWindowLongPtr(hwnd_, GWLP_USERDATA, ourdata))
     {
         return E_FAIL;
     }
@@ -119,7 +119,7 @@ HRESULT WebmMfWindow::SetUserData(LONG_PTR ptr_userdata)
 
     HRESULT hr = E_FAIL;
 
-    if (SetWindowLongPtr(hwnd_, GWL_USERDATA, ptr_userdata))
+    if (SetWindowLongPtr(hwnd_, GWLP_USERDATA, ptr_userdata))
     {
         hr = S_OK;
     }
