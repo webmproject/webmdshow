@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
@@ -124,7 +124,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
@@ -203,7 +203,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
@@ -283,7 +283,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
@@ -341,6 +341,22 @@
 	<References>
 	</References>
 	<Files>
+		<Filter
+			Name="common"
+			>
+			<File
+				RelativePath="..\..\..\common\debugutil.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\windowutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\windowutil.hpp"
+				>
+			</File>
+		</Filter>
 		<File
 			RelativePath=".\mfplayer.cpp"
 			>
