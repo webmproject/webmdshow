@@ -5,25 +5,26 @@
 
 #include <cassert>
 #include <new>
+#include <string>
+
 #include <windows.h>
 #include <windowsx.h>
 #include <mfplay.h>
 #include <mferror.h>
 #include <shlwapi.h> // for QITAB
-#include <string>
 
 #include "debugutil.hpp"
 #include "mfplayer.hpp"
 #include "mfplayer_main.hpp"
 
-namespace WebMMfTests {
+namespace WebmMfUtil {
 
-MfPlayerCallback:: MfPlayerCallback(MfPlayer* ptr_player) :
+MfPlayerCallback:: MfPlayerCallback(MfPlayer* ptr_mfplayer) :
   ref_cnt_(1),
-  ptr_player_(NULL)
+  ptr_mfplayer_(NULL)
 {
-    assert(ptr_player);
-    ptr_player_ = ptr_player;
+    assert(ptr_mfplayer);
+    ptr_mfplayer_ = ptr_mfplayer;
 }
 
 STDMETHODIMP MfPlayerCallback::QueryInterface(REFIID riid, void** ppv)
@@ -46,7 +47,7 @@ STDMETHODIMP_(ULONG) MfPlayerCallback::Release()
     ULONG count = InterlockedDecrement(&ref_cnt_);
     if (count == 0)
     {
-        ptr_player_ = 0;
+        ptr_mfplayer_ = 0;
         delete this;
         return 0;
     }
@@ -67,18 +68,18 @@ void MfPlayerCallback::OnMediaPlayerEvent(MFP_EVENT_HEADER* ptr_event_header)
         return;
     }
 
-    assert(ptr_player_);
-    if (ptr_player_)
+    assert(ptr_mfplayer_);
+    if (ptr_mfplayer_)
     {
         switch (ptr_event_header->eEventType)
         {
         case MFP_EVENT_TYPE_MEDIAITEM_CREATED:
-            ptr_player_->OnMediaItemCreated_(
+            ptr_mfplayer_->OnMediaItemCreated_(
                 MFP_GET_MEDIAITEM_CREATED_EVENT(ptr_event_header));
             break;
 
         case MFP_EVENT_TYPE_MEDIAITEM_SET:
-            ptr_player_->OnMediaItemSet_(
+            ptr_mfplayer_->OnMediaItemSet_(
                 MFP_GET_MEDIAITEM_SET_EVENT(ptr_event_header));
             break;
         }
@@ -86,7 +87,7 @@ void MfPlayerCallback::OnMediaPlayerEvent(MFP_EVENT_HEADER* ptr_event_header)
 }
 
 MfPlayer::MfPlayer() :
-  ptr_player_callback_(NULL),
+  ptr_mfplayercallback_(NULL),
   player_event_(INVALID_HANDLE_VALUE)
 {
 }
@@ -102,9 +103,9 @@ HRESULT MfPlayer::Open(std::wstring url_str)
     if (url_str.length() < 1)
         return E_INVALIDARG;
 
-    ptr_player_callback_ = new (std::nothrow) MfPlayerCallback(this);
-    assert(ptr_player_callback_);
-    if (NULL == ptr_player_callback_)
+    ptr_mfplayercallback_ = new (std::nothrow) MfPlayerCallback(this);
+    assert(ptr_mfplayercallback_);
+    if (NULL == ptr_mfplayercallback_)
     {
         return E_OUTOFMEMORY;
     }
@@ -119,9 +120,9 @@ HRESULT MfPlayer::Open(std::wstring url_str)
                     NULL,
                     FALSE,                 // Start playback automatically?
                     0,                     // Flags
-                    ptr_player_callback_,  // Callback pointer
+                    NULL/*ptr_mfplayercallback_*/,  // Callback pointer
                     NULL,    // TODO(tomfinegan): need window
-                    &ptr_player_);
+                    &ptr_mediaplayer_);
 
     assert(SUCCEEDED(hr));
     if (FAILED(hr))
@@ -130,14 +131,25 @@ HRESULT MfPlayer::Open(std::wstring url_str)
         return hr;
     }
 
-    // TODO(tomfinegan): might be simpler to use MF synchronously...
-    hr = ptr_player_->CreateMediaItemFromURL(url_str.c_str(), FALSE, 0, NULL);
+    hr = ptr_mediaplayer_->CreateMediaItemFromURL(url_str.c_str(), TRUE, 0,
+                                                  &ptr_mediaitem_);
     assert(SUCCEEDED(hr));
     if (FAILED(hr))
     {
         ShowErrorMessage(L"cannot create media item", hr);
         return hr;
     }
+
+    hr = SetAvailableStreams_();
+    assert(SUCCEEDED(hr));
+    if (FAILED(hr))
+    {
+        ShowErrorMessage(L"cannot set available streams", hr);
+        return hr;
+    }
+
+#if 0
+    // async setup
 
     DWORD wr = MsgWaitForMultipleObjects(1, &player_event_, TRUE, INFINITE,
                                          QS_ALLEVENTS);
@@ -147,13 +159,26 @@ HRESULT MfPlayer::Open(std::wstring url_str)
         ShowErrorMessage(L"creation event wait timed out", hr);
         hr = E_FAIL;
     }
+#else
+#endif
 
     return hr;
 }
 
 void MfPlayer::Close()
 {
-    assert(0);
+    if (ptr_mediaplayer_)
+    {
+        ptr_mediaplayer_->Shutdown();
+        ptr_mediaplayer_->Release();
+        ptr_mediaplayer_ = NULL;
+    }
+
+    if (ptr_mfplayercallback_)
+    {
+        ptr_mfplayercallback_->Release();
+        ptr_mfplayercallback_ = NULL;
+    }
 }
 
 HRESULT MfPlayer::Play()
@@ -165,7 +190,7 @@ HRESULT MfPlayer::Play()
         return E_UNEXPECTED;
     }
 
-    HRESULT hr = ptr_player_->Play();
+    HRESULT hr = ptr_mediaplayer_->Play();
     assert(SUCCEEDED(hr));
 
     if (FAILED(hr))
@@ -185,7 +210,7 @@ HRESULT MfPlayer::Pause()
         return E_UNEXPECTED;
     }
 
-    HRESULT hr = ptr_player_->Pause();
+    HRESULT hr = ptr_mediaplayer_->Pause();
     assert(SUCCEEDED(hr));
 
     if (FAILED(hr))
@@ -203,41 +228,64 @@ HRESULT MfPlayer::Pause()
 // completes.
 void MfPlayer::OnMediaItemCreated_(MFP_MEDIAITEM_CREATED_EVENT* ptr_event)
 {
-    HRESULT hr = S_OK;
+    HRESULT hr = E_FAIL;
 
     // The media item was created successfully.
 
     if (ptr_event)
     {
-        BOOL has_media_type = FALSE, is_selected = FALSE;
+        assert(ptr_event->pMediaItem);
+        ptr_mediaitem_ = ptr_event->pMediaItem;
 
-        // Check if the media item contains video.
-        hr = ptr_event->pMediaItem->HasVideo(&has_media_type, &is_selected);
-        assert(SUCCEEDED(hr));
-        if (FAILED(hr)) { goto done; }
+        hr = SetAvailableStreams_();
 
-        has_video_ = has_media_type && is_selected;
-
-        hr = ptr_event->pMediaItem->HasAudio(&has_media_type, &is_selected);
-        assert(SUCCEEDED(hr));
-        if (FAILED(hr)) { goto done; }
-
-        has_audio_ = has_media_type && is_selected;
-
-        // Set the media item on the player. This method completes asynchronously.
-        hr = ptr_player_->SetMediaItem(ptr_event->pMediaItem);
-        assert(SUCCEEDED(hr));
-
-        SetEvent(player_event_);
+        if (SUCCEEDED(hr))
+        {
+            SetEvent(player_event_);
+        }
     }
 
-done:
     if (FAILED(hr))
     {
         ShowErrorMessage(L"Error playing this file.", hr);
     }
 }
 
+HRESULT MfPlayer::SetAvailableStreams_()
+{
+    assert(ptr_mediaitem_);
+    if (NULL == ptr_mediaitem_)
+    {
+        return E_UNEXPECTED;
+    }
+    BOOL has_media_type = FALSE, is_selected = FALSE;
+
+    // Check if the media item contains video.
+    HRESULT hr = ptr_mediaitem_->HasVideo(&has_media_type, &is_selected);
+    assert(SUCCEEDED(hr));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    has_video_ = has_media_type && is_selected;
+
+    // Check for audio
+    hr = ptr_mediaitem_->HasAudio(&has_media_type, &is_selected);
+    assert(SUCCEEDED(hr));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    has_audio_ = has_media_type && is_selected;
+
+    // Set the media item on the player. This method completes asynchronously.
+    //hr = ptr_mediaplayer_->SetMediaItem(ptr_mediaitem_);
+    //assert(SUCCEEDED(hr));
+
+    return hr;
+}
 
 // OnMediaItemSet
 //
@@ -247,6 +295,34 @@ void MfPlayer::OnMediaItemSet_(MFP_MEDIAITEM_SET_EVENT* ptr_event)
     assert(ptr_event);
     (void)ptr_event;
     player_init_done_ = true;
+
+    // need a SetEvent here...
+}
+
+HRESULT MfPlayer::UpdateVideo()
+{
+    HRESULT hr = E_INVALIDARG;
+
+    if (has_video_ && ptr_mediaplayer_)
+    {
+        hr = ptr_mediaplayer_->UpdateVideo();
+        assert(SUCCEEDED(hr));
+    }
+
+    return hr;
+}
+
+MFP_MEDIAPLAYER_STATE MfPlayer::GetState()
+{
+    MFP_MEDIAPLAYER_STATE mediaplayer_state = MFP_MEDIAPLAYER_STATE_EMPTY;
+
+    if (ptr_mediaplayer_)
+    {
+        HRESULT hr = ptr_mediaplayer_->GetState(&mediaplayer_state);
+        assert(SUCCEEDED(hr));
+    }
+
+    return mediaplayer_state;
 }
 
 } // WebMMfTests namespace
