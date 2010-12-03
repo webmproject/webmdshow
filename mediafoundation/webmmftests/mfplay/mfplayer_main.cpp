@@ -22,6 +22,7 @@ struct WindowedMfPlayer
     WebmMfUtil::WebmMfWindow* ptr_mfwindow;
 };
 
+// TODO(tomfinegan): remove SetErrorMessage and replace w/DBGLOG or something
 
 //-----------------------------------------------------------------------------
 // ShowErrorMessage
@@ -67,6 +68,29 @@ void OnClose(HWND hwnd)
     PostQuitMessage(0);
 }
 
+void OnCreate(HWND hwnd)
+{
+    LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    assert(ptr_ourdata);
+
+    WindowedMfPlayer* ptr_player =
+        reinterpret_cast<WindowedMfPlayer*>(ptr_ourdata);
+
+    WebmMfUtil::MfPlayer* ptr_mfplayer = ptr_player->ptr_mfplayer;
+    assert(ptr_mfplayer);
+
+    if (ptr_mfplayer)
+    {
+        HRESULT hr = ptr_mfplayer->Open(hwnd, ptr_mfplayer->GetUrl());
+        assert(SUCCEEDED(hr));
+
+        if (SUCCEEDED(hr))
+        {
+            hr = ptr_mfplayer->Play();
+            assert(SUCCEEDED(hr));
+        }
+    }
+}
 
 //-----------------------------------------------------------------------------
 // OnPaint
@@ -114,14 +138,16 @@ void OnSize(HWND hwnd, UINT state, int /*cx*/, int /*cy*/)
     if (state == SIZE_RESTORED)
     {
         LONG_PTR ptr_ourdata = GetWindowLongPtr(hwnd, GWLP_USERDATA);
-        assert(ptr_ourdata);
 
-        WindowedMfPlayer* ptr_player =
-            reinterpret_cast<WindowedMfPlayer*>(ptr_ourdata);
-
-        if (ptr_player && ptr_player->ptr_mfplayer)
+        if (ptr_ourdata)
         {
-            ptr_player->ptr_mfplayer->UpdateVideo();
+            WindowedMfPlayer* ptr_player =
+                reinterpret_cast<WindowedMfPlayer*>(ptr_ourdata);
+
+            if (ptr_player && ptr_player->ptr_mfplayer)
+            {
+                ptr_player->ptr_mfplayer->UpdateVideo();
+            }
         }
     }
 }
@@ -182,6 +208,7 @@ LRESULT CALLBACK window_handler(HWND hwnd, UINT uMsg, WPARAM wParam,
         HANDLE_MSG(hwnd, WM_PAINT,   OnPaint);
         HANDLE_MSG(hwnd, WM_SIZE,    OnSize);
 
+    
     case WM_ERASEBKGND:
         return 1;
 
@@ -190,9 +217,9 @@ LRESULT CALLBACK window_handler(HWND hwnd, UINT uMsg, WPARAM wParam,
     }
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int mfplayer_main(int argc, WCHAR* argv[])
 {
-    if (argc < 2)
+    if (argc < 1)
     {
         ShowErrorMessage(L"No file specified", E_FAIL);
         return EXIT_FAILURE;
@@ -208,7 +235,7 @@ int _tmain(int argc, _TCHAR* argv[])
         return EXIT_FAILURE;
     }
 
-    std::wstring url_str = argv[1];
+    std::wstring url_str = argv[0];
 
     WebmMfUtil::WebmMfWindow mfwindow(window_handler);
     hr = mfwindow.Create();
@@ -220,16 +247,28 @@ int _tmain(int argc, _TCHAR* argv[])
         return EXIT_FAILURE;
     }
 
-
     WebmMfUtil::MfPlayer mfplayer;
 
-    hr = mfplayer.Open(url_str);
-    assert(SUCCEEDED(hr));
+    WindowedMfPlayer windowed_player;
+    windowed_player.ptr_mfplayer = &mfplayer;
+    windowed_player.ptr_mfwindow = &mfwindow;
 
-    if (SUCCEEDED(hr))
+    hr = mfwindow.SetUserData(reinterpret_cast<LONG_PTR>(&windowed_player));
+    assert(SUCCEEDED(hr));
+    if (FAILED(hr))
     {
-        hr = mfplayer.Play();
-        assert(SUCCEEDED(hr));
+        ShowErrorMessage(L"mfwindow.SetUserData failed!", hr);
+        return EXIT_FAILURE;
+    }
+
+    // TODO(tomfinegan): need a PostMessage here to kick off playback
+
+    // Message loop
+    MSG msg;
+    while (GetMessageW(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
 
     CoUninitialize();
@@ -237,3 +276,11 @@ int _tmain(int argc, _TCHAR* argv[])
     return EXIT_SUCCESS;
 }
 
+INT WINAPI wWinMain(HINSTANCE,HINSTANCE,LPWSTR ptr_cmdline,INT)
+{
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(ptr_cmdline, &argc);
+    int result = mfplayer_main(argc, argv);
+    LocalFree(argv);
+    return result;
+}
