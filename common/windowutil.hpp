@@ -12,6 +12,7 @@ public:
 
     HRESULT Create();
     HRESULT Destroy();
+    HWND GetHwnd() const;
     HRESULT Show();
     HRESULT Hide();
 

@@ -51,14 +51,9 @@ HRESULT WebmMfWindow::Create()
         return E_FAIL;
     }
 
-    const LONG_PTR ourdata = reinterpret_cast<LONG_PTR>(this);
-
-    if (!SetWindowLongPtr(hwnd_, GWLP_USERDATA, ourdata))
-    {
-        return E_FAIL;
-    }
-
-    return Show();
+    UpdateWindow(hwnd_);
+    Show();
+    return S_OK;
 }
 
 HRESULT WebmMfWindow::Destroy()
@@ -75,38 +70,35 @@ HRESULT WebmMfWindow::Destroy()
     return hr;
 }
 
+HWND WebmMfWindow::GetHwnd() const
+{
+    return hwnd_;
+}
+
 HRESULT WebmMfWindow::Show()
 {
-    HRESULT hr = E_FAIL;
     assert(hwnd_);
     if (NULL == hwnd_)
     {
-        return hr;
+        return E_FAIL;
     }
 
-    if (ShowWindow(hwnd_, SW_SHOW))
-    {
-        hr = S_OK;
-    }
+    ShowWindow(hwnd_, SW_SHOW);
 
-    return hr;
+    return S_OK;
 }
 
 HRESULT WebmMfWindow::Hide()
 {
-    HRESULT hr = E_FAIL;
     assert(hwnd_);
     if (NULL == hwnd_)
     {
-        return hr;
+        return E_FAIL;
     }
 
-    if (ShowWindow(hwnd_, SW_HIDE))
-    {
-        hr = S_OK;
-    }
+    ShowWindow(hwnd_, SW_HIDE);
 
-    return hr;
+    return S_OK;
 }
 
 HRESULT WebmMfWindow::SetUserData(LONG_PTR ptr_userdata)
@@ -117,14 +109,9 @@ HRESULT WebmMfWindow::SetUserData(LONG_PTR ptr_userdata)
         return E_INVALIDARG;
     }
 
-    HRESULT hr = E_FAIL;
+    SetWindowLongPtr(hwnd_, GWLP_USERDATA, ptr_userdata);
 
-    if (SetWindowLongPtr(hwnd_, GWLP_USERDATA, ptr_userdata))
-    {
-        hr = S_OK;
-    }
-
-    return hr;
+    return S_OK;
 }
 
 } // WebmMfUtil namespace
