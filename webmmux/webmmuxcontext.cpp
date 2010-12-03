@@ -292,10 +292,12 @@ void Context::FinalSegment()
 
 void Context::FinalInfo()
 {
-    m_file.SetPosition(m_duration_pos + 2 + 1);  //2 byte ID + 1 byte size
+    m_file.SetPosition(m_duration_pos);
+
+    m_file.WriteID2(0x4489);         //Duration ID
+    m_file.Write1UInt(4);            //payload size
 
     const float duration = static_cast<float>(m_max_timecode);
-
     m_file.Serialize4Float(duration);
 }
 
@@ -436,9 +438,15 @@ void Context::InitInfo()
 
     m_duration_pos = m_file.GetPosition();  //remember where duration is
 
+#if 0
     m_file.WriteID2(0x4489);         //Duration ID
     m_file.Write1UInt(4);            //payload size
     m_file.Serialize4Float(0.0);     //set value again during close
+#else
+    m_file.WriteID1(0xEC); //Void
+    m_file.Write1UInt(5);  //(Duration ID - Void ID) + payload
+    m_file.SetPosition(5, STREAM_SEEK_CUR);
+#endif
 
     //MuxingApp
 
