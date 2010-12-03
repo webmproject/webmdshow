@@ -7,11 +7,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfvp8dec_2008", "webmmf
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfvorbisdec_2008", "webmmfvorbisdec\webmmfvorbisdec_2008.vcproj", "{560D4BFA-63B9-468E-8845-7705DE2FBDDF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mfplay_windowed", "webmmftests\mfplay_windowed\mfplay_windowed.vcproj", "{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "webmmftests", "webmmftests", "{E53C42C4-B1E3-4DDA-BFBD-0B9A325544EF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mfplay", "webmmftests\mfplay\mfplay.vcproj", "{4B73ED03-BC69-47D2-BD63-A293FD9EE969}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mfplay_deprecated", "webmmftests\mfplay_deprecated\mfplay_deprecated.vcproj", "{4B73ED03-BC69-47D2-BD63-A293FD9EE969}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,14 +43,6 @@ Global
 		{560D4BFA-63B9-468E-8845-7705DE2FBDDF}.Release|Win32.Build.0 = Release|Win32
 		{560D4BFA-63B9-468E-8845-7705DE2FBDDF}.Release|x64.ActiveCfg = Release|x64
 		{560D4BFA-63B9-468E-8845-7705DE2FBDDF}.Release|x64.Build.0 = Release|x64
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Debug|Win32.ActiveCfg = Debug|Win32
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Debug|Win32.Build.0 = Debug|Win32
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Debug|x64.ActiveCfg = Debug|x64
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Debug|x64.Build.0 = Debug|x64
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Release|Win32.ActiveCfg = Release|Win32
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Release|Win32.Build.0 = Release|Win32
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Release|x64.ActiveCfg = Release|x64
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995}.Release|x64.Build.0 = Release|x64
 		{4B73ED03-BC69-47D2-BD63-A293FD9EE969}.Debug|Win32.ActiveCfg = Debug|Win32
 		{4B73ED03-BC69-47D2-BD63-A293FD9EE969}.Debug|Win32.Build.0 = Debug|Win32
 		{4B73ED03-BC69-47D2-BD63-A293FD9EE969}.Debug|x64.ActiveCfg = Debug|x64
@@ -66,7 +56,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{58F63BD7-2098-4CD4-8E1E-E2E5B0A62995} = {E53C42C4-B1E3-4DDA-BFBD-0B9A325544EF}
 		{4B73ED03-BC69-47D2-BD63-A293FD9EE969} = {E53C42C4-B1E3-4DDA-BFBD-0B9A325544EF}
 	EndGlobalSection
 EndGlobal
