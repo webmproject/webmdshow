@@ -316,17 +316,10 @@ void Context::InitFirstSeekHead()
     //Cues (3/4)
     //2nd SeekHead (4/4)
 
-    BYTE size = /* 4 */ 3 * 21;
-
-    m_file.WriteID4(0x114D9B74);  //Seek Head
-    m_file.Write1UInt(size);
+    const BYTE size = (4-1) + (3*21);  //(SeekHead ID - Void ID) + payload
 
     m_file.WriteID1(0xEC); //Void
-    --size;
-
     m_file.Write1UInt(size);
-    --size;
-
     m_file.SetPosition(size, STREAM_SEEK_CUR);
 }
 
@@ -334,18 +327,18 @@ void Context::InitFirstSeekHead()
 
 void Context::FinalFirstSeekHead()
 {
-    const __int64 start_pos = m_file.SetPosition(m_first_seekhead_pos + 4 + 1);
+    const LONGLONG start_pos = m_file.SetPosition(m_first_seekhead_pos);
+    const BYTE size = 3*21;
+
+    m_file.WriteID4(0x114D9B74);  //SeekHead ID
+    m_file.Write1UInt(size);
 
     WriteSeekEntry(0x1549A966, m_info_pos);   //SegmentInfo  (1/4)
     WriteSeekEntry(0x1654AE6B, m_track_pos);  //Track  (2/4)
     WriteSeekEntry(0x1C53BB6B, m_cues_pos);   //Cues (3/4)
     //WriteSeekEntry(0x114D9B74, m_second_seekhead_pos);   //2nd SeekHead (4/4)
 
-    const __int64 stop_pos = m_file.GetPosition();
-
-    const __int64 size = stop_pos - start_pos;
-    size;
-    assert(size == ( /* 4 */ 3 * 21));
+    assert((m_file.GetPosition() - start_pos) == (4 + 1 + size));
 }
 
 
