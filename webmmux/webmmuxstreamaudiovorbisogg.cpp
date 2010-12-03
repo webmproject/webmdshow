@@ -314,13 +314,12 @@ StreamAudioVorbisOgg::StreamAudioVorbisOgg(
 }
 
 
-void StreamAudioVorbisOgg::Final()
-{
-    const HRESULT hr = FinalizeTrackCodecPrivate();
-    hr;
-    SUCCEEDED(hr);
-}
-
+//void StreamAudioVorbisOgg::Final()
+//{
+//    const HRESULT hr = FinalizeTrackCodecPrivate();
+//    hr;
+//    SUCCEEDED(hr);
+//}
 
 
 void StreamAudioVorbisOgg::WriteTrackCodecID()
@@ -365,26 +364,13 @@ void StreamAudioVorbisOgg::WriteTrackCodecPrivate()
 
 HRESULT StreamAudioVorbisOgg::FinalizeTrackCodecPrivate()
 {
+    if (m_ident.empty() || m_comment.empty() || m_setup.empty())
+        return S_OK;
+
     EbmlIO::File& file = m_context.m_file;
 
     const __int64 old_pos = file.GetPosition();
     file.SetPosition(m_codec_private_data_pos);
-
-    if (m_ident.empty() || m_comment.empty() || m_setup.empty())
-    {
-        //debit allocated size by Void type (1) and length (2)
-        const int bytes_to_write_ = kPRIVATE_DATA_BYTES_RESERVED - 1 - 2;
-        assert(bytes_to_write_ <= USHRT_MAX);
-
-        const USHORT bytes_to_write = static_cast<USHORT>(bytes_to_write_);
-
-        file.WriteID1(0xEC); // Void
-        file.Write2UInt(bytes_to_write);
-
-        file.SetPosition(old_pos);
-
-        return S_OK;
-    }
 
     const DWORD ident_len = static_cast<const DWORD>(m_ident.size());
     assert(ident_len > 0);
@@ -462,6 +448,8 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
     if (pSample == 0)
         return E_INVALIDARG;
 
+    EbmlIO::File& file = m_context.m_file;
+
     BYTE* buf;
 
     HRESULT hr = pSample->GetPointer(&buf);
@@ -505,10 +493,15 @@ HRESULT StreamAudioVorbisOgg::Receive(IMediaSample* pSample)
         assert(memcmp(buf + 1, "vorbis", 6) == 0);
         m_setup.assign(buf, buf_end);
 
+        if (file.GetStream())
+        {
+            const HRESULT hr = FinalizeTrackCodecPrivate();
+            hr;
+            SUCCEEDED(hr);
+        }
+
         return S_OK;
     }
-
-    EbmlIO::File& file = m_context.m_file;
 
     if (file.GetStream() == 0)
         return S_OK;

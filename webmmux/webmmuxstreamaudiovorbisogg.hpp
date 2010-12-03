@@ -28,7 +28,7 @@ class StreamAudioVorbisOgg : public StreamAudio
 
 protected:
     StreamAudioVorbisOgg(Context&, const BYTE*, ULONG);
-    virtual void Final();  //grant last wishes
+    //virtual void Final();  //grant last wishes
 
     ULONG GetSamplesPerSec() const;
     BYTE GetChannels() const;
