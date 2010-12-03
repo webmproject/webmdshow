@@ -71,6 +71,16 @@ namespace ComReg
                 const GUID& mediatype,
                 const GUID& subtype);
 
+    HRESULT RegisterProtocolSource(
+                const wchar_t* protocol,
+                const wchar_t* ext,
+                const GUID& filter);
+
+    HRESULT UnRegisterProtocolSource(
+                const wchar_t* protocol,
+                const wchar_t* ext,
+                const GUID& filter);
+
     //Media Foundation
 
 #if (_WIN32_WINNT >= 0x0601)

@@ -837,3 +837,109 @@ HRESULT ComReg::UnRegisterByteStreamHandler(
     return S_OK;
 }
 #endif
+
+
+HRESULT ComReg::RegisterProtocolSource(
+    const wchar_t* protocol,
+    const wchar_t* ext,
+    const GUID& filter)
+{
+    if (protocol == 0)
+        return E_INVALIDARG;
+
+    if (ext == 0)
+        return E_INVALIDARG;
+
+    if (filter == GUID_NULL)
+        return E_INVALIDARG;
+
+    Registry::Key pk;  //protocol
+
+    LONG e = pk.open(HKEY_CLASSES_ROOT, protocol, KEY_READ | KEY_WRITE);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    Registry::Key ek;  //extensions
+
+    e = ek.open(pk, L"Extensions", KEY_READ | KEY_WRITE);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    wchar_t buf[guid_buflen];
+
+    const int n = StringFromGUID2(filter, buf, guid_buflen);
+    assert(n == guid_buflen);
+
+    e = ek.set(ext, buf);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    return S_OK;
+}
+
+
+HRESULT ComReg::UnRegisterProtocolSource(
+    const wchar_t* protocol,
+    const wchar_t* ext,
+    const GUID& filter)
+{
+    if (protocol == 0)
+        return E_INVALIDARG;
+
+    if (ext == 0)
+        return E_INVALIDARG;
+
+    if (filter == GUID_NULL)
+        return E_INVALIDARG;
+
+    Registry::Key pk;  //protocol
+
+    LONG e = pk.open(HKEY_CLASSES_ROOT, protocol, KEY_READ | KEY_WRITE);
+
+    if (e == ERROR_FILE_NOT_FOUND)
+        return S_FALSE;
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    Registry::Key ek;  //extensions
+
+    e = ek.open(pk, L"Extensions", KEY_READ | KEY_WRITE);
+
+    if (e == ERROR_FILE_NOT_FOUND)
+        return S_FALSE;
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    wstring val;
+
+    e = ek.query(ext, val);
+
+    if (e == ERROR_FILE_NOT_FOUND)
+        return S_FALSE;
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    GUID guid;
+
+    const HRESULT hr = ::CLSIDFromString(val.c_str(), &guid);
+
+    if (FAILED(hr))
+        return S_FALSE;
+
+    if (guid != filter)
+        return S_FALSE;
+
+    e = ::RegDeleteValue(ek, ext);
+
+    if (e)
+        return HRESULT_FROM_WIN32(e);
+
+    return S_OK;
+}
+
