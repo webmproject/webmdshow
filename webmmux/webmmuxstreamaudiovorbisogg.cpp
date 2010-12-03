@@ -347,7 +347,12 @@ void StreamAudioVorbisOgg::WriteTrackCodecPrivate()
 
     m_codec_private_data_pos = file.GetPosition();
 
-    file.SetPosition(kPRIVATE_DATA_BYTES_RESERVED, STREAM_SEEK_CUR);
+    const USHORT size = kPRIVATE_DATA_BYTES_RESERVED - 3;
+
+    file.WriteID1(0xEC); // Void
+    file.Write2UInt(size);
+
+    file.SetPosition(size, STREAM_SEEK_CUR);
 
 #if 0 //def _DEBUG
     odbgstream ods;
