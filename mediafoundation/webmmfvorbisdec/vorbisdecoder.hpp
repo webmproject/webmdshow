@@ -16,6 +16,11 @@ public:
     int CreateDecoder(const BYTE** const ptr_headers,
                       const DWORD* const header_lengths,
                       unsigned int num_headers /* must be == 3 */);
+    // |CreateDecoderFromBuffer| is a wrapper for |CreateDecoder|.  It handles 
+    // breaking up the chunk of vorbis setup data from a WebM file A_VORBIS
+    // CodecPrivate block
+    int CreateDecoderFromBuffer(const BYTE* const ptr_buffer, UINT size);
+
     void DestroyDecoder();
 
     int Decode(BYTE* ptr_samples, UINT32 length);
