@@ -4,7 +4,7 @@
 	Version="9.00"
 	Name="mfplay_deprecated"
 	ProjectGUID="{4B73ED03-BC69-47D2-BD63-A293FD9EE969}"
-	RootNamespace="mfplay"
+	RootNamespace="mfplay_deprecated"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
