@@ -458,7 +458,9 @@ HRESULT WebmMfVp8Dec::GetOutputAvailableType(
     if (dwOutputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
-    if (dwTypeIndex > 1)
+    enum { subtype_count = 3 };
+
+    if (dwTypeIndex >= subtype_count)
         return MF_E_NO_MORE_TYPES;
 
     if (pp == 0)
@@ -480,18 +482,17 @@ HRESULT WebmMfVp8Dec::GetOutputAvailableType(
     hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
     assert(SUCCEEDED(hr));
 
-    if (dwTypeIndex == 0)
+    const GUID subtypes[subtype_count] =
     {
-        hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_YV12);
-        assert(SUCCEEDED(hr));
-    }
-    else
-    {
-        assert(dwTypeIndex == 1);
+        MFVideoFormat_NV12,
+        MFVideoFormat_YV12,
+        MFVideoFormat_IYUV
+    };
 
-        hr = pmt->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_IYUV);
-        assert(SUCCEEDED(hr));
-    }
+    const GUID& subtype = subtypes[dwTypeIndex];
+
+    hr = pmt->SetGUID(MF_MT_SUBTYPE, subtype);
+    assert(SUCCEEDED(hr));
 
     hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
     assert(SUCCEEDED(hr));
@@ -499,7 +500,7 @@ HRESULT WebmMfVp8Dec::GetOutputAvailableType(
     hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
     assert(SUCCEEDED(hr));
 
-    if (m_pInputMediaType == 0)
+    if (m_pInputMediaType == 0)  //nothing else we can say
         return S_OK;
 
     FrameRate r;
@@ -807,13 +808,14 @@ HRESULT WebmMfVp8Dec::SetOutputType(
     if (FAILED(hr))
         return MF_E_INVALIDMEDIATYPE;
 
-    if ((g != MFVideoFormat_YV12) &&
-        (g != MFVideoFormat_IYUV))
-    {
-        //TODO: add I420 support
-
+    if (g == MFVideoFormat_NV12)
+        __noop;
+    else if (g == MFVideoFormat_YV12)
+        __noop;
+    else if (g == MFVideoFormat_IYUV)
+        __noop;
+    else  //TODO: add I420 support
         return MF_E_INVALIDMEDIATYPE;
-    }
 
     //hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE);
     //assert(SUCCEEDED(hr));
@@ -1346,7 +1348,6 @@ HRESULT WebmMfVp8Dec::Decode(IMFSample* pSample_out)
 
     hr = m_pOutputMediaType->GetGUID(MF_MT_SUBTYPE, &subtype);
     assert(SUCCEEDED(hr));
-    assert((subtype == MFVideoFormat_YV12) || (subtype == MFVideoFormat_IYUV));
 
     //TODO:
     //MFVideoFormat_I420
@@ -1499,11 +1500,6 @@ HRESULT WebmMfVp8Dec::GetFrame(
         pOut += strideOut;
     }
 
-    strideOut /= 2;
-
-    wIn = (wIn + 1) / 2;
-    hIn = (hIn + 1) / 2;
-
     const BYTE* pInV = f->planes[PLANE_V];
     assert(pInV);
 
@@ -1514,8 +1510,32 @@ HRESULT WebmMfVp8Dec::GetFrame(
 
     const int strideInU = f->stride[PLANE_U];
 
-    if (subtype == MFVideoFormat_YV12)
+    wIn = (wIn + 1) / 2;
+    hIn = (hIn + 1) / 2;
+
+    if (subtype == MFVideoFormat_NV12)
     {
+        for (unsigned int y = 0; y < hIn; ++y)
+        {
+            const BYTE* u = pInU;   //src
+            const BYTE* v = pInV;   //src
+            BYTE* uv = pOut;        //dst
+
+            for (unsigned int idx = 0; idx < wIn; ++idx)  //uv
+            {
+                *uv++ = *u++;  //Cb
+                *uv++ = *v++;  //Cr
+            }
+
+            pInU += strideInU;
+            pInV += strideInV;
+            pOut += strideOut;
+        }
+    }
+    else if (subtype == MFVideoFormat_YV12)
+    {
+        strideOut /= 2;
+
         //V
 
         for (unsigned int y = 0; y < hIn; ++y)
@@ -1536,6 +1556,10 @@ HRESULT WebmMfVp8Dec::GetFrame(
     }
     else
     {
+        assert(subtype == MFVideoFormat_IYUV);
+
+        strideOut /= 2;
+
         //U
 
         for (unsigned int y = 0; y < hIn; ++y)
