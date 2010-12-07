@@ -94,16 +94,16 @@ int VorbisDecoder::CreateDecoder(const BYTE** const ptr_headers,
     return S_OK;
 }
 
-int VorbisDecoder::CreateDecoderFromBuffer(const BYTE* const ptr_buffer, 
+int VorbisDecoder::CreateDecoderFromBuffer(const BYTE* const ptr_buffer,
                                            UINT size)
 {
     const BYTE* ptr_vorbis_headers = ptr_buffer;
     const BYTE* const end = ptr_vorbis_headers + size;
 
-    // TODO(tomfinegan): this |num_packets| bit requires the caller of 
-    //                   CreateDecoderFromBuffer to ensure that |ptr_buffer| 
+    // TODO(tomfinegan): this |num_packets| bit requires the caller of
+    //                   CreateDecoderFromBuffer to ensure that |ptr_buffer|
     //                   contains a WebM A_VORBIS CodecPrivate payload.  It
-    //                   might be better to have the caller skip the extra 
+    //                   might be better to have the caller skip the extra
     //                   byte...
     const BYTE num_packets = *ptr_vorbis_headers++;
     assert(num_packets == 2);
@@ -124,12 +124,12 @@ int VorbisDecoder::CreateDecoderFromBuffer(const BYTE* const ptr_buffer,
     const BYTE* const ptr_id = ptr_vorbis_headers;
     const BYTE* const ptr_comments = ptr_id + id_len;
     const BYTE* const ptr_setup = ptr_comments + comments_len;
-    
+
     // store the header pointers and lengths for CreateDecoder's use
     const BYTE* header_ptrs[3] = {ptr_id, ptr_comments, ptr_setup};
     const DWORD header_lengths[3] = {id_len, comments_len, setup_len};
 
-    return CreateDecoder(header_ptrs, header_lengths, 
+    return CreateDecoder(header_ptrs, header_lengths,
                          VORBIS_SETUP_HEADER_COUNT);
 }
 
