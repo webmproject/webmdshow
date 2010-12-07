@@ -271,6 +271,9 @@ MJH.Main = function() {
     var objRootFolder;
     var objVersion;
     var intReadWrite = -1;  //read-only by default
+    
+    //args[0] = 0.0.0.0
+    //args[1] = 0|1
 
     if (objArgs.Length > 2) {
         out.WriteLine("Too many arguments.");
