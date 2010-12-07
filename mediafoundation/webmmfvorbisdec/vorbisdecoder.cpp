@@ -100,24 +100,13 @@ int VorbisDecoder::CreateDecoderFromBuffer(const BYTE* const ptr_buffer,
     const BYTE* ptr_vorbis_headers = ptr_buffer;
     const BYTE* const end = ptr_vorbis_headers + size;
 
-    // TODO(tomfinegan): this |num_packets| bit requires the caller of
-    //                   CreateDecoderFromBuffer to ensure that |ptr_buffer|
-    //                   contains a WebM A_VORBIS CodecPrivate payload.  It
-    //                   might be better to have the caller skip the extra
-    //                   byte...
-    const BYTE num_packets = *ptr_vorbis_headers++;
-    assert(num_packets == 2);
-    if (num_packets != 2)
-    {
-        return E_INVALIDARG;
-    }
-
     // read the id and comment header lengths
     const DWORD id_len = *ptr_vorbis_headers++;
     const DWORD comments_len = *ptr_vorbis_headers++;
     // |ptr_vorbis_headers| points to first header, set full private data
     // length:
-    const DWORD total_len = end - ptr_vorbis_headers;
+    const INT64 total_len_ = end - ptr_vorbis_headers;
+    const DWORD total_len = (DWORD)total_len_;
     // and calculate the length of the setup header
     const DWORD setup_len = total_len - id_len + comments_len;
     // set the pointer to each vorbis header
