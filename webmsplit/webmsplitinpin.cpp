@@ -164,8 +164,6 @@ HRESULT Inpin::ReceiveConnection(
     if (bool(m_pPinConnection))
         return VFW_E_ALREADY_CONNECTED;
 
-    //assert(!bool(m_pReader));
-
     m_connection_mtv.Clear();
 
     if ((pmt != 0) && (pmt->majortype != GUID_NULL))
@@ -186,7 +184,40 @@ HRESULT Inpin::ReceiveConnection(
     if (FAILED(hr))
         return hr;
 
-    hr = m_pFilter->Open(&m_reader);
+    m_reader.m_sync_read = true;
+
+#if 1
+    hr = m_pFilter->Open();
+#else
+    for (;;)
+    {
+        hr = m_pFilter->Open();
+
+        if (SUCCEEDED(hr))
+            break;
+
+        if (hr != VFW_E_BUFFER_UNDERFLOW)
+            break;
+
+        LONGLONG total, avail;
+
+        const int status = m_reader.Length(&total, &avail);
+
+        if (status < 0)
+        {
+            hr = VFW_E_RUNTIME_ERROR;
+            break;
+        }
+
+        if (avail >= total)
+            continue;
+
+        hr = m_reader.Wait(*m_pFilter, avail, 1, 5000);
+
+        if (FAILED(hr))
+            break;
+    }
+#endif
 
     if (FAILED(hr))
     {
@@ -194,6 +225,7 @@ HRESULT Inpin::ReceiveConnection(
         return hr;
     }
 
+    m_reader.m_sync_read = false;
     m_pPinConnection = pin;
 
     return S_OK;

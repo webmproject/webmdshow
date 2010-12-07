@@ -736,21 +736,20 @@ HRESULT Filter::QueryVendorInfo(LPWSTR* pstr)
 }
 
 
-HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
+HRESULT Filter::Open()
 {
     if (m_pSegment)
         return VFW_E_WRONG_STATE;
 
-    assert(pFile);
     assert(m_outpins.empty());
+
+    MkvReader& reader = m_inpin.m_reader;
 
     __int64 result, pos;
 
-    //TODO: must initialize header to defaults
-
     mkvparser::EBMLHeader h;
 
-    result = h.Parse(pFile, pos);
+    result = h.Parse(&reader, pos);
 
     if (result < 0)  //error
     {
@@ -758,13 +757,13 @@ HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
             return VFW_E_INVALID_FILE_FORMAT;
 
         if (result == mkvparser::E_BUFFER_NOT_FULL)
-            return VFW_E_BUFFER_UNDERFLOW;  //require full header
+            return VFW_E_BUFFER_UNDERFLOW;
 
-        return E_FAIL;
+        return VFW_E_RUNTIME_ERROR;
     }
 
-    if (result > 0)  //need more data
-        return VFW_E_BUFFER_UNDERFLOW;  //require full header
+    if (result > 0)
+        return VFW_E_BUFFER_UNDERFLOW;
 
     if (h.m_version > 1)
         return VFW_E_INVALID_FILE_FORMAT;
@@ -795,7 +794,7 @@ HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
 
     mkvparser::Segment* p;
 
-    result = mkvparser::Segment::CreateInstance(pFile, pos, p);
+    result = mkvparser::Segment::CreateInstance(&reader, pos, p);
 
     if (result < 0)  //error
     {
@@ -805,15 +804,33 @@ HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
         if (result == mkvparser::E_BUFFER_NOT_FULL)
             return VFW_E_BUFFER_UNDERFLOW;
 
-        return E_FAIL;
+        return VFW_E_RUNTIME_ERROR;
     }
 
     if (result > 0)
-        return VFW_E_BUFFER_UNDERFLOW;
+        return VFW_E_BUFFER_UNDERFLOW;  //TODO: handle this as below
 
     assert(p);
-
     std::auto_ptr<mkvparser::Segment> pSegment(p);
+
+#if 0
+    result = pSegment->FindFirstCluster(pos);
+
+    if (result < 0)
+    {
+        if (result == mkvparser::E_FILE_FORMAT_INVALID)
+            return VFW_E_INVALID_FILE_FORMAT;
+
+        if (result != mkvparser::E_BUFFER_NOT_FULL)
+            return VFW_E_RUNTIME_ERROR;
+    }
+
+    //if you're going to do this, why not just a sync read...
+    const HRESULT hr = reader.Wait(*this, pos, 1, 5000);
+
+    if (FAILED(hr))
+        return hr;
+#endif
 
     result = pSegment->ParseHeaders();
 
@@ -825,7 +842,7 @@ HRESULT Filter::Open(mkvparser::IMkvReader* pFile)
         if (result == mkvparser::E_BUFFER_NOT_FULL)
             return VFW_E_BUFFER_UNDERFLOW;
 
-        return E_FAIL;
+        return VFW_E_RUNTIME_ERROR;
     }
 
     if (result > 0)
@@ -1051,7 +1068,7 @@ unsigned Filter::Main()
             if (status != mkvparser::E_BUFFER_NOT_FULL)
                 return 1;
 
-            hr = m_inpin.m_reader.Wait(*this, pos, size);
+            hr = m_inpin.m_reader.Wait(*this, pos, size, INFINITE);
 
             if (FAILED(hr))  //wait was cancelled
                 return 1;
@@ -1175,10 +1192,7 @@ void Filter::SetCurrPosition(
     m_currTime = currTime;
 
     if (InCache())
-    {
-        const long status = m_pSegment->LoadCluster();
-        assert(status >= 0);
-    }
+        m_pSegment->LoadCluster();
 
     if (m_pSegment->GetCount() <= 0)  //no clusters loaded yet
     {
@@ -1282,7 +1296,9 @@ void Filter::SetCurrPositionVideo(
         }
 
         status = m_pSegment->LoadCluster();
-        assert(status >= 0);
+
+        if (status < 0)
+            break;
     }
 
     if ((pCurr == 0) || pCurr->EOS())
@@ -1406,7 +1422,9 @@ void Filter::SetCurrPositionAudio(
         }
 
         status = m_pSegment->LoadCluster();
-        assert(status >= 0);
+
+        if (status < 0)
+            break;
     }
 
     if ((pCurr == 0) || pCurr->EOS())

@@ -38,10 +38,12 @@ public:
     HRESULT LockPages(const mkvparser::BlockEntry*);
     void UnlockPages(const mkvparser::BlockEntry*);
 
-    HRESULT Wait(CLockable&, LONGLONG pos, LONG size);
+    HRESULT Wait(CLockable&, LONGLONG pos, LONG size, DWORD timeout_ms);
 
     HRESULT BeginFlush();
     HRESULT EndFlush();
+
+    bool m_sync_read;
 
 private:
     ALLOCATOR_PROPERTIES m_props;
@@ -92,7 +94,7 @@ private:
         long&,
         unsigned char**) const;
 
-    cache_t::iterator InsertPage(cache_t::iterator, LONGLONG);
+    int InsertPage(cache_t::iterator, LONGLONG, cache_t::iterator&);
 
     void FreeOne(cache_t::iterator&);
     void PurgeOne();

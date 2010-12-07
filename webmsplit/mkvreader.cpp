@@ -18,7 +18,7 @@
 namespace WebmSplit
 {
 
-MkvReader::MkvReader()
+MkvReader::MkvReader() : m_sync_read(true)
 {
 }
 
@@ -182,10 +182,12 @@ int MkvReader::Read(
     if (!IsOpen())
         return -1;
 
-#if 0
-    const HRESULT hr = m_pSource->SyncRead(pos, len, buf);
-    return SUCCEEDED(hr) ? 0 : -1;
-#else
+    if (m_sync_read)
+    {
+        const HRESULT hr = m_pSource->SyncRead(pos, len, buf);
+        return SUCCEEDED(hr) ? 0 : -1;
+    }
+
     if (pos < 0)
         return -1;
 
@@ -222,15 +224,12 @@ int MkvReader::Read(
     {
         if ((next == m_cache.end()) || ((*next)->GetPos() > pos))
         {
-            FreeOne(next);
+            iter_t curr_iter;
 
-            if (m_free_pages.empty())  //error: all samples are busy
-                return -1;             //TODO: solve this problem somehow
+            const int status = InsertPage(next, pos, curr_iter);
 
-            const iter_t curr_iter = InsertPage(next, pos);
-
-            if (curr_iter == m_cache.end())  //async read is req'd
-                return mkvparser::E_BUFFER_NOT_FULL;
+            if (status < 0)  //error
+                return status;
 
             const cache_t::value_type page_iter = *curr_iter;
             const Page& curr_page = *page_iter;
@@ -253,7 +252,6 @@ int MkvReader::Read(
     }
 
     return 0;  //means all requested bytes were read
-#endif
 }
 
 
@@ -304,12 +302,15 @@ void MkvReader::Read(
 }
 
 
-MkvReader::cache_t::iterator
-MkvReader::InsertPage(
+int MkvReader::InsertPage(
     cache_t::iterator next,
-    LONGLONG pos)
+    LONGLONG pos,
+    cache_t::iterator& cache_iter)
 {
-    assert(!m_free_pages.empty());
+    FreeOne(next);
+
+    if (m_free_pages.empty())  //error: all samples are busy
+        return -1;  //generic error
 
     const DWORD page_size = m_props.cbBuffer;
 
@@ -327,20 +328,41 @@ MkvReader::InsertPage(
     if (page_iter->GetPos() == page_pos)
     {
         m_free_pages.erase(free_page);
-        return m_cache.insert(next, page_iter);
+        cache_iter = m_cache.insert(next, page_iter);
+        return 0;  //success
     }
 
     LONGLONG total, available;
 
     const int status = Length(&total, &available);
-    assert(status == 0);
+
+    if (status < 0)
+        return status;
+
     assert(available <= total);
     assert(page_pos < total);
 
     const LONGLONG page_end = page_pos + page_size;
 
+    //TODO: there is a problem here.  The caller probably checked
+    //already whether the attempted read would be past available,
+    //and if not the he would call Read assuming it would not
+    //fail.  However, we make a stronger test here, because we
+    //test the position of the end of the page -- but this pos
+    //is most likely beyond the pos tested by caller, so we
+    //return E_BUFFER_NOT_FULL when the caller is not expecting
+    //it.  We could just go ahead and read the entire page here,
+    //but then we run the risk of a "long delay" because we
+    //attempt a read beyong the available value.  One alternative
+    //is for the caller to attempt to read the byte just beyond
+    //his intended range.  Yet another possibility is to read
+    //up to available (instead of requiring page_end), and try
+    //to manage the fact that the page isn't full.  But that
+    //won't work either, because reads must be aligned (you
+    //must request and entire page).
+
     if ((page_end <= total) && (page_end > available))
-        return m_cache.end();
+        return mkvparser::E_BUFFER_NOT_FULL;
 
     HRESULT hr;
 
@@ -360,10 +382,20 @@ MkvReader::InsertPage(
     assert(SUCCEEDED(hr));
 
     hr = m_pSource->SyncReadAligned(page.pSample);
-    assert(SUCCEEDED(hr));
+
+    if (FAILED(hr))  //VFW_S_WRONG_STATE
+    {
+        const ULONG cRef = page.pSample->Release();
+        cRef;
+
+        page.pSample = 0;
+
+        return -1;  //generic error value
+    }
 
     m_free_pages.erase(free_page);
-    return m_cache.insert(next, page_iter);
+    cache_iter = m_cache.insert(next, page_iter);
+    return 0;  //success
 }
 
 
@@ -486,7 +518,8 @@ LONGLONG MkvReader::Page::GetPos() const
 HRESULT MkvReader::Wait(
     CLockable& lock,
     LONGLONG start_pos,
-    LONG size)
+    LONG size,
+    DWORD timeout)
 {
     assert(start_pos >= 0);
     assert(size > 0);
@@ -552,7 +585,7 @@ HRESULT MkvReader::Wait(
         hr = lock.Release();
         assert(SUCCEEDED(hr));
 
-        hrWait = m_pSource->WaitForNext(INFINITE, &pSample, &token);
+        hrWait = m_pSource->WaitForNext(timeout, &pSample, &token);
 
         hr = lock.Seize(INFINITE);
         assert(SUCCEEDED(hr));
@@ -721,12 +754,12 @@ HRESULT MkvReader::LockPages(const mkvparser::BlockEntry* pBE)
     {
         if ((next == m_cache.end()) || ((*next)->GetPos() > pos))
         {
-            FreeOne(next);
+            iter_t curr_iter;
 
-            if (m_free_pages.empty())  //error: all samples are busy
-                return E_FAIL;         //TODO
+            const int status = InsertPage(next, pos, curr_iter);
 
-            const iter_t curr_iter = InsertPage(next, pos);
+            if (status < 0)  //error
+                return status;
 
             if (curr_iter == m_cache.end())  //async read is req'd
                 return VFW_E_BUFFER_UNDERFLOW;

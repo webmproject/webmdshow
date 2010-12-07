@@ -88,10 +88,20 @@ STDAPI DllUnregisterServer()
     if (FAILED(hr))
         return hr;
 
-#if 1
+#if 0
     hr = ComReg::UnRegisterCustomFileType(
             L".webm",
             CLSID_AsyncReader);
+
+    if (FAILED(hr))
+        return hr;
+#endif
+
+#if 0
+    hr = ComReg::UnRegisterProtocolSource(
+            L"http",
+            L".webm",
+            CLSID_URLReader /* WebmTypes::CLSID_WebmSplit */ );
 
     if (FAILED(hr))
         return hr;
@@ -143,12 +153,22 @@ STDAPI DllRegisterServer()
     if (FAILED(hr))
         return hr;
 
-#if 1
+#if 0
     hr = ComReg::RegisterCustomFileType(
             L".webm",
             CLSID_AsyncReader,             //source
             MEDIATYPE_Stream,              //major
             WebmTypes::MEDIASUBTYPE_WEBM); //minor
+
+    if (FAILED(hr))
+        return hr;
+#endif
+
+#if 0
+    hr = ComReg::RegisterProtocolSource(
+            L"http",
+            L".webm",
+            CLSID_URLReader /* WebmTypes::CLSID_WebmSplit */ );
 
     if (FAILED(hr))
         return hr;

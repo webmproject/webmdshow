@@ -111,7 +111,7 @@ public:
     HRESULT OnDisconnectInpin();
     void OnStarvation(ULONG);
 
-    HRESULT Open(mkvparser::IMkvReader*);
+    HRESULT Open();
     void CreateOutpin(mkvparser::Stream*);
 
     bool InCache();
