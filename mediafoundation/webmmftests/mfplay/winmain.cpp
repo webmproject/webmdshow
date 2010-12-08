@@ -263,6 +263,12 @@ LRESULT OnCreateWindow(HWND hwnd)
     if (SUCCEEDED(hr))
     {
         UpdateUI(hwnd, Closed);
+        // TODO(tomfinegan): yikes... talk about burying the test kick off.
+        //                   Move this someplace more visible.
+        int argc = 1;
+        wchar_t* argv = L"mfplay";
+        testing::InitGoogleTest(&argc, &argv);
+        RUN_ALL_TESTS();
         return 0;   // Success.
     }
     else

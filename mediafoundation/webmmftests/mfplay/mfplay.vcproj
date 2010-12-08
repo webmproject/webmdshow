@@ -48,7 +48,7 @@
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				WarnAsError="true"
@@ -128,7 +128,7 @@
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				WarnAsError="true"
@@ -206,7 +206,7 @@
 				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				WarnAsError="true"
@@ -286,7 +286,7 @@
 				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				WarnAsError="true"
@@ -359,6 +359,10 @@
 		</File>
 		<File
 			RelativePath=".\player.rc"
+			>
+		</File>
+		<File
+			RelativePath=".\player_tests.cpp"
 			>
 		</File>
 		<File
