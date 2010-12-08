@@ -1,3 +1,4 @@
+#include "gtest/gtest.h"
 #include "Player.hpp"
 
 PCWSTR szTitle = L"BasicPlayback";
@@ -5,7 +6,7 @@ PCWSTR szWindowClass = L"MFBASICPLAYBACK";
 
 HINSTANCE   g_hInstance;                        // current instance
 BOOL        g_bRepaintClient = TRUE;            // Repaint the application client area?
-CPlayer     *g_pPlayer = NULL;                  // Global player object. 
+CPlayer     *g_pPlayer = NULL;                  // Global player object.
 
 // Note: After WM_CREATE is processed, g_pPlayer remains valid until the
 // window is destroyed.
@@ -45,7 +46,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
     // Perform application initialization.
     if (!InitInstance(hInstance, nCmdShow))
     {
-        NotifyError(NULL, L"Could not initialize the application.", 
+        NotifyError(NULL, L"Could not initialize the application.",
             HRESULT_FROM_WIN32(GetLastError()));
         return FALSE;
     }
@@ -170,7 +171,7 @@ void OnFileOpen(HWND hwnd)
     PWSTR pszFilePath = NULL;
 
     // Create the FileOpenDialog object.
-    HRESULT hr = CoCreateInstance(__uuidof(FileOpenDialog), NULL, 
+    HRESULT hr = CoCreateInstance(__uuidof(FileOpenDialog), NULL,
         CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileOpen));
     if (FAILED(hr))
     {
@@ -226,9 +227,9 @@ void OnOpenURL(HWND hwnd)
 {
     HRESULT hr = S_OK;
 
-    // Pass in an OpenUrlDialogInfo structure to the dialog. The dialog 
+    // Pass in an OpenUrlDialogInfo structure to the dialog. The dialog
     // fills in this structure with the URL. The dialog proc allocates
-    // the memory for the string. 
+    // the memory for the string.
 
     OpenUrlDialogInfo url;
     ZeroMemory(&url, sizeof(&url));
@@ -258,7 +259,7 @@ void OnOpenURL(HWND hwnd)
 LRESULT OnCreateWindow(HWND hwnd)
 {
     // Initialize the player object.
-    HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &g_pPlayer); 
+    HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &g_pPlayer);
     if (SUCCEEDED(hr))
     {
         UpdateUI(hwnd, Closed);
@@ -302,7 +303,7 @@ void OnResize(WORD width, WORD height)
 }
 
 
-// Handler for WM_CHAR messages. 
+// Handler for WM_CHAR messages.
 void OnKeyPress(WPARAM key)
 {
     switch (key)
@@ -379,7 +380,7 @@ void NotifyError(HWND hwnd, PCWSTR pszErrorMessage, HRESULT hrErr)
     const size_t MESSAGE_LEN = 512;
     WCHAR message[MESSAGE_LEN];
 
-    if (SUCCEEDED(StringCchPrintf(message, MESSAGE_LEN, L"%s (HRESULT = 0x%X)", 
+    if (SUCCEEDED(StringCchPrintf(message, MESSAGE_LEN, L"%s (HRESULT = 0x%X)",
         pszErrorMessage, hrErr)))
     {
         MessageBox(hwnd, message, NULL, MB_OK | MB_ICONERROR);
@@ -397,7 +398,7 @@ INT_PTR CALLBACK OpenUrlDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
     switch (message)
     {
     case WM_INITDIALOG:
-        // The caller sends a pointer to an OpenUrlDialogInfo structure as the 
+        // The caller sends a pointer to an OpenUrlDialogInfo structure as the
         // lParam. This structure stores the URL.
         pUrl = (OpenUrlDialogInfo*)lParam;
         return (INT_PTR)TRUE;
@@ -408,9 +409,9 @@ INT_PTR CALLBACK OpenUrlDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         case IDOK:
             if (pUrl)
             {
-                // Get the URL from the edit box in the dialog. This function 
+                // Get the URL from the edit box in the dialog. This function
                 // allocates memory. The caller must call CoTaskMemAlloc.
-                if (SUCCEEDED(AllocGetWindowText(GetDlgItem(hDlg, IDC_EDIT_URL), 
+                if (SUCCEEDED(AllocGetWindowText(GetDlgItem(hDlg, IDC_EDIT_URL),
                     &pUrl->pszURL, &pUrl->cch)))
                 {
                     result = TRUE;
@@ -436,7 +437,7 @@ INT_PTR CALLBACK OpenUrlDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
 // hwnd:     Handle to the window.
 // pszText:  Receives a pointer to the string.
 // pcchLen:  Receives the length of the string, in characters, not including
-//           the terminating NULL character. 
+//           the terminating NULL character.
 
 HRESULT AllocGetWindowText(HWND hwnd, WCHAR **pszText, DWORD *pcchLen)
 {
@@ -445,15 +446,15 @@ HRESULT AllocGetWindowText(HWND hwnd, WCHAR **pszText, DWORD *pcchLen)
         return E_POINTER;
     }
 
-    *pszText = NULL;  
+    *pszText = NULL;
 
-    int cch = GetWindowTextLength(hwnd);  
-    if (cch < 0) 
+    int cch = GetWindowTextLength(hwnd);
+    if (cch < 0)
     {
-        return E_UNEXPECTED; 
+        return E_UNEXPECTED;
     }
 
-    PWSTR pszTmp = (PWSTR)CoTaskMemAlloc(sizeof(WCHAR) * (cch + 1)); 
+    PWSTR pszTmp = (PWSTR)CoTaskMemAlloc(sizeof(WCHAR) * (cch + 1));
     // Includes room for terminating NULL character
 
     if (!pszTmp)
@@ -467,7 +468,7 @@ HRESULT AllocGetWindowText(HWND hwnd, WCHAR **pszText, DWORD *pcchLen)
     }
     else
     {
-        int res = GetWindowText(hwnd, pszTmp, (cch + 1));  
+        int res = GetWindowText(hwnd, pszTmp, (cch + 1));
         // Size includes terminating null character.
 
         // GetWindowText returns 0 if (a) there is no text or (b) it failed.
@@ -483,7 +484,7 @@ HRESULT AllocGetWindowText(HWND hwnd, WCHAR **pszText, DWORD *pcchLen)
     *pszText = pszTmp;
 
     // Return the length NOT including the '\0'.
-    *pcchLen = static_cast<DWORD>(cch);  
+    *pcchLen = static_cast<DWORD>(cch);
 
      return S_OK;
 }
