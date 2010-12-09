@@ -66,7 +66,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="mfuuid.lib mfplat.lib libogg_static.lib libvorbis_static.lib"
-				OutputFile="$(OutDir)\webmmfvorbisdec.dll"
+				OutputFile="$(OutDir)\webmmfvorbisdec32.dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x86\debug&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x86\debug&quot;"
 				GenerateManifest="false"
@@ -143,7 +143,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="mfuuid.lib mfplat.lib libogg_static.lib libvorbis_static.lib"
-				OutputFile="$(OutDir)\webmmfvorbisdec.dll"
+				OutputFile="$(OutDir)\webmmfvorbisdec64.dll"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x64\debug&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x64\debug&quot;"
 				GenerateManifest="false"
 				ModuleDefinitionFile="webmmfvorbisdec.def"
@@ -219,7 +219,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="mfuuid.lib mfplat.lib libogg_static.lib libvorbis_static.lib"
-				OutputFile="$(OutDir)\webmmfvorbisdec.dll"
+				OutputFile="$(OutDir)\webmmfvorbisdec32.dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x86\release&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x86\release&quot;"
 				ModuleDefinitionFile="webmmfvorbisdec.def"
@@ -291,7 +291,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="mfuuid.lib mfplat.lib libogg_static.lib libvorbis_static.lib"
-				OutputFile="$(OutDir)\webmmfvorbisdec.dll"
+				OutputFile="$(OutDir)\webmmfvorbisdec64.dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)..\third_party\libogg\x64\release&quot;;&quot;$(SolutionDir)..\third_party\libvorbis\x64\release&quot;"
 				GenerateManifest="false"
