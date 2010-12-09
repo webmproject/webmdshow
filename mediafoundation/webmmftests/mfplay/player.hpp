@@ -5,7 +5,7 @@
 
 #include <new>
 #include <windows.h>
-#include <shobjidl.h> 
+#include <shobjidl.h>
 #include <shlwapi.h>
 #include <assert.h>
 #include <strsafe.h>
@@ -27,21 +27,23 @@ template <class T> void SafeRelease(T **ppT)
     }
 }
 
-const UINT WM_APP_PLAYER_EVENT = WM_APP + 1;   
+const UINT WM_APP_PLAYER_EVENT = WM_APP + 1;
 
     // WPARAM = IMFMediaEvent*, WPARAM = MediaEventType
 
 enum PlayerState
 {
     Closed = 0,     // No session.
-    Ready,          // Session was created, ready to open a file. 
+    Ready,          // Session was created, ready to open a file.
     OpenPending,    // Session is opening a file.
     Started,        // Session is playing a file.
     Paused,         // Session is paused.
-    Stopped,        // Session is stopped (ready to play). 
+    Stopped,        // Session is stopped (ready to play).
     Closing         // Application has closed the session, but is waiting for MESessionClosed.
 };
 
+
+class WebmMfUtil::MfPlayerCallback;
 class CPlayer : public IMFAsyncCallback
 {
 public:
@@ -72,16 +74,18 @@ public:
     // Video functionality
     HRESULT       Repaint();
     HRESULT       ResizeVideo(WORD width, WORD height);
-    
+
     BOOL          HasVideo() const { return (m_pVideoDisplay != NULL);  }
 
+    void          SetStateCallback(WebmMfUtil::MfPlayerCallback* ptr_callback);
+
 protected:
-    
+
     // Constructor is private. Use static CreateInstance method to instantiate.
     CPlayer(HWND hVideo, HWND hEvent);
 
     // Destructor is private. Caller should call Release.
-    virtual ~CPlayer(); 
+    virtual ~CPlayer();
 
     HRESULT Initialize();
     HRESULT CreateSession();
@@ -94,9 +98,9 @@ protected:
     virtual HRESULT OnNewPresentation(IMFMediaEvent *pEvent);
 
     // Override to handle additional session events.
-    virtual HRESULT OnSessionEvent(IMFMediaEvent*, MediaEventType) 
-    { 
-        return S_OK; 
+    virtual HRESULT OnSessionEvent(IMFMediaEvent*, MediaEventType)
+    {
+        return S_OK;
     }
 
 protected:
@@ -110,6 +114,11 @@ protected:
     HWND                    m_hwndEvent;        // App window to receive events.
     PlayerState             m_state;            // Current state of the media session.
     HANDLE                  m_hCloseEvent;      // Event to wait on while closing.
+
+private:
+    void StateCallback();
+    WebmMfUtil::MfPlayerCallback* m_ptr_callback;
 };
+
 
 #endif PLAYER_H

@@ -1,5 +1,10 @@
 // MSDN MF player sample
 
+#include <windows.h>
+#include <windowsx.h>
+
+#include "debugutil.hpp"
+#include "mfplayerutil.hpp"
 #include "Player.hpp"
 #include <assert.h>
 
@@ -29,7 +34,7 @@ HRESULT GetEventObject(IMFMediaEvent *pEvent, Q **ppObject)
 
 HRESULT CreateMediaSource(PCWSTR pszURL, IMFMediaSource **ppSource);
 
-HRESULT CreatePlaybackTopology(IMFMediaSource *pSource, 
+HRESULT CreatePlaybackTopology(IMFMediaSource *pSource,
     IMFPresentationDescriptor *pPD, HWND hVideoWnd,IMFTopology **ppTopology);
 
 //  Static class method to create the CPlayer object.
@@ -77,7 +82,7 @@ HRESULT CPlayer::Initialize()
     return hr;
 }
 
-CPlayer::CPlayer(HWND hVideo, HWND hEvent) : 
+CPlayer::CPlayer(HWND hVideo, HWND hEvent) :
     m_pSession(NULL),
     m_pSource(NULL),
     m_pVideoDisplay(NULL),
@@ -85,25 +90,26 @@ CPlayer::CPlayer(HWND hVideo, HWND hEvent) :
     m_hwndEvent(hEvent),
     m_state(Closed),
     m_hCloseEvent(NULL),
-    m_nRefCount(1)
+    m_nRefCount(1),
+    m_ptr_callback(NULL)
 {
 }
 
 CPlayer::~CPlayer()
 {
-    assert(m_pSession == NULL);  
+    assert(m_pSession == NULL);
     // If FALSE, the app did not call Shutdown().
 
     // When CPlayer calls IMediaEventGenerator::BeginGetEvent on the
-    // media session, it causes the media session to hold a reference 
-    // count on the CPlayer. 
-    
-    // This creates a circular reference count between CPlayer and the 
-    // media session. Calling Shutdown breaks the circular reference 
+    // media session, it causes the media session to hold a reference
+    // count on the CPlayer.
+
+    // This creates a circular reference count between CPlayer and the
+    // media session. Calling Shutdown breaks the circular reference
     // count.
 
-    // If CreateInstance fails, the application will not call 
-    // Shutdown. To handle that case, call Shutdown in the destructor. 
+    // If CreateInstance fails, the application will not call
+    // Shutdown. To handle that case, call Shutdown in the destructor.
 
     Shutdown();
 }
@@ -112,7 +118,7 @@ CPlayer::~CPlayer()
 
 HRESULT CPlayer::QueryInterface(REFIID riid, void** ppv)
 {
-    static const QITAB qit[] = 
+    static const QITAB qit[] =
     {
         QITABENT(CPlayer, IMFAsyncCallback),
         { 0 }
@@ -183,14 +189,15 @@ HRESULT CPlayer::OpenURL(const WCHAR *sURL)
     }
 
     m_state = OpenPending;
-
-    // If SetTopology succeeds, the media session will queue an 
+    StateCallback();
+    // If SetTopology succeeds, the media session will queue an
     // MESessionTopologySet event.
 
 done:
     if (FAILED(hr))
     {
         m_state = Closed;
+        StateCallback();
     }
 
     SafeRelease(&pSourcePD);
@@ -199,7 +206,7 @@ done:
 }
 
 //  Pause playback.
-HRESULT CPlayer::Pause()    
+HRESULT CPlayer::Pause()
 {
     if (m_state != Started)
     {
@@ -214,6 +221,7 @@ HRESULT CPlayer::Pause()
     if (SUCCEEDED(hr))
     {
         m_state = Paused;
+        StateCallback();
     }
 
     return hr;
@@ -235,6 +243,7 @@ HRESULT CPlayer::Stop()
     if (SUCCEEDED(hr))
     {
         m_state = Stopped;
+        StateCallback();
     }
     return hr;
 }
@@ -289,7 +298,7 @@ HRESULT CPlayer::Invoke(IMFAsyncResult *pResult)
         goto done;
     }
 
-    // Get the event type. 
+    // Get the event type.
     hr = pEvent->GetType(&meType);
     if (FAILED(hr))
     {
@@ -298,8 +307,8 @@ HRESULT CPlayer::Invoke(IMFAsyncResult *pResult)
 
     if (meType == MESessionClosed)
     {
-        // The session was closed. 
-        // The application is waiting on the m_hCloseEvent event handle. 
+        // The session was closed.
+        // The application is waiting on the m_hCloseEvent event handle.
         SetEvent(m_hCloseEvent);
     }
     else
@@ -312,20 +321,20 @@ HRESULT CPlayer::Invoke(IMFAsyncResult *pResult)
         }
     }
 
-    // Check the application state. 
-        
-    // If a call to IMFMediaSession::Close is pending, it means the 
-    // application is waiting on the m_hCloseEvent event and
-    // the application's message loop is blocked. 
+    // Check the application state.
 
-    // Otherwise, post a private window message to the application. 
+    // If a call to IMFMediaSession::Close is pending, it means the
+    // application is waiting on the m_hCloseEvent event and
+    // the application's message loop is blocked.
+
+    // Otherwise, post a private window message to the application.
 
     if (m_state != Closing)
     {
         // Leave a reference count on the event.
         pEvent->AddRef();
 
-        PostMessage(m_hwndEvent, WM_APP_PLAYER_EVENT, 
+        PostMessage(m_hwndEvent, WM_APP_PLAYER_EVENT,
             (WPARAM)pEvent, (LPARAM)meType);
     }
 
@@ -336,8 +345,8 @@ done:
 
 HRESULT CPlayer::HandleEvent(UINT_PTR pEventPtr)
 {
-    HRESULT hrStatus = S_OK;            
-    MediaEventType meType = MEUnknown;  
+    HRESULT hrStatus = S_OK;
+    MediaEventType meType = MEUnknown;
 
     IMFMediaEvent *pEvent = (IMFMediaEvent*)pEventPtr;
 
@@ -353,12 +362,12 @@ HRESULT CPlayer::HandleEvent(UINT_PTR pEventPtr)
         goto done;
     }
 
-    // Get the event status. If the operation that triggered the event 
+    // Get the event status. If the operation that triggered the event
     // did not succeed, the status is a failure code.
     hr = pEvent->GetStatus(&hrStatus);
 
     // Check if the async operation succeeded.
-    if (SUCCEEDED(hr) && FAILED(hrStatus)) 
+    if (SUCCEEDED(hr) && FAILED(hrStatus))
     {
         hr = hrStatus;
     }
@@ -413,7 +422,7 @@ HRESULT CPlayer::Shutdown()
 
 HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
 {
-    UINT32 status; 
+    UINT32 status;
 
     HRESULT hr = pEvent->GetUINT32(MF_EVENT_TOPOLOGY_STATUS, &status);
     if (SUCCEEDED(hr) && (status == MF_TOPOSTATUS_READY))
@@ -423,8 +432,9 @@ HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
         // Get the IMFVideoDisplayControl interface from EVR. This call is
         // expected to fail if the media file does not have a video stream.
 
-        (void)MFGetService(m_pSession, MR_VIDEO_RENDER_SERVICE, 
+        (void)MFGetService(m_pSession, MR_VIDEO_RENDER_SERVICE,
             IID_PPV_ARGS(&m_pVideoDisplay));
+
 
         hr = StartPlayback();
     }
@@ -437,13 +447,14 @@ HRESULT CPlayer::OnPresentationEnded(IMFMediaEvent* /*pEvent*/)
 {
     // The session puts itself into the stopped state automatically.
     m_state = Stopped;
+    StateCallback();
     return S_OK;
 }
 
 //  Handler for MENewPresentation event.
 //
-//  This event is sent if the media source has a new presentation, which 
-//  requires a new topology. 
+//  This event is sent if the media source has a new presentation, which
+//  requires a new topology.
 
 HRESULT CPlayer::OnNewPresentation(IMFMediaEvent *pEvent)
 {
@@ -472,6 +483,7 @@ HRESULT CPlayer::OnNewPresentation(IMFMediaEvent *pEvent)
     }
 
     m_state = OpenPending;
+    StateCallback();
 
 done:
     SafeRelease(&pTopology);
@@ -506,18 +518,19 @@ HRESULT CPlayer::CreateSession()
     }
 
     m_state = Ready;
+    StateCallback();
 
 done:
     return hr;
 }
 
-//  Close the media session. 
+//  Close the media session.
 HRESULT CPlayer::CloseSession()
 {
-    //  The IMFMediaSession::Close method is asynchronous, but the 
+    //  The IMFMediaSession::Close method is asynchronous, but the
     //  CPlayer::CloseSession method waits on the MESessionClosed event.
-    //  
-    //  MESessionClosed is guaranteed to be the last event that the 
+    //
+    //  MESessionClosed is guaranteed to be the last event that the
     //  media session fires.
 
     HRESULT hr = S_OK;
@@ -530,7 +543,8 @@ HRESULT CPlayer::CloseSession()
         DWORD dwWaitResult = 0;
 
         m_state = Closing;
-           
+        StateCallback();
+
         hr = m_pSession->Close();
         // Wait for the close operation to complete
         if (SUCCEEDED(hr))
@@ -562,10 +576,11 @@ HRESULT CPlayer::CloseSession()
     SafeRelease(&m_pSource);
     SafeRelease(&m_pSession);
     m_state = Closed;
+    StateCallback();
     return hr;
 }
 
-//  Start playback from the current position. 
+//  Start playback from the current position.
 HRESULT CPlayer::StartPlayback()
 {
     assert(m_pSession != NULL);
@@ -581,6 +596,7 @@ HRESULT CPlayer::StartPlayback()
         // fails later, we'll get an MESessionStarted event with
         // an error code, and we will update our state then.
         m_state = Started;
+        StateCallback();
     }
     PropVariantClear(&varStart);
     return hr;
@@ -598,6 +614,17 @@ HRESULT CPlayer::Play()
         return E_UNEXPECTED;
     }
     return StartPlayback();
+}
+
+void CPlayer::SetStateCallback(WebmMfUtil::MfPlayerCallback* ptr_callback)
+{
+    m_ptr_callback = ptr_callback;
+}
+
+void CPlayer::StateCallback()
+{
+    if (m_ptr_callback)
+        m_ptr_callback->OnPlayerStateChange(m_state);
 }
 
 
@@ -618,16 +645,16 @@ HRESULT CreateMediaSource(PCWSTR sURL, IMFMediaSource **ppSource)
 
     // Use the source resolver to create the media source.
 
-    // Note: For simplicity this sample uses the synchronous method to create 
+    // Note: For simplicity this sample uses the synchronous method to create
     // the media source. However, creating a media source can take a noticeable
-    // amount of time, especially for a network source. For a more responsive 
+    // amount of time, especially for a network source. For a more responsive
     // UI, use the asynchronous BeginCreateObjectFromURL method.
 
     hr = pSourceResolver->CreateObjectFromURL(
         sURL,                       // URL of the source.
         MF_RESOLUTION_MEDIASOURCE,  // Create a source object.
         NULL,                       // Optional property store.
-        &ObjectType,        // Receives the created object type. 
+        &ObjectType,        // Receives the created object type.
         &pSource            // Receives a pointer to the media source.
         );
     if (FAILED(hr))
@@ -669,7 +696,7 @@ HRESULT CreateMediaSinkActivate(
     {
         goto done;
     }
- 
+
     // Create an IMFActivate object for the renderer, based on the media type.
     if (MFMediaType_Audio == guidMajorType)
     {
@@ -683,7 +710,7 @@ HRESULT CreateMediaSinkActivate(
     }
     else
     {
-        // Unknown stream type. 
+        // Unknown stream type.
         hr = E_FAIL;
         // Optionally, you could deselect this stream instead of failing.
     }
@@ -691,7 +718,7 @@ HRESULT CreateMediaSinkActivate(
     {
         goto done;
     }
- 
+
     // Return IMFActivate pointer to caller.
     *ppActivate = pActivate;
     (*ppActivate)->AddRef();
@@ -737,7 +764,7 @@ HRESULT AddSourceNode(
     {
         goto done;
     }
-    
+
     // Add the node to the topology.
     hr = pTopology->AddNode(pNode);
     if (FAILED(hr))
@@ -811,8 +838,8 @@ done:
 //
 //  For each stream, this function does the following:
 //
-//    1. Creates a source node associated with the stream. 
-//    2. Creates an output node for the renderer. 
+//    1. Creates a source node associated with the stream.
+//    2. Creates an output node for the renderer.
 //    3. Connects the two nodes.
 //
 //  The media session will add any decoders that are needed.
@@ -863,7 +890,7 @@ HRESULT AddBranchToPartialTopology(
         // Connect the source node to the output node.
         hr = pSourceNode->ConnectOutput(0, pOutputNode, 0);
     }
-    // else: If not selected, don't add the branch. 
+    // else: If not selected, don't add the branch.
 
 done:
     SafeRelease(&pSD);

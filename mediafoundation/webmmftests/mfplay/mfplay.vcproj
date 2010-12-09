@@ -348,6 +348,22 @@
 				RelativePath="..\..\..\common\debugutil.hpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\..\common\eventutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\eventutil.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\mfplayerutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\mfplayerutil.hpp"
+				>
+			</File>
 		</Filter>
 		<File
 			RelativePath=".\player.cpp"
@@ -363,6 +379,10 @@
 		</File>
 		<File
 			RelativePath=".\player_tests.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\player_tests.hpp"
 			>
 		</File>
 		<File

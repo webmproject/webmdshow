@@ -1,4 +1,9 @@
+#include <windows.h>
+#include <windowsx.h>
+
+#include "debugutil.hpp"
 #include "gtest/gtest.h"
+#include "mfplayerutil.hpp"
 #include "Player.hpp"
 
 PCWSTR szTitle = L"BasicPlayback";
@@ -92,7 +97,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 
     // Create the application window.
     hwnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInst, NULL);
+        CW_USEDEFAULT, 320, CW_USEDEFAULT, 240, NULL, NULL, hInst, NULL);
 
     if (hwnd == 0)
     {
