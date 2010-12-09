@@ -41,10 +41,12 @@ HRESULT EventWaiter::Create()
 
 HRESULT EventWaiter::Wait()
 {
-    DWORD wr = MsgWaitForMultipleObjects(1, &event_handle_, TRUE, INFINITE,
-                                         QS_ALLEVENTS);
-    HRESULT hr = S_OK;
-    if (wr != WAIT_OBJECT_0)
+    DWORD wr;// = MsgWaitForMultipleObjects(1, &event_handle_, TRUE, INFINITE,
+             //                            QS_ALLEVENTS);
+
+    HRESULT hr = CoWaitForMultipleHandles(COWAIT_WAITALL, INFINITE, 1,
+                                          &event_handle_, &wr);
+    if (wr != WAIT_OBJECT_0 || FAILED(hr))
     {
         DBGLOG(L"event wait failed" << hr);
         hr = E_FAIL;
