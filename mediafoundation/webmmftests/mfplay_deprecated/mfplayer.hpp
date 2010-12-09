@@ -5,20 +5,6 @@ namespace WebmMfUtil {
 
 class MfPlayer;
 
-class EventWaiter
-{
-public:
-    EventWaiter();
-    ~EventWaiter();
-    HRESULT Create();
-    HRESULT Set();
-    HRESULT Wait();
-private:
-    HANDLE event_handle_;
-
-    DISALLOW_COPY_AND_ASSIGN(EventWaiter);
-};
-
 class MfPlayerCallback : public IMFPMediaPlayerCallback
 {
 public:
