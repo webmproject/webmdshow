@@ -27,4 +27,8 @@ private:
 
 };
 
+void start_test_thread();
+
+DWORD WINAPI test_thread(LPVOID ptr_thread_data);
+
 #endif // __MEDIAFOUNDATION_WEBMMFTESTS_MFPLAY_PLAYER_TESTS_HPP__

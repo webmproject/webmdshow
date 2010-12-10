@@ -17,10 +17,31 @@
 #include "mfplayerutil.hpp"
 #include "player.hpp"
 #include "player_tests.hpp"
+#include "threadutil.hpp"
 
-// TODO(tomfinegan): this is just pure nasty... fix me!  It sucks that at
-//                   present we're going to share the player between tests!
+// TODO(tomfinegan): this is just pure nasty... fix me!
 extern CPlayer* g_pPlayer;
+
+// TODO(tomfinegan): destroy player between tests
+
+void start_test_thread()
+{
+    WebmMfUtil::SimpleThread simple_test_thread;
+    simple_test_thread.Run(test_thread, NULL);
+}
+
+DWORD WINAPI test_thread(LPVOID ptr_thread_data)
+{
+    ptr_thread_data;
+    int argc = 1;
+    wchar_t* argv = L"mfplay_test_thread";
+
+    // TODO(tomfinegan): open a console window for test output
+
+    testing::InitGoogleTest(&argc, &argv);
+    RUN_ALL_TESTS();
+    return 0;
+}
 
 PlayerController::PlayerController():
   ptr_player_(NULL),
@@ -50,6 +71,12 @@ HRESULT PlayerController::Play(CPlayer* player, std::wstring file_to_play)
     hr = player_state_change_waiter_.Create();
     if (FAILED(hr))
         return E_OUTOFMEMORY;
+
+
+    // TODO(tomfinegan): make player control thread safe-- control CPlayer
+    //                   with PostMessage instead of doing evil things with
+    //                   a global pointer to an object created in another
+    //                   thread that's doing things asynchronously.
 
     ptr_player_ = player;
     ptr_player_->SetStateCallback(ptr_player_callback_);

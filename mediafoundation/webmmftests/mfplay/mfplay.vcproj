@@ -364,6 +364,14 @@
 				RelativePath="..\..\..\common\mfplayerutil.hpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\..\common\threadutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\threadutil.hpp"
+				>
+			</File>
 		</Filter>
 		<File
 			RelativePath=".\player.cpp"
