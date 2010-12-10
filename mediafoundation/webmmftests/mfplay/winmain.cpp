@@ -13,7 +13,8 @@ PCWSTR szWindowClass = L"MFBASICPLAYBACK";
 
 HINSTANCE   g_hInstance;                        // current instance
 BOOL        g_bRepaintClient = TRUE;            // Repaint the application client area?
-CPlayer     *g_pPlayer = NULL;                  // Global player object.
+
+//CPlayer     *g_pPlayer = NULL;                  // Global player object.
 
 // Note: After WM_CREATE is processed, g_pPlayer remains valid until the
 // window is destroyed.
@@ -32,8 +33,8 @@ void                OnFileOpen(HWND hwnd);
 void                OnOpenURL(HWND hwnd);
 void                OnPlayerEvent(HWND hwnd, WPARAM pUnkPtr);
 void                OnPaint(HWND hwnd);
-void                OnResize(WORD width, WORD height);
-void                OnKeyPress(WPARAM key);
+void                OnResize(HWND hwnd, WORD width, WORD height);
+void                OnKeyPress(HWND hwnd, WPARAM key);
 
 // OpenUrlDialogInfo: Contains data passed to the "Open URL" dialog proc.
 struct OpenUrlDialogInfo
@@ -54,7 +55,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
     if (!InitInstance(hInstance, nCmdShow))
     {
         NotifyError(NULL, L"Could not initialize the application.",
-            HRESULT_FROM_WIN32(GetLastError()));
+                    HRESULT_FROM_WIN32(GetLastError()));
         return FALSE;
     }
 
@@ -65,12 +66,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
         DispatchMessage(&msg);
     }
 
-    // Clean up.
-    if (g_pPlayer)
-    {
-        g_pPlayer->Shutdown();
-        SafeRelease(&g_pPlayer);
-    }
     return 0;
 }
 
@@ -145,7 +140,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_SIZE:
-        OnResize(LOWORD(lParam), HIWORD(lParam));
+        OnResize(hwnd, LOWORD(lParam), HIWORD(lParam));
         break;
 
     case WM_ERASEBKGND:
@@ -157,7 +152,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_CHAR:
-        OnKeyPress(wParam);
+        OnKeyPress(hwnd, wParam);
         break;
 
     case WM_APP_PLAYER_EVENT:
@@ -212,7 +207,12 @@ void OnFileOpen(HWND hwnd)
     }
 
     // Display the file name to the user.
-    hr = g_pPlayer->OpenURL(pszFilePath);
+    CPlayer* ptr_player = get_player(hwnd);
+    if (!ptr_player)
+    {
+        goto done;
+    }
+    hr = ptr_player->OpenURL(pszFilePath);
     if (SUCCEEDED(hr))
     {
         UpdateUI(hwnd, OpenPending);
@@ -246,15 +246,19 @@ void OnOpenURL(HWND hwnd)
         OpenUrlDialogProc, (LPARAM)&url))
     {
         // Open the file with the playback object.
-        hr = g_pPlayer->OpenURL(url.pszURL);
-        if (SUCCEEDED(hr))
+        CPlayer* ptr_player = get_player(hwnd);
+        if (ptr_player)
         {
-            UpdateUI(hwnd, OpenPending);
-        }
-        else
-        {
-            NotifyError(hwnd, L"Could not open this URL.", hr);
-            UpdateUI(hwnd, Closed);
+            hr = ptr_player->OpenURL(url.pszURL);
+            if (SUCCEEDED(hr))
+            {
+                UpdateUI(hwnd, OpenPending);
+            }
+            else
+            {
+                NotifyError(hwnd, L"Could not open this URL.", hr);
+                UpdateUI(hwnd, Closed);
+            }
         }
     }
 
@@ -265,12 +269,16 @@ void OnOpenURL(HWND hwnd)
 //  Handler for WM_CREATE message.
 LRESULT OnCreateWindow(HWND hwnd)
 {
+    CPlayer* ptr_player = NULL;
+
     // Initialize the player object.
-    HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &g_pPlayer);
+    HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &ptr_player);
     if (SUCCEEDED(hr))
     {
+        LONG_PTR ptr_userdata = reinterpret_cast<LONG_PTR>(ptr_player);
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, ptr_userdata);
         UpdateUI(hwnd, Closed);
-        ::start_test_thread();
+        start_webmmf_test_thread(hwnd);
         return 0;   // Success.
     }
     else
@@ -286,10 +294,11 @@ void OnPaint(HWND hwnd)
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(hwnd, &ps);
 
-    if (g_pPlayer && g_pPlayer->HasVideo())
+    CPlayer* ptr_player = get_player(hwnd);
+    if (ptr_player && ptr_player->HasVideo())
     {
         // Video is playing. Ask the player to repaint.
-        g_pPlayer->Repaint();
+        ptr_player->Repaint();
     }
     else
     {
@@ -302,43 +311,52 @@ void OnPaint(HWND hwnd)
 }
 
 //  Handler for WM_SIZE messages.
-void OnResize(WORD width, WORD height)
+void OnResize(HWND hwnd, WORD width, WORD height)
 {
-    if (g_pPlayer)
+    CPlayer* ptr_player = get_player(hwnd);
+    if (ptr_player)
     {
-        g_pPlayer->ResizeVideo(width, height);
+        ptr_player->ResizeVideo(width, height);
     }
 }
 
 
 // Handler for WM_CHAR messages.
-void OnKeyPress(WPARAM key)
+void OnKeyPress(HWND hwnd, WPARAM key)
 {
-    switch (key)
+    CPlayer* ptr_player = get_player(hwnd);
+    if (ptr_player)
     {
-    // Space key toggles between running and paused
-    case VK_SPACE:
-        if (g_pPlayer->GetState() == Started)
+        switch (key)
         {
-            g_pPlayer->Pause();
+        // Space key toggles between running and paused
+        case VK_SPACE:
+            if (ptr_player->GetState() == Started)
+            {
+                ptr_player->Pause();
+            }
+            else if (ptr_player->GetState() == Paused)
+            {
+                ptr_player->Play();
+            }
+            break;
         }
-        else if (g_pPlayer->GetState() == Paused)
-        {
-            g_pPlayer->Play();
-        }
-        break;
     }
 }
 
 // Handler for Media Session events.
 void OnPlayerEvent(HWND hwnd, WPARAM pUnkPtr)
 {
-    HRESULT hr = g_pPlayer->HandleEvent(pUnkPtr);
-    if (FAILED(hr))
+    CPlayer* ptr_player = get_player(hwnd);
+    if (ptr_player)
     {
-        NotifyError(hwnd, L"An error occurred.", hr);
+        HRESULT hr = ptr_player->HandleEvent(pUnkPtr);
+        if (FAILED(hr))
+        {
+            NotifyError(hwnd, L"An error occurred.", hr);
+        }
+        UpdateUI(hwnd, ptr_player->GetState());
     }
-    UpdateUI(hwnd, g_pPlayer->GetState());
 }
 
 
@@ -349,7 +367,9 @@ void UpdateUI(HWND hwnd, PlayerState state)
     BOOL bWaiting = FALSE;
     BOOL bPlayback = FALSE;
 
-    assert(g_pPlayer != NULL);
+    CPlayer* ptr_player = get_player(hwnd);
+
+    assert(ptr_player != NULL);
 
     switch (state)
     {
@@ -372,7 +392,7 @@ void UpdateUI(HWND hwnd, PlayerState state)
     EnableMenuItem(hMenu, ID_FILE_OPENFILE, uEnable);
     EnableMenuItem(hMenu, ID_FILE_OPENURL, uEnable);
 
-    if (bPlayback && g_pPlayer->HasVideo())
+    if (bPlayback && ptr_player && ptr_player->HasVideo())
     {
         g_bRepaintClient = FALSE;
     }

@@ -15,20 +15,23 @@ public:
     PlayerController();
     ~PlayerController();
 
-    HRESULT Play(CPlayer* player, std::wstring file_to_play);
+    HRESULT Create(HWND hwnd_player);
+    HRESULT Destroy();
+    HRESULT Play(std::wstring file_to_play);
     HRESULT Pause();
     HRESULT Stop();
 private:
     static void OnPlayerStateChange(UINT_PTR ptr_this, int state);
-    CPlayer* ptr_player_;
+    HWND hwnd_player_;
     int waiting_for_state_;
     WebmMfUtil::MfPlayerCallback* ptr_player_callback_;
     WebmMfUtil::EventWaiter player_state_change_waiter_;
-
 };
 
-void start_test_thread();
+void start_webmmf_test_thread(HWND hwnd_player);
 
 DWORD WINAPI test_thread(LPVOID ptr_thread_data);
+
+CPlayer* get_player(HWND hwnd);
 
 #endif // __MEDIAFOUNDATION_WEBMMFTESTS_MFPLAY_PLAYER_TESTS_HPP__

@@ -19,15 +19,51 @@
 #include "player_tests.hpp"
 #include "threadutil.hpp"
 
-// TODO(tomfinegan): this is just pure nasty... fix me!
-extern CPlayer* g_pPlayer;
-
 // TODO(tomfinegan): destroy player between tests
 
-void start_test_thread()
+namespace
 {
+    // TODO(tomfinegan): get rid of this global window handle... all it will
+    //                   take to get rid of it is learning how to pass data to
+    //                   tests.
+    HWND g_hwnd_player = NULL;
+}
+
+CPlayer* get_player(HWND hwnd)
+{
+    CPlayer* ptr_player = NULL;
+    LONG_PTR ptr_userdata = GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (ptr_userdata)
+    {
+        ptr_player = reinterpret_cast<CPlayer*>(ptr_userdata);
+    }
+    return ptr_player;
+}
+
+HRESULT destroy_player(HWND hwnd)
+{
+    if (!hwnd)
+        return E_INVALIDARG;
+
+    CPlayer* ptr_player = get_player(hwnd);
+
+    HRESULT hr = E_FAIL;
+    if (ptr_player)
+    {
+        ptr_player->Shutdown();
+        ptr_player->Release();
+        hr = S_OK;
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, NULL);
+    }
+    return hr;
+}
+
+void start_webmmf_test_thread(HWND hwnd_player)
+{
+    g_hwnd_player = hwnd_player;
     WebmMfUtil::SimpleThread simple_test_thread;
-    simple_test_thread.Run(test_thread, NULL);
+    LPVOID ptr_player_hwnd = reinterpret_cast<LPVOID>(hwnd_player);
+    simple_test_thread.Run(test_thread, ptr_player_hwnd);
 }
 
 DWORD WINAPI test_thread(LPVOID ptr_thread_data)
@@ -44,7 +80,7 @@ DWORD WINAPI test_thread(LPVOID ptr_thread_data)
 }
 
 PlayerController::PlayerController():
-  ptr_player_(NULL),
+  hwnd_player_(NULL),
   waiting_for_state_(0)
 {
 
@@ -54,8 +90,19 @@ PlayerController::~PlayerController()
 {
 }
 
-HRESULT PlayerController::Play(CPlayer* player, std::wstring file_to_play)
+HRESULT PlayerController::Create(HWND hwnd_player)
 {
+    if (!hwnd_player)
+        return E_INVALIDARG;
+
+    hwnd_player_ = hwnd_player;
+    return S_OK;
+}
+
+HRESULT PlayerController::Play(std::wstring file_to_play)
+{
+
+    CPlayer* player = get_player(hwnd_player_);
 
     if (!player || file_to_play.length() == 0)
         return E_INVALIDARG;
@@ -78,12 +125,11 @@ HRESULT PlayerController::Play(CPlayer* player, std::wstring file_to_play)
     //                   a global pointer to an object created in another
     //                   thread that's doing things asynchronously.
 
-    ptr_player_ = player;
-    ptr_player_->SetStateCallback(ptr_player_callback_);
+    player->SetStateCallback(ptr_player_callback_);
 
     waiting_for_state_ = OpenPending;
 
-    hr = ptr_player_->OpenURL(file_to_play.c_str());
+    hr = player->OpenURL(file_to_play.c_str());
 
     if (SUCCEEDED(hr))
     {
@@ -118,8 +164,9 @@ void PlayerController::OnPlayerStateChange(UINT_PTR ptr_this, int state)
 TEST(WebmMfPlayTest, PlayFile)
 {
     PlayerController player_controller;
+    player_controller.Create(g_hwnd_player);
     std::wstring file = L"D:\\src\\media\\webm\\fg.webm";
 
-    HRESULT hr_play = player_controller.Play(g_pPlayer, file);
+    HRESULT hr_play = player_controller.Play(file);
     ASSERT_TRUE(SUCCEEDED(hr_play));
 }
