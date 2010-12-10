@@ -61,9 +61,15 @@ HRESULT destroy_player(HWND hwnd)
 void start_webmmf_test_thread(HWND hwnd_player)
 {
     g_hwnd_player = hwnd_player;
-    WebmMfUtil::SimpleThread simple_test_thread;
-    LPVOID ptr_player_hwnd = reinterpret_cast<LPVOID>(hwnd_player);
-    simple_test_thread.Run(test_thread, ptr_player_hwnd);
+    using WebmMfUtil::SimpleThread;
+    SimpleThread* ptr_simple_thread = NULL;
+    HRESULT hr = SimpleThread::Create(&ptr_simple_thread);
+
+    if (SUCCEEDED(hr))
+    {
+        LPVOID ptr_player_hwnd = reinterpret_cast<LPVOID>(hwnd_player);
+        ptr_simple_thread->Run(test_thread, ptr_player_hwnd);
+    }
 }
 
 DWORD WINAPI test_thread(LPVOID ptr_thread_data)

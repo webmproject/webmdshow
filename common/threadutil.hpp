@@ -15,15 +15,19 @@ namespace WebmMfUtil
 class SimpleThread
 {
 public:
-    SimpleThread();
     ~SimpleThread();
+    static HRESULT Create(SimpleThread** ptr_instance);
     HRESULT Run(LPTHREAD_START_ROUTINE ptr_thread_func, LPVOID ptr_data);
+    UINT AddRef();
+    UINT Release();
 
 private:
-    static DWORD WINAPI ThreadWrapper_(LPVOID ptr_this);
-  
-    DWORD thread_id_;
-    HANDLE thread_handle_;
+    SimpleThread();
+    static UINT WINAPI ThreadWrapper_(LPVOID ptr_this);
+
+    UINT ref_count_;
+    UINT thread_id_;
+    UINT_PTR ptr_thread_;
     LPTHREAD_START_ROUTINE ptr_thread_func_;
     LPVOID ptr_user_thread_data_;
 
