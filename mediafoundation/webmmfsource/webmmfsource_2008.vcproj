@@ -370,6 +370,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\common\versionhandling.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\versionhandling.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\common\vorbistypes.cpp"
 				>
 			</File>

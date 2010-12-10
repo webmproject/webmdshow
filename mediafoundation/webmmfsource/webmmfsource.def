@@ -3,3 +3,4 @@ EXPORTS
     DllRegisterServer private
     DllUnregisterServer private
     DllCanUnloadNow private
+    DllGetVersion private

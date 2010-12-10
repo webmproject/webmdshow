@@ -8,6 +8,8 @@
 ;
 
 ;http://nsis.sourceforge.net/Simple_tutorials
+;http://www.fredshack.com/docs/nsis.html
+;http://nsis.sourceforge.net/Docs/Contents.html
 
 ;WebM Media Foundation components installer.
 
@@ -35,6 +37,17 @@
 
   ShowInstDetails show
   ShowUnInstDetails show
+
+  ; Version Information
+  ;;http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.3
+  ;;http://stackoverflow.com/questions/4244497/changing-nsis-installer-properties
+
+  ;VIProductVersion $0
+  ;VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "WebM Media Foundation Components"
+  ;VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Webm Project"
+  ;VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" $0
+  ;VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" $0
+  ;VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "Installer for Webm Media Foundation components"
 
 ;--------------------------------
 ;Interface Settings
@@ -89,9 +102,30 @@ Section "Install" SecInstall
   ; Create Add/Remove programs keys
   ;;http://nsis.sourceforge.net/Add_uninstall_information_to_Add/Remove_Programs
 
-  WriteRegDWORD HKCU "${WMMF_UNINSTALL_KEY}" "VersionMajor" 0
-  WriteRegDWORD HKCU "${WMMF_UNINSTALL_KEY}" "VersionMinor" 9
-  WriteRegStr HKCU "${WMMF_UNINSTALL_KEY}" "DisplayVersion" "0.9.x"
+  ; Description of GetDllVersion
+  ;;http://nsis.sourceforge.net/GetDllVersion_Command_Explained
+
+  ${If} ${RunningX64}
+     StrCpy $0 "$COMMONFILES64\WebM Project\webmmf\webmmfsource64.dll"
+  ${Else}
+     StrCpy $0 "$COMMONFILES32\WebM Project\webmmf\webmmfsource32.dll"
+  ${EndIf}
+
+  GetDllVersion $0 $R0 $R1  ; $R0 = major | minor  $R1 = release | build
+
+  IntOp $R2 $R0 >> 16
+  IntOp $R2 $R2 & 0x0000FFFF  ; $R2 = major
+  IntOp $R3 $R0 & 0x0000FFFF  ; $R3 = minor
+  IntOp $R4 $R1 >> 16
+  IntOp $R4 $R4 & 0x0000FFFF  ; $R4 = release
+  IntOp $R5 $R1 & 0x0000FFFF  ; $R5 = build
+
+  WriteRegDWORD HKCU "${WMMF_UNINSTALL_KEY}" "VersionMajor" $R2
+  WriteRegDWORD HKCU "${WMMF_UNINSTALL_KEY}" "VersionMinor" $R3
+
+  StrCpy $0 "$R2.$R3.$R4.$R5"
+  WriteRegStr HKCU "${WMMF_UNINSTALL_KEY}" "DisplayVersion" $0
+
   WriteRegStr HKCU "${WMMF_UNINSTALL_KEY}" "DisplayName" "WebM Media Foundation Components"
   WriteRegStr HKCU "${WMMF_UNINSTALL_KEY}" "UninstallString" "$OUTDIR\uninstall_webmmf.exe"
   WriteRegDWORD HKCU "${WMMF_UNINSTALL_KEY}" "NoModify" 0x00000001
@@ -229,7 +263,7 @@ Section "Uninstall" SecUninstall
     Delete "$COMMONFILES64\Webm Project\webmmf\uninstall_webmmf.exe"
     RMDir /r "$COMMONFILES64\Webm Project\webmmf"
 
-  ${Else}     
+  ${Else}
 
     Delete "$COMMONFILES32\Webm Project\webmmf\uninstall_webmmf.exe"
 

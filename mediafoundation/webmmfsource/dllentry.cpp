@@ -9,9 +9,10 @@
 #include "cfactory.hpp"
 #include "comreg.hpp"
 #include "webmtypes.hpp"
+#include "versionhandling.hpp"
 #include <cassert>
 #include <comdef.h>
-//#include <uuids.h>
+#include <shlwapi.h>
 
 HMODULE g_hModule;
 static ULONG s_cLock;
@@ -191,6 +192,47 @@ STDAPI DllRegisterServer()
 
     //RegisterSource(filename);
     RegisterHandler(filename);
+
+    return S_OK;
+}
+
+
+STDAPI DllGetVersion(DLLVERSIONINFO2* pdvi)
+{
+    if (pdvi == 0)
+        return E_POINTER;
+
+    DLLVERSIONINFO2& dvi2 = *pdvi;
+    DLLVERSIONINFO& dvi1 = dvi2.info1;
+
+    if (dvi1.cbSize < sizeof(DLLVERSIONINFO))
+        return E_INVALIDARG;
+
+    std::wstring filename_;
+
+    const HRESULT hr = ComReg::ComRegGetModuleFileName(g_hModule, filename_);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (filename_.empty())
+        return E_FAIL;
+
+    const wchar_t* const filename = filename_.c_str();
+
+    WORD a, b, c, d;
+    VersionHandling::GetVersion(filename, a, b, c, d);
+
+    dvi1.dwMajorVersion = a;
+    dvi1.dwMinorVersion = b;
+    dvi1.dwBuildNumber = c;
+    dvi1.dwPlatformID = /* DLLVER_PLATFORM_NT */ d;
+
+    if (dvi1.cbSize < sizeof(DLLVERSIONINFO2))
+        return S_OK;
+
+    dvi2.dwFlags = 0;
+    dvi2.ullVersion = MAKEDLLVERULL(a, b, c, /* 0 */ d);
 
     return S_OK;
 }
