@@ -12,6 +12,7 @@
 #include <string>
 
 #include "debugutil.hpp"
+#include "consoleutil.hpp"
 #include "eventutil.hpp"
 #include "gtest/gtest.h"
 #include "mfplayerutil.hpp"
@@ -79,6 +80,11 @@ DWORD WINAPI test_thread(LPVOID ptr_thread_data)
     wchar_t* argv = L"mfplay_test_thread";
 
     // TODO(tomfinegan): open a console window for test output
+
+    WebmMfUtil::ConsoleWindow console_window;
+    HRESULT hr = console_window.Create();
+
+    assert(SUCCEEDED(hr));
 
     testing::InitGoogleTest(&argc, &argv);
     RUN_ALL_TESTS();

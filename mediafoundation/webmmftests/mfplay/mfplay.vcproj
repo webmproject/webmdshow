@@ -345,6 +345,14 @@
 			Name="common"
 			>
 			<File
+				RelativePath="..\..\..\common\consoleutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\consoleutil.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\debugutil.hpp"
 				>
 			</File>
