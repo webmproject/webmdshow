@@ -13,6 +13,7 @@
 #pragma warning(pop)
 
 #include "debugutil.hpp"
+#include "eventutil.hpp"
 #include "mfplayer.hpp"
 #include "windowutil.hpp"
 
@@ -208,7 +209,7 @@ LRESULT CALLBACK window_handler(HWND hwnd, UINT uMsg, WPARAM wParam,
         HANDLE_MSG(hwnd, WM_PAINT,   OnPaint);
         HANDLE_MSG(hwnd, WM_SIZE,    OnSize);
 
-    
+
     case WM_ERASEBKGND:
         return 1;
 
