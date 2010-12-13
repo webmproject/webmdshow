@@ -20,6 +20,7 @@ public:
     HRESULT Create();
     HRESULT Set();
     HRESULT Wait();
+    HRESULT MessageWait();
 private:
     HANDLE event_handle_;
 

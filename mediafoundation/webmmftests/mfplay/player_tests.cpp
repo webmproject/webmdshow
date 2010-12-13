@@ -144,7 +144,7 @@ HRESULT PlayerController::Play(std::wstring file_to_play)
     {
         waiting_for_state_ = Started;
         DBGLOG("Waiting for Started");
-        hr = player_state_change_waiter_.Wait();
+        hr = player_state_change_waiter_.MessageWait();
         DBGLOG("Started wait result = " << hr);
     }
 

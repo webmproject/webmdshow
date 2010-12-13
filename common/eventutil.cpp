@@ -15,6 +15,8 @@
 namespace WebmMfUtil
 {
 
+DWORD kTIMEOUT = 500;
+
 EventWaiter::EventWaiter() :
   event_handle_(INVALID_HANDLE_VALUE)
 {
@@ -41,9 +43,7 @@ HRESULT EventWaiter::Create()
 
 HRESULT EventWaiter::Wait()
 {
-    DWORD wr;// = MsgWaitForMultipleObjects(1, &event_handle_, TRUE, INFINITE,
-             //                            QS_ALLEVENTS);
-
+    DWORD wr;
     HRESULT hr = CoWaitForMultipleHandles(COWAIT_WAITALL, INFINITE, 1,
                                           &event_handle_, &wr);
     if (wr != WAIT_OBJECT_0 || FAILED(hr))
@@ -51,6 +51,29 @@ HRESULT EventWaiter::Wait()
         DBGLOG(L"event wait failed" << hr);
         hr = E_FAIL;
     }
+    return hr;
+}
+
+HRESULT EventWaiter::MessageWait()
+{
+    HRESULT hr = E_FAIL;
+    for (;;)
+    {
+        MSG msg;
+        while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        DWORD wr = MsgWaitForMultipleObjects(1, &event_handle_, TRUE, kTIMEOUT,
+                                             QS_ALLEVENTS);
+        if (wr == WAIT_OBJECT_0)
+        {
+            hr = S_OK;
+            break;
+        }
+    }
+
     return hr;
 }
 
