@@ -9,7 +9,20 @@
 #ifndef __MEDIAFOUNDATION_WEBMMFTESTS_MFPLAY_PLAYER_TESTS_HPP__
 #define __MEDIAFOUNDATION_WEBMMFTESTS_MFPLAY_PLAYER_TESTS_HPP__
 
+const static UINT WM_APP_PLAYER_COMMAND = WM_APP + 2;
 
+enum PlayerCommand
+{
+    PLAYER_CMD_BASE = WM_APP_PLAYER_COMMAND,
+    PLAYER_CMD_OPEN,
+    PLAYER_CMD_PLAY,
+};
+
+struct PlayerCommandMessage
+{
+    PlayerCommand command;
+    const void* ptr_command_data;
+};
 
 class PlayerController
 {

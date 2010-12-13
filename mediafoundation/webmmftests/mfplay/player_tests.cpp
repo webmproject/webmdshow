@@ -113,7 +113,6 @@ HRESULT PlayerController::Create(HWND hwnd_player)
 
 HRESULT PlayerController::Play(std::wstring file_to_play)
 {
-
     CPlayer* player = get_player(hwnd_player_);
 
     if (!player || file_to_play.length() == 0)
@@ -131,26 +130,19 @@ HRESULT PlayerController::Play(std::wstring file_to_play)
     if (FAILED(hr))
         return E_OUTOFMEMORY;
 
-
-    // TODO(tomfinegan): make player control thread safe-- control CPlayer
-    //                   with PostMessage instead of doing evil things with
-    //                   a global pointer to an object created in another
-    //                   thread that's doing things asynchronously.
-
     player->SetStateCallback(ptr_player_callback_);
 
     waiting_for_state_ = OpenPending;
 
-    hr = player->OpenURL(file_to_play.c_str());
+    const wchar_t* ptr_file_name = file_to_play.c_str();
+    PlayerCommandMessage command_msg =
+        {PLAYER_CMD_OPEN, reinterpret_cast<const void*>(ptr_file_name)};
 
-    if (SUCCEEDED(hr))
-    {
-        DBGLOG("Waiting for OpenPending");
-        hr = player_state_change_waiter_.Wait();
-        DBGLOG("OpenPending wait result = " << hr);
-    }
-
-    if (SUCCEEDED(hr))
+    WPARAM command_msg_wparam =
+        reinterpret_cast<WPARAM>(&command_msg);
+    BOOL posted_msg = PostMessage(hwnd_player_, WM_APP_PLAYER_COMMAND,
+                                  command_msg_wparam, 0);
+    if (posted_msg)
     {
         waiting_for_state_ = Started;
         DBGLOG("Waiting for Started");
@@ -177,7 +169,7 @@ TEST(WebmMfPlayTest, PlayFile)
 {
     PlayerController player_controller;
     player_controller.Create(g_hwnd_player);
-    std::wstring file = L"D:\\src\\media\\webm\\fg.webm";
+    std::wstring file = L"C:\\src\\media\\fg.webm";
 
     HRESULT hr_play = player_controller.Play(file);
     ASSERT_TRUE(SUCCEEDED(hr_play));

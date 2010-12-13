@@ -35,6 +35,7 @@ void                OnPlayerEvent(HWND hwnd, WPARAM pUnkPtr);
 void                OnPaint(HWND hwnd);
 void                OnResize(HWND hwnd, WORD width, WORD height);
 void                OnKeyPress(HWND hwnd, WPARAM key);
+void                OnPlayerCommand(HWND hwnd, WPARAM command_msg);
 
 // OpenUrlDialogInfo: Contains data passed to the "Open URL" dialog proc.
 struct OpenUrlDialogInfo
@@ -157,6 +158,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_APP_PLAYER_EVENT:
         OnPlayerEvent(hwnd, wParam);
+        break;
+
+    case WM_APP_PLAYER_COMMAND:
+        OnPlayerCommand(hwnd, wParam);
         break;
 
     default:
@@ -359,6 +364,48 @@ void OnPlayerEvent(HWND hwnd, WPARAM pUnkPtr)
     }
 }
 
+void OnPlayerCommand(HWND hwnd, WPARAM command_msg)
+{
+    CPlayer* player = get_player(hwnd);
+
+    if (!command_msg || !player)
+        return;
+
+    PlayerCommandMessage* ptr_command_msg =
+        reinterpret_cast<PlayerCommandMessage*>(command_msg);
+
+    PlayerCommand command = ptr_command_msg->command;
+
+    if (PLAYER_CMD_OPEN == command)
+    {
+        const wchar_t* ptr_filename =
+            reinterpret_cast<const wchar_t*>(ptr_command_msg->ptr_command_data);
+        HRESULT hr = player->OpenURL(ptr_filename);
+
+        if (SUCCEEDED(hr))
+        {
+            UpdateUI(hwnd, OpenPending);
+        }
+        else
+        {
+            NotifyError(hwnd, L"Could not open this URL.", hr);
+            UpdateUI(hwnd, Closed);
+        }
+    }
+    else if (PLAYER_CMD_PLAY == command)
+    {
+        HRESULT hr = player->Play();
+        if (SUCCEEDED(hr))
+        {
+            UpdateUI(hwnd, Started);
+        }
+        else
+        {
+            NotifyError(hwnd, L"Could not Play.", hr);
+            UpdateUI(hwnd, Closed);
+        }
+    }
+}
 
 // Update the application UI to reflect the current state.
 
