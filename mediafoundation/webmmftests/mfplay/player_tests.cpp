@@ -132,8 +132,6 @@ HRESULT PlayerController::Play(std::wstring file_to_play)
 
     player->SetStateCallback(ptr_player_callback_);
 
-    waiting_for_state_ = OpenPending;
-
     const wchar_t* ptr_file_name = file_to_play.c_str();
     PlayerCommandMessage command_msg =
         {PLAYER_CMD_OPEN, reinterpret_cast<const void*>(ptr_file_name)};
@@ -169,7 +167,7 @@ TEST(WebmMfPlayTest, PlayFile)
 {
     PlayerController player_controller;
     player_controller.Create(g_hwnd_player);
-    std::wstring file = L"C:\\src\\media\\fg.webm";
+    std::wstring file = L"D:\\src\\media\\webm\\fg.webm";
 
     HRESULT hr_play = player_controller.Play(file);
     ASSERT_TRUE(SUCCEEDED(hr_play));
