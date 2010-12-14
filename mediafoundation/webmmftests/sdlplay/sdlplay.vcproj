@@ -353,6 +353,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\comreg.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\comreg.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\consoleutil.cpp"
 				>
 			</File>
@@ -362,6 +370,22 @@
 			</File>
 			<File
 				RelativePath="..\..\..\common\debugutil.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\mfobjwrapper.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\mfobjwrapper.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\webmtypes.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\webmtypes.hpp"
 				>
 			</File>
 			<File
@@ -377,6 +401,14 @@
 				>
 				<File
 					RelativePath="..\..\..\common\tests\comdllwrapper_tests.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\common\tests\mfdllpaths.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\common\tests\mfobjwrapper_tests.cpp"
 					>
 				</File>
 			</Filter>

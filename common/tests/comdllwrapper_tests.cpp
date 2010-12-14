@@ -1,3 +1,11 @@
+// Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS.  All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
+
 #include <windows.h>
 #include <windowsx.h>
 
@@ -5,6 +13,7 @@
 #include <string>
 
 #include "debugutil.hpp"
+#include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "gtest/gtest.h"
 
@@ -32,8 +41,6 @@ TEST(ComDllWrapperBasic, CreateAsyncFileSource)
     std::wstring dll_path = L"C:\\Windows\\System32\\quartz.dll";
     // use the async file source filter as test fodder
     const wchar_t* async_src_str = L"{E436EBB5-524F-11CE-9F53-0020AF0BA770}";
-    CLSID async_src_clsid;
-    HRESULT hr = CLSIDFromString(async_src_str, &async_src_clsid);
-    ASSERT_TRUE(SUCCEEDED(hr));
+    GUID async_src_clsid = ComReg::GUIDFromString(async_src_str);
     ASSERT_EQ(S_OK, dll_wrapper.LoadDll(dll_path, async_src_clsid));
 }
