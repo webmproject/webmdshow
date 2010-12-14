@@ -42,6 +42,9 @@
   ;;http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.3
   ;;http://stackoverflow.com/questions/4244497/changing-nsis-installer-properties
 
+  ; Info from MS about ProductVersion Property
+  ;;http://msdn.microsoft.com/en-us/library/aa370859.aspx
+
   ;VIProductVersion $0
   ;VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "WebM Media Foundation Components"
   ;VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Webm Project"
