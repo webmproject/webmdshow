@@ -23,6 +23,8 @@ public:
     HRESULT LoadDll(std::wstring dll_path, CLSID mf_clsid);
     IClassFactoryPtr GetIClassFactoryPtr() const;
     HRESULT GetInterfacePtr(GUID interface_id, void** ptr_instance);
+    const wchar_t* GetDllPath() const;
+    const CLSID GetClsid() const;
 
 private:
     CLSID clsid_;

@@ -90,4 +90,14 @@ HRESULT ComDllWrapper::GetInterfacePtr(GUID interface_id, void** ptr_instance)
     return ptr_unk_->QueryInterface(interface_id, ptr_instance);
 }
 
+const wchar_t* ComDllWrapper::GetDllPath() const
+{
+    return dll_path_.c_str();
+}
+
+const CLSID ComDllWrapper::GetClsid() const
+{
+    return clsid_;
+}
+
 } // WebmMfUtil namespace
