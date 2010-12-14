@@ -346,6 +346,8 @@ void VideoStream::OnPopulateSample(
     const bool bKey = pCurrBlock->IsKey();
     assert(!m_bDiscontinuity || bKey);
 
+    const bool bInvisible = pCurrBlock->IsInvisible();
+
     const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(start_ns >= base_ns);
     //assert((start_ns % 100) == 0);
@@ -428,7 +430,7 @@ void VideoStream::OnPopulateSample(
 
         hr = pSample->SetActualDataLength(srcsize);
 
-        hr = pSample->SetPreroll(0);
+        hr = pSample->SetPreroll(bInvisible ? TRUE : FALSE);
         assert(SUCCEEDED(hr));
 
         hr = pSample->SetMediaType(0);
