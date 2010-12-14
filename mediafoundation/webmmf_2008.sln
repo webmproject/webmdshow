@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mfplay", "webmmftests\mfpla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WMPPlay", "webmmftests\WMPPlay\WMPPlay.csproj", "{73D52465-E6B3-43D8-BC45-CCEA2060DA3E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sdlplay", "webmmftests\sdlplay\sdlplay.vcproj", "{BC765DC7-5514-4399-8906-9B24C07C5D47}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -109,6 +111,20 @@ Global
 		{73D52465-E6B3-43D8-BC45-CCEA2060DA3E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{73D52465-E6B3-43D8-BC45-CCEA2060DA3E}.Release|Win32.ActiveCfg = Release|Any CPU
 		{73D52465-E6B3-43D8-BC45-CCEA2060DA3E}.Release|x64.ActiveCfg = Release|Any CPU
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Debug|Win32.Build.0 = Debug|Win32
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Debug|x64.ActiveCfg = Debug|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Debug|x64.Build.0 = Debug|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Release|Any CPU.ActiveCfg = Release|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Release|Mixed Platforms.Build.0 = Release|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Release|Win32.ActiveCfg = Release|Win32
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Release|Win32.Build.0 = Release|Win32
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Release|x64.ActiveCfg = Release|x64
+		{BC765DC7-5514-4399-8906-9B24C07C5D47}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -117,5 +133,6 @@ Global
 		{4B73ED03-BC69-47D2-BD63-A293FD9EE969} = {E53C42C4-B1E3-4DDA-BFBD-0B9A325544EF}
 		{96EA6AEE-53FB-4402-AB02-155C6A501447} = {E53C42C4-B1E3-4DDA-BFBD-0B9A325544EF}
 		{73D52465-E6B3-43D8-BC45-CCEA2060DA3E} = {E53C42C4-B1E3-4DDA-BFBD-0B9A325544EF}
+		{BC765DC7-5514-4399-8906-9B24C07C5D47} = {E53C42C4-B1E3-4DDA-BFBD-0B9A325544EF}
 	EndGlobalSection
 EndGlobal
