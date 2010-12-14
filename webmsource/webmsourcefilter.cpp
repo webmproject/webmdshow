@@ -974,15 +974,16 @@ void Filter::SetCurrPosition(
             if (pCues->Find(ns, pOutpinTrack, pCP, pTP))
             {
                 const BlockEntry* const pCurr = pCues->GetBlock(pCP, pTP);
-                assert(pCurr);
-                assert(!pCurr->EOS());
 
-                m_pSeekBase = pCurr->GetCluster();
-                m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
-                m_seekTime_ns = m_seekBase_ns;
+                if ((pCurr != 0) && !pCurr->EOS())
+                {
+                    m_pSeekBase = pCurr->GetCluster();
+                    m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+                    m_seekTime_ns = m_seekBase_ns;
 
-                pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
-                return;
+                    pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
+                    return;
+                }
             }
         }
 
@@ -1054,21 +1055,27 @@ void Filter::SetCurrPosition(
             if (pCues->Find(ns, pVideoTrack, pCP, pTP))
             {
                 const BlockEntry* pCurr = pCues->GetBlock(pCP, pTP);
-                assert(pCurr);
-                assert(!pCurr->EOS());
 
-                m_pSeekBase = pCurr->GetCluster();
-                m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
-                m_seekTime_ns = m_seekBase_ns;  //to find same block later
-
-                pCurr = m_pSeekBase->GetEntry(pOutpinTrack, m_seekBase_ns);
-                assert(pCurr);
-
-                if (!pCurr->EOS())
+                if ((pCurr != 0) && !pCurr->EOS())
+                {
+                    m_pSeekBase = pCurr->GetCluster();
                     m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+                    m_seekTime_ns = m_seekBase_ns;  //to find same block later
 
-                pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
-                return;
+                    pCurr = m_pSeekBase->GetEntry(pOutpinTrack, m_seekBase_ns);
+                    assert(pCurr);
+
+                    if (!pCurr->EOS())
+                    {
+                        const Block* const pBlock = pCurr->GetBlock();
+                        assert(pBlock);
+
+                        m_seekBase_ns = pBlock->GetTime(m_pSeekBase);
+                    }
+
+                    pOutpinStream->SetCurrPosition(m_seekBase_ns, pCurr);
+                    return;
+                }
             }
         }
 

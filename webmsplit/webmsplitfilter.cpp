@@ -1270,15 +1270,16 @@ void Filter::SetCurrPositionVideo(
         if (pCues->Find(ns, pTrack, pCP, pTP))
         {
             const BlockEntry* const pCurr = pCues->GetBlock(pCP, pTP);
-            assert(pCurr);
-            assert(!pCurr->EOS());
 
-            m_pSeekBase = pCurr->GetCluster();
-            m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
-            m_seekTime_ns = m_seekBase_ns;
+            if ((pCurr != 0) && !pCurr->EOS())
+            {
+                m_pSeekBase = pCurr->GetCluster();
+                m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+                m_seekTime_ns = m_seekBase_ns;
 
-            pStream->SetCurrPosition(m_seekBase_ns, pCurr);
-            return;
+                pStream->SetCurrPosition(m_seekBase_ns, pCurr);
+                return;
+            }
         }
     }
 
@@ -1390,21 +1391,22 @@ void Filter::SetCurrPositionAudio(
         if (pCues->Find(ns, pVideoTrack, pCP, pTP))
         {
             const BlockEntry* pCurr = pCues->GetBlock(pCP, pTP);
-            assert(pCurr);
-            assert(!pCurr->EOS());
 
-            m_pSeekBase = pCurr->GetCluster();
-            m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
-            m_seekTime_ns = m_seekBase_ns;  //to find same block later
-
-            pCurr = m_pSeekBase->GetEntry(pSeekTrack, m_seekBase_ns);
-            assert(pCurr);
-
-            if (!pCurr->EOS())
+            if ((pCurr != 0) && !pCurr->EOS())
+            {
+                m_pSeekBase = pCurr->GetCluster();
                 m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+                m_seekTime_ns = m_seekBase_ns;  //to find same block later
 
-            pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
-            return;
+                pCurr = m_pSeekBase->GetEntry(pSeekTrack, m_seekBase_ns);
+                assert(pCurr);
+
+                if (!pCurr->EOS())
+                    m_seekBase_ns = pCurr->GetBlock()->GetTime(m_pSeekBase);
+
+                pSeekStream->SetCurrPosition(m_seekBase_ns, pCurr);
+                return;
+            }
         }
     }
 
