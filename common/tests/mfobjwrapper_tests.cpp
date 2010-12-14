@@ -16,6 +16,7 @@
 #include <string>
 
 #include "debugutil.hpp"
+#include "eventutil.hpp"
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "gtest/gtest.h"
@@ -23,23 +24,63 @@
 #include "tests/mfdllpaths.hpp"
 #include "webmtypes.hpp"
 
+using WebmMfUtil::MfByteStreamHandlerWrapper;
+using WebmTypes::CLSID_WebmMfByteStreamHandler;
+using WebmTypes::CLSID_WebmMfVp8Dec;
+using WebmTypes::CLSID_WebmMfVorbisDec;
+
+HRESULT mf_startup()
+{
+    HRESULT hr = MFStartup(MF_VERSION);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, MFStartup failed, hr=" << hr);
+    }
+    return hr;
+}
+
+HRESULT mf_shutdown()
+{
+    HRESULT hr = MFShutdown();
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, MFShutdown failed, hr=" << hr);
+    }
+    return hr;
+}
+
 TEST(MfObjWrapperBasic, CreateMfByteStreamHandlerWrapper)
 {
-    WebmMfUtil::MfByteStreamHandlerWrapper mf_bsh;
-    ASSERT_EQ(S_OK, mf_bsh.Create(WEBM_SOURCE_PATH,
-                                  WebmTypes::CLSID_WebmMfByteStreamHandler));
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(0, ptr_mf_bsh->Release());
 }
 
-TEST(MfObjWrapperBasic, CreateMfTransformWrapper1)
+TEST(MfObjWrapperBasic, CreateVp8DecTransformWrapper)
 {
     WebmMfUtil::MfTransformWrapper mf_transform;
-    ASSERT_EQ(S_OK, mf_transform.Create(VP8DEC_PATH,
-                                        WebmTypes::CLSID_WebmMfVp8Dec));
+    ASSERT_EQ(S_OK, mf_transform.Create(VP8DEC_PATH, CLSID_WebmMfVp8Dec));
 }
 
-TEST(MfObjWrapperBasic, CreateMfTransformWrapper2)
+TEST(MfObjWrapperBasic, CreateVorbisDecTransformWrapper)
 {
     WebmMfUtil::MfTransformWrapper mf_transform;
     ASSERT_EQ(S_OK, mf_transform.Create(VORBISDEC_PATH,
-                                        WebmTypes::CLSID_WebmMfVorbisDec));
+                                        CLSID_WebmMfVorbisDec));
+}
+
+TEST(MfByteStreamHandlerWrapper, LoadFile)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(L"C:\\src\\media\\fg.webm"));
+    ASSERT_EQ(0, ptr_mf_bsh->Release());
+    ASSERT_EQ(S_OK, mf_shutdown());
 }

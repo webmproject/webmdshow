@@ -24,16 +24,38 @@ protected:
     DISALLOW_COPY_AND_ASSIGN(MfObjWrapperBase);
 };
 
-class MfByteStreamHandlerWrapper : public MfObjWrapperBase
+class MfByteStreamHandlerWrapper : public IMFAsyncCallback,
+                                   public MfObjWrapperBase
+
 {
 public:
-    MfByteStreamHandlerWrapper();
+    static HRESULT Create(std::wstring dll_path, GUID mfobj_clsid,
+                          MfByteStreamHandlerWrapper** ptr_bsh_wrapper);
     virtual ~MfByteStreamHandlerWrapper();
-    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
+
+    HRESULT OpenURL(std::wstring url);
+
+    // IUnknown methods
+    STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
+    STDMETHODIMP_(ULONG) AddRef();
+    STDMETHODIMP_(ULONG) Release();
+
+    // IMFAsyncCallback methods
+    STDMETHODIMP GetParameters(DWORD*, DWORD*);
+    STDMETHODIMP Invoke(IMFAsyncResult* pAsyncResult);
+
 
 private:
+    MfByteStreamHandlerWrapper();
+    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
     _COM_SMARTPTR_TYPEDEF(IMFByteStreamHandler, IID_IMFByteStreamHandler);
-    IMFByteStreamHandlerPtr ptr_bsh_;
+    _COM_SMARTPTR_TYPEDEF(IMFByteStream, IID_IMFByteStream);
+    _COM_SMARTPTR_TYPEDEF(IMFMediaSource, IID_IMFMediaSource);
+    EventWaiter open_event_;
+    IMFByteStreamPtr ptr_stream_;
+    IMFByteStreamHandlerPtr ptr_handler_;
+    IMFMediaSourcePtr ptr_media_src_;
+    UINT ref_count_;
 
     DISALLOW_COPY_AND_ASSIGN(MfByteStreamHandlerWrapper);
 };

@@ -373,6 +373,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\eventutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\eventutil.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\mfobjwrapper.cpp"
 				>
 			</File>
