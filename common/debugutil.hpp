@@ -20,6 +20,9 @@ do { \
     wos << "["__FUNCTION__"] " << X << std::endl; \
 } while(0)
 
+// TODO(tomfinegan): replace the hard coded hr w/expansion of X
+#define HRLOG(X) L" {hr=" << X << L" (" << hrtext(X) << L")}"
+
 #define REFTIMETOSECONDS(X) (double(X) / 10000000.0f)
 
 #else

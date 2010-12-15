@@ -17,10 +17,9 @@ class MfObjWrapperBase
 public:
     MfObjWrapperBase();
     virtual ~MfObjWrapperBase();
-    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid) = 0;
 protected:
-    ComDllWrapper com_dll_;
-
+    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid) = 0;
+    ComDllWrapper* ptr_com_dll_;
     DISALLOW_COPY_AND_ASSIGN(MfObjWrapperBase);
 };
 
@@ -33,6 +32,7 @@ public:
                           MfByteStreamHandlerWrapper** ptr_bsh_wrapper);
     virtual ~MfByteStreamHandlerWrapper();
 
+    HRESULT LoadMediaStreams();
     HRESULT OpenURL(std::wstring url);
 
     // IUnknown methods
@@ -51,11 +51,22 @@ private:
     _COM_SMARTPTR_TYPEDEF(IMFByteStreamHandler, IID_IMFByteStreamHandler);
     _COM_SMARTPTR_TYPEDEF(IMFByteStream, IID_IMFByteStream);
     _COM_SMARTPTR_TYPEDEF(IMFMediaSource, IID_IMFMediaSource);
+    _COM_SMARTPTR_TYPEDEF(IMFPresentationDescriptor, 
+                          IID_IMFPresentationDescriptor);
+    _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, IID_IMFMediaTypeHandler);
+    DWORD stream_count_;
     EventWaiter open_event_;
     IMFByteStreamPtr ptr_stream_;
     IMFByteStreamHandlerPtr ptr_handler_;
     IMFMediaSourcePtr ptr_media_src_;
+    IMFPresentationDescriptorPtr ptr_pres_desc_;
+    UINT audio_stream_count_;
     UINT ref_count_;
+    UINT selected_stream_count_;
+    UINT video_stream_count_;
+    typedef std::vector<IMFStreamDescriptor*> MfStreamDesc;
+    MfStreamDesc audio_streams_;
+    MfStreamDesc video_streams_;
 
     DISALLOW_COPY_AND_ASSIGN(MfByteStreamHandlerWrapper);
 };

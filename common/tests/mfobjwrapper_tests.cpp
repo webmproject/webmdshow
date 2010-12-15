@@ -14,6 +14,7 @@
 
 #include <comdef.h>
 #include <string>
+#include <vector>
 
 #include "debugutil.hpp"
 #include "eventutil.hpp"
@@ -24,10 +25,10 @@
 #include "tests/mfdllpaths.hpp"
 #include "webmtypes.hpp"
 
-using WebmMfUtil::MfByteStreamHandlerWrapper;
 using WebmTypes::CLSID_WebmMfByteStreamHandler;
 using WebmTypes::CLSID_WebmMfVp8Dec;
 using WebmTypes::CLSID_WebmMfVorbisDec;
+using WebmMfUtil::MfByteStreamHandlerWrapper;
 
 HRESULT mf_startup()
 {
@@ -81,6 +82,20 @@ TEST(MfByteStreamHandlerWrapper, LoadFile)
                                            CLSID_WebmMfByteStreamHandler,
                                            &ptr_mf_bsh));
     ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(L"C:\\src\\media\\fg.webm"));
-    ASSERT_EQ(0, ptr_mf_bsh->Release());
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfByteStreamHandlerWrapper, LoadMediaStreams)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(L"C:\\src\\media\\fg.webm"));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ptr_mf_bsh->Release();
     ASSERT_EQ(S_OK, mf_shutdown());
 }
