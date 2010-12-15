@@ -18,22 +18,26 @@ typedef HRESULT (*DllGetClassObjFunc)(REFCLSID rclsid, REFIID riid,
 class ComDllWrapper
 {
 public:
-    ComDllWrapper();
     ~ComDllWrapper();
-    HRESULT LoadDll(std::wstring dll_path, CLSID mf_clsid);
-    IClassFactoryPtr GetIClassFactoryPtr() const;
-    HRESULT GetInterfacePtr(GUID interface_id, void** ptr_instance);
     const wchar_t* GetDllPath() const;
     const CLSID GetClsid() const;
+    HRESULT CreateInstance(GUID interface_id, void** ptr_instance);
+    IClassFactoryPtr GetIClassFactoryPtr() const;
+    static HRESULT Create(std::wstring dll_path, CLSID clsid,
+                          ComDllWrapper** ptr_instance);
+    UINT AddRef();
+    UINT Release();
 
 private:
-    CLSID clsid_;
-    HMODULE dll_module_;
-    std::wstring dll_path_;
-    DllGetClassObjFunc ptrfn_get_class_object_;
+    ComDllWrapper();
+    HRESULT LoadDll_();
 
+    CLSID clsid_;
+    DllGetClassObjFunc ptrfn_get_class_object_;
+    HMODULE dll_module_;
     IClassFactoryPtr ptr_class_factory_;
-    IUnknownPtr ptr_unk_;
+    std::wstring dll_path_;
+    UINT ref_count_;
 
     DISALLOW_COPY_AND_ASSIGN(ComDllWrapper);
 };

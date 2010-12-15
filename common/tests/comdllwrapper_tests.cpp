@@ -8,6 +8,9 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include <mfapi.h>
+#include <mferror.h>
+#include <mfidl.h>
 
 #include <comdef.h>
 #include <string>
@@ -16,31 +19,42 @@
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "gtest/gtest.h"
+#include "tests/mfdllpaths.hpp"
+#include "webmtypes.hpp"
+
+using WebmTypes::CLSID_WebmMfVorbisDec;
+using WebmMfUtil::ComDllWrapper;
 
 TEST(ComDllWrapperBasic, FailPathDoesNotExist)
 {
-    WebmMfUtil::ComDllWrapper dll_wrapper;
+    ComDllWrapper* ptr_dll_wrapper = NULL;
     GUID guid = GUID_NULL;
     std::wstring fake_dll_path = L"FakeDllName.dll";
-    ASSERT_EQ(E_INVALIDARG, dll_wrapper.LoadDll(fake_dll_path, guid));
+    ASSERT_EQ(E_INVALIDARG,
+              ComDllWrapper::Create(fake_dll_path, guid, &ptr_dll_wrapper));
 }
 
-TEST(ComDllWrapperBasic, FailGuidNull)
+TEST(ComDllWrapperBasic, FailClassNotAvailable)
 {
-    WebmMfUtil::ComDllWrapper dll_wrapper;
+    ComDllWrapper* ptr_dll_wrapper = NULL;
     GUID guid = GUID_NULL;
-    // abuse the DShow DLL for a quick test
-    std::wstring dll_path = L"C:\\Windows\\System32\\quartz.dll";
-    ASSERT_EQ(CLASS_E_CLASSNOTAVAILABLE, dll_wrapper.LoadDll(dll_path, guid));
+    ASSERT_EQ(CLASS_E_CLASSNOTAVAILABLE,
+              ComDllWrapper::Create(VORBISDEC_PATH, guid, &ptr_dll_wrapper));
 }
 
-TEST(ComDllWrapperBasic, CreateAsyncFileSource)
+TEST(ComDllWrapperBasic, CreateVorbisDec)
 {
-    WebmMfUtil::ComDllWrapper dll_wrapper;
-    // abuse the DShow DLL for a quick test
-    std::wstring dll_path = L"C:\\Windows\\System32\\quartz.dll";
-    // use the async file source filter as test fodder
-    const wchar_t* async_src_str = L"{E436EBB5-524F-11CE-9F53-0020AF0BA770}";
-    GUID async_src_clsid = ComReg::GUIDFromString(async_src_str);
-    ASSERT_EQ(S_OK, dll_wrapper.LoadDll(dll_path, async_src_clsid));
+    ComDllWrapper* ptr_dll_wrapper = NULL;
+    ASSERT_EQ(S_OK,
+              ComDllWrapper::Create(VORBISDEC_PATH, CLSID_WebmMfVorbisDec,
+                                    &ptr_dll_wrapper));
+    IMFTransform* ptr_mftransform = NULL;
+    void* ptr_transform = reinterpret_cast<void*>(ptr_mftransform);
+    ASSERT_EQ(S_OK, ptr_dll_wrapper->CreateInstance(IID_IMFTransform,
+                                                    &ptr_transform));
+    if (ptr_mftransform)
+    {
+        ptr_mftransform->Release();
+    }
+    ptr_dll_wrapper->Release();
 }
