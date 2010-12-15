@@ -622,6 +622,8 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         m_bDiscontinuity = false;
     }
 
+    const bool bInvisible = pCurrBlock->IsInvisible();
+
     const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
     const LONGLONG sample_time = curr_ns / 100;  //reftime units
 
@@ -630,7 +632,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 
     const LONGLONG preroll_ns = m_pSource->m_preroll_ns;
 
-    if ((preroll_ns >= 0) && (curr_ns < preroll_ns))
+    if (bInvisible || ((preroll_ns >= 0) && (curr_ns < preroll_ns)))
     {
         //TODO: handle this for audio too
 
