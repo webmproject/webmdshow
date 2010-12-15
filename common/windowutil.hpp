@@ -10,7 +10,7 @@ public:
     explicit WebmMfWindow(WNDPROC ptrfn_window_proc);
     ~WebmMfWindow();
 
-    HRESULT Create();
+    HRESULT Create(HINSTANCE hinstance);
     HRESULT Destroy();
     HWND GetHwnd() const;
     HRESULT Show();
@@ -19,6 +19,7 @@ public:
     HRESULT SetUserData(LONG_PTR ptr_userdata);
 private:
 
+    HINSTANCE instance_;
     HWND hwnd_;
     WNDCLASS window_class_;
     const WNDPROC ptrfn_window_proc_;

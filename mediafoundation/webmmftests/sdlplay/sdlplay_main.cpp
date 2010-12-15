@@ -63,7 +63,6 @@ LRESULT CALLBACK window_handler(HWND hwnd, UINT uMsg, WPARAM wParam,
         HANDLE_MSG(hwnd, WM_PAINT,   OnPaint);
         HANDLE_MSG(hwnd, WM_SIZE,    OnSize);
 
-
     case WM_ERASEBKGND:
         return 1;
 
@@ -71,6 +70,8 @@ LRESULT CALLBACK window_handler(HWND hwnd, UINT uMsg, WPARAM wParam,
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
     }
 }
+
+HINSTANCE g_instance;
 
 int sdlplay_main(int argc, WCHAR* argv[])
 {
@@ -93,7 +94,7 @@ int sdlplay_main(int argc, WCHAR* argv[])
     std::wstring url_str = argv[0];
 
     WebmMfUtil::WebmMfWindow mfwindow(window_handler);
-    hr = mfwindow.Create();
+    hr = mfwindow.Create(g_instance);
     assert(SUCCEEDED(hr));
 
     if (FAILED(hr))
@@ -102,17 +103,6 @@ int sdlplay_main(int argc, WCHAR* argv[])
         return EXIT_FAILURE;
     }
 
-    //hr = mfwindow.SetUserData(reinterpret_cast<LONG_PTR>(&windowed_player));
-    //assert(SUCCEEDED(hr));
-    //if (FAILED(hr))
-    //{
-    //    DBGLOG(L"mfwindow.SetUserData failed!" << hr);
-    //    return EXIT_FAILURE;
-    //}
-
-    // TODO(tomfinegan): need a PostMessage here to kick off playback
-
-    // Message loop
     MSG msg;
     while (GetMessageW(&msg, NULL, 0, 0))
     {
@@ -134,10 +124,11 @@ int test_main(int argc, WCHAR* argv[])
     return 0;
 }
 
-INT WINAPI wWinMain(HINSTANCE,HINSTANCE,LPWSTR ptr_cmdline,INT)
+INT WINAPI wWinMain(HINSTANCE,HINSTANCE instance, LPWSTR ptr_cmdline,INT)
 {
     int argc = 0;
     LPWSTR* argv = CommandLineToArgvW(ptr_cmdline, &argc);
+    g_instance = instance;
     test_main(argc, argv);
     int result = sdlplay_main(argc, argv);
     LocalFree(argv);
