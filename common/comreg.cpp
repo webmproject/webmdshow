@@ -871,6 +871,7 @@ HRESULT ComReg::RegisterProtocolSource(
 
     const int n = StringFromGUID2(filter, buf, guid_buflen);
     assert(n == guid_buflen);
+    n;
 
     e = ek.set(ext, buf);
 
