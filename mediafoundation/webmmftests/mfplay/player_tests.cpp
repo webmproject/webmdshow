@@ -83,6 +83,7 @@ DWORD WINAPI test_thread(LPVOID ptr_thread_data)
 
     WebmMfUtil::ConsoleWindow console_window;
     HRESULT hr = console_window.Create();
+    hr;
 
     assert(SUCCEEDED(hr));
 

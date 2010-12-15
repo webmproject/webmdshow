@@ -16,6 +16,7 @@ const wchar_t* const kWindowClass = L"WebM MF Window Class";
 const wchar_t* const kWindowName = L"WebM MF Window";
 
 WebmMfWindow::WebmMfWindow(WNDPROC ptrfn_window_proc) :
+  instance_(NULL),
   hwnd_(NULL),
   ptrfn_window_proc_(ptrfn_window_proc)
 {
@@ -31,7 +32,7 @@ WebmMfWindow::~WebmMfWindow()
     Destroy();
 }
 
-HRESULT WebmMfWindow::Create()
+HRESULT WebmMfWindow::Create(HINSTANCE instance)
 {
     assert(ptrfn_window_proc_);
 
@@ -39,12 +40,10 @@ HRESULT WebmMfWindow::Create()
     {
         return E_INVALIDARG;
     }
-
+    instance_ = instance;
     hwnd_ = CreateWindow(window_class_.lpszClassName, kWindowName,
-                         WS_POPUPWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                         CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL,
-                         GetModuleHandle(NULL), NULL);
-
+                         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+                         320, 240, NULL, NULL, instance_, NULL);
     assert(hwnd_);
     if (NULL == hwnd_)
     {
