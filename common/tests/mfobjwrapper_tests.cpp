@@ -112,7 +112,7 @@ TEST(MfByteStreamHandlerWrapper, Start)
                                            &ptr_mf_bsh));
     ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
     ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
-    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(0LL));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
     ptr_mf_bsh->Release();
     ASSERT_EQ(S_OK, mf_shutdown());
 }

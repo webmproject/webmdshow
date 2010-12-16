@@ -389,6 +389,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\mfutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\mfutil.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\webmtypes.cpp"
 				>
 			</File>
