@@ -101,3 +101,18 @@ TEST(MfByteStreamHandlerWrapper, LoadMediaStreams)
     ptr_mf_bsh->Release();
     ASSERT_EQ(S_OK, mf_shutdown());
 }
+
+TEST(MfByteStreamHandlerWrapper, Start)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(0LL));
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}

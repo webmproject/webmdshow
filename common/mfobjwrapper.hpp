@@ -12,6 +12,14 @@
 namespace WebmMfUtil
 {
 
+enum MfState
+{
+    MFSTATE_STOPPED = 0,
+    MFSTATE_STARTED = 1,
+    MFSTATE_PAUSED = 2,
+    MFSTATE_ERROR = 3
+};
+
 class MfObjWrapperBase
 {
 public:
@@ -20,10 +28,9 @@ public:
     virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid) = 0;
 protected:
     ComDllWrapper* ptr_com_dll_;
+    MfState state_;
     DISALLOW_COPY_AND_ASSIGN(MfObjWrapperBase);
 };
-
-
 
 class MfByteStreamHandlerWrapper : public IMFAsyncCallback,
                                    public MfObjWrapperBase
@@ -57,13 +64,19 @@ private:
     _COM_SMARTPTR_TYPEDEF(IMFMediaEventGenerator, IID_IMFMediaEventGenerator);
 
     MfByteStreamHandlerWrapper();
-    HRESULT HandleEvent_(IMFMediaEventPtr& ptr_event);
+    HRESULT HandleMediaSourceEvent_(IMFMediaEventPtr& ptr_event);
     HRESULT OnSourceStarted_(IMFMediaEventPtr& ptr_event);
     HRESULT OnNewStream_(IMFMediaEventPtr& ptr_event);
-    HRESULT WaitForMediaEvent_(DWORD expected_event);
+    HRESULT OnUpdatedStream_(IMFMediaEventPtr& ptr_event);
+    HRESULT WaitForExpectedMediaEvent_(MediaEventType expected_event_type);
+    HRESULT WaitForMediaEvent_(MediaEventType* ptr_event_val);
+    HRESULT WaitForNewStreamEvents_();
+    HRESULT WaitForUpdatedStreamEvents_();
+    HRESULT WaitForStartEvents_();
+    HRESULT WaitForSeekEvents_();
+    HRESULT WaitForStreamEvents_();
     virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
 
-    DWORD expected_media_event_type_;
     DWORD stream_count_;
     EventWaiter open_event_;
     EventWaiter media_source_event_;
@@ -75,6 +88,8 @@ private:
     IMFMediaStreamPtr ptr_audio_stream_;
     IMFMediaStreamPtr ptr_video_stream_;
     IMFPresentationDescriptorPtr ptr_pres_desc_;
+    MediaEventType expected_media_event_type_;
+    MediaEventType media_event_type_recvd_;
     UINT audio_stream_count_;
     UINT ref_count_;
     UINT selected_stream_count_;
