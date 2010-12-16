@@ -24,6 +24,7 @@
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "mfobjwrapper.hpp"
+#include "mfutil.hpp"
 #include "webmtypes.hpp"
 
 namespace WebmMfUtil
@@ -40,9 +41,11 @@ MfObjWrapperBase::~MfObjWrapperBase()
 
 MfByteStreamHandlerWrapper::MfByteStreamHandlerWrapper():
   audio_stream_count_(0),
-  expected_media_event_type_(0),
-  media_event_error_(S_OK),
-  media_event_type_recvd_(0),
+  event_type_recvd_(0),
+  expected_event_type_(0),
+  media_event_error_(0),
+  ptr_audio_stream_(NULL),
+  ptr_video_stream_(NULL),
   ref_count_(0),
   selected_stream_count_(0),
   stream_count_(0),
@@ -258,30 +261,61 @@ HRESULT MfByteStreamHandlerWrapper::HandleMediaSourceEvent_(
         DBGLOG("ERROR, null event, return E_INVALIDARG");
         return E_INVALIDARG;
     }
-    MediaEventType event_type;
+    MediaEventType event_type = MEError;
     HRESULT hr = ptr_event->GetType(&event_type);
     if (FAILED(hr))
     {
-        DBGLOG("ERROR, cannot get event type" << HRLOG(hr)
-          << " return E_FAIL.");
-        return E_FAIL;
+        DBGLOG("ERROR, cannot get event type" << HRLOG(hr));
     }
-    if (0 != expected_media_event_type_ &&
-        event_type != expected_media_event_type_)
+    if (0 != expected_event_type_ && event_type != expected_event_type_)
     {
         DBGLOG("ERROR, unexpected event type, expected "
-          << expected_media_event_type_ << " got " << event_type);
-        return E_FAIL;
+          << expected_event_type_ << " got " << event_type);
+        media_event_error_ = E_UNEXPECTED;
     }
-    media_event_type_recvd_ = event_type;
-    if (event_type == MENewStream)
+    else
     {
-        hr = OnNewStream_(ptr_event);
+        switch (event_type)
+        {
+        case MENewStream:
+            DBGLOG("MENewStream");
+            hr = OnNewStream_(ptr_event);
+            if (FAILED(hr))
+            {
+                DBGLOG("MENewStream handling failed");
+            }
+            break;
+        case MEUpdatedStream:
+            DBGLOG("MEUpdatedStream");
+            hr = OnUpdatedStream_(ptr_event);
+            if (FAILED(hr))
+            {
+                DBGLOG("MEUpdatedStream handling failed");
+            }
+            break;
+        case MESourceStarted:
+            DBGLOG("MESourceStarted");
+            hr = OnSourceStarted_(ptr_event);
+            if (FAILED(hr))
+            {
+                DBGLOG("MESourceStarted handling failed");
+            }
+            break;
+        case MESourceSeeked:
+            DBGLOG("MESourceSeeked");
+            hr = OnSourceSeeked_(ptr_event);
+            if (FAILED(hr))
+            {
+                DBGLOG("MESourceSeeked handling failed");
+            }
+            break;
+        default:
+            DBGLOG("unhandled event_type=" << event_type);
+            media_event_error_ = E_UNEXPECTED;
+            break;
+        }
     }
-    else if (event_type == MEUpdatedStream)
-    {
-        hr = OnUpdatedStream_(ptr_event);
-    }
+    event_type_recvd_ = event_type;
     return media_source_event_.Set();
 }
 
@@ -344,11 +378,21 @@ HRESULT MfByteStreamHandlerWrapper::OnNewStream_(IMFMediaEventPtr &ptr_event)
     //                   I only interact with them in event handlers?
     if (MFMediaType_Audio == major_type)
     {
-        ptr_audio_stream_ = ptr_media_stream;
+        hr = MfMediaStream::Create(ptr_media_stream, &ptr_audio_stream_);
+        if (FAILED(hr) || !ptr_audio_stream_)
+        {
+            media_event_error_ = hr;
+            DBGLOG("audio MfMediaStream creation failed" << HRLOG(hr));
+        }
     }
     else
     {
-        ptr_video_stream_ = ptr_media_stream;
+        hr = MfMediaStream::Create(ptr_media_stream, &ptr_video_stream_);
+        if (FAILED(hr) || !ptr_video_stream_)
+        {
+            media_event_error_ = hr;
+            DBGLOG("video MfMediaStream creation failed" << HRLOG(hr));
+        }
     }
     return hr;
 }
@@ -356,19 +400,29 @@ HRESULT MfByteStreamHandlerWrapper::OnNewStream_(IMFMediaEventPtr &ptr_event)
 HRESULT MfByteStreamHandlerWrapper::OnUpdatedStream_(IMFMediaEventPtr &)
 {
     // no-op for now
+    media_event_error_ = S_OK;
     return S_OK;
 }
 
 HRESULT MfByteStreamHandlerWrapper::OnSourceStarted_(
     IMFMediaEventPtr&)
 {
-    return E_NOTIMPL;
+    // no-op for now
+    media_event_error_ = S_OK;
+    return S_OK;
 }
 
-HRESULT MfByteStreamHandlerWrapper::WaitForExpectedMediaEvent_(
+HRESULT MfByteStreamHandlerWrapper::OnSourceSeeked_(
+    IMFMediaEventPtr&)
+{
+    // no-op for now
+    return S_OK;
+}
+
+HRESULT MfByteStreamHandlerWrapper::WaitForEvent_(
     MediaEventType expected_event_type)
 {
-    expected_media_event_type_ = expected_event_type;
+    expected_event_type_ = expected_event_type;
     HRESULT hr = ptr_media_src_->BeginGetEvent(this, NULL);
     if (FAILED(hr))
     {
@@ -381,55 +435,19 @@ HRESULT MfByteStreamHandlerWrapper::WaitForExpectedMediaEvent_(
         DBGLOG("ERROR, media source event wait failed" << HRLOG(hr));
         return hr;
     }
-    if (FAILED(media_event_type_recvd_))
+    if (FAILED(media_event_error_))
     {
         // when event handling fails the last error is stored in
-        // |media_event_type_recvd_|, just return it to the caller
+        // |event_type_recvd_|, just return it to the caller
         DBGLOG("ERROR, media source event handling failed"
-            << HRLOG(media_event_type_recvd_));
-        return media_event_type_recvd_;
+            << HRLOG(media_event_error_));
+        return media_event_error_;
     }
-    if (media_event_type_recvd_ != expected_event_type)
+    if (event_type_recvd_ != expected_event_type)
     {
-        DBGLOG("ERROR, unexpected event received"
-            << HRLOG(media_event_type_recvd_));
+        DBGLOG("ERROR, unexpected event received" << event_type_recvd_);
         return E_UNEXPECTED;
     }
-    return hr;
-}
-
-HRESULT MfByteStreamHandlerWrapper::WaitForMediaEvent_(
-    MediaEventType* ptr_event_val)
-{
-    if (!ptr_event_val)
-    {
-        return E_INVALIDARG;
-    }
-    // must set |expected_media_event_type_| to 0 when we're waiting for an
-    // unspecified event, otherwise |HandleMediaSourceEvent_| will think
-    // there's been an error
-    expected_media_event_type_ = 0;
-    HRESULT hr = ptr_media_src_->BeginGetEvent(this, NULL);
-    if (FAILED(hr))
-    {
-        DBGLOG("ERROR, BeginGetEvent failed" << HRLOG(hr));
-        return hr;
-    }
-    hr = media_source_event_.Wait();
-    if (FAILED(hr))
-    {
-        DBGLOG("ERROR, media source event wait failed" << HRLOG(hr));
-        return hr;
-    }
-    if (FAILED(media_event_type_recvd_))
-    {
-        // when event handling fails the last error is stored in
-        // |media_event_type_recvd_|, just return it to the caller
-        DBGLOG("ERROR, media source event handling failed"
-            << HRLOG(media_event_type_recvd_));
-        return media_event_type_recvd_;
-    }
-    *ptr_event_val = media_event_type_recvd_;
     return hr;
 }
 
@@ -451,10 +469,10 @@ HRESULT MfByteStreamHandlerWrapper::WaitForNewStreamEvents_()
     UINT num_events = 0;
     while (num_events < num_new_events)
     {
-        hr = WaitForExpectedMediaEvent_(MENewStream);
+        hr = WaitForEvent_(MENewStream);
         if (FAILED(hr))
         {
-            DBGLOG("ERROR, WaitForMediaEvent_ MENewStream failed"
+            DBGLOG("ERROR, WaitForEvent_ MENewStream failed"
                 << HRLOG(hr));
             return hr;
         }
@@ -482,10 +500,10 @@ HRESULT MfByteStreamHandlerWrapper::WaitForUpdatedStreamEvents_()
     UINT num_events = 0;
     while (num_events < num_update_events)
     {
-        hr = WaitForExpectedMediaEvent_(MEUpdatedStream);
+        hr = WaitForEvent_(MEUpdatedStream);
         if (FAILED(hr))
         {
-            DBGLOG("ERROR, wait failed" << HRLOG(hr));
+            DBGLOG("ERROR, stream update wait failed" << HRLOG(hr));
             return hr;
         }
         ++num_events;
@@ -493,6 +511,85 @@ HRESULT MfByteStreamHandlerWrapper::WaitForUpdatedStreamEvents_()
     return hr;
 }
 
+HRESULT MfByteStreamHandlerWrapper::WaitForStartedEvents_()
+{
+    // http://msdn.microsoft.com/en-us/library/ms694101(v=VS.85).aspx
+    // If the source sends an MESourceStarted event, each media stream sends
+    // an MEStreamStarted event.
+
+    // wait for MESourceStarted
+    HRESULT hr = WaitForEvent_(MESourceStarted);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, source start wait failed" << HRLOG(hr));
+        return hr;
+    }
+    // now wait for the MEStreamStarted events
+    if (!ptr_audio_stream_ && !ptr_video_stream_)
+    {
+        DBGLOG("ERROR, 0 stream events to wait on" << HRLOG(E_INVALIDARG));
+        return E_INVALIDARG;
+    }
+    if (ptr_audio_stream_)
+    {
+        hr = ptr_audio_stream_->WaitForStreamEvent(MEStreamStarted);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, audio stream start wait failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    if (ptr_video_stream_)
+    {
+        hr = ptr_video_stream_->WaitForStreamEvent(MEStreamStarted);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, video stream start wait failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    return hr;
+}
+
+HRESULT MfByteStreamHandlerWrapper::WaitForSeekedEvents_()
+{
+    // http://msdn.microsoft.com/en-us/library/ms694101(v=VS.85).aspx
+    // If the source sends an MESourceSeeked event, each stream sends an
+    // MEStreamSeeked event.
+
+    // wait for MESourceSeeked
+    HRESULT hr = WaitForEvent_(MESourceSeeked);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, source start wait failed" << HRLOG(hr));
+        return hr;
+    }
+    // now wait for the MEStreamSeeked events
+    if (!ptr_audio_stream_ && !ptr_video_stream_)
+    {
+        DBGLOG("ERROR, 0 stream events to wait on" << HRLOG(E_INVALIDARG));
+        return E_INVALIDARG;
+    }
+    if (ptr_audio_stream_)
+    {
+        hr = ptr_audio_stream_->WaitForStreamEvent(MEStreamSeeked);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, audio stream seek wait failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    if (ptr_video_stream_)
+    {
+        hr = ptr_video_stream_->WaitForStreamEvent(MEStreamSeeked);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, video stream seek wait failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    return hr;
+}
 
 // TODO(tomfinegan): I should rename this to GetDefaultStreams_, then add a
 //                   GetAvailableStreams method that exposes all of the
@@ -558,7 +655,7 @@ HRESULT MfByteStreamHandlerWrapper::LoadMediaStreams()
     return hr;
 }
 
-HRESULT MfByteStreamHandlerWrapper::Start(LONGLONG start_time)
+HRESULT MfByteStreamHandlerWrapper::Start(bool seeking, LONGLONG start_time)
 {
     if (!ptr_media_src_)
     {
@@ -580,29 +677,88 @@ HRESULT MfByteStreamHandlerWrapper::Start(LONGLONG start_time)
         DBGLOG("ERROR, no event queue");
         return E_INVALIDARG;
     }
-    // store the time in a PROPVARIANT
     PROPVARIANT time_var;
     PropVariantInit(&time_var);
-    time_var.vt = VT_I8;
-    time_var.hVal.QuadPart = start_time;
+    if (seeking)
+    {
+        // seeking enabled, store the time in |time_var|
+        time_var.vt = VT_I8;
+        time_var.hVal.QuadPart = start_time;
+    }
+    else
+    {
+        // not seeking, leave |time_var| empty
+        time_var.vt = VT_EMPTY;
+    }
     // GUID_NULL == TIME_FORMAT_NONE, 100 ns units (aka TIME_FORMAT_MEDIA_TIME
     // in DirectShow)
     const GUID time_format = GUID_NULL;
     HRESULT hr = ptr_media_src_->Start(ptr_pres_desc_, &time_format,
                                        &time_var);
+    // Note: if IMFMediaSource::Start fails asynchronously, our handler will
+    //       receive an MESourceStarted event w/data set to error code.
+    //       However, a comment in webmmfsource lists this behavior as TODO.
     if (FAILED(hr))
     {
         DBGLOG("ERROR, IMFMediaSource::Start failed" << HRLOG(hr));
         return hr;
     }
-
+    state_ = MFSTATE_STARTED;
+    DBGLOG("state_=MFSTATE_STARTED");
     if (!ptr_audio_stream_ && !ptr_video_stream_)
     {
-        // wait for MENewStream * num streams
+        // Our |IMFMediaStreamPtr|'s pointers are stored when MENewStream
+        // is received in |WaitForNewStreamEvents_|.
         hr = WaitForNewStreamEvents_();
+        if (FAILED(hr))
+        {
+            state_ = MFSTATE_ERROR;
+            DBGLOG("state_=MFSTATE_ERROR, new stream event wait failed"
+                << HRLOG(hr));
+            return hr;
+        }
     }
-
-
+    else
+    {
+        // If the streams already exist when calling IMFMediaSource::Start,
+        // each stream will send a MEUpdatedStream event.
+        hr = WaitForUpdatedStreamEvents_();
+        if (FAILED(hr))
+        {
+            state_ = MFSTATE_ERROR;
+            DBGLOG("state_=MFSTATE_ERROR, updated stream event wait failed"
+                << HRLOG(hr));
+            return hr;
+        }
+    }
+    if (!seeking)
+    {
+        // if we did not seek, webmmfsource will send:
+        // MESourceStarted
+        // MEStreamStarted * num streams
+        hr = WaitForStartedEvents_();
+        if (FAILED(hr))
+        {
+            state_ = MFSTATE_ERROR;
+            DBGLOG("state_=MFSTATE_ERROR, start event wait failed"
+                << HRLOG(hr));
+            return hr;
+        }
+    }
+    else
+    {
+        // when we seek, webmmfsource will send:
+        // MESourceSeeked
+        // MEStreamSeeked * num streams
+        hr = WaitForSeekedEvents_();
+        if (FAILED(hr))
+        {
+            state_ = MFSTATE_ERROR;
+            DBGLOG("state_=MFSTATE_ERROR, seek event wait failed"
+                << HRLOG(hr));
+            return hr;
+        }
+    }
     return hr;
 }
 
