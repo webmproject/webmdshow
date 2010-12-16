@@ -115,10 +115,12 @@ int sdlplay_main(int argc, WCHAR* argv[])
     return EXIT_SUCCESS;
 }
 
+wchar_t* g_test_input_file = NULL;
 int test_main(int argc, WCHAR* argv[])
 {
     WebmMfUtil::ConsoleWindow console_window;
     console_window.Create();
+    g_test_input_file = argv[0];
     testing::InitGoogleTest(&argc, argv);
     RUN_ALL_TESTS();
     return 0;

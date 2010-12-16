@@ -17,11 +17,13 @@ class MfObjWrapperBase
 public:
     MfObjWrapperBase();
     virtual ~MfObjWrapperBase();
-protected:
     virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid) = 0;
+protected:
     ComDllWrapper* ptr_com_dll_;
     DISALLOW_COPY_AND_ASSIGN(MfObjWrapperBase);
 };
+
+
 
 class MfByteStreamHandlerWrapper : public IMFAsyncCallback,
                                    public MfObjWrapperBase
@@ -31,42 +33,52 @@ public:
     static HRESULT Create(std::wstring dll_path, GUID mfobj_clsid,
                           MfByteStreamHandlerWrapper** ptr_bsh_wrapper);
     virtual ~MfByteStreamHandlerWrapper();
-
     HRESULT LoadMediaStreams();
     HRESULT OpenURL(std::wstring url);
-
+    HRESULT Pause();
+    HRESULT Start(LONGLONG start_time);
+    HRESULT Stop();
     // IUnknown methods
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
     STDMETHODIMP_(ULONG) AddRef();
     STDMETHODIMP_(ULONG) Release();
-
     // IMFAsyncCallback methods
     STDMETHODIMP GetParameters(DWORD*, DWORD*);
     STDMETHODIMP Invoke(IMFAsyncResult* pAsyncResult);
-
-
 private:
-    MfByteStreamHandlerWrapper();
-    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
     _COM_SMARTPTR_TYPEDEF(IMFByteStreamHandler, IID_IMFByteStreamHandler);
     _COM_SMARTPTR_TYPEDEF(IMFByteStream, IID_IMFByteStream);
+    _COM_SMARTPTR_TYPEDEF(IMFMediaEvent, IID_IMFMediaEvent);
     _COM_SMARTPTR_TYPEDEF(IMFMediaSource, IID_IMFMediaSource);
-    _COM_SMARTPTR_TYPEDEF(IMFPresentationDescriptor, 
+    _COM_SMARTPTR_TYPEDEF(IMFMediaStream, IID_IMFMediaStream);
+    _COM_SMARTPTR_TYPEDEF(IMFPresentationDescriptor,
                           IID_IMFPresentationDescriptor);
     _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, IID_IMFMediaTypeHandler);
+    _COM_SMARTPTR_TYPEDEF(IMFMediaEventGenerator, IID_IMFMediaEventGenerator);
+
+    MfByteStreamHandlerWrapper();
+    HRESULT HandleEvent_(IMFMediaEventPtr& ptr_event);
+    HRESULT OnSourceStarted_(IMFMediaEventPtr& ptr_event);
+    HRESULT OnNewStream_(IMFMediaEventPtr& ptr_event);
+    HRESULT WaitForMediaEvent_(DWORD expected_event);
+    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
+
+    DWORD expected_media_event_type_;
     DWORD stream_count_;
     EventWaiter open_event_;
-    IMFByteStreamPtr ptr_stream_;
+    EventWaiter media_source_event_;
+    HRESULT media_event_error_;
+    IMFByteStreamPtr ptr_byte_stream_;
     IMFByteStreamHandlerPtr ptr_handler_;
+    IMFMediaEventGeneratorPtr ptr_event_queue_;
     IMFMediaSourcePtr ptr_media_src_;
+    IMFMediaStreamPtr ptr_audio_stream_;
+    IMFMediaStreamPtr ptr_video_stream_;
     IMFPresentationDescriptorPtr ptr_pres_desc_;
     UINT audio_stream_count_;
     UINT ref_count_;
     UINT selected_stream_count_;
     UINT video_stream_count_;
-    typedef std::vector<IMFStreamDescriptor*> MfStreamDesc;
-    MfStreamDesc audio_streams_;
-    MfStreamDesc video_streams_;
 
     DISALLOW_COPY_AND_ASSIGN(MfByteStreamHandlerWrapper);
 };
