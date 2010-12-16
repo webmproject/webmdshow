@@ -915,8 +915,8 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     m_mf_input_samples.pop_front();
     p_mf_input_sample->Release();
 
-    DBGLOG("IN start_time=" << REFTIMETOSECONDS(input_start_time) <<
-           " duration=" << REFTIMETOSECONDS(input_duration));
+    //DBGLOG("IN start_time=" << REFTIMETOSECONDS(input_start_time) <<
+    //       " duration=" << REFTIMETOSECONDS(input_duration));
 
     UINT32 samples_available;
     status = m_vorbis_decoder.GetOutputSamplesAvailable(&samples_available);
@@ -937,21 +937,20 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     LONGLONG mediatime_decoded = SamplesToMediaTime(samples_available);
     m_mediatime_decoded += mediatime_decoded;
 
-    // logging spam for tracking audio pauses with some input files
-    DBGLOG("OUT start_time=" << REFTIMETOSECONDS(m_start_time) <<
-           " duration (seconds)=" << REFTIMETOSECONDS(mediatime_decoded) <<
-           " duration (samples)=" << samples_available <<
-           " end time=" <<
-           REFTIMETOSECONDS(m_start_time + mediatime_decoded));
-    DBGLOG("m_total_samples_decoded=" << m_total_samples_decoded);
-    DBGLOG("total time recvd (seconds)=" <<
-           REFTIMETOSECONDS(m_mediatime_recvd) <<
-           " total time decoded (seconds)=" <<
-           REFTIMETOSECONDS(m_mediatime_decoded));
-    DBGLOG("lag (seconds)=" <<
-           REFTIMETOSECONDS(m_mediatime_recvd - m_mediatime_decoded) <<
-           " lag (samples)=" <<
-           MediaTimeToSamples(m_mediatime_recvd - m_mediatime_decoded));
+    //DBGLOG("OUT start_time=" << REFTIMETOSECONDS(m_start_time) <<
+    //       " duration (seconds)=" << REFTIMETOSECONDS(mediatime_decoded) <<
+    //       " duration (samples)=" << samples_available <<
+    //       " end time=" <<
+    //       REFTIMETOSECONDS(m_start_time + mediatime_decoded));
+    //DBGLOG("m_total_samples_decoded=" << m_total_samples_decoded);
+    //DBGLOG("total time recvd (seconds)=" <<
+    //       REFTIMETOSECONDS(m_mediatime_recvd) <<
+    //       " total time decoded (seconds)=" <<
+    //       REFTIMETOSECONDS(m_mediatime_decoded));
+    //DBGLOG("lag (seconds)=" <<
+    //       REFTIMETOSECONDS(m_mediatime_recvd - m_mediatime_decoded) <<
+    //       " lag (samples)=" <<
+    //       MediaTimeToSamples(m_mediatime_recvd - m_mediatime_decoded));
 
     // update |m_start_time| for the next time through |ProcessOutput|
     const LONGLONG start_time = m_decode_start_time +
