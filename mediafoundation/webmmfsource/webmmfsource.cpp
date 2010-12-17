@@ -41,23 +41,138 @@ HRESULT CreateSource(
     IMFMediaSource*& pResult = *ppResult;
     pResult = 0;
 
-    WebmMfSource* const p =
+    WebmMfSource* const pSource =
         new (std::nothrow) WebmMfSource(pClassFactory, pByteStream);
 
-    if (p == 0)
+    if (pSource == 0)
         return E_OUTOFMEMORY;
 
-    pResult = p;
+    HRESULT hr;
 
-    HRESULT hr = p->Load();
+#ifdef _DEBUG
+    DWORD dw;
+    hr = pByteStream->GetCapabilities(&dw);
+
+    if (SUCCEEDED(hr))
+    {
+        odbgstream os;
+        os << "webmmfsource::BeginCreateObject: caps:";
+
+        if (dw & MFBYTESTREAM_IS_READABLE)
+            os << " READABLE";
+
+        if (dw & MFBYTESTREAM_IS_WRITABLE)
+            os << " WRITABLE";
+
+        if (dw & MFBYTESTREAM_IS_SEEKABLE)
+            os << " SEEKABLE";
+
+        if (dw & MFBYTESTREAM_IS_REMOTE)
+            os << " REMOTE";
+
+        if (dw & MFBYTESTREAM_IS_DIRECTORY)
+            os << " DIRECTORY";
+
+        if (dw & MFBYTESTREAM_HAS_SLOW_SEEK)
+            os << " SLOW_SEEK";
+
+        if (dw & MFBYTESTREAM_IS_PARTIALLY_DOWNLOADED)
+            os << " PARTIALLY_DOWNLOADED";
+
+        if (dw & MFBYTESTREAM_SHARE_WRITE)
+            os << " SHARE_WRITE";
+
+        os << endl;
+    }
+#endif
+
+    typedef IMFByteStreamBuffering Buffering;
+    _COM_SMARTPTR_TYPEDEF(Buffering, __uuidof(Buffering));
+
+    const BufferingPtr pBuffering(pByteStream);
+
+    if (pBuffering)
+    {
+        MFBYTESTREAM_BUFFERING_PARAMS p;
+
+        p.cbTotalFileSize = static_cast<QWORD>(-1);
+        p.cbPlayableDataSize = static_cast<QWORD>(-1);
+        p.prgBuckets = 0;
+        p.cBuckets = 0;
+        p.qwNetBufferingTime = 0;
+        p.qwExtraBufferingTimeDuringSeek = 0;
+        p.qwPlayDuration = 0;
+        p.dRate = 1;
+
+        hr = pBuffering->SetBufferingParams(&p);
+        hr = pBuffering->EnableBuffering(TRUE);
+    }
+
+    hr = pSource->Load();
+
+    IMFMediaSource* const pUnk = pSource;
 
     if (FAILED(hr))
     {
-        pResult->Release();
-        pResult = 0;
+        const ULONG n = pUnk->Release();
+        n;
+        assert(n == 0);
+
+        return hr;
     }
 
-    return hr;
+    if (pBuffering)
+    {
+        mkvparser::Segment* const pSegment = pSource->m_pSegment;
+
+        MFBYTESTREAM_BUFFERING_PARAMS p;
+
+        const LONGLONG duration = pSegment->GetDuration();  //reftime units
+
+        if (duration >= 0)
+            p.qwPlayDuration = duration;
+        else
+            p.qwPlayDuration = 0;
+
+        hr = pByteStream->GetLength(&p.cbTotalFileSize);
+
+        if (FAILED(hr))
+            p.cbTotalFileSize = 0;
+
+        p.cbPlayableDataSize = p.cbTotalFileSize;
+
+        MF_LEAKY_BUCKET_PAIR bb[1];
+
+        if ((p.cbTotalFileSize == 0) || (duration <= 0))
+        {
+            p.prgBuckets = 0;
+            p.cBuckets = 0;
+        }
+        else
+        {
+            MF_LEAKY_BUCKET_PAIR& b = bb[0];
+
+            const QWORD bits = p.cbTotalFileSize * 8ULL;
+            const double secs = double(duration) / 10000000;
+
+            const double bitrate = double(bits) / secs;
+
+            b.dwBitrate = static_cast<DWORD>(bitrate);
+            b.msBufferWindow = 5000;  //?
+
+            p.prgBuckets = bb;
+            p.cBuckets = 1;
+        }
+
+        p.qwNetBufferingTime = 0;
+        p.qwExtraBufferingTimeDuringSeek = 0;
+        p.dRate = 1;
+
+        hr = pBuffering->SetBufferingParams(&p);
+    }
+
+    pResult = pUnk;
+    return S_OK;
 }
 
 
