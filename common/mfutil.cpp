@@ -102,57 +102,82 @@ STDMETHODIMP MfMediaStream::GetParameters(DWORD*, DWORD*)
 // IMFAsyncCallback method
 STDMETHODIMP MfMediaStream::Invoke(IMFAsyncResult* pAsyncResult)
 {
+    stream_event_error_ = E_FAIL;
+    MediaEventType event_type = MEError;
     IMFMediaEventPtr ptr_event;
     HRESULT hr = ptr_event_queue_->EndGetEvent(pAsyncResult, &ptr_event);
     if (FAILED(hr))
     {
-        DBGLOG("ERROR, EndGetEvent failed" << HRLOG(hr)
-          << " return E_FAIL.");
-        return E_FAIL;
+        DBGLOG("ERROR, EndGetEvent failed" << HRLOG(hr));
     }
-    MediaEventType event_type;
-    hr = ptr_event->GetType(&event_type);
-    if (FAILED(hr))
+    else
     {
-        DBGLOG("ERROR, cannot get event type" << HRLOG(hr)
-          << " return E_FAIL.");
-        return E_FAIL;
+        hr = ptr_event->GetType(&event_type);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, cannot get event type" << HRLOG(hr));
+        }
+        if (0 != expected_event_ && event_type != expected_event_)
+        {
+            DBGLOG("ERROR, unexpected event type, expected "
+              << expected_event_ << " got " << event_type);
+            stream_event_error_ = E_UNEXPECTED;
+        }
+        else
+        {
+            switch (event_type)
+            {
+            case MEStreamPaused:
+                DBGLOG("MEStreamPaused");
+                stream_event_error_ = OnStreamPaused_(ptr_event);
+                if (FAILED(stream_event_error_))
+                {
+                    DBGLOG("MEStreamSeeked handling failed");
+                }
+                break;
+            case MEStreamStarted:
+                DBGLOG("MEStreamStarted");
+                stream_event_error_ = OnStreamStarted_(ptr_event);
+                if (FAILED(stream_event_error_))
+                {
+                    DBGLOG("MEStreamSeeked handling failed");
+                }
+                break;
+            case MEStreamSeeked:
+                DBGLOG("MEStreamSeeked");
+                stream_event_error_ = OnStreamSeeked_(ptr_event);
+                if (FAILED(stream_event_error_))
+                {
+                    DBGLOG("MEStreamSeeked handling failed");
+                }
+                break;
+            default:
+                stream_event_error_ = E_UNEXPECTED;
+                DBGLOG("unhandled event_type=" << event_type);
+                break;
+            }
+        }
     }
-    if (0 != expected_event_ && event_type != expected_event_)
-    {
-        DBGLOG("ERROR, unexpected event type, expected "
-          << expected_event_ << " got " << event_type);
-        return E_FAIL;
-    }
+    expected_event_ = 0;
     stream_event_recvd_ = event_type;
-    switch (stream_event_recvd_)
-    {
-    case MEStreamStarted:
-        DBGLOG("MEStreamStarted");
-        OnStreamStarted_(ptr_event);
-        break;
-    case MEStreamSeeked:
-        DBGLOG("MEStreamSeeked");
-        OnStreamSeeked_(ptr_event);
-        break;
-    default:
-        DBGLOG("unhandled event_type=" << event_type);
-        break;
-    }
     return stream_event_.Set();
 }
 
-HRESULT MfMediaStream::OnStreamStarted_(IMFMediaEventPtr&)
+HRESULT MfMediaStream::OnStreamPaused_(IMFMediaEventPtr&)
 {
     // no-op for now
-    stream_event_error_ = S_OK;
     return S_OK;
 }
 
 HRESULT MfMediaStream::OnStreamSeeked_(IMFMediaEventPtr&)
 {
     // no-op for now
-    stream_event_error_ = S_OK;
+    return S_OK;
+}
+
+HRESULT MfMediaStream::OnStreamStarted_(IMFMediaEventPtr&)
+{
+    // no-op for now
     return S_OK;
 }
 
@@ -203,12 +228,6 @@ HRESULT MfMediaStream::WaitForStreamEvent(MediaEventType event_type)
         DBGLOG("ERROR, stream event handling failed"
             << HRLOG(stream_event_error_));
         return stream_event_error_;
-    }
-    if (stream_event_recvd_ != expected_event_)
-    {
-        DBGLOG("ERROR, unexpected event received "
-            << HRLOG(stream_event_recvd_));
-        return E_UNEXPECTED;
     }
     return hr;
 }

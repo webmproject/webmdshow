@@ -34,6 +34,7 @@ private:
     MfMediaStream();
     ~MfMediaStream();
     HRESULT Create_(IMFMediaStreamPtr& ptr_stream);
+    HRESULT OnStreamPaused_(IMFMediaEventPtr& ptr_event);
     HRESULT OnStreamSeeked_(IMFMediaEventPtr& ptr_event);
     HRESULT OnStreamStarted_(IMFMediaEventPtr& ptr_event);
 
