@@ -72,14 +72,15 @@ private:
     HRESULT OnSourcePaused_(IMFMediaEventPtr& ptr_event);
     HRESULT OnSourceSeeked_(IMFMediaEventPtr& ptr_event);
     HRESULT OnSourceStarted_(IMFMediaEventPtr& ptr_event);
+    HRESULT OnSourceStopped_(IMFMediaEventPtr& ptr_event);
     HRESULT OnNewStream_(IMFMediaEventPtr& ptr_event);
     HRESULT OnUpdatedStream_(IMFMediaEventPtr& ptr_event);
     HRESULT WaitForEvent_(MediaEventType expected_event_type);
     HRESULT WaitForNewStreamEvents_();
     HRESULT WaitForPausedEvents_();
-    HRESULT WaitForStartedEvents_();
     HRESULT WaitForSeekedEvents_();
-    HRESULT WaitForStreamEvents_();
+    HRESULT WaitForStartedEvents_();
+    HRESULT WaitForStoppedEvents_();
     HRESULT WaitForUpdatedStreamEvents_();
     virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
 

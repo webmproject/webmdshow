@@ -317,6 +317,14 @@ HRESULT MfByteStreamHandlerWrapper::HandleMediaSourceEvent_(
                     DBGLOG("MESourceStarted handling failed");
                 }
                 break;
+            case MESourceStopped:
+                DBGLOG("MESourceStopped");
+                media_event_error_ = OnSourceStopped_(ptr_event);
+                if (FAILED(media_event_error_))
+                {
+                    DBGLOG("MESourceStopped handling failed");
+                }
+                break;
             case MEUpdatedStream:
                 DBGLOG("MEUpdatedStream");
                 media_event_error_ = OnUpdatedStream_(ptr_event);
@@ -426,6 +434,13 @@ HRESULT MfByteStreamHandlerWrapper::OnSourcePaused_(
     return S_OK;
 }
 
+HRESULT MfByteStreamHandlerWrapper::OnSourceSeeked_(
+    IMFMediaEventPtr&)
+{
+    // no-op for now
+    return S_OK;
+}
+
 HRESULT MfByteStreamHandlerWrapper::OnSourceStarted_(
     IMFMediaEventPtr&)
 {
@@ -433,7 +448,7 @@ HRESULT MfByteStreamHandlerWrapper::OnSourceStarted_(
     return S_OK;
 }
 
-HRESULT MfByteStreamHandlerWrapper::OnSourceSeeked_(
+HRESULT MfByteStreamHandlerWrapper::OnSourceStopped_(
     IMFMediaEventPtr&)
 {
     // no-op for now
@@ -640,6 +655,41 @@ HRESULT MfByteStreamHandlerWrapper::WaitForSeekedEvents_()
     return hr;
 }
 
+HRESULT MfByteStreamHandlerWrapper::WaitForStoppedEvents_()
+{
+    // http://msdn.microsoft.com/en-us/library/ms694101(v=VS.85).aspx
+    // If the source sends an MESourceSeeked event, each stream sends an
+    // MEStreamSeeked event.
+
+    // wait for MESourceStopped
+    HRESULT hr = WaitForEvent_(MESourceStopped);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, source start wait failed" << HRLOG(hr));
+        return hr;
+    }
+    // now wait for the MEStreamStopped events
+    if (ptr_audio_stream_)
+    {
+        hr = ptr_audio_stream_->WaitForStreamEvent(MEStreamStopped);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, audio stream stop wait failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    if (ptr_video_stream_)
+    {
+        hr = ptr_video_stream_->WaitForStreamEvent(MEStreamStopped);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, video stream stop wait failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    return hr;
+}
+
 // TODO(tomfinegan): I should rename this to GetDefaultStreams_, then add a
 //                   GetAvailableStreams method that exposes all of the
 //                   available streams after calling GetDefaultStreams_.
@@ -817,12 +867,9 @@ HRESULT MfByteStreamHandlerWrapper::Start(bool seeking, LONGLONG start_time)
 
 HRESULT MfByteStreamHandlerWrapper::Pause()
 {
-    if (!ptr_audio_stream_ && !ptr_video_stream_)
-    {
-        DBGLOG("ERROR, no streams, E_INVALIDARG");
-        return E_INVALIDARG;
-    }
-    if (MFSTATE_STARTED != state_)
+    const bool no_streams = (!ptr_audio_stream_ && !ptr_video_stream_);
+    const bool wrong_state = MFSTATE_STARTED != state_;
+    if (no_streams || wrong_state)
     {
         DBGLOG("ERROR, MF_E_INVALID_STATE_TRANSITION");
         return MF_E_INVALID_STATE_TRANSITION;
@@ -841,6 +888,33 @@ HRESULT MfByteStreamHandlerWrapper::Pause()
         return hr;
     }
     state_ = MFSTATE_PAUSED;
+    return hr;
+}
+
+HRESULT MfByteStreamHandlerWrapper::Stop()
+{
+    const bool no_streams = (!ptr_audio_stream_ && !ptr_video_stream_);
+    const bool wrong_state =
+        (MFSTATE_STARTED != state_ && MFSTATE_PAUSED != state_);
+    if (no_streams || wrong_state)
+    {
+        DBGLOG("ERROR, MF_E_INVALID_STATE_TRANSITION");
+        return MF_E_INVALID_STATE_TRANSITION;
+    }
+    HRESULT hr = E_FAIL;
+    hr = ptr_media_src_->Stop();
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, Paused failed" << HRLOG(hr));
+        return hr;
+    }
+    hr = WaitForStoppedEvents_();
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, Stop failed" << HRLOG(hr));
+        return hr;
+    }
+    state_ = MFSTATE_STOPPED;
     return hr;
 }
 
