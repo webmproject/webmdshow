@@ -658,8 +658,8 @@ HRESULT MfByteStreamHandlerWrapper::WaitForSeekedEvents_()
 HRESULT MfByteStreamHandlerWrapper::WaitForStoppedEvents_()
 {
     // http://msdn.microsoft.com/en-us/library/ms694101(v=VS.85).aspx
-    // If the source sends an MESourceSeeked event, each stream sends an
-    // MEStreamSeeked event.
+    // If the source sends an MESourceStopped event, each stream sends an
+    // MEStreamStopped event.
 
     // wait for MESourceStopped
     HRESULT hr = WaitForEvent_(MESourceStopped);
