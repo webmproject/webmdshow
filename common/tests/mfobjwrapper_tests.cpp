@@ -148,6 +148,58 @@ TEST(MfByteStreamHandlerWrapper, StartPause)
     ASSERT_EQ(S_OK, mf_shutdown());
 }
 
+TEST(MfByteStreamHandlerWrapper, StartStop)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Stop());
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfByteStreamHandlerWrapper, StartPauseStop)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Pause());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Stop());
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfByteStreamHandlerWrapper, StartPauseStopStartStop)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Pause());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Stop());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Stop());
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
 TEST(MfByteStreamHandlerWrapper, StartPauseStart)
 {
     ASSERT_EQ(S_OK, mf_startup());
@@ -199,3 +251,49 @@ TEST(MfByteStreamHandlerWrapper, StartSeekTo20SecondsPauseStart)
     ASSERT_EQ(S_OK, mf_shutdown());
 }
 
+TEST(BSHBasicFuzz, PauseWithoutStart)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(MF_E_INVALID_STATE_TRANSITION, ptr_mf_bsh->Pause());
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(BSHBasicFuzz, StopWithoutStart)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(MF_E_INVALID_STATE_TRANSITION, ptr_mf_bsh->Stop());
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(BSHBasicFuzz, StartStopPauseWithoutStart)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Stop());
+    ASSERT_EQ(MF_E_INVALID_STATE_TRANSITION, ptr_mf_bsh->Pause());
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
