@@ -214,14 +214,16 @@ INTERFACENAME = { /* ED3110FF-5211-11DF-94AF-0026B977EEAA */
 //  };
 
 
-//unclaimed:
-INTERFACENAME = { /* ED311103-5211-11DF-94AF-0026B977EEAA */
-    0xED311103,
-    0x5211,
-    0x11DF,
-    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
-  };
+//webm vorbis decoder CLSID
+//INTERFACENAME = { /* ED311103-5211-11DF-94AF-0026B977EEAA */
+//    0xED311103,
+//    0x5211,
+//    0x11DF,
+//    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
+//  };
 
+
+//unclaimed:
 INTERFACENAME = { /* ED311104-5211-11DF-94AF-0026B977EEAA */
     0xED311104,
     0x5211,

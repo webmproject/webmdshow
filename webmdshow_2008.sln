@@ -23,6 +23,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "makewebm_2008", "makewebm\m
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "playwebm_2008", "playwebm\playwebm_2008.vcproj", "{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisdecoder_2008", "webmvorbisdecoder\webmvorbisdecoder_2008.vcproj", "{0E132E1D-37A1-4301-AE60-61BCB71724E9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -113,6 +115,16 @@ Global
 		{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}.Release|Win32.ActiveCfg = Release|Win32
 		{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}.Release|Win32.Build.0 = Release|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Debug|Win32.Build.0 = Debug|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Any CPU.ActiveCfg = Release|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Win32.ActiveCfg = Release|Win32
+		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

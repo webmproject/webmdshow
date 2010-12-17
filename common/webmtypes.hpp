@@ -18,6 +18,7 @@ namespace WebmTypes
     //extern const CLSID CLSID_WebmMux;
     extern const CLSID CLSID_WebmSource;  //DirectShow
     extern const CLSID CLSID_WebmSplit;
+    extern const CLSID CLSID_WebmVorbisDecoder;
 
     extern const CLSID CLSID_WebmMfSource;  //Media Foundation
     extern const CLSID CLSID_WebmMfByteStreamHandler;
