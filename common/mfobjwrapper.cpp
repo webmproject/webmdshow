@@ -55,6 +55,16 @@ MfByteStreamHandlerWrapper::MfByteStreamHandlerWrapper():
 
 MfByteStreamHandlerWrapper::~MfByteStreamHandlerWrapper()
 {
+    if (ptr_audio_stream_)
+    {
+        ptr_audio_stream_->Release();
+        ptr_audio_stream_ = NULL;
+    }
+    if (ptr_video_stream_)
+    {
+        ptr_video_stream_->Release();
+        ptr_video_stream_ = NULL;
+    }
     if (ptr_media_src_)
     {
         ptr_media_src_->Shutdown();
