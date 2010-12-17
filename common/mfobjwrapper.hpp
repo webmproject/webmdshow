@@ -69,16 +69,18 @@ private:
 
     MfByteStreamHandlerWrapper();
     HRESULT HandleMediaSourceEvent_(IMFMediaEventPtr& ptr_event);
+    HRESULT OnSourcePaused_(IMFMediaEventPtr& ptr_event);
     HRESULT OnSourceSeeked_(IMFMediaEventPtr& ptr_event);
     HRESULT OnSourceStarted_(IMFMediaEventPtr& ptr_event);
     HRESULT OnNewStream_(IMFMediaEventPtr& ptr_event);
     HRESULT OnUpdatedStream_(IMFMediaEventPtr& ptr_event);
     HRESULT WaitForEvent_(MediaEventType expected_event_type);
     HRESULT WaitForNewStreamEvents_();
-    HRESULT WaitForUpdatedStreamEvents_();
+    HRESULT WaitForPausedEvents_();
     HRESULT WaitForStartedEvents_();
     HRESULT WaitForSeekedEvents_();
     HRESULT WaitForStreamEvents_();
+    HRESULT WaitForUpdatedStreamEvents_();
     virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
 
     DWORD stream_count_;

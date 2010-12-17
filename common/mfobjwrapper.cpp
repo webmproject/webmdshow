@@ -266,65 +266,73 @@ STDMETHODIMP MfByteStreamHandlerWrapper::Invoke(IMFAsyncResult* pAsyncResult)
 HRESULT MfByteStreamHandlerWrapper::HandleMediaSourceEvent_(
     IMFMediaEventPtr& ptr_event)
 {
-    if (!ptr_event)
-    {
-        DBGLOG("ERROR, null event, return E_INVALIDARG");
-        return E_INVALIDARG;
-    }
     MediaEventType event_type = MEError;
     HRESULT hr = ptr_event->GetType(&event_type);
     if (FAILED(hr))
     {
+        media_event_error_ = hr;
         DBGLOG("ERROR, cannot get event type" << HRLOG(hr));
-    }
-    if (0 != expected_event_type_ && event_type != expected_event_type_)
-    {
-        DBGLOG("ERROR, unexpected event type, expected "
-          << expected_event_type_ << " got " << event_type);
-        media_event_error_ = E_UNEXPECTED;
     }
     else
     {
-        switch (event_type)
+        if (0 != expected_event_type_ && event_type != expected_event_type_)
         {
-        case MENewStream:
-            DBGLOG("MENewStream");
-            hr = OnNewStream_(ptr_event);
-            if (FAILED(hr))
-            {
-                DBGLOG("MENewStream handling failed");
-            }
-            break;
-        case MEUpdatedStream:
-            DBGLOG("MEUpdatedStream");
-            hr = OnUpdatedStream_(ptr_event);
-            if (FAILED(hr))
-            {
-                DBGLOG("MEUpdatedStream handling failed");
-            }
-            break;
-        case MESourceStarted:
-            DBGLOG("MESourceStarted");
-            hr = OnSourceStarted_(ptr_event);
-            if (FAILED(hr))
-            {
-                DBGLOG("MESourceStarted handling failed");
-            }
-            break;
-        case MESourceSeeked:
-            DBGLOG("MESourceSeeked");
-            hr = OnSourceSeeked_(ptr_event);
-            if (FAILED(hr))
-            {
-                DBGLOG("MESourceSeeked handling failed");
-            }
-            break;
-        default:
-            DBGLOG("unhandled event_type=" << event_type);
+            DBGLOG("ERROR, unexpected event type, expected "
+              << expected_event_type_ << " got " << event_type);
             media_event_error_ = E_UNEXPECTED;
-            break;
+        }
+        else
+        {
+            switch (event_type)
+            {
+            case MENewStream:
+                DBGLOG("MENewStream");
+                media_event_error_ = OnNewStream_(ptr_event);
+                if (FAILED(media_event_error_))
+                {
+                    DBGLOG("MENewStream handling failed");
+                }
+                break;
+            case MESourcePaused:
+                DBGLOG("MESourcePaused");
+                media_event_error_ = OnSourcePaused_(ptr_event);
+                if (FAILED(media_event_error_))
+                {
+                    DBGLOG("MESourcePaused handling failed");
+                }
+                break;
+            case MESourceSeeked:
+                DBGLOG("MESourceSeeked");
+                media_event_error_ = OnSourceSeeked_(ptr_event);
+                if (FAILED(media_event_error_))
+                {
+                    DBGLOG("MESourceSeeked handling failed");
+                }
+                break;
+            case MESourceStarted:
+                DBGLOG("MESourceStarted");
+                media_event_error_ = OnSourceStarted_(ptr_event);
+                if (FAILED(media_event_error_))
+                {
+                    DBGLOG("MESourceStarted handling failed");
+                }
+                break;
+            case MEUpdatedStream:
+                DBGLOG("MEUpdatedStream");
+                media_event_error_ = OnUpdatedStream_(ptr_event);
+                if (FAILED(media_event_error_))
+                {
+                    DBGLOG("MEUpdatedStream handling failed");
+                }
+                break;
+            default:
+                DBGLOG("unhandled event_type=" << event_type);
+                media_event_error_ = E_UNEXPECTED;
+                break;
+            }
         }
     }
+    expected_event_type_ = 0;
     event_type_recvd_ = event_type;
     return media_source_event_.Set();
 }
@@ -391,7 +399,6 @@ HRESULT MfByteStreamHandlerWrapper::OnNewStream_(IMFMediaEventPtr &ptr_event)
         hr = MfMediaStream::Create(ptr_media_stream, &ptr_audio_stream_);
         if (FAILED(hr) || !ptr_audio_stream_)
         {
-            media_event_error_ = hr;
             DBGLOG("audio MfMediaStream creation failed" << HRLOG(hr));
         }
     }
@@ -400,7 +407,6 @@ HRESULT MfByteStreamHandlerWrapper::OnNewStream_(IMFMediaEventPtr &ptr_event)
         hr = MfMediaStream::Create(ptr_media_stream, &ptr_video_stream_);
         if (FAILED(hr) || !ptr_video_stream_)
         {
-            media_event_error_ = hr;
             DBGLOG("video MfMediaStream creation failed" << HRLOG(hr));
         }
     }
@@ -410,7 +416,13 @@ HRESULT MfByteStreamHandlerWrapper::OnNewStream_(IMFMediaEventPtr &ptr_event)
 HRESULT MfByteStreamHandlerWrapper::OnUpdatedStream_(IMFMediaEventPtr &)
 {
     // no-op for now
-    media_event_error_ = S_OK;
+    return S_OK;
+}
+
+HRESULT MfByteStreamHandlerWrapper::OnSourcePaused_(
+    IMFMediaEventPtr&)
+{
+    // no-op for now
     return S_OK;
 }
 
@@ -418,7 +430,6 @@ HRESULT MfByteStreamHandlerWrapper::OnSourceStarted_(
     IMFMediaEventPtr&)
 {
     // no-op for now
-    media_event_error_ = S_OK;
     return S_OK;
 }
 
@@ -453,10 +464,48 @@ HRESULT MfByteStreamHandlerWrapper::WaitForEvent_(
             << HRLOG(media_event_error_));
         return media_event_error_;
     }
-    if (event_type_recvd_ != expected_event_type)
+    return hr;
+}
+
+HRESULT MfByteStreamHandlerWrapper::WaitForPausedEvents_()
+{
+    // http://msdn.microsoft.com/en-us/library/ms694275(v=VS.85).aspx
+    // When paused the source sends an MESourcePaused event, and every active
+    // stream sends an MEStreamPaused event.
+
+    // wait for MESourcePaused
+    HRESULT hr = WaitForEvent_(MESourcePaused);
+    if (FAILED(hr))
     {
-        DBGLOG("ERROR, unexpected event received" << event_type_recvd_);
-        return E_UNEXPECTED;
+        DBGLOG("ERROR, source pause wait failed" << HRLOG(hr));
+        return hr;
+    }
+    // now wait for the MEStreamPaused events
+    // TODO(tomfinegan): might have to flush RequestSample event responses from
+    //                   the stream event queues on Pause because:
+    // http://msdn.microsoft.com/en-us/library/ms694275(v=VS.85).aspx
+    // Note that the source's event queue is not serialized with the stream
+    // event queues, so the client might receive some samples after the
+    // MESourcePaused event, due to multi-threading issues. But the client
+    // will not receive any samples from a stream after the MEStreamPaused
+    // event.
+    if (ptr_audio_stream_)
+    {
+        hr = ptr_audio_stream_->WaitForStreamEvent(MEStreamPaused);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, audio stream pause wait failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    if (ptr_video_stream_)
+    {
+        hr = ptr_video_stream_->WaitForStreamEvent(MEStreamPaused);
+        if (FAILED(hr))
+        {
+            DBGLOG("ERROR, video stream pause wait failed" << HRLOG(hr));
+            return hr;
+        }
     }
     return hr;
 }
@@ -535,11 +584,6 @@ HRESULT MfByteStreamHandlerWrapper::WaitForStartedEvents_()
         return hr;
     }
     // now wait for the MEStreamStarted events
-    if (!ptr_audio_stream_ && !ptr_video_stream_)
-    {
-        DBGLOG("ERROR, 0 stream events to wait on" << HRLOG(E_INVALIDARG));
-        return E_INVALIDARG;
-    }
     if (ptr_audio_stream_)
     {
         hr = ptr_audio_stream_->WaitForStreamEvent(MEStreamStarted);
@@ -575,11 +619,6 @@ HRESULT MfByteStreamHandlerWrapper::WaitForSeekedEvents_()
         return hr;
     }
     // now wait for the MEStreamSeeked events
-    if (!ptr_audio_stream_ && !ptr_video_stream_)
-    {
-        DBGLOG("ERROR, 0 stream events to wait on" << HRLOG(E_INVALIDARG));
-        return E_INVALIDARG;
-    }
     if (ptr_audio_stream_)
     {
         hr = ptr_audio_stream_->WaitForStreamEvent(MEStreamSeeked);
@@ -727,6 +766,10 @@ HRESULT MfByteStreamHandlerWrapper::Start(bool seeking, LONGLONG start_time)
                 << HRLOG(hr));
             return hr;
         }
+        // always set seeking to false; we're getting MESourceStarted and
+        // MEStreamStarted in response to the first Start when a time is
+        // specified.
+        seeking = false;
     }
     else
     {
@@ -769,6 +812,35 @@ HRESULT MfByteStreamHandlerWrapper::Start(bool seeking, LONGLONG start_time)
             return hr;
         }
     }
+    return hr;
+}
+
+HRESULT MfByteStreamHandlerWrapper::Pause()
+{
+    if (!ptr_audio_stream_ && !ptr_video_stream_)
+    {
+        DBGLOG("ERROR, no streams, E_INVALIDARG");
+        return E_INVALIDARG;
+    }
+    if (MFSTATE_STARTED != state_)
+    {
+        DBGLOG("ERROR, MF_E_INVALID_STATE_TRANSITION");
+        return MF_E_INVALID_STATE_TRANSITION;
+    }
+    HRESULT hr = E_FAIL;
+    hr = ptr_media_src_->Pause();
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, Paused failed" << HRLOG(hr));
+        return hr;
+    }
+    hr = WaitForPausedEvents_();
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, Paused failed" << HRLOG(hr));
+        return hr;
+    }
+    state_ = MFSTATE_PAUSED;
     return hr;
 }
 
