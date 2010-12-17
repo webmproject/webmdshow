@@ -37,6 +37,7 @@ private:
     HRESULT OnStreamPaused_(IMFMediaEventPtr& ptr_event);
     HRESULT OnStreamSeeked_(IMFMediaEventPtr& ptr_event);
     HRESULT OnStreamStarted_(IMFMediaEventPtr& ptr_event);
+    HRESULT OnStreamStopped_(IMFMediaEventPtr& ptr_event);
 
     EventWaiter stream_event_;
     HRESULT stream_event_error_;

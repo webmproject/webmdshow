@@ -135,20 +135,28 @@ STDMETHODIMP MfMediaStream::Invoke(IMFAsyncResult* pAsyncResult)
                     DBGLOG("MEStreamSeeked handling failed");
                 }
                 break;
-            case MEStreamStarted:
-                DBGLOG("MEStreamStarted");
-                stream_event_error_ = OnStreamStarted_(ptr_event);
-                if (FAILED(stream_event_error_))
-                {
-                    DBGLOG("MEStreamSeeked handling failed");
-                }
-                break;
             case MEStreamSeeked:
                 DBGLOG("MEStreamSeeked");
                 stream_event_error_ = OnStreamSeeked_(ptr_event);
                 if (FAILED(stream_event_error_))
                 {
                     DBGLOG("MEStreamSeeked handling failed");
+                }
+                break;
+            case MEStreamStarted:
+                DBGLOG("MEStreamStarted");
+                stream_event_error_ = OnStreamStarted_(ptr_event);
+                if (FAILED(stream_event_error_))
+                {
+                    DBGLOG("MEStreamStarted handling failed");
+                }
+                break;
+            case MEStreamStopped:
+                DBGLOG("MEStreamStopped");
+                stream_event_error_ = OnStreamStopped_(ptr_event);
+                if (FAILED(stream_event_error_))
+                {
+                    DBGLOG("MEStreamStopped handling failed");
                 }
                 break;
             default:
@@ -176,6 +184,12 @@ HRESULT MfMediaStream::OnStreamSeeked_(IMFMediaEventPtr&)
 }
 
 HRESULT MfMediaStream::OnStreamStarted_(IMFMediaEventPtr&)
+{
+    // no-op for now
+    return S_OK;
+}
+
+HRESULT MfMediaStream::OnStreamStopped_(IMFMediaEventPtr&)
 {
     // no-op for now
     return S_OK;
