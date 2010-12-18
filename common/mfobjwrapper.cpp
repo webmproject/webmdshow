@@ -14,9 +14,7 @@
 #include <mfidl.h>
 #include <shlwapi.h>
 
-#include <cassert>
 #include <string>
-#include <vector>
 
 #include "debugutil.hpp"
 #include "eventutil.hpp"
@@ -724,19 +722,11 @@ HRESULT MfByteStreamHandlerWrapper::LoadMediaStreams()
         // TODO(tomfinegan): decide what to do w/unselected streams
         if (selected)
         {
-            IMFMediaTypeHandlerPtr ptr_media_type_handler;
-            hr = ptr_desc->GetMediaTypeHandler(&ptr_media_type_handler);
-            if (FAILED(hr) || !ptr_media_type_handler)
-            {
-                DBGLOG("ERROR, GetMediaTypeHandler failed, count="
-                    << stream_count_ << " index=" << i << HRLOG(hr));
-                return hr;
-            }
             GUID major_type;
-            hr = ptr_media_type_handler->GetMajorType(&major_type);
+            hr = get_major_type(ptr_desc, &major_type);
             if (FAILED(hr))
             {
-                DBGLOG("ERROR, GetMajorType failed, count=" << stream_count_
+                DBGLOG("ERROR, get_major_type failed, count=" << stream_count_
                     << " index=" << i << HRLOG(hr));
                 return hr;
             }

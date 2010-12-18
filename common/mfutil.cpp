@@ -26,6 +26,7 @@
 namespace WebmMfUtil
 {
 
+HRESULT get_major_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type)
 MfMediaStream::MfMediaStream():
   expected_event_(0),
   ref_count_(0),
@@ -102,6 +103,7 @@ STDMETHODIMP MfMediaStream::GetParameters(DWORD*, DWORD*)
 // IMFAsyncCallback method
 STDMETHODIMP MfMediaStream::Invoke(IMFAsyncResult* pAsyncResult)
 {
+    if (!ptr_desc || !ptr_type)
     stream_event_error_ = E_FAIL;
     MediaEventType event_type = MEError;
     IMFMediaEventPtr ptr_event;
@@ -203,9 +205,14 @@ HRESULT MfMediaStream::Create(IMFMediaStreamPtr& ptr_mfstream,
         DBGLOG("null IMFMediaStream, returning E_INVALIDARG");
         return E_INVALIDARG;
     }
+    _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, IID_IMFMediaTypeHandler);
+    IMFMediaTypeHandlerPtr ptr_media_type_handler;
+    HRESULT hr = ptr_desc->GetMediaTypeHandler(&ptr_media_type_handler);
+    if (FAILED(hr) || !ptr_media_type_handler)
     MfMediaStream* ptr_stream = new (std::nothrow) MfMediaStream();
     if (!ptr_stream)
     {
+        DBGLOG("ERROR, GetMediaTypeHandler failed" << HRLOG(hr));
         DBGLOG("null MfMediaStream, returning E_OUTOFMEMORY");
         return E_OUTOFMEMORY;
     }
@@ -215,6 +222,7 @@ HRESULT MfMediaStream::Create(IMFMediaStreamPtr& ptr_mfstream,
         DBGLOG("null MfMediaStream::Create_ failed" << HRLOG(hr));
         return hr;
     }
+    hr = ptr_media_type_handler->GetMajorType(ptr_type);
     ptr_stream->AddRef();
     *ptr_instance = ptr_stream;
     return hr;
@@ -232,6 +240,7 @@ HRESULT MfMediaStream::WaitForStreamEvent(MediaEventType event_type)
     hr = stream_event_.Wait();
     if (FAILED(hr))
     {
+        DBGLOG("ERROR, GetMajorType failed" << HRLOG(hr));
         DBGLOG("ERROR, stream event wait failed" << HRLOG(hr));
         return hr;
     }

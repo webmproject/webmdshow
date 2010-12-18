@@ -12,6 +12,7 @@
 namespace WebmMfUtil
 {
 
+HRESULT get_major_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
 class MfMediaStream : public IMFAsyncCallback
 {
 public:
