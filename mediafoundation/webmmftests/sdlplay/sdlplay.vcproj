@@ -381,6 +381,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\mfmediastream.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\mfmediastream.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\mfobjwrapper.cpp"
 				>
 			</File>

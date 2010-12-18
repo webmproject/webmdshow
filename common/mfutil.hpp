@@ -13,44 +13,6 @@ namespace WebmMfUtil
 {
 
 HRESULT get_major_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
-class MfMediaStream : public IMFAsyncCallback
-{
-public:
-    _COM_SMARTPTR_TYPEDEF(IMFMediaStream, IID_IMFMediaStream);
-    static HRESULT Create(IMFMediaStreamPtr& ptr_stream,
-                          MfMediaStream** ptr_instance);
-    HRESULT WaitForStreamEvent(MediaEventType event_type);
-    // IUnknown methods
-    STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
-    STDMETHODIMP_(ULONG) AddRef();
-    STDMETHODIMP_(ULONG) Release();
-    // IMFAsyncCallback methods
-    STDMETHODIMP GetParameters(DWORD*, DWORD*);
-    STDMETHODIMP Invoke(IMFAsyncResult* pAsyncResult);
-
-private:
-    _COM_SMARTPTR_TYPEDEF(IMFMediaEvent, IID_IMFMediaEvent);
-    _COM_SMARTPTR_TYPEDEF(IMFMediaEventGenerator, IID_IMFMediaEventGenerator);
-
-    MfMediaStream();
-    ~MfMediaStream();
-    HRESULT Create_(IMFMediaStreamPtr& ptr_stream);
-    HRESULT OnStreamPaused_(IMFMediaEventPtr& ptr_event);
-    HRESULT OnStreamSeeked_(IMFMediaEventPtr& ptr_event);
-    HRESULT OnStreamStarted_(IMFMediaEventPtr& ptr_event);
-    HRESULT OnStreamStopped_(IMFMediaEventPtr& ptr_event);
-
-    EventWaiter stream_event_;
-    HRESULT stream_event_error_;
-    IMFMediaEventGeneratorPtr ptr_event_queue_;
-    IMFMediaStreamPtr ptr_stream_;
-
-    MediaEventType expected_event_;
-    MediaEventType stream_event_recvd_;
-    ULONG ref_count_;
-
-    DISALLOW_COPY_AND_ASSIGN(MfMediaStream);
-};
 
 } // WebmMfUtil namespace
 

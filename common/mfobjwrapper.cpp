@@ -21,6 +21,7 @@
 #include "hrtext.hpp"
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
+#include "mfmediastream.hpp"
 #include "mfobjwrapper.hpp"
 #include "mfutil.hpp"
 #include "webmtypes.hpp"
