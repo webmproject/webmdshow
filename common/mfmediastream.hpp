@@ -31,7 +31,6 @@ private:
     _COM_SMARTPTR_TYPEDEF(IMFMediaEvent, IID_IMFMediaEvent);
     _COM_SMARTPTR_TYPEDEF(IMFMediaEventGenerator, IID_IMFMediaEventGenerator);
     _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
-    _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
     _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, IID_IMFMediaTypeHandler);
     _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, IID_IMFStreamDescriptor);
 
@@ -48,7 +47,7 @@ private:
     HRESULT stream_event_error_;
     IMFMediaEventGeneratorPtr ptr_event_queue_;
     IMFMediaStreamPtr ptr_stream_;
-    IMFMediaTypeHandlerPtr ptr_media_type_handler_;
+    IMFMediaTypePtr ptr_media_type_;
     MediaEventType expected_event_;
     MediaEventType stream_event_recvd_;
     ULONG ref_count_;

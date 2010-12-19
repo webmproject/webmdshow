@@ -79,6 +79,19 @@ HRESULT MfMediaStream::Create_(IMFMediaStreamPtr& ptr_stream)
             << " returning E_FAIL.");
         return E_FAIL;
     }
+    IMFStreamDescriptorPtr ptr_desc;
+    hr = ptr_stream->GetStreamDescriptor(&ptr_desc);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, GetStreamDescriptor failed" << HRLOG(hr));
+        return hr;
+    }
+    hr = get_media_type(ptr_desc, &ptr_media_type_);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, get_media_type failed" << HRLOG(hr));
+        return hr;
+    }
     hr = stream_event_.Create();
     if (FAILED(hr))
     {

@@ -13,6 +13,8 @@ namespace WebmMfUtil
 {
 
 HRESULT get_major_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
+HRESULT get_media_type(IMFStreamDescriptor* ptr_desc, IMFMediaType** ptr_type);
+HRESULT get_sub_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
 
 } // WebmMfUtil namespace
 
