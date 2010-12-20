@@ -291,7 +291,7 @@ MJH.Main = function() {
 
         objVersion = function (major, minor, revision, build) {
             out.Write("version: major=");
-            out.Write(minor);
+            out.Write(major);
             out.Write(" minor=");
             out.Write(minor);
             out.Write(" revision=");
