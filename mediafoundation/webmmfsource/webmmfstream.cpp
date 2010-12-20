@@ -239,12 +239,19 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     for (;;)
     {
         const long status = m_pTrack->m_pSegment->LoadCluster();
-        assert(status == 0);  //TODO
+
+        if (status < 0)
+        {
+            hr = E_FAIL;  //TODO: ask MS how to handle network underflow
+            break;
+        }
 
         hr = PopulateSample(pSample);
 
-        if (hr != VFW_E_BUFFER_UNDERFLOW)
+        if (SUCCEEDED(hr))
             break;
+
+        assert(hr == VFW_E_BUFFER_UNDERFLOW);
     }
 
     if (hr == S_OK)  //have a sample
@@ -292,17 +299,16 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
         return S_OK;
     }
 
-    assert(hr == S_FALSE);  //EOS
-
 #ifdef _DEBUG
     odbgstream os;
 
-    os << "WebmMfStream::RequestSample: EOS detected; track="
+    os << "WebmMfStream::RequestSample: EOS; track="
        << m_pTrack->GetNumber()
        << " type="
        << m_pTrack->GetType()
        << " bEOS="
        << boolalpha << m_bEOS
+       << " hr.EOS=" << boolalpha << bool(hr == S_FALSE)
        << endl;
 #endif
 
@@ -317,88 +323,6 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
     return S_OK;  //TODO: MF_E_END_OF_STREAM instead?
 }
-
-
-#if 0
-HRESULT WebmMfStream::PopulateSample(IMFSample* pSample)
-{
-    if (m_pCurr == 0)
-    {
-        const long result = m_pTrack->GetFirst(m_pCurr);
-
-        if (result == mkvparser::E_BUFFER_NOT_FULL)
-            return VFW_E_BUFFER_UNDERFLOW;
-
-        assert(result >= 0);
-        assert(m_pCurr);
-
-        //TODO:
-        //This doesn't seem correct: the base cluster must be the
-        //same for all streams (since that is how time is calculated),
-        //but we can't really guarantee that here (unless we also
-        //have a guarantee that all streams are initialized to
-        //pCurr=NULL, in which case all streams would be all have
-        //the same base).
-        //
-        //The other problem is that there's no guarantee that
-        //m_pCurr is on the first cluster in the segment.  Technically
-        //it doesn't matter, but if pCurr is far away then there will
-        //be a large gap in time before this frame renders.
-        //
-        //I'd feel better if the initialization step were explicit,
-        //and for all streams simultaneously; say, during the
-        //transition to paused/running.  This would have the effect
-        //of setting pCurr for all streams to some non-NULL value,
-        //for which we could then test.
-        //END TODO.
-
-        //TODO: determine this value during Start
-        //m_pBaseCluster = m_pTrack->m_pSegment->GetFirst();
-        //assert(m_pBaseCluster);
-    }
-
-    if (m_pCurr->EOS())
-        return S_FALSE;  //no more samples: send EOS downstream
-
-#if 0  //must be done by subclass
-    const mkvparser::BlockEntry* pNextBlock;
-
-    const long result = m_pTrack->GetNext(m_pCurr, pNextBlock);
-
-    if (result == mkvparser::E_BUFFER_NOT_FULL)
-        return VFW_E_BUFFER_UNDERFLOW;
-
-    assert(result >= 0);
-    assert(pNextBlock);
-
-    HRESULT hr = OnPopulateSample(pNextBlock, pSample);
-    assert(SUCCEEDED(hr));  //TODO
-    assert(hr == S_OK);     //TODO: for now, assume we never throw away
-
-    m_pCurr = pNextBlock;
-#else
-    HRESULT hr = OnPopulateSample(pSample);
-
-    if (hr == VFW_E_BUFFER_UNDERFLOW)
-        return hr;
-
-    assert(hr == S_OK);
-#endif
-
-    if (m_bDiscontinuity)
-    {
-        //TODO: resolve whether to set this for first of the preroll samples,
-        //or wait until last of preroll samples has been pushed downstream.
-
-        hr = pSample->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
-        assert(SUCCEEDED(hr));
-
-        m_bDiscontinuity = false;  //TODO: must set back to true during a seek
-    }
-
-    return S_OK;  //TODO
-}
-#endif
 
 
 void WebmMfStream::PurgeSamples()

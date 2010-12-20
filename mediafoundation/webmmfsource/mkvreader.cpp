@@ -305,6 +305,8 @@ int MkvReader::Length(long long* total, long long* avail)
         return -1;
 
     *total = m_length;
+
+    //TODO: is there an MF-specific mechanism to handle this?
     *avail = m_length;
 
     return 0;

@@ -125,55 +125,6 @@ HRESULT WebmMfStreamVideo::GetFrameRate(
 
     if ((frame_rate <= 0) || (frame_rate > std::numeric_limits<UINT32>::max()))
     {
-#if 0
-        const long result = pSegment->LoadCluster();
-        result;
-
-        using mkvparser::Cluster;
-        using mkvparser::BlockEntry;
-        using mkvparser::Block;
-
-        Cluster* const pCluster = pSegment->GetFirst();
-
-        if ((pCluster == 0) || pCluster->EOS())
-            return E_FAIL;
-
-        const LONGLONG tn = pTrack->GetNumber();
-        assert(tn > 0);
-
-        const BlockEntry* const pFirst = pCluster->GetEntry(pTrack);
-
-        if ((pFirst == 0) || pFirst->EOS())
-            return E_FAIL;
-
-        int count = 0;
-        LONGLONG t1 = 0;  //to pacify compiler
-
-        while (const BlockEntry* pLast = pCluster->GetNext(pFirst))
-        {
-            const Block* const pBlock = pLast->GetBlock();
-            assert(pBlock);
-
-            if (pBlock->GetTrackNumber() == tn)
-            {
-                ++count;
-                t1 = pBlock->GetTime(pCluster);
-            }
-
-            pLast = pCluster->GetNext(pLast);
-        }
-
-        if (count <= 0)
-            return E_FAIL;
-
-        const LONGLONG t0 = pFirst->GetBlock()->GetTime(pCluster);
-        const LONGLONG ns = t1 - t0;
-
-        if (ns <= 0)
-            return E_FAIL;
-
-        frame_rate = (double(count) * 1000000000) / double(ns);
-#else
         using namespace mkvparser;
 
         long result = pSegment->LoadCluster();
@@ -222,7 +173,6 @@ HRESULT WebmMfStreamVideo::GetFrameRate(
         assert(ns > 0);
 
         frame_rate = (double(count) * 1000000000) / double(ns);
-#endif
     }
 
     denom = 1;
@@ -296,52 +246,6 @@ WebmMfStreamVideo::WebmMfStreamVideo(
 WebmMfStreamVideo::~WebmMfStreamVideo()
 {
 }
-
-
-#if 0
-HRESULT WebmMfStreamVideo::Start(
-    const PROPVARIANT& var,
-    const SeekInfo& info)
-{
-    //TODO: could pass bThin and rate here too
-
-    assert(var.vt == VT_I8);
-
-    const LONGLONG reftime = var.hVal.QuadPart;
-    assert(reftime >= 0);
-
-    m_bDiscontinuity = true;
-    m_curr = info;
-
-    const mkvparser::BlockEntry* const pBE = info.pBE;
-
-#ifdef _DEBUG
-    odbgstream os;
-
-    os << "WebmMfStreamVideo::Start: reftime[sec]="
-       << (double(reftime) / 10000000);
-
-    if ((pBE == 0) || pBE->EOS())
-        __noop;
-    else
-    {
-        const mkvparser::Block* const pB = pBE->GetBlock();
-        assert(pB);
-        assert(pB->IsKey());
-
-        const LONGLONG time_ns = pB->GetTime(info.pCluster);
-        assert(time_ns >= 0);
-
-        os << " block.time[sec]="
-           << (double(time_ns) / 1000000000);
-    }
-
-    os << endl;
-#endif
-
-    return OnStart(var);
-}
-#endif
 
 
 HRESULT WebmMfStreamVideo::Seek(
@@ -469,7 +373,7 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
         if (result == mkvparser::E_BUFFER_NOT_FULL)
             return VFW_E_BUFFER_UNDERFLOW;
 
-        assert(result >= 0);
+        assert(result >= 0);  //TODO
     }
     else
     {
