@@ -20,25 +20,9 @@ enum MfState
     MFSTATE_ERROR = 3
 };
 
-// TODO(tomfinegan): get rid of MfObjWrapperBase?  Not so sure it's useful
-//                   given how different |MfByteStreamHandlerWrapper| and
-//                   |MfTransformWrapper| are likely to become...
-class MfObjWrapperBase
-{
-public:
-    MfObjWrapperBase();
-    virtual ~MfObjWrapperBase();
-    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid) = 0;
-protected:
-    ComDllWrapper* ptr_com_dll_;
-    MfState state_;
-    DISALLOW_COPY_AND_ASSIGN(MfObjWrapperBase);
-};
-
 class MfMediaStream;
 
-class MfByteStreamHandlerWrapper : public IMFAsyncCallback,
-                                   public MfObjWrapperBase
+class MfByteStreamHandlerWrapper : public IMFAsyncCallback
 {
 public:
     static HRESULT Create(std::wstring dll_path, GUID mfobj_clsid,
@@ -84,6 +68,7 @@ private:
     HRESULT WaitForUpdatedStreamEvents_();
     virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
 
+    ComDllWrapper* ptr_com_dll_;
     DWORD stream_count_;
     EventWaiter open_event_;
     EventWaiter media_source_event_;
@@ -97,26 +82,13 @@ private:
     MediaEventType event_type_recvd_;
     MfMediaStream* ptr_audio_stream_;
     MfMediaStream* ptr_video_stream_;
+    MfState state_;
     UINT audio_stream_count_;
     UINT selected_stream_count_;
     UINT video_stream_count_;
     ULONG ref_count_;
 
     DISALLOW_COPY_AND_ASSIGN(MfByteStreamHandlerWrapper);
-};
-
-class MfTransformWrapper : public MfObjWrapperBase
-{
-public:
-    MfTransformWrapper();
-    virtual ~MfTransformWrapper();
-    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
-
-private:
-    _COM_SMARTPTR_TYPEDEF(IMFTransform, IID_IMFTransform);
-    IMFTransformPtr ptr_transform_;
-
-    DISALLOW_COPY_AND_ASSIGN(MfTransformWrapper);
 };
 
 } // WebmMfUtil namespace

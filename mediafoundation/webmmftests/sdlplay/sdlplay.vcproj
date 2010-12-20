@@ -397,6 +397,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\mftranswrap.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\mftranswrap.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\mfutil.cpp"
 				>
 			</File>

@@ -29,24 +29,17 @@
 namespace WebmMfUtil
 {
 
-MfObjWrapperBase::MfObjWrapperBase():
-  state_(MFSTATE_STOPPED)
-{
-}
-
-MfObjWrapperBase::~MfObjWrapperBase()
-{
-}
-
 MfByteStreamHandlerWrapper::MfByteStreamHandlerWrapper():
   audio_stream_count_(0),
   event_type_recvd_(0),
   expected_event_type_(0),
   media_event_error_(0),
   ptr_audio_stream_(NULL),
+  ptr_com_dll_(NULL),
   ptr_video_stream_(NULL),
   ref_count_(0),
   selected_stream_count_(0),
+  state_(MFSTATE_STOPPED),
   stream_count_(0),
   video_stream_count_(0)
 {
@@ -906,33 +899,6 @@ HRESULT MfByteStreamHandlerWrapper::Stop()
         return hr;
     }
     state_ = MFSTATE_STOPPED;
-    return hr;
-}
-
-MfTransformWrapper::MfTransformWrapper()
-{
-}
-
-MfTransformWrapper::~MfTransformWrapper()
-{
-}
-
-HRESULT MfTransformWrapper::Create(std::wstring dll_path, GUID mfobj_clsid)
-{
-    HRESULT hr = ComDllWrapper::Create(dll_path, mfobj_clsid, &ptr_com_dll_);
-    if (FAILED(hr) || !ptr_com_dll_)
-    {
-        DBGLOG("ComDllWrapper::Create failed path=" << dll_path.c_str()
-            << HRLOG(hr));
-        return hr;
-    }
-    hr = ptr_com_dll_->CreateInstance(IID_IMFTransform,
-                                reinterpret_cast<void**>(&ptr_transform_));
-    if (FAILED(hr) || !ptr_transform_)
-    {
-        DBGLOG("GetInterfacePtr failed" << HRLOG(hr));
-        return hr;
-    }
     return hr;
 }
 
