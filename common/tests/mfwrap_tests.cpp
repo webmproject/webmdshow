@@ -21,7 +21,7 @@
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "gtest/gtest.h"
-#include "mfobjwrapper.hpp"
+#include "mfsrcwrap.hpp"
 #include "mftranswrap.hpp"
 #include "tests/mfdllpaths.hpp"
 #include "webmtypes.hpp"

@@ -6,8 +6,8 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#ifndef __WEBMDSHOW_COMMON_MFOBJWRAPPER_HPP__
-#define __WEBMDSHOW_COMMON_MFOBJWRAPPER_HPP__
+#ifndef __WEBMDSHOW_COMMON_MFSRCWRAP_HPP__
+#define __WEBMDSHOW_COMMON_MFSRCWRAP_HPP__
 
 namespace WebmMfUtil
 {
@@ -93,4 +93,4 @@ private:
 
 } // WebmMfUtil namespace
 
-#endif // __WEBMDSHOW_COMMON_MFOBJWRAPPER_HPP__
+#endif // __WEBMDSHOW_COMMON_MFSRCWRAP_HPP__

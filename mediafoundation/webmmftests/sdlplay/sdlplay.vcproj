@@ -389,11 +389,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\common\mfobjwrapper.cpp"
+				RelativePath="..\..\..\common\mfsrcwrap.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\common\mfobjwrapper.hpp"
+				RelativePath="..\..\..\common\mfsrcwrap.hpp"
 				>
 			</File>
 			<File
@@ -440,7 +440,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\common\tests\mfobjwrapper_tests.cpp"
+					RelativePath="..\..\..\common\tests\mfwrap_tests.cpp"
 					>
 				</File>
 			</Filter>

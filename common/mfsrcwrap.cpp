@@ -22,7 +22,7 @@
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "mfmediastream.hpp"
-#include "mfobjwrapper.hpp"
+#include "mfsrcwrap.hpp"
 #include "mfutil.hpp"
 #include "webmtypes.hpp"
 
