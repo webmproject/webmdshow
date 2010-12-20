@@ -30,6 +30,7 @@ using WebmTypes::CLSID_WebmMfByteStreamHandler;
 using WebmTypes::CLSID_WebmMfVp8Dec;
 using WebmTypes::CLSID_WebmMfVorbisDec;
 using WebmMfUtil::MfByteStreamHandlerWrapper;
+using WebmMfUtil::MfTransformWrapper;
 
 extern wchar_t* g_test_input_file;
 
@@ -53,7 +54,7 @@ HRESULT mf_shutdown()
     return hr;
 }
 
-TEST(MfObjWrapperBasic, CreateMfByteStreamHandlerWrapper)
+TEST(MfByteStreamHandlerWrapper, CreateMfByteStreamHandlerWrapper)
 {
     MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
     ASSERT_EQ(S_OK,
@@ -61,19 +62,6 @@ TEST(MfObjWrapperBasic, CreateMfByteStreamHandlerWrapper)
                                            CLSID_WebmMfByteStreamHandler,
                                            &ptr_mf_bsh));
     ASSERT_EQ(0, ptr_mf_bsh->Release());
-}
-
-TEST(MfObjWrapperBasic, CreateVp8DecTransformWrapper)
-{
-    WebmMfUtil::MfTransformWrapper mf_transform;
-    ASSERT_EQ(S_OK, mf_transform.Create(VP8DEC_PATH, CLSID_WebmMfVp8Dec));
-}
-
-TEST(MfObjWrapperBasic, CreateVorbisDecTransformWrapper)
-{
-    WebmMfUtil::MfTransformWrapper mf_transform;
-    ASSERT_EQ(S_OK, mf_transform.Create(VORBISDEC_PATH,
-                                        CLSID_WebmMfVorbisDec));
 }
 
 TEST(MfByteStreamHandlerWrapper, LoadFile)
@@ -248,6 +236,75 @@ TEST(MfByteStreamHandlerWrapper, StartSeekTo20SecondsPauseStart)
     ASSERT_EQ(S_OK, ptr_mf_bsh->Start(true, 200000000LL));
     ASSERT_EQ(S_OK, ptr_mf_bsh->Pause());
     ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfTransformWrapper, CreateVp8DecTransformWrapper)
+{
+    MfTransformWrapper mf_transform;
+    ASSERT_EQ(S_OK, mf_transform.Create(VP8DEC_PATH, CLSID_WebmMfVp8Dec));
+}
+
+TEST(MfTransformWrapper, CreateVorbisDecTransformWrapper)
+{
+    MfTransformWrapper mf_transform;
+    ASSERT_EQ(S_OK, mf_transform.Create(VORBISDEC_PATH,
+                                        CLSID_WebmMfVorbisDec));
+}
+
+TEST(MfTransformWrapper, SetAudioInputType)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    if (ptr_mf_bsh->GetAudioStreamCount() > 0)
+    {
+        _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
+        IMFMediaTypePtr ptr_type;
+        ASSERT_EQ(S_OK, ptr_mf_bsh->GetAudioMediaType(&ptr_type));
+        GUID major_type = GUID_NULL;
+        ASSERT_EQ(S_OK, ptr_type->GetMajorType(&major_type));
+        ASSERT_EQ(TRUE, MFMediaType_Audio == major_type);
+        MfTransformWrapper mf_transform;
+        ASSERT_EQ(S_OK, mf_transform.Create(VORBISDEC_PATH,
+                                            CLSID_WebmMfVorbisDec));
+        ASSERT_EQ(S_OK, mf_transform.SetInputType(ptr_type));
+    }
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfTransformWrapper, SetVideoInputType)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    if (ptr_mf_bsh->GetVideoStreamCount() > 0)
+    {
+        _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
+        IMFMediaTypePtr ptr_type;
+        ASSERT_EQ(S_OK, ptr_mf_bsh->GetVideoMediaType(&ptr_type));
+        GUID major_type = GUID_NULL;
+        ASSERT_EQ(S_OK, ptr_type->GetMajorType(&major_type));
+        ASSERT_EQ(TRUE, MFMediaType_Video == major_type);
+        MfTransformWrapper mf_transform;
+        ASSERT_EQ(S_OK, mf_transform.Create(VP8DEC_PATH,
+                                            CLSID_WebmMfVp8Dec));
+        ASSERT_EQ(S_OK, mf_transform.SetInputType(ptr_type));
+    }
     ptr_mf_bsh->Release();
     ASSERT_EQ(S_OK, mf_shutdown());
 }

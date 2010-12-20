@@ -43,7 +43,7 @@ HRESULT MfTransformWrapper::Create(std::wstring dll_path, GUID mfobj_clsid)
         return hr;
     }
     hr = ptr_com_dll_->CreateInstance(IID_IMFTransform,
-                                reinterpret_cast<void**>(&ptr_transform_));
+        reinterpret_cast<void**>(&ptr_transform_));
     if (FAILED(hr) || !ptr_transform_)
     {
         DBGLOG("GetInterfacePtr failed" << HRLOG(hr));
@@ -51,5 +51,60 @@ HRESULT MfTransformWrapper::Create(std::wstring dll_path, GUID mfobj_clsid)
     }
     return hr;
 }
+
+HRESULT MfTransformWrapper::SetInputType(IMFMediaTypePtr& ptr_type)
+{
+    if (!ptr_transform_)
+    {
+        DBGLOG("ERROR, transform obj not created, E_INVALIDARG");
+        return E_INVALIDARG;
+    }
+    HRESULT hr;
+    if (!ptr_type)
+    {
+        hr = ptr_transform_->GetInputAvailableType(0, 0, &ptr_type);
+        if (FAILED(hr))
+        {
+            DBGLOG("GetInputAvailableType failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    hr = ptr_transform_->SetInputType(0, ptr_type, 0);
+    if (FAILED(hr))
+    {
+        DBGLOG("IMFTransform::SetInputType failed" << HRLOG(hr));
+        return hr;
+    }
+    ptr_input_type_ = ptr_type;
+    return hr;
+}
+
+HRESULT MfTransformWrapper::SetOutputType(IMFMediaTypePtr& ptr_type)
+{
+    if (!ptr_transform_)
+    {
+        DBGLOG("ERROR, transform obj not created, E_INVALIDARG");
+        return E_INVALIDARG;
+    }
+    HRESULT hr;
+    if (!ptr_type)
+    {
+        hr = ptr_transform_->GetOutputAvailableType(0, 0, &ptr_type);
+        if (FAILED(hr))
+        {
+            DBGLOG("GetOutputAvailableType failed" << HRLOG(hr));
+            return hr;
+        }
+    }
+    hr = ptr_transform_->SetOutputType(0, ptr_type, 0);
+    if (FAILED(hr))
+    {
+        DBGLOG("IMFTransform::SetOutputType failed" << HRLOG(hr));
+        return hr;
+    }
+    ptr_output_type_ = ptr_type;
+    return hr;
+}
+
 
 } // WebmMfUtil namespace
