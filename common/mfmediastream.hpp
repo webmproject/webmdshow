@@ -18,6 +18,7 @@ public:
     _COM_SMARTPTR_TYPEDEF(IMFMediaStream, IID_IMFMediaStream);
     static HRESULT Create(IMFMediaStreamPtr& ptr_stream,
                           MfMediaStream** ptr_instance);
+    HRESULT GetMediaType(IMFMediaType** ptr_type);
     HRESULT WaitForStreamEvent(MediaEventType event_type);
     // IUnknown methods
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
@@ -41,7 +42,6 @@ private:
     HRESULT OnStreamSeeked_(IMFMediaEventPtr& ptr_event);
     HRESULT OnStreamStarted_(IMFMediaEventPtr& ptr_event);
     HRESULT OnStreamStopped_(IMFMediaEventPtr& ptr_event);
-    HRESULT StoreMediaType_();
 
     EventWaiter stream_event_;
     HRESULT stream_event_error_;

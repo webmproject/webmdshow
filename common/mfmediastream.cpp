@@ -229,6 +229,17 @@ HRESULT MfMediaStream::Create(IMFMediaStreamPtr& ptr_mfstream,
     return hr;
 }
 
+HRESULT MfMediaStream::GetMediaType(IMFMediaType **ptr_type)
+{
+    if (NULL == ptr_media_type_)
+    {
+        DBGLOG("ERROR, media type not set, E_UNEXPECTED");
+        return E_UNEXPECTED;
+    }
+    *ptr_type = ptr_media_type_;
+    return S_OK;
+}
+
 HRESULT MfMediaStream::WaitForStreamEvent(MediaEventType event_type)
 {
     expected_event_ = event_type;
