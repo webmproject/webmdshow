@@ -73,8 +73,8 @@ MfByteStreamHandlerWrapper::~MfByteStreamHandlerWrapper()
     }
 }
 
-HRESULT MfByteStreamHandlerWrapper::Create(std::wstring dll_path,
-                                           GUID mfobj_clsid)
+HRESULT MfByteStreamHandlerWrapper::Create_(std::wstring dll_path,
+                                            GUID mfobj_clsid)
 {
     HRESULT hr = ComDllWrapper::Create(dll_path, mfobj_clsid, &ptr_com_dll_);
     if (FAILED(hr) || !ptr_com_dll_)
@@ -111,29 +111,65 @@ HRESULT MfByteStreamHandlerWrapper::Create(
     MfByteStreamHandlerWrapper** ptr_bsh_instance)
 {
     *ptr_bsh_instance = new (std::nothrow) MfByteStreamHandlerWrapper();
-
     if (!*ptr_bsh_instance)
     {
         DBGLOG("ctor failed");
         return E_OUTOFMEMORY;
     }
-
     MfByteStreamHandlerWrapper* ptr_bsh_wrapper = *ptr_bsh_instance;
-
-    HRESULT hr = ptr_bsh_wrapper->Create(dll_path, mfobj_clsid);
-
+    HRESULT hr = ptr_bsh_wrapper->Create_(dll_path, mfobj_clsid);
     if (SUCCEEDED(hr))
     {
         ptr_bsh_wrapper->AddRef();
     }
     else
     {
-        DBGLOG("ERROR, inner Create failed" << HRLOG(hr));
+        DBGLOG("ERROR, Create_ failed" << HRLOG(hr));
     }
-
     return hr;
 }
 
+HRESULT MfByteStreamHandlerWrapper::GetAudioMediaType(
+    IMFMediaType **ptr_type) const
+{
+    if (0 == audio_stream_count_)
+    {
+        DBGLOG("no audio streams");
+        return E_INVALIDARG;
+    }
+    if (NULL == ptr_audio_stream_)
+    {
+        DBGLOG("ERROR, audio stream not created, E_UNEXPECTED");
+        return E_UNEXPECTED;
+    }
+    return ptr_audio_stream_->GetMediaType(ptr_type);
+}
+
+UINT MfByteStreamHandlerWrapper::GetAudioStreamCount() const
+{
+    return audio_stream_count_;
+}
+
+HRESULT MfByteStreamHandlerWrapper::GetVideoMediaType(
+    IMFMediaType **ptr_type) const
+{
+    if (0 == video_stream_count_)
+    {
+        DBGLOG("no video streams");
+        return E_INVALIDARG;
+    }
+    if (NULL == ptr_video_stream_)
+    {
+        DBGLOG("ERROR, video stream not created, E_UNEXPECTED");
+        return E_UNEXPECTED;
+    }
+    return ptr_video_stream_->GetMediaType(ptr_type);
+}
+
+UINT MfByteStreamHandlerWrapper::GetVideoStreamCount() const
+{
+    return video_stream_count_;
+}
 
 HRESULT MfByteStreamHandlerWrapper::OpenURL(std::wstring url)
 {

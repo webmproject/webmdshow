@@ -28,11 +28,17 @@ public:
     static HRESULT Create(std::wstring dll_path, GUID mfobj_clsid,
                           MfByteStreamHandlerWrapper** ptr_bsh_wrapper);
     virtual ~MfByteStreamHandlerWrapper();
+    HRESULT GetAudioMediaType(IMFMediaType** ptr_type) const;
+    HRESULT GetAudioSample(IMFSample** ptr_sample);
+    HRESULT GetVideoMediaType(IMFMediaType** ptr_type) const;
+    HRESULT GetVideoSample(IMFSample** ptr_sample);
     HRESULT LoadMediaStreams();
     HRESULT OpenURL(std::wstring url);
     HRESULT Pause();
     HRESULT Start(bool seeking, LONGLONG start_time);
     HRESULT Stop();
+    UINT GetAudioStreamCount() const;
+    UINT GetVideoStreamCount() const;
     // IUnknown methods
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
     STDMETHODIMP_(ULONG) AddRef();
@@ -52,6 +58,7 @@ private:
     _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, IID_IMFMediaTypeHandler);
 
     MfByteStreamHandlerWrapper();
+    HRESULT Create_(std::wstring dll_path, GUID mfobj_clsid);
     HRESULT HandleMediaSourceEvent_(IMFMediaEventPtr& ptr_event);
     HRESULT OnSourcePaused_(IMFMediaEventPtr& ptr_event);
     HRESULT OnSourceSeeked_(IMFMediaEventPtr& ptr_event);
@@ -66,7 +73,6 @@ private:
     HRESULT WaitForStartedEvents_();
     HRESULT WaitForStoppedEvents_();
     HRESULT WaitForUpdatedStreamEvents_();
-    virtual HRESULT Create(std::wstring dll_path, GUID mfobj_clsid);
 
     ComDllWrapper* ptr_com_dll_;
     DWORD stream_count_;
