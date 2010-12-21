@@ -33,6 +33,10 @@ MfMediaStream::MfMediaStream():
 
 MfMediaStream::~MfMediaStream()
 {
+    if (ptr_sample_)
+    {
+        ptr_sample_ = 0;
+    }
     if (ptr_event_queue_)
     {
         ptr_event_queue_ = 0;
@@ -136,6 +140,14 @@ STDMETHODIMP MfMediaStream::Invoke(IMFAsyncResult* pAsyncResult)
         {
             switch (event_type)
             {
+            case MEMediaSample:
+                DBGLOG("MEMediaSample");
+                stream_event_error_ = OnMediaSample_(ptr_event);
+                if (FAILED(stream_event_error_))
+                {
+                    DBGLOG("MEMediaSample handling failed");
+                }
+                break;
             case MEStreamPaused:
                 DBGLOG("MEStreamPaused");
                 stream_event_error_ = OnStreamPaused_(ptr_event);
@@ -178,6 +190,24 @@ STDMETHODIMP MfMediaStream::Invoke(IMFAsyncResult* pAsyncResult)
     expected_event_ = 0;
     stream_event_recvd_ = event_type;
     return stream_event_.Set();
+}
+
+HRESULT MfMediaStream::OnMediaSample_(IMFMediaEventPtr& ptr_event)
+{
+    IUnknownPtr ptr_iunk;
+    HRESULT hr = get_event_iunk_ptr(ptr_event, &ptr_iunk);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, could not obtain IUnknown from event" << HRLOG(hr));
+        return hr;
+    }
+    ptr_sample_ = ptr_iunk;
+    if (!ptr_sample_)
+    {
+        DBGLOG("ERROR, sample pointer null");
+        return E_POINTER;
+    }
+    return S_OK;
 }
 
 HRESULT MfMediaStream::OnStreamPaused_(IMFMediaEventPtr&)
@@ -231,7 +261,7 @@ HRESULT MfMediaStream::Create(IMFMediaStreamPtr& ptr_mfstream,
 
 HRESULT MfMediaStream::GetMediaType(IMFMediaType **ptr_type)
 {
-    if (NULL == ptr_media_type_)
+    if (!ptr_media_type_)
     {
         DBGLOG("ERROR, media type not set, E_UNEXPECTED");
         return E_UNEXPECTED;
@@ -263,6 +293,43 @@ HRESULT MfMediaStream::WaitForStreamEvent(MediaEventType event_type)
             << HRLOG(stream_event_error_));
         return stream_event_error_;
     }
+    return hr;
+}
+
+HRESULT MfMediaStream::GetSample(IMFSample **ptr_sample)
+{
+    if (!ptr_stream_)
+    {
+        DBGLOG("ERROR, stream not set, E_UNEXPECTED");
+        return E_UNEXPECTED;
+    }
+    HRESULT hr = ptr_stream_->RequestSample(NULL);
+    // MF_E_MEDIA_SOURCE_WRONGSTATE is not treated as an error by the pipeline
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, RequestSample failed" << HRLOG(hr));
+        return hr;
+    }
+    hr = WaitForStreamEvent(MEMediaSample);
+    if (FAILED(hr))
+    {
+        DBGLOG("WaitForStreamEvent MEMediaSample failed" << HRLOG(hr));
+        return hr;
+    }
+    if (FAILED(stream_event_error_))
+    {
+        DBGLOG("MEMediaSample event handling failed"
+            << HRLOG(stream_event_error_));
+        return stream_event_error_;
+    }
+    if (!ptr_sample_)
+    {
+        // TODO(tomfinegan):
+        DBGLOG("ERROR, null sample");
+        return E_OUTOFMEMORY;
+    }
+    ptr_sample_->AddRef();
+    *ptr_sample = ptr_sample_;
     return hr;
 }
 
