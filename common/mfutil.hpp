@@ -12,8 +12,10 @@
 namespace WebmMfUtil
 {
 
+HRESULT get_event_iunk_ptr(IMFMediaEvent* ptr_event, IUnknown** ptr_iunk);
 HRESULT get_major_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
-HRESULT get_media_type(IMFStreamDescriptor* ptr_desc, IMFMediaType** ptr_type);
+HRESULT get_media_type(IMFStreamDescriptor* ptr_desc, 
+                       IMFMediaType** ptr_type);
 HRESULT get_sub_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
 
 } // WebmMfUtil namespace

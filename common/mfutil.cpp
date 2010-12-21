@@ -23,6 +23,24 @@ namespace WebmMfUtil
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, IID_IMFMediaTypeHandler);
 
+HRESULT get_event_iunk_ptr(IMFMediaEvent* ptr_event, IUnknown** ptr_iunk)
+{
+    if (!ptr_event)
+    {
+        return E_INVALIDARG;
+    }
+    PROPVARIANT event_val;
+    PropVariantInit(&event_val);
+    HRESULT hr = ptr_event->GetValue(&event_val);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, could not get event value" << HRLOG(hr));
+        return hr;
+    }
+    *ptr_iunk = event_val.punkVal;
+    return hr;
+}
+
 HRESULT get_media_type(IMFStreamDescriptor* ptr_desc, IMFMediaType** ptr_type)
 {
     if (!ptr_desc)
