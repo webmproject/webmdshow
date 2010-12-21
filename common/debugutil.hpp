@@ -9,6 +9,7 @@
 
 #ifdef _DEBUG
 #include "odbgstream.hpp"
+#include "hrtext.hpp"
 #include "iidstr.hpp"
 
 // keep the compiler quiet about do/while(0)'s used in log macros

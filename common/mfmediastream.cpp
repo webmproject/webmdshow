@@ -16,7 +16,6 @@
 
 #include "debugutil.hpp"
 #include "eventutil.hpp"
-#include "hrtext.hpp"
 #include "mfmediastream.hpp"
 #include "mfutil.hpp"
 

@@ -14,11 +14,11 @@
 #include <mfidl.h>
 #include <shlwapi.h>
 
+#include <cassert>
 #include <string>
 
 #include "debugutil.hpp"
 #include "eventutil.hpp"
-#include "hrtext.hpp"
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "mfmediastream.hpp"

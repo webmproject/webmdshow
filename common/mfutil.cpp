@@ -15,7 +15,6 @@
 
 #include "debugutil.hpp"
 #include "eventutil.hpp"
-#include "hrtext.hpp"
 #include "mfutil.hpp"
 
 namespace WebmMfUtil
