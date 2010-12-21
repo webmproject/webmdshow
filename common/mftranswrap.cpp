@@ -24,8 +24,55 @@
 namespace WebmMfUtil
 {
 
+HRESULT MfTransformWrapper::CreateInstance(std::wstring dll_path,
+                                           GUID mfobj_clsid,
+                                           MfTransformWrapper** ptr_instance)
+{
+    if (dll_path.empty() || GUID_NULL == mfobj_clsid)
+    {
+        return E_INVALIDARG;
+    }
+    MfTransformWrapper* ptr_wrapper = new (std::nothrow) MfTransformWrapper();
+    if (!ptr_wrapper)
+    {
+        return E_OUTOFMEMORY;
+    }
+    HRESULT hr = ptr_wrapper->Create_(dll_path, mfobj_clsid);
+    if (SUCCEEDED(hr))
+    {
+        *ptr_instance = ptr_wrapper;
+        ptr_wrapper->AddRef();
+    }
+    else
+    {
+        DBGLOG("ERROR, Create_ failed" << HRLOG(hr));
+    }
+    return hr;
+}
+
+HRESULT MfTransformWrapper::QueryInterface(REFIID, void**)
+{
+    return E_NOTIMPL;
+}
+
+ULONG MfTransformWrapper::AddRef()
+{
+    return InterlockedIncrement(&ref_count_);
+}
+
+ULONG MfTransformWrapper::Release()
+{
+    UINT ref_count = InterlockedDecrement(&ref_count_);
+    if (ref_count == 0)
+    {
+        delete this;
+    }
+    return ref_count;
+}
+
 MfTransformWrapper::MfTransformWrapper():
-  ptr_com_dll_(NULL)
+  ptr_com_dll_(NULL),
+  ref_count_(0)
 {
 }
 
@@ -33,7 +80,7 @@ MfTransformWrapper::~MfTransformWrapper()
 {
 }
 
-HRESULT MfTransformWrapper::Create(std::wstring dll_path, GUID mfobj_clsid)
+HRESULT MfTransformWrapper::Create_(std::wstring dll_path, GUID mfobj_clsid)
 {
     HRESULT hr = ComDllWrapper::Create(dll_path, mfobj_clsid, &ptr_com_dll_);
     if (FAILED(hr) || !ptr_com_dll_)
@@ -59,16 +106,23 @@ HRESULT MfTransformWrapper::SetInputType(IMFMediaTypePtr& ptr_type)
         DBGLOG("ERROR, transform obj not created, E_INVALIDARG");
         return E_INVALIDARG;
     }
-    HRESULT hr;
     if (!ptr_type)
     {
-        hr = ptr_transform_->GetInputAvailableType(0, 0, &ptr_type);
-        if (FAILED(hr))
-        {
-            DBGLOG("GetInputAvailableType failed" << HRLOG(hr));
-            return hr;
-        }
+        DBGLOG("ERROR, media type required, E_INVALIDARG");
+        return E_INVALIDARG;
     }
+    HRESULT hr;
+    // this won't work (for vorbis at least-- SetInputType will fail without
+    // the setup headers from the source object!
+    //if (!ptr_type)
+    //{
+    //    hr = ptr_transform_->GetInputAvailableType(0, 0, &ptr_type);
+    //    if (FAILED(hr))
+    //    {
+    //        DBGLOG("GetInputAvailableType failed" << HRLOG(hr));
+    //        return hr;
+    //    }
+    //}
     hr = ptr_transform_->SetInputType(0, ptr_type, 0);
     if (FAILED(hr))
     {

@@ -290,17 +290,22 @@ TEST(MfByteStreamHandlerWrapper, StartSeekTo20SecondsPauseStart)
     ASSERT_EQ(S_OK, mf_shutdown());
 }
 
-TEST(MfTransformWrapper, CreateVp8DecTransformWrapper)
+TEST(MfTransformWrapper, CreateVp8Decoder)
 {
-    MfTransformWrapper mf_transform;
-    ASSERT_EQ(S_OK, mf_transform.Create(VP8DEC_PATH, CLSID_WebmMfVp8Dec));
+    MfTransformWrapper* ptr_transform = NULL;
+    ASSERT_EQ(S_OK, MfTransformWrapper::CreateInstance(VP8DEC_PATH,
+                                                       CLSID_WebmMfVp8Dec,
+                                                       &ptr_transform));
+    ptr_transform->Release();
 }
 
-TEST(MfTransformWrapper, CreateVorbisDecTransformWrapper)
+TEST(MfTransformWrapper, CreateVorbisDecoder)
 {
-    MfTransformWrapper mf_transform;
-    ASSERT_EQ(S_OK, mf_transform.Create(VORBISDEC_PATH,
-                                        CLSID_WebmMfVorbisDec));
+    MfTransformWrapper* ptr_transform = NULL;
+    ASSERT_EQ(S_OK, MfTransformWrapper::CreateInstance(VORBISDEC_PATH,
+                                                       CLSID_WebmMfVorbisDec,
+                                                       &ptr_transform));
+    ptr_transform->Release();
 }
 
 TEST(MfTransformWrapper, SetAudioInputType)
@@ -322,10 +327,14 @@ TEST(MfTransformWrapper, SetAudioInputType)
         GUID major_type = GUID_NULL;
         ASSERT_EQ(S_OK, ptr_type->GetMajorType(&major_type));
         ASSERT_EQ(TRUE, MFMediaType_Audio == major_type);
-        MfTransformWrapper mf_transform;
-        ASSERT_EQ(S_OK, mf_transform.Create(VORBISDEC_PATH,
-                                            CLSID_WebmMfVorbisDec));
-        ASSERT_EQ(S_OK, mf_transform.SetInputType(ptr_type));
+        MfTransformWrapper* ptr_transform = NULL;
+        ASSERT_EQ(S_OK,
+            MfTransformWrapper::CreateInstance(VORBISDEC_PATH,
+                                               CLSID_WebmMfVorbisDec,
+                                               &ptr_transform));
+        ASSERT_EQ(S_OK, ptr_transform->SetInputType(ptr_type));
+
+        ptr_transform->Release();
     }
     ptr_mf_bsh->Release();
     ASSERT_EQ(S_OK, mf_shutdown());
@@ -350,10 +359,12 @@ TEST(MfTransformWrapper, SetVideoInputType)
         GUID major_type = GUID_NULL;
         ASSERT_EQ(S_OK, ptr_type->GetMajorType(&major_type));
         ASSERT_EQ(TRUE, MFMediaType_Video == major_type);
-        MfTransformWrapper mf_transform;
-        ASSERT_EQ(S_OK, mf_transform.Create(VP8DEC_PATH,
-                                            CLSID_WebmMfVp8Dec));
-        ASSERT_EQ(S_OK, mf_transform.SetInputType(ptr_type));
+        MfTransformWrapper* ptr_transform = NULL;
+        ASSERT_EQ(S_OK, MfTransformWrapper::CreateInstance(VP8DEC_PATH,
+                                                           CLSID_WebmMfVp8Dec,
+                                                           &ptr_transform));
+        ASSERT_EQ(S_OK, ptr_transform->SetInputType(ptr_type));
+        ptr_transform->Release();
     }
     ptr_mf_bsh->Release();
     ASSERT_EQ(S_OK, mf_shutdown());
