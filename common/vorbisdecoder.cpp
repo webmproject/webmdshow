@@ -13,8 +13,15 @@
 #ifdef _WIN32
 #include "mferror.h"
 #include "windows.h"
-#include "mmsystem.h"
 #include "mmreg.h"
+#else
+// note: need SPEAKER_X_Y definitions w/o mmreg.h
+//
+// Define HRESULT and MF_E_TRANSFORM_NEED_MORE_INPUT in a very very lame
+// first step toward making VorbisDecoder cross platform:
+typedef long HRESULT;
+#define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
+#define MF_E_TRANSFORM_NEED_MORE_INPUT   _HRESULT_TYPEDEF_(0xC00D6D72L)
 #endif
 
 #include "debugutil.hpp"

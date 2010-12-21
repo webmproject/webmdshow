@@ -325,7 +325,7 @@
 	</References>
 	<Files>
 		<Filter
-			Name="Resource Files"
+			Name="resources"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
@@ -339,7 +339,7 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="Common Files"
+			Name="common"
 			>
 			<File
 				RelativePath="..\..\common\cfactory.cpp"
@@ -363,6 +363,14 @@
 			</File>
 			<File
 				RelativePath="..\..\common\comreg.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\vorbisdecoder.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\vorbisdecoder.hpp"
 				>
 			</File>
 			<File
@@ -420,14 +428,6 @@
 		</Filter>
 		<File
 			RelativePath=".\dllentry.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\vorbisdecoder.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\vorbisdecoder.hpp"
 			>
 		</File>
 		<File
