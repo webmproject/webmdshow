@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)..\third_party\libvpx;$(SolutionDir)..\third_party\sdl\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
@@ -66,9 +66,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib gtestd.lib gtest_maind.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtestd.lib gtest_maind.lib libogg_static.lib libvorbis_static.lib vpxmtd.lib SDL.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x86\debug"
+				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x86\debug;$(SolutionDir)..\third_party\libogg\x86\debug;$(SolutionDir)..\third_party\libvorbis\x86\debug;$(SolutionDir)..\third_party\libvpx\x86\debug;$(SolutionDir)..\third_party\sdl\x86\debug"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -124,7 +124,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)..\third_party\libvpx;$(SolutionDir)..\third_party\sdl\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
@@ -146,9 +146,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib gtestd.lib gtest_maind.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtestd.lib gtest_maind.lib libogg_static.lib libvorbis_static.lib vpxmtd.lib SDL.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x64\debug"
+				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x64\debug;$(SolutionDir)..\third_party\libogg\x64\debug;$(SolutionDir)..\third_party\libvorbis\x64\debug;$(SolutionDir)..\third_party\libvpx\x64\debug;$(SolutionDir)..\third_party\sdl\x64\debug"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -203,7 +203,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)..\third_party\libvpx;$(SolutionDir)..\third_party\sdl\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="0"
@@ -224,9 +224,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib gtest.lib gtest_main.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtest.lib gtest_main.lib libogg_static.lib libvorbis_static.lib vpxmt.lib SDL.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x86\release"
+				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x86\release;$(SolutionDir)..\third_party\libogg\x86\release;$(SolutionDir)..\third_party\libvorbis\x86\release;$(SolutionDir)..\third_party\libvpx\x86\release;$(SolutionDir)..\third_party\sdl\x86\release"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -283,7 +283,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include"
+				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party\gtest\include;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)..\third_party\libvpx;$(SolutionDir)..\third_party\sdl\include"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="0"
@@ -304,9 +304,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib gtest.lib gtest_main.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtest.lib gtest_main.lib libogg_static.lib libvorbis_static.lib vpxmt.lib SDL.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x64\release"
+				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x64\release;$(SolutionDir)..\third_party\libogg\x64\release;$(SolutionDir)..\third_party\libvorbis\x64\release;$(SolutionDir)..\third_party\libvpx\x64\release;$(SolutionDir)..\third_party\sdl\x64\release"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -413,6 +413,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\vorbisdecoder.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\vorbisdecoder.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\webmtypes.cpp"
 				>
 			</File>
@@ -447,6 +455,14 @@
 		</Filter>
 		<File
 			RelativePath=".\sdlplay_main.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\SDLVideoPlayer.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\SDLVideoPlayer.h"
 			>
 		</File>
 	</Files>
