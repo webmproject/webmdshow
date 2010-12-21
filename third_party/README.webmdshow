@@ -13,11 +13,16 @@ libvpx
 Version: v0.9.5-2-g755e2a2
 URL: http://review.webmproject.org/
 
+sdl
+Version: 1.2.14
+URL: http://www.libsdl.org/download-1.2.php
+
 Build instructions:
 
-The libogg and libvorbis distributions noted above include visual studio 2008
+* The libogg and libvorbis distributions noted above include visual studio 2008
 solution files.  Use the provided script to build the libraries used by the
 webmdshow MediaFoundation objects.
 
-The libvpx binaries were built from source by the same script.
+* The libvpx binaries were built from source by the same script.
 
+* See README.webmdshow in the sdl directory for instructions

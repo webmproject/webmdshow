@@ -1,0 +1,7 @@
+To build the libSDL binaries:
+
+1. Download the SDL v1.2.14 source http://www.libsdl.org/download-1.2.php
+2. Extract the contents.
+3. Extract sdl-1.2.14-vs2008-static.zip so that the VisualC directory contained
+   within is at the root of the directory from step 2.
+4. Open SDL.sln in MSVC2008 and build.
