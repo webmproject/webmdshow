@@ -60,16 +60,10 @@ MfByteStreamHandlerWrapper::~MfByteStreamHandlerWrapper()
     if (ptr_media_src_)
     {
         ptr_media_src_->Shutdown();
-        ptr_media_src_ = 0;
     }
     if (ptr_byte_stream_)
     {
         ptr_byte_stream_->Close();
-        ptr_byte_stream_ = 0;
-    }
-    if (ptr_handler_)
-    {
-        ptr_handler_ = 0;
     }
 }
 
