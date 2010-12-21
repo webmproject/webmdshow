@@ -33,18 +33,6 @@ MfMediaStream::MfMediaStream():
 
 MfMediaStream::~MfMediaStream()
 {
-    if (ptr_sample_)
-    {
-        ptr_sample_ = 0;
-    }
-    if (ptr_event_queue_)
-    {
-        ptr_event_queue_ = 0;
-    }
-    if (ptr_stream_)
-    {
-        ptr_stream_ = 0;
-    }
 }
 
 HRESULT MfMediaStream::QueryInterface(REFIID riid, void** ppv)
