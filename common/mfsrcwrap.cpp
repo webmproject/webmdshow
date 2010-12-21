@@ -129,6 +129,21 @@ HRESULT MfByteStreamHandlerWrapper::Create(
     return hr;
 }
 
+HRESULT MfByteStreamHandlerWrapper::GetAudioSample(IMFSample** ptr_sample)
+{
+    if (0 == audio_stream_count_)
+    {
+        DBGLOG("no audio streams");
+        return E_INVALIDARG;
+    }
+    if (NULL == ptr_audio_stream_)
+    {
+        DBGLOG("ERROR, audio stream not created, E_UNEXPECTED");
+        return E_UNEXPECTED;
+    }
+    return ptr_audio_stream_->GetSample(ptr_sample);
+}
+
 HRESULT MfByteStreamHandlerWrapper::GetAudioMediaType(
     IMFMediaType **ptr_type) const
 {
@@ -148,6 +163,21 @@ HRESULT MfByteStreamHandlerWrapper::GetAudioMediaType(
 UINT MfByteStreamHandlerWrapper::GetAudioStreamCount() const
 {
     return audio_stream_count_;
+}
+
+HRESULT MfByteStreamHandlerWrapper::GetVideoSample(IMFSample** ptr_sample)
+{
+    if (0 == video_stream_count_)
+    {
+        DBGLOG("no video streams");
+        return E_INVALIDARG;
+    }
+    if (NULL == ptr_video_stream_)
+    {
+        DBGLOG("ERROR, video stream not created, E_UNEXPECTED");
+        return E_UNEXPECTED;
+    }
+    return ptr_video_stream_->GetSample(ptr_sample);
 }
 
 HRESULT MfByteStreamHandlerWrapper::GetVideoMediaType(
@@ -375,16 +405,14 @@ HRESULT MfByteStreamHandlerWrapper::HandleMediaSourceEvent_(
 
 HRESULT MfByteStreamHandlerWrapper::OnNewStream_(IMFMediaEventPtr &ptr_event)
 {
-    PROPVARIANT event_val;
-    PropVariantInit(&event_val);
-    HRESULT hr = ptr_event->GetValue(&event_val);
+    IUnknownPtr ptr_iunk;
+    HRESULT hr = get_event_iunk_ptr(ptr_event, &ptr_iunk);
     if (FAILED(hr))
     {
-        DBGLOG("ERROR, could not get event value" << HRLOG(hr));
+        DBGLOG("ERROR, could not obtain IUnknown from event" << HRLOG(hr));
         return hr;
     }
-    // just assign the IUnknown val, what could go wrong... (shudder)
-    IMFMediaStreamPtr ptr_media_stream = event_val.punkVal;
+    IMFMediaStreamPtr ptr_media_stream = ptr_iunk;
     if (!ptr_media_stream)
     {
         DBGLOG("ERROR, stream pointer null");

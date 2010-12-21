@@ -91,6 +91,56 @@ TEST(MfByteStreamHandlerWrapper, LoadMediaStreams)
     ASSERT_EQ(S_OK, mf_shutdown());
 }
 
+TEST(MfByteStreamHandlerWrapper, GetAudioSample)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    if (ptr_mf_bsh->GetAudioStreamCount() > 0)
+    {
+        _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
+        IMFSamplePtr ptr_sample;
+        ASSERT_EQ(S_OK, ptr_mf_bsh->GetAudioSample(&ptr_sample));
+        DWORD buffer_count = 0;
+        ASSERT_EQ(S_OK, ptr_sample->GetBufferCount(&buffer_count));
+        ASSERT_GT(buffer_count, 0UL);
+        ASSERT_EQ(true, ptr_sample != NULL);
+    }
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfByteStreamHandlerWrapper, GetVideoSample)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    if (ptr_mf_bsh->GetAudioStreamCount() > 0)
+    {
+        _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
+        IMFSamplePtr ptr_sample;
+        ASSERT_EQ(S_OK, ptr_mf_bsh->GetVideoSample(&ptr_sample));
+        DWORD buffer_count = 0;
+        ASSERT_EQ(S_OK, ptr_sample->GetBufferCount(&buffer_count));
+        ASSERT_GT(buffer_count, 0UL);
+        ASSERT_EQ(true, ptr_sample != NULL);
+    }
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
 TEST(MfByteStreamHandlerWrapper, Start)
 {
     ASSERT_EQ(S_OK, mf_startup());
