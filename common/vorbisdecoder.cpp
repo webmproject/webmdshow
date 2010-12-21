@@ -71,6 +71,9 @@ int VorbisDecoder::CreateDecoder(const BYTE** const ptr_headers,
     assert(header_lengths);
     assert(num_headers == 3);
 
+    if (3 != num_headers)
+        return E_INVALIDARG;
+
     vorbis_info_init(&m_vorbis_info);
     vorbis_comment_init(&m_vorbis_comment);
 
