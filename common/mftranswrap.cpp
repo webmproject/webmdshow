@@ -112,17 +112,6 @@ HRESULT MfTransformWrapper::SetInputType(IMFMediaTypePtr& ptr_type)
         return E_INVALIDARG;
     }
     HRESULT hr;
-    // this won't work (for vorbis at least-- SetInputType will fail without
-    // the setup headers from the source object!
-    //if (!ptr_type)
-    //{
-    //    hr = ptr_transform_->GetInputAvailableType(0, 0, &ptr_type);
-    //    if (FAILED(hr))
-    //    {
-    //        DBGLOG("GetInputAvailableType failed" << HRLOG(hr));
-    //        return hr;
-    //    }
-    //}
     hr = ptr_transform_->SetInputType(0, ptr_type, 0);
     if (FAILED(hr))
     {

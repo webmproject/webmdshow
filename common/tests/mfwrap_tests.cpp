@@ -340,6 +340,40 @@ TEST(MfTransformWrapper, SetAudioInputType)
     ASSERT_EQ(S_OK, mf_shutdown());
 }
 
+TEST(MfTransformWrapper, SetAudioOutputType)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    if (ptr_mf_bsh->GetAudioStreamCount() > 0)
+    {
+        _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
+        IMFMediaTypePtr ptr_type;
+        ASSERT_EQ(S_OK, ptr_mf_bsh->GetAudioMediaType(&ptr_type));
+        GUID major_type = GUID_NULL;
+        ASSERT_EQ(S_OK, ptr_type->GetMajorType(&major_type));
+        ASSERT_EQ(TRUE, MFMediaType_Audio == major_type);
+        MfTransformWrapper* ptr_transform = NULL;
+        ASSERT_EQ(S_OK,
+            MfTransformWrapper::CreateInstance(VORBISDEC_PATH,
+                                               CLSID_WebmMfVorbisDec,
+                                               &ptr_transform));
+        ASSERT_EQ(S_OK, ptr_transform->SetInputType(ptr_type));
+        // empty IMFMediaTypePtr means use first available output type
+        ptr_type = 0;
+        ASSERT_EQ(S_OK, ptr_transform->SetOutputType(ptr_type));
+        ptr_transform->Release();
+    }
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
 TEST(MfTransformWrapper, SetVideoInputType)
 {
     ASSERT_EQ(S_OK, mf_startup());
@@ -364,6 +398,39 @@ TEST(MfTransformWrapper, SetVideoInputType)
                                                            CLSID_WebmMfVp8Dec,
                                                            &ptr_transform));
         ASSERT_EQ(S_OK, ptr_transform->SetInputType(ptr_type));
+        ptr_transform->Release();
+    }
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfTransformWrapper, SetVideoOutputType)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    if (ptr_mf_bsh->GetVideoStreamCount() > 0)
+    {
+        _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
+        IMFMediaTypePtr ptr_type;
+        ASSERT_EQ(S_OK, ptr_mf_bsh->GetVideoMediaType(&ptr_type));
+        GUID major_type = GUID_NULL;
+        ASSERT_EQ(S_OK, ptr_type->GetMajorType(&major_type));
+        ASSERT_EQ(TRUE, MFMediaType_Video == major_type);
+        MfTransformWrapper* ptr_transform = NULL;
+        ASSERT_EQ(S_OK, MfTransformWrapper::CreateInstance(VP8DEC_PATH,
+                                                           CLSID_WebmMfVp8Dec,
+                                                           &ptr_transform));
+        ASSERT_EQ(S_OK, ptr_transform->SetInputType(ptr_type));
+        // empty IMFMediaTypePtr means use first available output type
+        ptr_type = 0;
+        ASSERT_EQ(S_OK, ptr_transform->SetOutputType(ptr_type));
         ptr_transform->Release();
     }
     ptr_mf_bsh->Release();
