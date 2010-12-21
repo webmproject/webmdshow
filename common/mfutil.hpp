@@ -12,9 +12,10 @@
 namespace WebmMfUtil
 {
 
+HRESULT copy_media_type(IMFMediaType* ptr_src, IMFMediaType** ptr_dest);
 HRESULT get_event_iunk_ptr(IMFMediaEvent* ptr_event, IUnknown** ptr_iunk);
 HRESULT get_major_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
-HRESULT get_media_type(IMFStreamDescriptor* ptr_desc, 
+HRESULT get_media_type(IMFStreamDescriptor* ptr_desc,
                        IMFMediaType** ptr_type);
 HRESULT get_sub_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
 

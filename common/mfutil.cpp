@@ -23,6 +23,29 @@ namespace WebmMfUtil
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, IID_IMFMediaTypeHandler);
 
+HRESULT copy_media_type(IMFMediaType* ptr_src, IMFMediaType** ptr_dest)
+{
+    if (!ptr_src)
+    {
+        return E_INVALIDARG;
+    }
+    IMFMediaType* ptr_type;
+    HRESULT hr = MFCreateMediaType(&ptr_type);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, MFCreateMediaType failed" << HRLOG(hr));
+        return hr;
+    }
+    hr = ptr_src->CopyAllItems(ptr_type);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, CopyAllItems failed" << HRLOG(hr));
+        return hr;
+    }
+    *ptr_dest = ptr_type;
+    return hr;
+}
+
 HRESULT get_event_iunk_ptr(IMFMediaEvent* ptr_event, IUnknown** ptr_iunk)
 {
     if (!ptr_event)
@@ -54,13 +77,15 @@ HRESULT get_media_type(IMFStreamDescriptor* ptr_desc, IMFMediaType** ptr_type)
         DBGLOG("ERROR, GetMediaTypeHandler failed" << HRLOG(hr));
         return hr;
     }
-    hr = ptr_media_type_handler->GetCurrentMediaType(ptr_type);
+    _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
+    IMFMediaTypePtr ptr_temp_mt;
+    hr = ptr_media_type_handler->GetCurrentMediaType(&ptr_temp_mt);
     if (FAILED(hr))
     {
         DBGLOG("ERROR, GetCurrentMediaType failed" << HRLOG(hr));
         return hr;
     }
-    return hr;
+    return copy_media_type(ptr_temp_mt, ptr_type);
 }
 
 HRESULT get_major_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type)
