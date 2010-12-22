@@ -8,11 +8,11 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include <comdef.h>
 #include <mfapi.h>
 #include <mferror.h>
 #include <mfidl.h>
 
-#include <comdef.h>
 #include <string>
 #include <vector>
 
@@ -23,6 +23,7 @@
 #include "gtest/gtest.h"
 #include "mfsrcwrap.hpp"
 #include "mftranswrap.hpp"
+#include "mfutil.hpp"
 #include "tests/mfdllpaths.hpp"
 #include "webmtypes.hpp"
 
@@ -31,28 +32,10 @@ using WebmTypes::CLSID_WebmMfVp8Dec;
 using WebmTypes::CLSID_WebmMfVorbisDec;
 using WebmMfUtil::MfByteStreamHandlerWrapper;
 using WebmMfUtil::MfTransformWrapper;
+using WebmMfUtil::mf_startup;
+using WebmMfUtil::mf_shutdown;
 
 extern wchar_t* g_test_input_file;
-
-HRESULT mf_startup()
-{
-    HRESULT hr = MFStartup(MF_VERSION);
-    if (FAILED(hr))
-    {
-        DBGLOG("ERROR, MFStartup failed, hr=" << hr);
-    }
-    return hr;
-}
-
-HRESULT mf_shutdown()
-{
-    HRESULT hr = MFShutdown();
-    if (FAILED(hr))
-    {
-        DBGLOG("ERROR, MFShutdown failed, hr=" << hr);
-    }
-    return hr;
-}
 
 TEST(MfByteStreamHandlerWrapper, CreateMfByteStreamHandlerWrapper)
 {

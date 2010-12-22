@@ -132,4 +132,24 @@ HRESULT get_sub_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_sub_type)
     return hr;
 }
 
+HRESULT mf_startup()
+{
+    HRESULT hr = MFStartup(MF_VERSION);
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, MFStartup failed, hr=" << hr);
+    }
+    return hr;
+}
+
+HRESULT mf_shutdown()
+{
+    HRESULT hr = MFShutdown();
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR, MFShutdown failed, hr=" << hr);
+    }
+    return hr;
+}
+
 } // WebmMfUtil namespace
