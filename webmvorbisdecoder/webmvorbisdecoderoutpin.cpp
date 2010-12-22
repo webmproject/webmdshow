@@ -14,8 +14,9 @@
 #include "cmediasample.hpp"
 #include "mediatypeutil.hpp"
 #include "webmtypes.hpp"
+#include "vorbistypes.hpp"
 #include <vfwmsgs.h>
-//#include <amvideo.h>  //VIDEOINFOHEADER
+#include <mmreg.h>
 #include <uuids.h>
 #include <cassert>
 #ifdef _DEBUG
@@ -198,7 +199,6 @@ HRESULT Outpin::Connect(
 
     if (FAILED(hr))
     {
-        //hr = CMemAllocator::CreateInstance(&m_sample_factory, &pAllocator);
         hr = CMediaSample::CreateAllocator(&pAllocator);
 
         if (FAILED(hr))
@@ -217,34 +217,19 @@ HRESULT Outpin::Connect(
     hr = pInputPin->GetAllocatorRequirements(&props);
 
     if (props.cBuffers <= 0)
-        props.cBuffers = 1;
+        props.cBuffers = 10;
 
-#if 0 //TODO
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_VideoInfo);  //TODO
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
+    assert(mt.formattype == FORMAT_WaveFormatEx);
+    assert(mt.cbFormat >= 18);
     assert(mt.pbFormat);
 
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+    const WAVEFORMATEX& wfx = (WAVEFORMATEX&)(*mt.pbFormat);
 
-    LONG w = bmih.biWidth;
-    assert(w > 0);
+    const long rate = wfx.nSamplesPerSec;
+    const long size = wfx.nBlockAlign;
 
-    LONG h = labs(bmih.biHeight);
-    assert(h > 0);
-
-    //if (w % 16)
-    //    w = 16 * ((w + 15) / 16);
-    //
-    //if (h % 16)
-    //    h = 16 * ((h + 15) / 16);
-
-    const long cbBuffer = w*h + 2*((w+1)/2 * (h+1)/2);
-    
-#else
-    const long cbBuffer = 1;  //TODO
-#endif
+    const long cbBuffer = (rate * size) / 2;  //half-sec worth of payload
 
     if (props.cbBuffer < cbBuffer)
         props.cbBuffer = cbBuffer;
@@ -295,43 +280,56 @@ HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (pmt == 0)
         return E_INVALIDARG;
 
-#if 0  //TODO
-    const AM_MEDIA_TYPE& mt = *pmt;
+    Filter::Lock lock;
 
-    if (mt.majortype != MEDIATYPE_Video)
+    const HRESULT hr = lock.Seize(m_pFilter);
+
+    if (FAILED(hr))
+        return hr;
+
+    const Inpin& inpin = m_pFilter->m_inpin;
+
+    if (!bool(inpin.m_pPinConnection))
+        return VFW_E_NO_TYPES;
+
+    const AM_MEDIA_TYPE& mtOut = *pmt;
+
+    if (mtOut.majortype != MEDIATYPE_Audio)
         return S_FALSE;
 
-    if (mt.subtype == MEDIASUBTYPE_YV12)
-        __noop;
-    else if (mt.subtype == WebmTypes::MEDIASUBTYPE_I420)
-        __noop;
-    else
+    if (mtOut.subtype != MEDIASUBTYPE_IEEE_FLOAT)
         return S_FALSE;
 
-    if (mt.formattype != FORMAT_VideoInfo)  //TODO: liberalize
+    if (mtOut.formattype != FORMAT_WaveFormatEx)
         return S_FALSE;
 
-    if (mt.pbFormat == 0)
+    if (mtOut.pbFormat == 0)
         return S_FALSE;
 
-    if (mt.cbFormat < sizeof(VIDEOINFOHEADER))
+    if (mtOut.cbFormat < 18)
         return S_FALSE;
 
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+    const WAVEFORMATEX& wfxOut = (WAVEFORMATEX&)(*mtOut.pbFormat);
 
-    if (bmih.biSize != sizeof(BITMAPINFOHEADER))  //TODO: liberalize
+    if (wfxOut.wFormatTag != WAVE_FORMAT_IEEE_FLOAT)
         return S_FALSE;
 
-    if (bmih.biWidth <= 0)
+    if (wfxOut.cbSize > 0)
         return S_FALSE;
 
-    //if (bmih.biHeight <= 0)
-    //    return S_FALSE;
+    const AM_MEDIA_TYPE& mtIn = inpin.m_connection_mtv[0];
+    const WAVEFORMATEX& wfxIn = (WAVEFORMATEX&)(*mtIn.pbFormat);
 
-    if (bmih.biCompression != mt.subtype.Data1)
+    if (wfxOut.nChannels != wfxIn.nChannels)
         return S_FALSE;
-#endif
+
+    if (wfxOut.nSamplesPerSec != wfxIn.nSamplesPerSec)
+        return S_FALSE;
+
+    if (wfxOut.nBlockAlign != wfxIn.nBlockAlign)
+        return S_FALSE;
+
+    //TODO: check bits/sample
 
     return S_OK;
 }
@@ -694,7 +692,7 @@ HRESULT Outpin::GetPreroll(LONGLONG* p)
 
 HRESULT Outpin::GetName(PIN_INFO& info) const
 {
-    const wchar_t* const name_ = L"PCM";
+    const wchar_t* const name_ = L"PCM (IEEE Float)";
 
 #if _MSC_VER >= 1400
     enum { namelen = sizeof(info.achName) / sizeof(WCHAR) };
@@ -711,61 +709,40 @@ HRESULT Outpin::GetName(PIN_INFO& info) const
 
 void Outpin::OnInpinConnect(const AM_MEDIA_TYPE& mtIn)
 {
-#if 0 //TODO
-    assert(mtIn.cbFormat >= sizeof(VIDEOINFOHEADER));
-    assert(mtIn.pbFormat);
-
-    const VIDEOINFOHEADER& vihIn = (VIDEOINFOHEADER&)(*mtIn.pbFormat);
-    const BITMAPINFOHEADER& bmihIn = vihIn.bmiHeader;
+    typedef VorbisTypes::VORBISFORMAT2 FMT;
+    const FMT& fmt = (FMT&)(*mtIn.pbFormat);
 
     m_preferred_mtv.Clear();
 
     AM_MEDIA_TYPE mt;
+    WAVEFORMATEX wfx;
 
-    VIDEOINFOHEADER vih;
-    BITMAPINFOHEADER& bmih = vih.bmiHeader;
-
-    mt.majortype = MEDIATYPE_Video;
-    mt.subtype = MEDIASUBTYPE_YV12;
+    mt.majortype = MEDIATYPE_Audio;
+    mt.subtype = MEDIASUBTYPE_IEEE_FLOAT;
     mt.bFixedSizeSamples = TRUE;
     mt.bTemporalCompression = FALSE;
-    mt.lSampleSize = 0;
-    mt.formattype = FORMAT_VideoInfo;
+    //mt.lSampleSize
+    mt.formattype = FORMAT_WaveFormatEx;
     mt.pUnk = 0;
-    mt.cbFormat = sizeof vih;
-    mt.pbFormat = (BYTE*)&vih;
+    mt.cbFormat = 18;
+    mt.pbFormat = (BYTE*)&wfx;
 
-    SetRectEmpty(&vih.rcSource);  //TODO
-    SetRectEmpty(&vih.rcTarget);  //TODO
-    vih.dwBitRate = 0;
-    vih.dwBitErrorRate = 0;
-    vih.AvgTimePerFrame = vihIn.AvgTimePerFrame;
+    wfx.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+    wfx.nChannels = static_cast<WORD>(fmt.channels);
+    wfx.nSamplesPerSec = fmt.samplesPerSec;
 
-    const LONG w = bmihIn.biWidth;
-    assert(w > 0);
+    const size_t bytesPerSample = sizeof(float);
+    const size_t bitsPerSample = 8 * bytesPerSample;
 
-    const LONG h = bmihIn.biHeight;
-    assert(h > 0);
+    wfx.wBitsPerSample = static_cast<WORD>(bitsPerSample);
 
-    bmih.biSize = sizeof bmih;
-    bmih.biWidth = w;
-    bmih.biHeight = h;
-    bmih.biPlanes = 1;  //because Microsoft says so
-    bmih.biBitCount = 12;  //?
-    bmih.biCompression = mt.subtype.Data1;
-    bmih.biSizeImage = w*h + 2*((w+1)/2 * (h+1)/2);
-    bmih.biXPelsPerMeter = 0;
-    bmih.biYPelsPerMeter = 0;
-    bmih.biClrUsed = 0;
-    bmih.biClrImportant = 0;
+    wfx.nBlockAlign = bytesPerSample * wfx.nChannels;
+    wfx.nAvgBytesPerSec = wfx.nBlockAlign * wfx.nSamplesPerSec;
+    wfx.cbSize = 0;
+
+    mt.lSampleSize = wfx.nBlockAlign;
 
     m_preferred_mtv.Add(mt);
-
-    mt.subtype = WebmTypes::MEDIASUBTYPE_I420;
-    bmih.biCompression = mt.subtype.Data1;  //"I420"
-
-    m_preferred_mtv.Add(mt);
-#endif
 }
 
 
@@ -795,11 +772,10 @@ void Outpin::SetDefaultMediaTypes()
 {
     m_preferred_mtv.Clear();
 
-#if 0  //TODO
     AM_MEDIA_TYPE mt;
 
-    mt.majortype = MEDIATYPE_Video;
-    mt.subtype = MEDIASUBTYPE_YV12;
+    mt.majortype = MEDIATYPE_Audio;
+    mt.subtype = MEDIASUBTYPE_IEEE_FLOAT;
     mt.bFixedSizeSamples = TRUE;
     mt.bTemporalCompression = FALSE;
     mt.lSampleSize = 0;
@@ -809,10 +785,6 @@ void Outpin::SetDefaultMediaTypes()
     mt.pbFormat = 0;
 
     m_preferred_mtv.Add(mt);
-
-    mt.subtype = WebmTypes::MEDIASUBTYPE_I420;
-    m_preferred_mtv.Add(mt);
-#endif
 }
 
 

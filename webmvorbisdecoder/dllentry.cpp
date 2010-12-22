@@ -85,20 +85,10 @@ STDAPI DllUnregisterServer()
                     0,
                     WebmTypes::CLSID_WebmVorbisDecoder);
 
-    //TODO
-    //assert(SUCCEEDED(hr));
+    assert(SUCCEEDED(hr));  //TODO
 
     hr = ComReg::UnRegisterCoclass(WebmTypes::CLSID_WebmVorbisDecoder);
-
-    std::wstring filename_;
-
-    hr = ComReg::ComRegGetModuleFileName(g_hModule, filename_);
-    assert(SUCCEEDED(hr));
-    assert(!filename_.empty());
-
-    const wchar_t* const filename = filename_.c_str();
-
-    hr = ComReg::UnRegisterTypeLibResource(filename);
+    assert(SUCCEEDED(hr));  //TODO
 
     return S_OK;  //TODO
 }
@@ -121,9 +111,6 @@ STDAPI DllRegisterServer()
 #endif
 
     hr = DllUnregisterServer();
-    assert(SUCCEEDED(hr));
-
-    hr = ComReg::RegisterTypeLibResource(filename, 0);
     assert(SUCCEEDED(hr));
 
     hr = ComReg::RegisterCoclass(
@@ -170,7 +157,7 @@ STDAPI DllRegisterServer()
     enum { nOutpinMediaTypes = 1 };
     const REGPINTYPES outpinMediaTypes[nOutpinMediaTypes] =
     {
-        { &MEDIATYPE_Audio, &MEDIASUBTYPE_PCM },
+        { &MEDIATYPE_Audio, &MEDIASUBTYPE_IEEE_FLOAT },
     };
 
     outpin.strName = 0;              //obsolete

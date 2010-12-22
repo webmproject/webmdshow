@@ -47,6 +47,8 @@ Inpin::Inpin(Filter* p) :
     mt.pbFormat = 0;
 
     m_preferred_mtv.Add(mt);
+
+    m_packet.packetno = -1;
 }
 
 HRESULT Inpin::QueryInterface(const IID& iid, void** ppv)
@@ -349,27 +351,38 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
         return S_FALSE;
 
     const FMT& fmt = (FMT&)(*mt.pbFormat);
-    
+
     if (fmt.channels == 0)
         return S_FALSE;
-        
+
     //TODO: check for max channels value?
 
     if (fmt.samplesPerSec == 0)
         return S_FALSE;
-        
+
     //check bitsPerSample?
 
-    if (fmt.headerSize[0] == 0)
-        return S_FALSE;
-        
-    if (fmt.headerSize[1] == 0)
+    const ULONG id_len = fmt.headerSize[0];
+
+    if (id_len == 0)
         return S_FALSE;
 
-    if (fmt.headerSize[2] == 0)
+    const ULONG comment_len = fmt.headerSize[1];
+
+    if (comment_len == 0)
         return S_FALSE;
-        
-    //TODO: check that specified size equals cbBuffer
+
+    const ULONG setup_len = fmt.headerSize[2];
+
+    if (setup_len == 0)
+        return S_FALSE;
+
+    const ULONG hdr_len = id_len + comment_len + setup_len;
+
+    if (mt.cbFormat < (sizeof(FMT) + hdr_len))
+        return S_FALSE;
+
+    //TODO: vet headers
 
     return S_OK;
 }
@@ -432,25 +445,28 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (pInSample == 0)
         return E_INVALIDARG;
 
-//#define DEBUG_RECEIVE
+    __int64 start_reftime_, stop_reftime_;
+    HRESULT hr = pInSample->GetTime(&start_reftime_, &stop_reftime_);
+
+#define DEBUG_RECEIVE
 
 #ifdef DEBUG_RECEIVE
     {
-        __int64 start_reftime, stop_reftime;
-        const HRESULT hr = pInSample->GetTime(&start_reftime, &stop_reftime);
-
         odbgstream os;
-        os << "vp8dec::inpin::receive: ";
+        os << "webmvorbisdec::inpin::receive: ";
 
         os << std::fixed << std::setprecision(3);
 
         if (hr == S_OK)
-            os << "start[ms]=" << double(start_reftime) / 10000
-               << "; stop[ms]=" << double(stop_reftime) / 10000
-               << "; dt[ms]=" << double(stop_reftime - start_reftime) / 10000;
+            os << "start[ms]="
+               << double(start_reftime_) / 10000
+               << "; stop[ms]="
+               << double(stop_reftime_) / 10000
+               << "; dt[ms]="
+               << double(stop_reftime_ - start_reftime_) / 10000;
 
         else if (hr == VFW_S_NO_STOP_TIME)
-            os << "start[ms]=" << double(start_reftime) / 10000;
+            os << "start[ms]=" << double(start_reftime_) / 10000;
 
         os << endl;
     }
@@ -458,7 +474,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     Filter::Lock lock;
 
-    HRESULT hr = lock.Seize(m_pFilter);
+    hr = lock.Seize(m_pFilter);
 
     if (FAILED(hr))
         return hr;
@@ -490,40 +506,50 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (m_bFlush)
         return S_FALSE;
 
-    BYTE* buf;
-
-    hr = pInSample->GetPointer(&buf);
-    assert(SUCCEEDED(hr));
-    assert(buf);
-
-    const long len = pInSample->GetActualDataLength();
-    assert(len >= 0);
-
-#if 0  //TODO
-    const vpx_codec_err_t err = vpx_codec_decode(&m_ctx, buf, len, 0, 0);
-
-    if (err != VPX_CODEC_OK)
+    if (m_first_reftime < 0)
     {
-        GraphUtil::IMediaEventSinkPtr pSink(m_pFilter->m_info.pGraph);
+        LONGLONG sp;
 
-        if (bool(pSink))
-        {
-            lock.Release();
+        hr = pInSample->GetTime(&m_first_reftime, &sp);
 
-            hr = pSink->Notify(
-                    EC_STREAM_ERROR_STOPPED,
-                    VFW_E_SAMPLE_REJECTED,
-                    err);
-        }
+        if (FAILED(hr))
+            return hr;
 
-        m_bEndOfStream = true;  //clear this when we stop and then start again
-        return S_FALSE;
+        if (m_first_reftime < 0)
+            return S_OK;
+
+        m_start_reftime = m_first_reftime;
+        m_samples = 0;
     }
 
+    BYTE* buf_in;
+
+    hr = pInSample->GetPointer(&buf_in);
+    assert(SUCCEEDED(hr));
+    assert(buf_in);
+
+    const long len_in = pInSample->GetActualDataLength();
+    assert(len_in >= 0);
+
+    ogg_packet& pkt = m_packet;
+
+    pkt.packet = buf_in;
+    pkt.bytes = len_in;
+    ++pkt.packetno;
+
+    int status = vorbis_synthesis(&m_block, &pkt);
+    assert(status == 0);  //TODO
+
+    status = vorbis_synthesis_blockin(&m_dsp_state, &m_block);
+    assert(status == 0);  //TODO
+
+#if 0 //TODO
     if (pInSample->IsPreroll() == S_OK)
         return S_OK;
+#endif
 
-    lock.Release();
+    hr = lock.Release();
+    assert(SUCCEEDED(hr));
 
     GraphUtil::IMediaSamplePtr pOutSample;
 
@@ -548,150 +574,111 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (!bool(outpin.m_pInputPin))  //should never happen
         return S_FALSE;
 
-    vpx_codec_iter_t iter = 0;
+    typedef VorbisTypes::VORBISFORMAT2 FMT;
 
-    vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &iter);
-
-    if (f == 0)
-        return S_OK;
-
-    AM_MEDIA_TYPE* pmt;
-
-    hr = pOutSample->GetMediaType(&pmt);
-
-    if (SUCCEEDED(hr) && (pmt != 0))
-    {
-        assert(outpin.QueryAccept(pmt) == S_OK);
-        outpin.m_connection_mtv.Clear();
-        outpin.m_connection_mtv.Add(*pmt);
-
-        MediaTypeUtil::Free(pmt);
-        pmt = 0;
-    }
-
-    const AM_MEDIA_TYPE& mt = outpin.m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_VideoInfo);
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+    assert(mt.cbFormat > sizeof(FMT));
     assert(mt.pbFormat);
 
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+    const FMT& fmt = (const FMT&)(*mt.pbFormat);
+    assert(fmt.channels > 0);
+    assert(fmt.samplesPerSec > 0);
 
-    //Y
+    const long size = pOutSample->GetSize();
+    assert(size >= 0);
 
-    const BYTE* pInY = f->planes[PLANE_Y];
-    assert(pInY);
+    const long max_samples = size / (fmt.channels * sizeof(float));
+    assert(max_samples > 0);
 
-    unsigned int wIn = f->d_w;
-    unsigned int hIn = f->d_h;
+    BYTE* dst;
 
-    BYTE* pOutBuf;
-
-    hr = pOutSample->GetPointer(&pOutBuf);
+    hr = pOutSample->GetPointer(&dst);
     assert(SUCCEEDED(hr));
-    assert(pOutBuf);
+    assert(dst);
 
-    BYTE* pOut = pOutBuf;
+    BYTE* const dst_end = dst + size;
+    dst_end;
 
-    const int strideInY = f->stride[PLANE_Y];
+    long total_samples = 0;
 
-    LONG strideOut = bmih.biWidth;
-    assert(strideOut);
-    assert((strideOut % 2) == 0);  //?
-
-    for (unsigned int y = 0; y < hIn; ++y)
+    while (total_samples < max_samples)
     {
-        memcpy(pOut, pInY, wIn);
-        pInY += strideInY;
-        pOut += strideOut;
-    }
+        float** sv;  //samples vector
 
-    strideOut /= 2;
+        const int count = vorbis_synthesis_pcmout(&m_dsp_state, &sv);
 
-    wIn = (wIn + 1) / 2;
-    hIn = (hIn + 1) / 2;
+        if (count < 0)  //error?
+            return S_FALSE;
 
-    const BYTE* pInV = f->planes[PLANE_V];
-    assert(pInV);
+        if (count == 0)
+            break;
 
-    const int strideInV = f->stride[PLANE_V];
+        long samples = max_samples - total_samples;
 
-    const BYTE* pInU = f->planes[PLANE_U];
-    assert(pInU);
+        if (samples > count)
+            samples = count;
 
-    const int strideInU = f->stride[PLANE_U];
-
-    if (mt.subtype == MEDIASUBTYPE_YV12)
-    {
-        //V
-
-        for (unsigned int y = 0; y < hIn; ++y)
+        for (long i = 0; i < samples; ++i)
         {
-            memcpy(pOut, pInV, wIn);
-            pInV += strideInV;
-            pOut += strideOut;
+            for (DWORD j = 0; j < fmt.channels; ++j)
+            {
+                const float* const src = sv[j] + i;
+                assert(src);
+
+                memcpy(dst, src, sizeof(float));
+                dst += sizeof(float);
+            }
         }
 
-        //U
+        assert(dst <= dst_end);
 
-        for (unsigned int y = 0; y < hIn; ++y)
-        {
-            memcpy(pOut, pInU, wIn);
-            pInU += strideInU;
-            pOut += strideOut;
-        }
-    }
-    else
-    {
-        //U
+        status = vorbis_synthesis_read(&m_dsp_state, samples);
+        assert(status == 0);
 
-        for (unsigned int y = 0; y < hIn; ++y)
-        {
-            memcpy(pOut, pInU, wIn);
-            pInU += strideInU;
-            pOut += strideOut;
-        }
-
-        //V
-
-        for (unsigned int y = 0; y < hIn; ++y)
-        {
-            memcpy(pOut, pInV, wIn);
-            pInV += strideInV;
-            pOut += strideOut;
-        }
+        total_samples += samples;
+        assert(total_samples <= max_samples);
     }
 
-    __int64 st, sp;
+    if (total_samples <= 0)
+        return S_OK;
 
-    hr = pInSample->GetTime(&st, &sp);
+    const long len_out = total_samples * fmt.channels * sizeof(float);
+    assert(len_out <= size);
 
-    if (FAILED(hr))
-    {
-        hr = pOutSample->SetTime(0, 0);
-        assert(SUCCEEDED(hr));
-    }
-    else if (hr == S_OK)
-    {
-        hr = pOutSample->SetTime(&st, &sp);
-        assert(SUCCEEDED(hr));
-    }
-    else
-    {
-        hr = pOutSample->SetTime(&st, 0);
-        assert(SUCCEEDED(hr));
-    }
+    hr = pOutSample->SetActualDataLength(len_out);
+    assert(SUCCEEDED(hr));
 
-    hr = pOutSample->SetSyncPoint(TRUE);
+    m_samples += total_samples;
+
+    const double secs = m_samples / double(fmt.samplesPerSec);
+    const double ticks = secs * 10000000;
+
+    LONGLONG stop_reftime = m_first_reftime + static_cast<LONGLONG>(ticks);
+
+    hr = pOutSample->SetTime(&m_start_reftime, &stop_reftime);
+    //hr = pOutSample->SetTime(&start_reftime_, 0);
+    assert(SUCCEEDED(hr));
+
+    odbgstream os;
+    os << "webmvorbisdec::Inpin::Receive: total_samples="
+       << total_samples
+       << " samples="
+       << m_samples
+       << " secs="
+       << secs
+       << " st=" << m_start_reftime
+       << " st[ms]=" << (double(m_start_reftime) / 10000)
+       << " sp=" << stop_reftime
+       << " sp[ms]=" << (double(stop_reftime) / 10000)
+       << " dt[ms]=" << (double(stop_reftime - m_start_reftime) / 10000)
+       << endl;
+
+    m_start_reftime = stop_reftime;
+
+    hr = pOutSample->SetSyncPoint(TRUE);  //?
     assert(SUCCEEDED(hr));
 
     hr = pOutSample->SetPreroll(FALSE);
-    assert(SUCCEEDED(hr));
-
-    const ptrdiff_t lenOut_ = pOut - pOutBuf;
-    const long lenOut = static_cast<long>(lenOut_);
-
-    hr = pOutSample->SetActualDataLength(lenOut);
     assert(SUCCEEDED(hr));
 
     hr = pInSample->IsDiscontinuity();
@@ -699,12 +686,19 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     hr = pOutSample->SetMediaTime(0, 0);
 
-    lock.Release();
+    hr = lock.Release();
+    assert(SUCCEEDED(hr));
 
-    return outpin.m_pInputPin->Receive(pOutSample);
-#else
-    return E_NOTIMPL;  //TODO
-#endif
+    os << "webmvorbisdec::Inpin::Receive: calling downstream pin (before)"
+       << endl;
+
+    hr = outpin.m_pInputPin->Receive(pOutSample);
+
+    os << "webmvorbisdec::Inpin::Receive: called downstream pin (after); "
+       << "hr=0x" << hex << hr << dec
+       << endl;
+
+    return hr;
 }
 
 
@@ -788,31 +782,88 @@ HRESULT Inpin::Start()
     m_bEndOfStream = false;
     m_bFlush = false;
 
-#if 0  //TODO
-    vpx_codec_iface_t& vp8 = vpx_codec_vp8_dx_algo;
+    typedef VorbisTypes::VORBISFORMAT2 FMT;
 
-    const int flags = VPX_CODEC_USE_POSTPROC;
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+    assert(mt.cbFormat > sizeof(FMT));
+    assert(mt.pbFormat);
 
-    const vpx_codec_err_t err = vpx_codec_dec_init(
-                                    &m_ctx,
-                                    &vp8,
-                                    0,
-                                    flags);
+    BYTE* pb = mt.pbFormat;
+    BYTE* const pb_end = pb + mt.cbFormat;
 
-    if (err == VPX_CODEC_MEM_ERROR)
-        return E_OUTOFMEMORY;
+    const FMT& fmt = (const FMT&)(*pb);
 
-    if (err != VPX_CODEC_OK)
-        return E_FAIL;
+    pb += sizeof(FMT);
+    assert(pb < pb_end);
 
-    const HRESULT hr = OnApplyPostProcessing();
+    const ULONG id_len = fmt.headerSize[0];
+    assert(id_len > 0);
 
-    if (FAILED(hr))
-    {
-        Stop();
-        return hr;
-    }
-#endif
+    const ULONG comment_len = fmt.headerSize[1];
+    assert(comment_len > 0);
+
+    const ULONG setup_len = fmt.headerSize[2];
+    assert(setup_len > 0);
+
+    BYTE* const id_buf = pb;
+    assert(id_buf < pb_end);
+
+    BYTE* const comment_buf = pb += id_len;
+    assert(comment_buf < pb_end);
+
+    BYTE* const setup_buf = pb += comment_len;
+    assert(setup_buf < pb_end);
+
+    pb += setup_len;
+    assert(pb == pb_end);
+
+    ogg_packet& pkt = m_packet;
+
+    pkt.packet = id_buf;
+    pkt.bytes = id_len;
+    pkt.b_o_s = 1;
+    pkt.e_o_s = 0;
+    pkt.granulepos = 0;
+    pkt.packetno = 0;
+
+    int status = vorbis_synthesis_idheader(&pkt);
+    assert(status == 1);  //TODO
+
+    vorbis_info& info = m_info;
+    vorbis_info_init(&info);
+
+    vorbis_comment& comment = m_comment;
+    vorbis_comment_init(&comment);
+
+    status = vorbis_synthesis_headerin(&info, &comment, &pkt);
+    assert(status == 0);
+    assert((info.channels >= 0) && (DWORD(info.channels) == fmt.channels));
+    assert((info.rate >= 0) && (DWORD(info.rate) == fmt.samplesPerSec));
+
+    pkt.packet = comment_buf;
+    pkt.bytes = comment_len;
+    pkt.b_o_s = 0;
+    ++pkt.packetno;
+
+    status = vorbis_synthesis_headerin(&info, &comment, &pkt);
+    assert(status == 0);
+
+    pkt.packet = setup_buf;
+    pkt.bytes = setup_len;
+    ++pkt.packetno;
+
+    status = vorbis_synthesis_headerin(&info, &comment, &pkt);
+    assert(status == 0);
+
+    status = vorbis_synthesis_init(&m_dsp_state, &info);
+    assert(status == 0);
+
+    status = vorbis_block_init(&m_dsp_state, &m_block);
+    assert(status == 0);
+
+    m_first_reftime = -1;
+    //m_start_reftime
+    //m_samples
 
     return S_OK;
 }
@@ -820,11 +871,15 @@ HRESULT Inpin::Start()
 
 void Inpin::Stop()
 {
-#if 0  //TODO
-    const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
-    err;
-    assert(err == VPX_CODEC_OK);
-#endif
+    if (m_packet.packetno < 0)
+        return;
+
+    vorbis_block_clear(&m_block);
+    vorbis_dsp_clear(&m_dsp_state);
+    vorbis_comment_clear(&m_comment);
+    vorbis_info_clear(&m_info);
+
+    m_packet.packetno = -1;
 }
 
 

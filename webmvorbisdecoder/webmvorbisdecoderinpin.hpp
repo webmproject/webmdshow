@@ -9,6 +9,7 @@
 #pragma once
 #include "webmvorbisdecoderpin.hpp"
 #include "graphutil.hpp"
+#include "vorbis/codec.h"
 
 namespace WebmVorbisDecoderLib
 {
@@ -91,7 +92,16 @@ private:
     bool m_bEndOfStream;
     bool m_bFlush;
 
-    //HRESULT PopulateSample(IMediaSample*, const vpx_image_t*);
+    ogg_packet m_packet;
+
+    vorbis_info m_info;
+    vorbis_comment m_comment;
+    vorbis_dsp_state m_dsp_state;
+    vorbis_block m_block;
+
+    LONGLONG m_first_reftime;
+    LONGLONG m_start_reftime;
+    double m_samples;
 
 };
 

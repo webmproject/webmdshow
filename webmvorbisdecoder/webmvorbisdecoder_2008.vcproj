@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)common"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)third_party\libvorbis;$(SolutionDir)third_party\libogg"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -61,10 +61,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="strmiids.lib"
+				AdditionalDependencies="strmiids.lib libogg_static.lib libvorbis_static.lib"
 				OutputFile="$(SolutionDir)..\dll\webmdshow\$(ConfigurationName)\$(RootNameSpace).dll"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="$(SolutionDir)third_party\libvorbis\x86\debug;$(SolutionDir)third_party\libogg\x86\debug"
 				GenerateManifest="false"
+				ModuleDefinitionFile="webmvorbisdecoder.def"
 				GenerateDebugInformation="true"
 				SubSystem="0"
 				TargetMachine="1"
@@ -268,6 +270,22 @@
 			</File>
 			<File
 				RelativePath="..\common\webmtypes.hpp"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Vorbis Files"
+			>
+			<File
+				RelativePath="..\third_party\libvorbis\vorbis\codec.h"
+				>
+			</File>
+			<File
+				RelativePath="..\third_party\libogg\ogg\ogg.h"
+				>
+			</File>
+			<File
+				RelativePath="..\third_party\libogg\ogg\os_types.h"
 				>
 			</File>
 		</Filter>
