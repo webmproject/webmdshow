@@ -23,6 +23,7 @@
 #include "webmtypes.hpp"
 
 using WebmTypes::CLSID_WebmMfVorbisDec;
+using WebmTypes::CLSID_WebmMfVp8Dec;
 using WebmMfUtil::ComDllWrapper;
 
 TEST(ComDllWrapperBasic, FailPathDoesNotExist)
@@ -47,6 +48,23 @@ TEST(ComDllWrapperBasic, CreateVorbisDec)
     ComDllWrapper* ptr_dll_wrapper = NULL;
     ASSERT_EQ(S_OK,
               ComDllWrapper::Create(VORBISDEC_PATH, CLSID_WebmMfVorbisDec,
+                                    &ptr_dll_wrapper));
+    IMFTransform* ptr_mftransform = NULL;
+    void* ptr_transform = reinterpret_cast<void*>(ptr_mftransform);
+    ASSERT_EQ(S_OK, ptr_dll_wrapper->CreateInstance(IID_IMFTransform,
+                                                    &ptr_transform));
+    if (ptr_mftransform)
+    {
+        ptr_mftransform->Release();
+    }
+    ptr_dll_wrapper->Release();
+}
+
+TEST(ComDllWrapperBasic, CreateVp8Dec)
+{
+    ComDllWrapper* ptr_dll_wrapper = NULL;
+    ASSERT_EQ(S_OK,
+              ComDllWrapper::Create(VP8DEC_PATH, CLSID_WebmMfVp8Dec,
                                     &ptr_dll_wrapper));
     IMFTransform* ptr_mftransform = NULL;
     void* ptr_transform = reinterpret_cast<void*>(ptr_mftransform);

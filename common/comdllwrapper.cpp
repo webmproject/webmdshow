@@ -34,8 +34,9 @@ ComDllWrapper::~ComDllWrapper()
 {
     if (ptr_class_factory_)
     {
-        IClassFactory* ptr_class_factory = ptr_class_factory_.Detach();
-        ptr_class_factory->LockServer(FALSE);
+        //IClassFactory* ptr_class_factory = ptr_class_factory_.Detach();
+        //ptr_class_factory_->LockServer(FALSE);
+        ptr_class_factory_ = 0;
     }
     if (NULL != dll_module_)
     {
@@ -105,15 +106,15 @@ HRESULT ComDllWrapper::LoadDll_()
         {
             DBGLOG("DllGetClassObject failed" << HRLOG(hr));
         }
-        if (SUCCEEDED(hr) && ptr_class_factory_)
-        {
-            hr = ptr_class_factory_->LockServer(TRUE);
-            if (FAILED(hr))
-            {
-                DBGLOG("LockServer failed" << HRLOG(hr));
-                return hr;
-            }
-        }
+        //if (SUCCEEDED(hr) && ptr_class_factory_)
+        //{
+        //    hr = ptr_class_factory_->LockServer(TRUE);
+        //    if (FAILED(hr))
+        //    {
+        //        DBGLOG("LockServer failed" << HRLOG(hr));
+        //        return hr;
+        //    }
+        //}
     }
     return hr;
 }
