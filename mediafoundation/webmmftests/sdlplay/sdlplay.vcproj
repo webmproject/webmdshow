@@ -427,6 +427,22 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\vorbistypes.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\vorbistypes.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\webmsdl.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\webmsdl.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\webmtypes.cpp"
 				>
 			</File>
@@ -459,6 +475,10 @@
 				</File>
 				<File
 					RelativePath=".\sdlvideoplayer_tests.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\common\tests\webmsdl_tests.cpp"
 					>
 				</File>
 			</Filter>
