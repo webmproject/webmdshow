@@ -132,7 +132,7 @@
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
-				WarnAsError="true"
+				WarnAsError="false"
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 			/>
@@ -455,6 +455,10 @@
 				</File>
 				<File
 					RelativePath="..\..\..\common\tests\mfwrap_tests.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\sdlvideoplayer_tests.cpp"
 					>
 				</File>
 			</Filter>

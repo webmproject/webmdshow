@@ -1,8 +1,17 @@
+// Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS.  All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
+
 #include <windows.h>
 #include <windowsx.h>
 
 #include <cassert>
 #include <cmath>
+#include <queue>
 #include <vector>
 
 #include "debugutil.hpp"
@@ -47,13 +56,6 @@ SDLVideoPlayer::SDLVideoPlayer():
   m_last_video_milli(-1),
   m_last_video_jitter(0)
 {
-  // TODO: Call this from outside this class
-  // For some reason SDL hangs if you call Init() here from a command line
-  // app.
-#ifdef CMD_LINE_PLAYER
-#else
-  Init();
-#endif
   // Since this doesn't work:
   //#pragma warning(push)
   // disable unreferenced local function removed warning: we don't care
@@ -79,22 +81,28 @@ SDLVideoPlayer::~SDLVideoPlayer()
 
 int SDLVideoPlayer::Init()
 {
-  if (m_inited)
-    return 1;
-
-  //Initialize all SDL subsystems
-  if( SDL_Init( SDL_INIT_EVERYTHING ) == -1 )
-  {
-    return false;
-  }
-
-  m_vbuffer_mutex = SDL_CreateMutex();
-  m_audio_mutex = SDL_CreateMutex();
-  m_audio_cond = SDL_CreateCond();
-
-  m_inited = true;
-
-  return 0;
+    // TODO(tomfinegan): fgalligan@ had some comments about this method
+    //                   hanging if called at certain times in a command
+    //                   line app... keep an eye on this spot.
+    if (m_inited)
+    {
+        DBGLOG("Already initialized");
+        return S_FALSE;
+    }
+    if(SDL_Init(SDL_INIT_EVERYTHING) == -1)
+    {
+        DBGLOG("SDL_Init failed, " << SDL_GetError());
+        return E_FAIL;
+    }
+    m_vbuffer_mutex = SDL_CreateMutex();
+    m_audio_mutex = SDL_CreateMutex();
+    m_audio_cond = SDL_CreateCond();
+    for (int i = 0; i < OVERLAY_BUFFER_SIZE; ++i)
+    {
+        m_overlay_buffer[i] = NULL;
+    }
+    m_inited = true;
+    return 0;
 }
 
 int SDLVideoPlayer::setup_surface(int display_width, int display_height)
@@ -118,14 +126,29 @@ int SDLVideoPlayer::setup_surface(int display_width, int display_height)
   // TODO(tomfinegan): check pointer
   pscreen = SDL_SetVideoMode(display_width, display_height, 0,
                              SDL_VIDEO_Flags);
+  if (!pscreen)
+  {
+      return E_OUTOFMEMORY;
+  }
   // TODO(tomfinegan): check pointer
   overlay = SDL_CreateYUVOverlay(display_width, display_height,
                                  SDL_YV12_OVERLAY, pscreen);
+  if (!overlay)
+  {
+      DBGLOG("SDL_CreateYUVOverlay failed, " << SDL_GetError());
+      return E_OUTOFMEMORY;
+  }
   for (int i=0; i<OVERLAY_BUFFER_SIZE; i++)
   {
     // TODO(tomfinegan): check pointers
     m_overlay_buffer[i] = SDL_CreateYUVOverlay(display_width, display_height,
                                                SDL_YV12_OVERLAY, pscreen);
+    if (!m_overlay_buffer[i])
+    {
+        DBGLOG("SDL_CreateYUVOverlay failed, i=" << i << ", "
+            << SDL_GetError());
+        return E_OUTOFMEMORY;
+    }
   }
 
   drect.x = 0;
@@ -145,7 +168,7 @@ int SDLVideoPlayer::setup_surface(int display_width, int display_height)
 #endif
 
   return 0;
-};
+}
 
 
 int SDLVideoPlayer::Exit()
@@ -164,10 +187,13 @@ int SDLVideoPlayer::Exit()
 #endif
   SDL_WaitThread(mythread, NULL);
 
-  for(int i=0; i<OVERLAY_BUFFER_SIZE; i++)
+  for(int i = 0; i < OVERLAY_BUFFER_SIZE; ++i)
   {
-    SDL_FreeYUVOverlay(m_overlay_buffer[i]);
-    m_overlay_buffer[i] = NULL;
+      if (m_overlay_buffer[i])
+      {
+          SDL_FreeYUVOverlay(m_overlay_buffer[i]);
+          m_overlay_buffer[i] = NULL;
+      }
   }
   SDL_FreeYUVOverlay(overlay);
   overlay = NULL;

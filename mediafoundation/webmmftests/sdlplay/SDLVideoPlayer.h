@@ -1,24 +1,27 @@
-#ifndef __SDLVIDEOPLAYER_H__
-#define __SDLVIDEOPLAYER_H__ 1
+// Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS.  All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
+
+#ifndef __WEBMDSHOW_MEDIAFOUNDATION_WEBMMFTESTS_SDLPLAY_SDLVIDEOPLAYER_H__
+#define __WEBMDSHOW_MEDIAFOUNDATION_WEBMMFTESTS_SDLPLAY_SDLVIDEOPLAYER_H__
+
+#include "vorbisdecoder.hpp"
+#include "vpx/vpx_decoder.h"
+#include "vpx/vp8dx.h"
 
 #pragma warning(push)
 // disable member alignment sensitive to packing warning: we know SDL is 4
 // byte aligned, and we're fine with that
 #pragma warning(disable:4121)
-#include <SDL.h>
-#include <SDL_thread.h>
-#include <SDL_audio.h>
-#include <SDL_timer.h>
+#include "SDL.h"
+#include "SDL_thread.h"
+#include "SDL_audio.h"
+#include "SDL_timer.h"
 #pragma warning(pop)
-
-#include "vpx/vpx_decoder.h"
-#include "vpx/vp8dx.h"
-
-#include <windows.h> // vorbisdecoder needs windows
-#include "vorbisdecoder.hpp"
-
-#include <queue>
-using namespace std;
 
 const int OVERLAY_BUFFER_SIZE = 5;
 
@@ -28,7 +31,7 @@ struct AudioFrame
   int size;
 };
 
-class SDLVideoPlayer //: public VideoPlayer
+class SDLVideoPlayer
 {
 public:
     SDLVideoPlayer();
@@ -91,7 +94,6 @@ private:
     long long m_last_video_milli;
     long long m_last_video_jitter;
 
-
     // Audio
     bool m_setup_audio;
     int m_channels;
@@ -105,7 +107,7 @@ private:
     int m_scratch_size;
     long long m_total_samples;
 
-    queue<AudioFrame*> m_audio_queue;
+    std::queue<AudioFrame*> m_audio_queue;
 
     WebmMfVorbisDecLib::VorbisDecoder m_vorbis_decoder;
 
@@ -114,7 +116,8 @@ private:
 
     bool m_inited;
 
+    //DISALLOW_COPY_AND_ASSIGN(SDLVideoPlayer);
 };
 
 
-#endif // __SDLVIDEOPLAYER_H__
+#endif // __WEBMDSHOW_MEDIAFOUNDATION_WEBMMFTESTS_SDLPLAY_SDLVIDEOPLAYER_H__
