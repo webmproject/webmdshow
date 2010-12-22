@@ -20,6 +20,7 @@
 #include "eventutil.hpp"
 #include "hrtext.hpp"
 #include "mftranswrap.hpp"
+#include "mfutil.hpp"
 
 namespace WebmMfUtil
 {
@@ -97,6 +98,16 @@ HRESULT MfTransformWrapper::Create_(std::wstring dll_path, GUID mfobj_clsid)
         return hr;
     }
     return hr;
+}
+
+HRESULT MfTransformWrapper::GetInputType(IMFMediaType** ptr_type) const
+{
+    return copy_media_type(ptr_input_type_, ptr_type);
+}
+
+HRESULT MfTransformWrapper::GetOutputType(IMFMediaType** ptr_type) const
+{
+    return copy_media_type(ptr_output_type_, ptr_type);
 }
 
 HRESULT MfTransformWrapper::SetInputType(IMFMediaTypePtr& ptr_type)

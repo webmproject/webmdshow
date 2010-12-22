@@ -20,7 +20,8 @@ class MfTransformWrapper : public IUnknown
 public:
     static HRESULT CreateInstance(std::wstring dll_path, GUID mfobj_clsid,
                                   MfTransformWrapper** ptr_instance);
-    
+    HRESULT GetInputType(IMFMediaType** ptr_type) const;
+    HRESULT GetOutputType(IMFMediaType** ptr_type) const;
     HRESULT SetInputType(IMFMediaTypePtr& ptr_type);
     HRESULT SetOutputType(IMFMediaTypePtr& ptr_type);
     // IUnknown methods
