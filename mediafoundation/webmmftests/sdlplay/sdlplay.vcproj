@@ -95,7 +95,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="&#x0D;&#x0A;"
+				Description="copy SDL.dll to $(OutDir)..."
+				CommandLine="copy $(SolutionDir)..\third_party\sdl\x86\debug\SDL.dll $(OutDir)\&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -175,7 +176,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="&#x0D;&#x0A;"
+				Description="copy SDL.dll to $(OutDir)..."
+				CommandLine="copy $(SolutionDir)..\third_party\sdl\x64\debug\SDL.dll $(OutDir)\&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -255,6 +257,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="copy SDL.dll to $(OutDir)..."
+				CommandLine="copy $(SolutionDir)..\third_party\sdl\x86\release\SDL.dll $(OutDir)\&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -335,6 +339,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="copy SDL.dll to $(OutDir)..."
+				CommandLine="copy $(SolutionDir)..\third_party\sdl\x64\release\SDL.dll $(OutDir)\&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
