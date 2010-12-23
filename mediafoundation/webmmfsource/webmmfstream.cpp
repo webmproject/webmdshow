@@ -5,6 +5,8 @@
 #include <cassert>
 #include <comdef.h>
 #include <vfwmsgs.h>
+#include <process.h>
+#include <windows.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -26,7 +28,10 @@ WebmMfStream::WebmMfStream(
     m_pDesc(pDesc),
     m_pTrack(pTrack),
     m_bSelected(true),
-    m_bEOS(false)
+    m_bEOS(false),
+    m_hThread(0),
+    m_hQuit(0),
+    m_hRequestSample(0)
 {
     m_pDesc->AddRef();
 
@@ -38,6 +43,8 @@ WebmMfStream::WebmMfStream(
 
 WebmMfStream::~WebmMfStream()
 {
+    StopThread();
+    PurgeTokens();
     PurgeSamples();
 
     if (m_pEvents)
@@ -227,8 +234,66 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     if (!m_bSelected)
         return MF_E_INVALIDREQUEST;
 
+    //This return value is incorrrect:
+    //if (m_pSource->m_state == WebmMfSource::kStateStopped)
+    //    return MF_E_INVALIDREQUEST;
+    //See the description of IMFMediaStream::RequestSample here:
+    //  http://msdn.microsoft.com/en-us/library/ms696240%28v=VS.85%29.aspx
+    //The text says:
+    //  "Because the Media Foundation pipeline is multi-threaded, the
+    //source's RequestSample method might get called after the source has
+    //stopped. If the media source is stopped, the method should return
+    //MF_E_MEDIA_SOURCE_WRONGSTATE. The pipeline does not treat this return
+    //code as an error condition. If the source returns any other error code,
+    //the pipeline treats it as fatal error and halts the session."
+    //
+    //This is the correct behavior:
+
     if (m_pSource->m_state == WebmMfSource::kStateStopped)
-        return MF_E_INVALIDREQUEST;
+        return MF_E_MEDIA_SOURCE_WRONGSTATE;
+
+    hr = StartThread();
+
+    if (FAILED(hr))
+        return hr;
+
+    if (pToken)
+        pToken->AddRef();
+
+    m_tokens.push_back(pToken);
+
+    const BOOL b = SetEvent(m_hRequestSample);
+    assert(b);
+
+    return S_OK;
+}
+
+
+void WebmMfStream::OnRequestSample()
+{
+    WebmMfSource::Lock lock;
+
+    HRESULT hr = lock.Seize(m_pSource);
+
+    if (FAILED(hr))
+        return;
+
+    if (m_pEvents == 0)  //TODO
+        return;
+
+    if (!m_bSelected)  //TODO
+        return;
+
+    const WebmMfSource::State state = m_pSource->m_state;
+
+    if (state == WebmMfSource::kStateStopped)
+        return;  //TODO: anything else to do here?
+
+    if (state == WebmMfSource::kStateStarted)
+        DeliverSamples();
+
+    if (m_tokens.empty())
+        return;  //TODO: test for EOS here?
 
     IMFSamplePtr pSample;
 
@@ -238,6 +303,10 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
     for (;;)
     {
+        //TODO: this is too liberal.  If we race ahead of the current pos
+        //in the byte stream, then this purges the network cache.  We
+        //only want to load a new cluster when PopulateSample tells us
+        //that there's an underflow.
         const long status = m_pTrack->m_pSegment->LoadCluster();
 
         if (status < 0)
@@ -256,37 +325,22 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
     if (hr == S_OK)  //have a sample
     {
-#if 0
-        odbgstream os;
-
-        LONGLONG t;
-
-        hr = pSample->GetSampleTime(&t);
-        assert(SUCCEEDED(hr));
-        assert(t >= 0);
-
-        os << "WebmMfStream::RequestSample: type="
-           << m_pTrack->GetType()
-           << " time[sec]="
-           << (double(t) / 10000000)
-           << endl;
-#endif
-
-        //WavSource sample says:
-        // NOTE: If we processed sample requests asynchronously, we would
-        // need to call AddRef on the token and put the token onto a FIFO
-        // queue. See documenation for IMFMediaStream::RequestSample.
+        IUnknown* pToken = m_tokens.front();
+        m_tokens.pop_front();
 
         if (pToken)
         {
             hr = pSample->SetUnknown(MFSampleExtension_Token, pToken);
             assert(SUCCEEDED(hr));
+
+            pToken->Release();
+            pToken = 0;
         }
 
-        if (m_pSource->m_state == WebmMfSource::kStatePaused)
+        if (state == WebmMfSource::kStatePaused)  //TODO: verify this
         {
             m_samples.push_back(pSample.Detach());
-            return S_OK;
+            return;
         }
 
         hr = m_pEvents->QueueEventParamUnk(
@@ -296,8 +350,12 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
                 pSample);
 
         assert(SUCCEEDED(hr));
-        return S_OK;
+        return;
     }
+
+    //TODO: we still have pending tokens.  What should we do with them?
+    //For now:
+    PurgeTokens();
 
 #ifdef _DEBUG
     odbgstream os;
@@ -312,16 +370,15 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
        << endl;
 #endif
 
+    //TODO: move this into RequestSample?
     if (m_bEOS)  //sent event already
-        return MF_E_END_OF_STREAM;
+        return; // MF_E_END_OF_STREAM;
 
     hr = m_pEvents->QueueEventParamVar(MEEndOfStream, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
 
     m_bEOS = true;
     m_pSource->NotifyEOS();
-
-    return S_OK;  //TODO: MF_E_END_OF_STREAM instead?
 }
 
 
@@ -335,6 +392,19 @@ void WebmMfStream::PurgeSamples()
         m_samples.pop_front();
 
         pSample->Release();
+    }
+}
+
+
+void WebmMfStream::PurgeTokens()
+{
+    while (!m_tokens.empty())
+    {
+        IUnknown* const pToken = m_tokens.front();
+        m_tokens.pop_front();
+
+        if (pToken)
+            pToken->Release();
     }
 }
 
@@ -501,15 +571,23 @@ HRESULT WebmMfStream::Restart()
 
     assert(m_pEvents);
 
-    const HRESULT hr = m_pEvents->QueueEventParamVar(
-                        MEStreamStarted,
-                        GUID_NULL,
-                        S_OK,
-                        &var);
+    HRESULT hr = m_pEvents->QueueEventParamVar(
+                    MEStreamStarted,
+                    GUID_NULL,
+                    S_OK,
+                    &var);
 
     assert(SUCCEEDED(hr));
 
-    DeliverSamples();
+    //DeliverSamples();
+
+    hr = StartThread();
+
+    if (FAILED(hr))
+        return hr;
+
+    const BOOL b = SetEvent(m_hRequestSample);
+    assert(b);
 
     return S_OK;
 }
@@ -538,6 +616,118 @@ HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 
     reftime = curr_ns / 100;
     return S_OK;
+}
+
+
+HRESULT WebmMfStream::StartThread()
+{
+    if (m_hThread)  //weird
+        return S_FALSE;
+
+    if (m_hQuit == 0)
+    {
+        m_hQuit = CreateEvent(0, 0, 0, 0);
+
+        if (m_hQuit == 0)
+        {
+            const DWORD e = GetLastError();
+            return HRESULT_FROM_WIN32(e);
+        }
+    }
+
+    if (m_hRequestSample == 0)
+    {
+        m_hRequestSample = CreateEvent(0, 0, 0, 0);
+
+        if (m_hRequestSample == 0)
+        {
+            const DWORD e = GetLastError();
+            return HRESULT_FROM_WIN32(e);
+        }
+    }
+
+    const uintptr_t h = _beginthreadex(
+                            0,  //security
+                            0,  //stack size
+                            &WebmMfStream::ThreadProc,
+                            this,
+                            0,   //run immediately
+                            0);  //thread id
+
+    m_hThread = reinterpret_cast<HANDLE>(h);
+
+    if (m_hThread == 0)  //error
+        return E_FAIL;   //TODO: convert errno to HRESULT (how?)
+
+    return S_OK;
+}
+
+
+void WebmMfStream::StopThread()
+{
+    if (m_hThread)
+    {
+        BOOL b = SetEvent(m_hQuit);
+        assert(b);
+
+        const DWORD dw = WaitForSingleObject(m_hThread, 5000);
+        assert(dw == WAIT_OBJECT_0);
+
+        b = CloseHandle(m_hThread);
+        assert(b);
+
+        m_hThread = 0;
+    }
+
+    if (m_hRequestSample)
+    {
+        const BOOL b = CloseHandle(m_hRequestSample);
+        assert(b);
+
+        m_hRequestSample = 0;
+    }
+
+    if (m_hQuit == 0)
+    {
+        const BOOL b = CloseHandle(m_hQuit);
+        assert(b);
+
+        m_hQuit = 0;
+    }
+}
+
+
+unsigned WebmMfStream::ThreadProc(void* pv)
+{
+    WebmMfStream* const pStream = static_cast<WebmMfStream*>(pv);
+    assert(pStream);
+
+    return pStream->Main();
+}
+
+
+unsigned WebmMfStream::Main()
+{
+    enum { nh = 2 };
+    const HANDLE ah[nh] = { m_hQuit, m_hRequestSample };
+
+    for (;;)
+    {
+        const DWORD dw = WaitForMultipleObjects(nh, ah, FALSE, INFINITE);
+
+        if (dw == WAIT_FAILED)
+            return 1;  //error
+
+        assert(dw >= WAIT_OBJECT_0);
+        assert(dw < (WAIT_OBJECT_0 + nh));
+
+        if (dw == WAIT_OBJECT_0) //hQuit
+            return 0;
+
+        assert(dw == (WAIT_OBJECT_0 + 1));  //hRequestSample
+
+        OnRequestSample();
+    }
 }
 
 

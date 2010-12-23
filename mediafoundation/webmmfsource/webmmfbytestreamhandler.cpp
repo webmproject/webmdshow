@@ -136,7 +136,7 @@ ULONG WebmMfByteStreamHandler::Release()
 HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     IMFByteStream* pByteStream,
     LPCWSTR pURL,
-    DWORD,
+    DWORD dwFlags,
     IPropertyStore*,
     IUnknown** ppUnkCancelCookie,
     IMFAsyncCallback* pCallback,
@@ -160,6 +160,9 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     if (pCallback == 0)
         return E_INVALIDARG;
 
+    dwFlags;
+    //TODO: if (!(dwFlags & MF_RESOLUTION_MEDIASOURCE) return E_INVALIDARG;
+
     IMFMediaSourcePtr pSource;
 
     //TODO: pass pByteStream as arg to Open, not CreateSource
@@ -178,6 +181,9 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
         return hr;
 
     assert(pResult);
+
+    //TODO: pSource->BeginOpen(pByteStream, this, 0);
+    //etc: see mpeg1source example
 
     hr = MFInvokeCallback(pResult);
 

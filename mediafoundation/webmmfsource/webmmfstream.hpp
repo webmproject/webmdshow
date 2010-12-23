@@ -90,11 +90,28 @@ private:
     typedef std::list<IMFSample*> samples_t;
     samples_t m_samples;
 
+    typedef std::list<IUnknown*> tokens_t;
+    tokens_t m_tokens;
+
     bool m_bSelected;
     bool m_bEOS;  //indicates whether we have posted EOS event
 
+    void PurgeTokens();
     void PurgeSamples();
     void DeliverSamples();
+
+    HANDLE m_hThread;
+    HANDLE m_hQuit;
+    HANDLE m_hRequestSample;
+
+    static unsigned __stdcall ThreadProc(void*);
+    unsigned Main();
+
+    HRESULT StartThread();
+    void StopThread();
+
+    void OnRequestSample();
+
 
 };
 

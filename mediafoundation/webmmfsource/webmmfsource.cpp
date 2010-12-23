@@ -1105,7 +1105,11 @@ HRESULT WebmMfSource::Start(
         }
     }
 
-    if (m_state == kStateStopped)
+    const State old_state = m_state;
+
+    m_state = kStateStarted;  //new state
+
+    if (old_state == kStateStopped)
     {
         //TOOD: verify whether this is really a Started event.
         //Can it ever be a Seeked event?  I'm following the WavSource example.
@@ -1159,8 +1163,6 @@ HRESULT WebmMfSource::Start(
         hr = RestartStreams();
         assert(SUCCEEDED(hr));
     }
-
-    m_state = kStateStarted;
 
     //TODO
     //if there was an error
