@@ -1,5 +1,6 @@
 #include "webmmfsource.hpp"
 #include "webmmfstream.hpp"
+//#include "mkvparser.hpp"
 #include <mfapi.h>
 #include <mferror.h>
 #include <cassert>
@@ -14,7 +15,6 @@ using std::boolalpha;
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaEventQueue, __uuidof(IMFMediaEventQueue));
-_COM_SMARTPTR_TYPEDEF(IMFSample, __uuidof(IMFSample));
 
 
 namespace WebmMfSourceLib
@@ -29,9 +29,8 @@ WebmMfStream::WebmMfStream(
     m_pTrack(pTrack),
     m_bSelected(true),
     m_bEOS(false),
-    m_hThread(0),
-    m_hQuit(0),
-    m_hRequestSample(0)
+    m_pNextBlock(0),
+    m_pLocked(0)
 {
     m_pDesc->AddRef();
 
@@ -43,8 +42,7 @@ WebmMfStream::WebmMfStream(
 
 WebmMfStream::~WebmMfStream()
 {
-    StopThread();
-    PurgeTokens();
+    //PurgeTokens();
     PurgeSamples();
 
     if (m_pEvents)
@@ -226,7 +224,9 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     WebmMfSource::Lock lock;
 
     HRESULT hr = lock.Seize(m_pSource);
-    assert(SUCCEEDED(hr));  //TODO
+
+    if (FAILED(hr))
+        return hr;
 
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
@@ -252,23 +252,41 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     if (m_pSource->m_state == WebmMfSource::kStateStopped)
         return MF_E_MEDIA_SOURCE_WRONGSTATE;
 
-    hr = StartThread();
+    return m_pSource->RequestSample(this, pToken);
+}
 
-    if (FAILED(hr))
-        return hr;
 
-    if (pToken)
-        pToken->AddRef();
+HRESULT WebmMfStream::ProcessSample(IMFSample* pSample)
+{
+    if (m_pEvents == 0)  //shutdown has been requested
+        return S_FALSE;
 
-    m_tokens.push_back(pToken);
+    if (m_pSource->m_state == WebmMfSource::kStateStopped)
+        return S_FALSE;  //throw this sample away
 
-    const BOOL b = SetEvent(m_hRequestSample);
-    assert(b);
+    if (m_pSource->m_state == WebmMfSource::kStatePaused)
+    {
+        pSample->AddRef();
+        m_samples.push_back(pSample);
+
+        return S_OK;
+    }
+
+    assert(m_samples.empty());
+
+    const HRESULT hr = m_pEvents->QueueEventParamUnk(
+                        MEMediaSample,
+                        GUID_NULL,
+                        S_OK,
+                        pSample);
+
+    assert(SUCCEEDED(hr));  //TODO
 
     return S_OK;
 }
 
 
+#if 0
 void WebmMfStream::OnRequestSample()
 {
     WebmMfSource::Lock lock;
@@ -380,6 +398,7 @@ void WebmMfStream::OnRequestSample()
     m_bEOS = true;
     m_pSource->NotifyEOS();
 }
+#endif
 
 
 void WebmMfStream::PurgeSamples()
@@ -392,19 +411,6 @@ void WebmMfStream::PurgeSamples()
         m_samples.pop_front();
 
         pSample->Release();
-    }
-}
-
-
-void WebmMfStream::PurgeTokens()
-{
-    while (!m_tokens.empty())
-    {
-        IUnknown* const pToken = m_tokens.front();
-        m_tokens.pop_front();
-
-        if (pToken)
-            pToken->Release();
     }
 }
 
@@ -478,14 +484,12 @@ HRESULT WebmMfStream::Shutdown()
 }
 
 
-HRESULT WebmMfStream::Select( /* LONGLONG time */ )
+HRESULT WebmMfStream::Select()
 {
     assert(m_samples.empty());
 
     m_bSelected = true;
     m_bEOS = false;
-
-    //SetCurrPos(time);
 
     return S_OK;
 }
@@ -579,15 +583,7 @@ HRESULT WebmMfStream::Restart()
 
     assert(SUCCEEDED(hr));
 
-    //DeliverSamples();
-
-    hr = StartThread();
-
-    if (FAILED(hr))
-        return hr;
-
-    const BOOL b = SetEvent(m_hRequestSample);
-    assert(b);
+    DeliverSamples();
 
     return S_OK;
 }
@@ -619,116 +615,116 @@ HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 }
 
 
-HRESULT WebmMfStream::StartThread()
+HRESULT WebmMfStream::SetEOS()
 {
-    if (m_hThread)  //weird
+    if (m_bEOS)
         return S_FALSE;
 
-    if (m_hQuit == 0)
-    {
-        m_hQuit = CreateEvent(0, 0, 0, 0);
+    m_bEOS = true;
 
-        if (m_hQuit == 0)
+    const HRESULT hr = m_pEvents->QueueEventParamVar(
+                        MEEndOfStream,
+                        GUID_NULL,
+                        S_OK,
+                        0);
+
+    assert(SUCCEEDED(hr));
+
+    //TODO: m_pSource->NotifyEOS();
+
+    return hr;
+}
+
+
+#if 0
+HRESULT WebmMfStream::NotifyCurrCluster(const mkvparser::Cluster* pCluster)
+{
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    const mkvparser::BlockEntry* pCurr = pCluster->GetFirst();
+
+    while (pCurr)
+    {
+        const mkvparser::Block* const pBlock = pCurr->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
         {
-            const DWORD e = GetLastError();
-            return HRESULT_FROM_WIN32(e);
+            SetCurrBlock(pCurr);
+            return S_OK;
         }
+
+        pCurr = pCluster->GetNext(pCurr);
     }
 
-    if (m_hRequestSample == 0)
-    {
-        m_hRequestSample = CreateEvent(0, 0, 0, 0);
-
-        if (m_hRequestSample == 0)
-        {
-            const DWORD e = GetLastError();
-            return HRESULT_FROM_WIN32(e);
-        }
-    }
-
-    const uintptr_t h = _beginthreadex(
-                            0,  //security
-                            0,  //stack size
-                            &WebmMfStream::ThreadProc,
-                            this,
-                            0,   //run immediately
-                            0);  //thread id
-
-    m_hThread = reinterpret_cast<HANDLE>(h);
-
-    if (m_hThread == 0)  //error
-        return E_FAIL;   //TODO: convert errno to HRESULT (how?)
-
-    return S_OK;
+    return VFW_E_BUFFER_UNDERFLOW;
 }
+#endif
 
 
-void WebmMfStream::StopThread()
+HRESULT WebmMfStream::GetNextBlock(const mkvparser::BlockEntry* pCurr)
 {
-    if (m_hThread)
+    assert(pCurr);
+    assert(!pCurr->EOS());
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    const mkvparser::Cluster* const pCluster = pCurr->GetCluster();
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    m_pNextBlock = pCluster->GetNext(pCurr);
+
+    while (m_pNextBlock)
     {
-        BOOL b = SetEvent(m_hQuit);
-        assert(b);
+        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
+        assert(pBlock);
 
-        const DWORD dw = WaitForSingleObject(m_hThread, 5000);
-        assert(dw == WAIT_OBJECT_0);
+        if (pBlock->GetTrackNumber() == tn)
+            return S_OK;  //success
 
-        b = CloseHandle(m_hThread);
-        assert(b);
-
-        m_hThread = 0;
+        m_pNextBlock = pCluster->GetNext(m_pNextBlock);
     }
 
-    if (m_hRequestSample)
-    {
-        const BOOL b = CloseHandle(m_hRequestSample);
-        assert(b);
-
-        m_hRequestSample = 0;
-    }
-
-    if (m_hQuit == 0)
-    {
-        const BOOL b = CloseHandle(m_hQuit);
-        assert(b);
-
-        m_hQuit = 0;
-    }
+    return VFW_E_BUFFER_UNDERFLOW;  //did not find next entry for this track
 }
 
 
-unsigned WebmMfStream::ThreadProc(void* pv)
+HRESULT WebmMfStream::NotifyNextCluster(const mkvparser::Cluster* pNextCluster)
 {
-    WebmMfStream* const pStream = static_cast<WebmMfStream*>(pv);
-    assert(pStream);
-
-    return pStream->Main();
-}
-
-
-unsigned WebmMfStream::Main()
-{
-    enum { nh = 2 };
-    const HANDLE ah[nh] = { m_hQuit, m_hRequestSample };
-
-    for (;;)
+    if ((pNextCluster == 0) || pNextCluster->EOS())
     {
-        const DWORD dw = WaitForMultipleObjects(nh, ah, FALSE, INFINITE);
-
-        if (dw == WAIT_FAILED)
-            return 1;  //error
-
-        assert(dw >= WAIT_OBJECT_0);
-        assert(dw < (WAIT_OBJECT_0 + nh));
-
-        if (dw == WAIT_OBJECT_0) //hQuit
-            return 0;
-
-        assert(dw == (WAIT_OBJECT_0 + 1));  //hRequestSample
-
-        OnRequestSample();
+        m_pNextBlock = m_pTrack->GetEOS();
+        return S_OK;
     }
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    m_pNextBlock = pNextCluster->GetFirst();
+
+    while (m_pNextBlock)
+    {
+        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+            return S_OK;  //success
+
+        m_pNextBlock = pNextCluster->GetNext(m_pNextBlock);
+    }
+
+    return VFW_E_BUFFER_UNDERFLOW;
 }
+
+
+bool WebmMfStream::IsCurrBlockLocked() const
+{
+    return (m_pLocked != 0);
+}
+
 
 
 }  //end namespace WebmMfSource

@@ -70,6 +70,19 @@ public:
 
     virtual void SetRate(BOOL, float) = 0;
 
+    virtual bool IsEOS() const = 0;
+    HRESULT SetEOS();
+
+    virtual HRESULT GetSample(IUnknown*) = 0;
+
+    //const mkvparser::Cluster* GetCurrCluster() const;
+    virtual const mkvparser::BlockEntry* GetCurrBlock() const = 0;
+    bool IsCurrBlockLocked() const;
+
+    //HRESULT NotifyCurrCluster(const mkvparser::Cluster*);
+    virtual int LockCurrBlock() = 0;
+    HRESULT NotifyNextCluster(const mkvparser::Cluster*);
+
     WebmMfSource* const m_pSource;
     IMFStreamDescriptor* const m_pDesc;
     const mkvparser::Track* const m_pTrack;
@@ -80,8 +93,13 @@ protected:
     HRESULT OnSeek(const PROPVARIANT& time);
     virtual void OnStop() = 0;
 
-    virtual const mkvparser::BlockEntry* GetCurrBlock() const = 0;
-    virtual HRESULT PopulateSample(IMFSample*) = 0;
+    //virtual void SetCurrBlock(const mkvparser::BlockEntry*) = 0;
+    const mkvparser::BlockEntry* m_pNextBlock;
+
+    HRESULT GetNextBlock(const mkvparser::BlockEntry* pCurr);
+    HRESULT ProcessSample(IMFSample*);
+
+    const mkvparser::BlockEntry* m_pLocked;
 
 private:
 
@@ -90,28 +108,11 @@ private:
     typedef std::list<IMFSample*> samples_t;
     samples_t m_samples;
 
-    typedef std::list<IUnknown*> tokens_t;
-    tokens_t m_tokens;
-
     bool m_bSelected;
     bool m_bEOS;  //indicates whether we have posted EOS event
 
-    void PurgeTokens();
     void PurgeSamples();
     void DeliverSamples();
-
-    HANDLE m_hThread;
-    HANDLE m_hQuit;
-    HANDLE m_hRequestSample;
-
-    static unsigned __stdcall ThreadProc(void*);
-    unsigned Main();
-
-    HRESULT StartThread();
-    void StopThread();
-
-    void OnRequestSample();
-
 
 };
 

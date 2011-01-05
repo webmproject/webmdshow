@@ -4,19 +4,22 @@
 //#include <mferror.h>
 #include <algorithm>
 //#include <utility>  //std::make_pair
+#include <comdef.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
 #endif
 
-MkvReader::MkvReader(IMFByteStream* pStream) : m_pStream(pStream)
+MkvReader::MkvReader(IMFByteStream* pStream) :
+    m_pStream(pStream),
+    m_async_pos(-1),  //means "no async read in progress"
+    m_async_len(0)    //means nothing remains to be read
 {
     const ULONG n = m_pStream->AddRef();
     n;
 
     HRESULT hr;
 
-#ifdef _DEBUG
     DWORD dw;
 
     hr = m_pStream->GetCapabilities(&dw);
@@ -28,8 +31,6 @@ MkvReader::MkvReader(IMFByteStream* pStream) : m_pStream(pStream)
 
     //TODO: check MFBYTESTREAM_IS_REMOTE
     //TODO: check MFBYTESTREAM_HAS_SLOW_SEEK
-    //TODO: check MFBYTESTREAM_IS_PARTIALLY_DOWNLOADED
-#endif
 
     GetSystemInfo(&m_info);
     //dwPageSize
@@ -37,6 +38,8 @@ MkvReader::MkvReader(IMFByteStream* pStream) : m_pStream(pStream)
 
     hr = m_pStream->GetLength(&m_length);
     assert(SUCCEEDED(hr));
+
+    m_avail = m_length;  //does get adjusted during async read
 }
 
 
@@ -48,8 +51,74 @@ MkvReader::~MkvReader()
     n;
 }
 
+
+HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
+{
+    typedef IMFByteStreamBuffering Buffering;
+    _COM_SMARTPTR_TYPEDEF(Buffering, __uuidof(Buffering));
+
+    const BufferingPtr pBuffering(m_pStream);
+
+    if (!pBuffering)
+        return S_FALSE;
+
+    MFBYTESTREAM_BUFFERING_PARAMS p;
+
+    //const LONGLONG duration = pSource->GetDuration();  //reftime units
+
+    if (duration_reftime >= 0)
+        p.qwPlayDuration = duration_reftime;
+    else
+        p.qwPlayDuration = 0;
+
+    HRESULT hr = m_pStream->GetLength(&p.cbTotalFileSize);
+
+    if (FAILED(hr))
+        p.cbTotalFileSize = 0;
+
+    p.cbPlayableDataSize = p.cbTotalFileSize;
+
+    MF_LEAKY_BUCKET_PAIR bb[1];
+
+    if ((p.cbTotalFileSize == 0) || (duration_reftime <= 0))
+    {
+        p.prgBuckets = 0;
+        p.cBuckets = 0;
+    }
+    else
+    {
+        MF_LEAKY_BUCKET_PAIR& b = bb[0];
+
+        const QWORD bits = p.cbTotalFileSize * 8ULL;
+        const double secs = double(duration_reftime) / 10000000;
+
+        const double bitrate = double(bits) / secs;
+
+        b.dwBitrate = static_cast<DWORD>(bitrate);
+        b.msBufferWindow = 5000;  //?
+
+        p.prgBuckets = bb;
+        p.cBuckets = 1;
+    }
+
+    p.qwNetBufferingTime = 0;
+    p.qwExtraBufferingTimeDuringSeek = 0;
+    p.dRate = 1;
+
+    hr = pBuffering->SetBufferingParams(&p);
+    assert(SUCCEEDED(hr));  //TODO
+
+    hr = pBuffering->EnableBuffering(TRUE);
+    assert(SUCCEEDED(hr));  //TODO
+
+    return S_OK;
+}
+
+
 int MkvReader::Read(long long pos, long len, unsigned char* buf)
 {
+    assert(m_async_len <= 0);
+
     if (pos < 0)
         return -1;
 
@@ -86,7 +155,14 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
     {
         if ((next == m_cache.end()) || ((*next)->pos > pos))
         {
-            const iter_t curr_iter = InsertPage(next, pos);
+            iter_t curr_iter;
+
+            const int status = InsertPage(next, pos, curr_iter);
+            assert(status == 0);
+
+            if (status)
+                return status;
+
             const cache_t::value_type page_iter = *curr_iter;
             const Page& curr_page = *page_iter;
 
@@ -110,11 +186,13 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
 }
 
 
-MkvReader::cache_t::iterator
-MkvReader::InsertPage(
+int MkvReader::InsertPage(
     cache_t::iterator next,
-    LONGLONG pos)
+    LONGLONG pos,
+    cache_t::iterator& curr)
 {
+    assert(m_async_len <= 0);
+
     const DWORD page_size = m_info.dwPageSize;
 
     if (m_regions.size() < 4)  //arbitrary upper bound
@@ -182,40 +260,20 @@ MkvReader::InsertPage(
     const LONGLONG key = page_size * LONGLONG(pos / page_size);
     assert((next == m_cache.end()) || ((*next)->pos > key));
 
-    //TODO: implement region affinity
     free_pages_t::iterator free_page = m_free_pages.find(key);
 
-    if (free_page == m_free_pages.end())
-        free_page = m_free_pages.begin();
+    if (free_page == m_free_pages.end())  //not found
+        return mkvparser::E_BUFFER_NOT_FULL;
 
     const pages_vector_t::iterator page_iter = free_page->second;
     m_free_pages.erase(free_page);
 
     Page& page = *page_iter;
     assert(page.cRef == 0);
+    assert(page.pos == key);
 
-    if (page.pos != key)
-    {
-        page.pos = key;
-
-        QWORD curr;
-
-        HRESULT hr = m_pStream->Seek(msoBegin, page.pos, 0, &curr);
-        assert(SUCCEEDED(hr));
-        assert(curr == QWORD(page.pos));
-
-        const Region& r = *page.region;
-        const pages_vector_t::size_type offset = page_iter - r.pages.begin();
-        BYTE* const ptr = page.region->ptr + offset * size_t(page_size);
-
-        ULONG cbRead;
-        hr = m_pStream->Read(ptr, page_size,  &cbRead);
-        assert(SUCCEEDED(hr));
-        assert((cbRead == page_size) ||
-               (QWORD(page.pos + cbRead) == m_length));
-    }
-
-    return m_cache.insert(next, page_iter);
+    curr = m_cache.insert(next, page_iter);
+    return 0;  //success
 }
 
 
@@ -254,6 +312,17 @@ void MkvReader::CreateRegion()
 
         m_free_pages.insert(value);
     }
+
+#if 0 //def _DEBUG
+    odbgstream os;
+    os << "mkvreader::CreateRegion: regions.size="
+       << m_regions.size()
+       << " free_pages.size="
+       << m_free_pages.size()
+       << " cache.size="
+       << m_cache.size()
+       << endl;
+#endif
 }
 
 
@@ -265,6 +334,7 @@ void MkvReader::Read(
 {
     const Page& page = *page_iter;
     assert(pos >= page.pos);
+    assert(page.cRef >= 0);
 
     const LONG page_size = m_info.dwPageSize;
 
@@ -305,21 +375,21 @@ int MkvReader::Length(long long* total, long long* avail)
         return -1;
 
     *total = m_length;
-
-    //TODO: is there an MF-specific mechanism to handle this?
-    *avail = m_length;
+    *avail = m_avail;
 
     return 0;
 }
 
 
-void MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
+int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
 {
+    assert(m_async_len <= 0);
+
     if (pBE == 0)
-        return;
+        return 0;
 
     if (pBE->EOS())
-        return;
+        return 0;
 
     const mkvparser::Block* const pBlock = pBE->GetBlock();
     assert(pBlock);
@@ -360,7 +430,14 @@ void MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
     {
         if ((next == m_cache.end()) || ((*next)->pos > pos))
         {
-            const iter_t curr = InsertPage(next, pos);
+            iter_t curr;
+
+            const int status = InsertPage(next, pos, curr);
+            assert(status == 0);
+
+            if (status)  //should never happen
+                return status;
+
             const cache_t::value_type page_iter = *curr;
             Page& page = *page_iter;
 
@@ -395,6 +472,8 @@ void MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
            << endl;
     }
 #endif
+
+    return 0;
 }
 
 
@@ -456,6 +535,7 @@ void MkvReader::UnlockPage(const mkvparser::BlockEntry* pBE)
 }
 
 
+#if 0
 int MkvReader::PurgeFront()
 {
     int n = 0;
@@ -508,7 +588,6 @@ int MkvReader::PurgeBack()
 }
 
 
-#if 0
 void MkvReader::Purge()
 {
     PurgeFront();
@@ -604,12 +683,15 @@ void MkvReader::DestroyRegions()
 
 void MkvReader::PurgeOne()
 {
+    assert(m_async_len <= 0);  //no async read in progress
+
     if (m_cache.empty())
         return;
 
     {
         const cache_t::value_type page_iter = m_cache.front();
         const Page& page = *page_iter;
+        assert(page.cRef >= 0);
 
         if (page.cRef <= 0)
         {
@@ -625,6 +707,7 @@ void MkvReader::PurgeOne()
     {
         const cache_t::value_type page_iter = m_cache.back();
         const Page& page = *page_iter;
+        assert(page.cRef >= 0);
 
         if (page.cRef <= 0)
         {
@@ -645,6 +728,7 @@ void MkvReader::PurgeOne()
         {
             const cache_t::value_type page_iter = *cache_iter;
             const Page& page = *page_iter;
+            assert(page.cRef >= 0);
 
             if (page.cRef == 0)
             {
@@ -664,4 +748,417 @@ void MkvReader::PurgeOne()
 
         return;
     }
+}
+
+
+void MkvReader::Purge(ULONGLONG pos)
+{
+    const DWORD page_size = m_info.dwPageSize;
+
+    while (!m_cache.empty())
+    {
+        const cache_t::value_type page_iter = m_cache.front();
+
+        const Page& page = *page_iter;
+
+        if (page.cRef < 0)  //async read in progress
+            return;
+
+        if (page.cRef > 0)  //locked
+            return;
+
+        assert(page.pos >= 0);
+
+        const ULONGLONG page_end = page.pos + page_size;
+
+        if (page_end > pos)
+            return;
+
+        m_cache.pop_front();
+
+        const free_pages_t::value_type value(page.pos, page_iter);
+        m_free_pages.insert(value);
+    }
+}
+
+
+void MkvReader::ResetAvailable()
+{
+    m_avail = 0;
+}
+
+
+HRESULT MkvReader::AsyncReadInit(
+    LONGLONG pos,
+    LONG len,
+    IMFAsyncCallback* pCB)
+{
+    assert(pos >= 0);
+    assert(len > 0);
+    assert(pCB);
+    assert(m_async_pos < 0);
+    assert(m_async_len <= 0);
+
+    //TODO: if we're attempting to load a new cluster, we assume
+    //few (if any) of the pages containing that cluster have
+    //been loaded already.  The exception is the pages near the
+    //beginning of the cluster -- these would contain the end of
+    //the previous cluster, so there's a good change they're already
+    //in the cache (and hence don't need to be loaded).
+
+    //TODO: we have been assuming that a request to load a cluster
+    //happens without gaps.  In other words we are not preloading
+    //clusters because Segment::GetCues returns a non-NULL value.
+    //If the byte stream allows us to read anywhere in the stream
+    //(that is, the stream is seekable), then it would be nice to
+    //take advantage of that.  Does that mean not playing
+    //tricks with m_avail?
+    //
+    //If Segment::GetNext detects preloaded clusters, then it
+    //assumes that it's free to preload them again.  I think
+    //the only way to get a preloaded cluster is if Cues is non-NULL,
+    //and the only way for that to be true is if avail >= total.
+    //But that's probably wrong if the Cues element happens to
+    //be declared at the beginning of the file (before the first
+    //cluster).  So we might need an explicit check somewhere to
+    //determine whether it's OK to seek ahead in the stream.
+    //
+    //But who calls Segment::GetNext?  Track::GetFirst and Track::GetNext.
+    //Also WebmMfSource::GetDuration.  The Track ops might be OK,
+    //since they return E_BUFFER_NOT_FULL if underflow occurs.  But
+    //that's not quite right: if Segment::GetNext is called with
+    //a (fully) loaded cluster, then it returns EOS in the normal
+    //way (leaving it up to the caller to decide to call LoadCluster
+    //explicitly).  If preloaded clusters are detected, then it
+    //simply preloads the next cluster, and assumes that the
+    //(synchronous) read will succeed.
+    //
+    //Alternatively, we can use the Cues, but only up to
+    //the limit of what has been parsed so far (that is,
+    //among the fully-loaded clusters).
+    //
+    //Seeking is hard.  You have to (pre)load many clusters
+    //just to find the one you're looking for.  (But is this
+    //only true when NOT using cues?)  Maybe this media source
+    //object needs to allowing seeking when:
+    //  this is a file-based source; or,
+    //  this is a network source, and we have a cues.
+    //Does the pipeline query for the ability to seek just
+    //once?  For example, if this is a network source we
+    //don't necessarily have the cues element right away.
+    //I suppose that "have cues" is true if the cues
+    //are at the beginning of the file.  It's no great
+    //loss if we lose the ability to seek if this is a
+    //network source and the cues are at the end of the
+    //file.
+    //
+    //But if we do support seeking in a network source,
+    //then we will have to also support preloading clusters.
+    //The problem is in Segment::GetNext.  If the current
+    //cluster is preloaded (it corresponded to a cue point, say),
+    //then GetNext will first parse the ID and Size fields
+    //in order to consume the payload of the current cluster.
+    //This involves synchronous reads.  (We parse enough of
+    //the file to determine whether the next element is a cluster,
+    //and if so, we parse enough of that cluster to determine
+    //whether is has block entries.)  The problem is that
+    //these reads can block if network I/O is slow.  Maybe
+    //the solution is to not call Track::GetNext (which is
+    //the op that calls Segment::GetNext).
+    //
+    //We search the cues to find the cue point, and then
+    //call GetBlock to get the block corresponding to that
+    //cue point.  That's the process that creates the first
+    //preloaded cluster.  We could replace the track-based
+    //navigation ops by simply iterating over clusters
+    //(this is what Jeff K. does in the QT filter) -- that
+    //would at least give us control of when clusters
+    //are (pre)loaded.  We need to do things at the cluster
+    //level (not the block level) because loading a cluster
+    //is the only thing we can do asynchronously.
+    //LoadCluster will tell us the pos and size of the thing
+    //that needs to be read (untimately, read asynchronously),
+    //but that op only works on the cluster that immediately
+    //follows the fully-loaded clusters.  We might need
+    //a new op that allows us to preload a cluster asynchronously.
+    //We might be able to fix up Segment::GetNext the same way
+    //we did Segment::LoadCluster, by returing the pos and size
+    //of the thing we need to (asynchrously) read in order
+    //to continue parsing.
+
+    typedef cache_t::iterator iter_t;
+    iter_t next;
+
+    const DWORD page_size = m_info.dwPageSize;
+
+    //int n = 0;
+
+    if (m_cache.empty() || (pos < (*m_cache.front()).pos))
+        next = m_cache.begin();
+    else
+    {
+        const iter_t i = m_cache.begin();
+        const iter_t j = m_cache.end();
+
+        next = std::upper_bound(i, j, pos, PageLess());
+        assert(next != i);
+
+        const cache_t::value_type page_iter = *--iter_t(next);
+        Page& page = *page_iter;
+        const LONGLONG page_end = page.pos + page_size;
+
+        if (pos < page_end)  //cache hit
+        {
+            Read(page_iter, pos, len, 0);
+            //TODO: ++page.cRef;
+            //++n;
+
+            m_avail = pos;
+        }
+    }
+
+    while (len > 0)
+    {
+        if ((next == m_cache.end()) || ((*next)->pos > pos))
+        {
+            iter_t curr;
+
+            const HRESULT hr = AsyncReadPage(next, pos, pCB, curr);
+
+            if (FAILED(hr))
+                return hr;
+
+            const cache_t::value_type page_iter = *curr;
+
+            Page& page = *page_iter;
+            assert(page.pos == pos);
+
+            if (hr == S_FALSE)  //async read in progress
+            {
+                assert(page.cRef < 0);
+
+                m_async_pos = page.pos;
+                m_async_len = len;
+
+                return S_FALSE;  //tell caller to wait for completion
+            }
+
+            next = ++iter_t(curr);
+            assert((next == m_cache.end()) || ((*next)->pos > page.pos));
+
+            Read(page_iter, pos, len, 0);
+            //TODO: ++page.cRef;
+            //++n;
+
+            m_avail = pos;
+        }
+        else
+        {
+            const cache_t::value_type page_iter = *next++;
+            Page& page = *page_iter;
+            assert(page.pos <= pos);
+            assert(pos < (page.pos + page_size));
+
+            Read(page_iter, pos, len, 0);
+            //TODO: ++page.cRef;
+            //++n;
+
+            m_avail = pos;
+        }
+    }
+
+    return S_OK;
+}
+
+
+HRESULT MkvReader::AsyncReadContinue(
+    IMFAsyncCallback* pCB)
+{
+    assert(pCB);
+    assert(!m_cache.empty());
+
+    LONG& len = m_async_len;
+    assert(len > 0);
+
+    LONGLONG& pos = m_async_pos;
+    assert(pos > (*m_cache.front()).pos);
+
+    typedef cache_t::iterator iter_t;
+    iter_t next;
+
+    const DWORD page_size = m_info.dwPageSize;
+
+    {
+        const iter_t i = m_cache.begin();
+        const iter_t j = m_cache.end();
+
+        next = std::upper_bound(i, j, pos, PageLess());
+        assert(next != i);
+
+        const cache_t::value_type page_iter = *--iter_t(next);
+        Page& page = *page_iter;
+
+        const LONGLONG page_end = page.pos + page_size;
+        page_end;
+        assert(pos >= page_end);
+    }
+
+    while (len > 0)
+    {
+        if ((next == m_cache.end()) || ((*next)->pos > pos))
+        {
+            iter_t curr;
+
+            const HRESULT hr = AsyncReadPage(next, pos, pCB, curr);
+
+            if (FAILED(hr))
+                return hr;
+
+            const cache_t::value_type page_iter = *curr;
+
+            Page& page = *page_iter;
+            assert(page.pos == pos);
+
+            if (hr == S_FALSE)  //async read in progress
+            {
+                assert(page.cRef < 0);
+                return S_FALSE;  //tell caller to wait for completion
+            }
+
+            next = ++iter_t(curr);
+            assert((next == m_cache.end()) || ((*next)->pos > page.pos));
+
+            Read(page_iter, pos, len, 0);
+            //TODO: ++page.cRef;
+            //++n;
+
+            m_avail = pos;
+        }
+        else
+        {
+            const cache_t::value_type page_iter = *next++;
+
+            Page& page = *page_iter;
+            assert(page.pos <= pos);
+            assert(pos < (page.pos + page_size));
+
+            Read(page_iter, pos, len, 0);
+            //TODO: ++page.cRef;
+            //++n;
+
+            m_avail = pos;
+        }
+    }
+
+    pos = -1;
+    return S_OK;
+}
+
+
+HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
+{
+    assert(pResult);
+    assert(m_async_pos >= 0);
+    assert(m_async_len > 0);
+    assert(!m_cache.empty());
+
+    typedef cache_t::iterator iter_t;
+
+    const iter_t i = m_cache.begin();
+    const iter_t j = m_cache.end();
+
+    const iter_t curr = std::lower_bound(i, j, m_async_pos, PageLess());
+    assert(curr != j);
+
+    const cache_t::value_type page_iter = *curr;
+
+    Page& page = *page_iter;
+    assert(page.pos == m_async_pos);
+    assert(page.cRef < 0);
+
+    const DWORD page_size = m_info.dwPageSize;
+
+    ULONG cbRead;
+
+    const HRESULT hr = m_pStream->EndRead(pResult, &cbRead);
+    assert(SUCCEEDED(hr));  //TODO
+    assert((cbRead == page_size) ||
+           (QWORD(page.pos + cbRead) == m_length));
+
+    page.cRef = 0;  //async read is complete
+
+    const iter_t next = ++iter_t(curr);
+    next;
+    assert((next == m_cache.end()) || ((*next)->pos > page.pos));
+
+    Read(page_iter, m_async_pos, m_async_len, 0);
+    //TODO: ++page.cRef;
+    //++n;
+
+    m_avail = m_async_pos;
+
+    if (m_async_len > 0)
+        return S_FALSE;
+
+    m_async_pos = -1;
+    return S_OK;
+}
+
+
+HRESULT MkvReader::AsyncReadPage(
+    cache_t::iterator next,
+    LONGLONG pos,
+    IMFAsyncCallback* pCB,
+    cache_t::iterator& curr)
+{
+    const DWORD page_size = m_info.dwPageSize;
+
+    //TODO: purge as necessary
+
+    if (m_free_pages.empty())
+        CreateRegion();
+
+    const LONGLONG key = page_size * LONGLONG(pos / page_size);
+    assert((next == m_cache.end()) || ((*next)->pos > key));
+
+    free_pages_t::iterator free_page = m_free_pages.find(key);
+
+    if (free_page == m_free_pages.end())  //key not found
+        free_page = m_free_pages.begin(); //just pick one
+
+    const pages_vector_t::iterator page_iter = free_page->second;
+
+    Page& page = *page_iter;
+    assert(page.cRef == 0);
+
+    if (page.pos == key)  //re-use the free page as is
+    {
+        m_free_pages.erase(free_page);  //page is no longer free
+        curr = m_cache.insert(next, page_iter);
+
+        return S_OK;
+    }
+
+    page.pos = key;
+    QWORD new_pos;
+
+    HRESULT hr = m_pStream->Seek(msoBegin, page.pos, 0, &new_pos);
+    assert(SUCCEEDED(hr));
+    assert(new_pos == QWORD(page.pos));
+
+    const Region& r = *page.region;
+    const pages_vector_t::size_type offset = page_iter - r.pages.begin();
+    BYTE* const ptr = page.region->ptr + offset * size_t(page_size);
+
+    hr = m_pStream->BeginRead(ptr, page_size, pCB, 0);
+
+    if (FAILED(hr))
+        return hr;
+
+    page.cRef = -1;  //means "async read in progress"
+
+    m_free_pages.erase(free_page);  //page is no longer free
+    curr = m_cache.insert(next, page_iter);
+
+    return S_FALSE;
 }

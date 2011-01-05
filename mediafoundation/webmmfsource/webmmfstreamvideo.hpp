@@ -45,10 +45,17 @@ public:
 
     void SetRate(BOOL, float);
 
+    const mkvparser::BlockEntry* GetCurrBlock() const;
+
+    bool IsEOS() const;
+    HRESULT GetSample(IUnknown* pToken);
+    //const mkvparser::Cluster* GetCurrCluster() const;
+
+    int LockCurrBlock();
+
 protected:
 
-    const mkvparser::BlockEntry* GetCurrBlock() const;
-    HRESULT PopulateSample(IMFSample*);
+    //void SetCurrBlock(const mkvparser::BlockEntry*);
     void OnStop();
 
 private:
@@ -62,8 +69,6 @@ private:
         const mkvparser::VideoTrack*,
         UINT32&,
         UINT32&);
-
-    const mkvparser::BlockEntry* m_pLocked;
 
 };
 

@@ -10,6 +10,7 @@ namespace WebmMfSourceLib
 {
 
 class WebmMfStream;
+class WebmMfByteStreamHandler;
 
 class WebmMfSource : public IMFMediaSource,
                      public IMFRateControl,
@@ -17,10 +18,7 @@ class WebmMfSource : public IMFMediaSource,
                      public IMFGetService,
                      public CLockable
 {
-    friend HRESULT CreateSource(
-        IClassFactory*,
-        IMFByteStream*,
-        IMFMediaSource**);
+    friend HRESULT CreateSource(WebmMfByteStreamHandler*, WebmMfSource**);
 
     WebmMfSource(const WebmMfSource&);
     WebmMfSource& operator=(const WebmMfSource&);
@@ -89,17 +87,23 @@ public:
 
     HRESULT STDMETHODCALLTYPE GetService(REFGUID, REFIID, LPVOID*);
 
+    //local methods
+
+    HRESULT AsyncLoad();
+    HRESULT RequestSample(WebmMfStream*, IUnknown*);
+
 private:
 
     static std::wstring ConvertFromUTF8(const char*);
 
-    WebmMfSource(IClassFactory*, IMFByteStream*);
+    explicit WebmMfSource(WebmMfByteStreamHandler*);
     virtual ~WebmMfSource();
 
-    HRESULT Load();
+    //HRESULT SyncLoad();
     LONGLONG GetDuration() const;
 
     IClassFactory* const m_pClassFactory;
+    WebmMfByteStreamHandler* m_pHandler;
     LONG m_cRef;
     IMFMediaEventQueue* m_pEvents;
 
@@ -110,7 +114,7 @@ private:
     streams_t m_streams;
 
     HRESULT NewStream(IMFStreamDescriptor*, const mkvparser::Track*);
-    HRESULT UpdateStream(IMFStreamDescriptor*, WebmMfStream*);
+    HRESULT UpdateStream(WebmMfStream*);
 
     void GetTime(
         IMFPresentationDescriptor*,
@@ -136,12 +140,85 @@ public:
     State m_state;
     LONGLONG m_preroll_ns;
 
-    void NotifyEOS();
-
 private:
 
     BOOL m_bThin;
     float m_rate;
+
+    struct Request
+    {
+        WebmMfStream* pStream;
+        IUnknown* pToken;
+    };
+
+    void NotifyEOS();
+
+    class CAsyncRead : public IMFAsyncCallback
+    {
+        CAsyncRead(const CAsyncRead&);
+        CAsyncRead& operator=(const CAsyncRead&);
+
+    public:
+        explicit CAsyncRead(WebmMfSource*);
+        virtual ~CAsyncRead();
+
+        WebmMfSource* const m_pSource;
+        HRESULT m_hrStatus;  //of calling MkvReader::AsyncReadContinue
+
+        HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
+        ULONG STDMETHODCALLTYPE AddRef();
+        ULONG STDMETHODCALLTYPE Release();
+
+        HRESULT STDMETHODCALLTYPE GetParameters(DWORD*, DWORD*);
+        HRESULT STDMETHODCALLTYPE Invoke(IMFAsyncResult*);
+    };
+
+    CAsyncRead m_async_read;
+
+    typedef std::list<Request> requests_t;
+    requests_t m_requests;
+
+    HANDLE m_hThread;
+    HANDLE m_hQuit;
+    HANDLE m_hRequestSample;
+    HANDLE m_hAsyncRead;
+
+    HRESULT InitThread();
+    void FinalThread();
+
+    static unsigned __stdcall ThreadProc(void*);
+    unsigned Main();
+
+    typedef bool (WebmMfSource::*thread_state_t)();
+    thread_state_t m_thread_state;
+
+    bool StateAsyncRead();
+    bool StateRequestSample();
+    bool StateQuit();
+
+    thread_state_t OnAsyncRead();
+    thread_state_t OnRequestSample();
+
+    const mkvparser::Cluster* m_pCurr;
+    const mkvparser::Cluster* m_pNext;
+
+    //for async load:
+    thread_state_t StateAsyncParseEbmlHeader();
+    thread_state_t StateAsyncParseSegmentHeaders();
+    thread_state_t StateAsyncInitStreams();
+
+    //for async locking:
+    thread_state_t StateAsyncLockCurr();
+
+    //for async cluster parsing:
+    thread_state_t StateAsyncParseNext();
+    thread_state_t StateAsyncLoadNext();
+
+    typedef thread_state_t (WebmMfSource::*async_state_t)();
+    async_state_t m_async_state;
+
+    HRESULT ParseEbmlHeader(LONGLONG&);
+    void PurgeCache();
 
 };
 

@@ -1,9 +1,13 @@
 #pragma once
+#include "clockable.hpp"
 
 namespace WebmMfSourceLib
 {
 
-class WebmMfByteStreamHandler : public IMFByteStreamHandler
+class WebmMfSource;
+
+class WebmMfByteStreamHandler : public IMFByteStreamHandler,
+                                public CLockable
 {
     WebmMfByteStreamHandler(const WebmMfByteStreamHandler&);
     WebmMfByteStreamHandler& operator=(const WebmMfByteStreamHandler&);
@@ -42,13 +46,21 @@ public:
 
     HRESULT STDMETHODCALLTYPE GetMaxNumberOfBytesRequiredForResolution(QWORD*);
 
+    //local members
+
+    IClassFactory* const m_pClassFactory;
+    IMFByteStream* m_pByteStream;
+
+    HRESULT AsyncLoadComplete(HRESULT);
+
 private:
 
     explicit WebmMfByteStreamHandler(IClassFactory*);
     virtual ~WebmMfByteStreamHandler();
 
-    IClassFactory* const m_pClassFactory;
     LONG m_cRef;
+    IMFAsyncResult* m_pResult;
+    BOOL m_bCancel;
 
 };
 

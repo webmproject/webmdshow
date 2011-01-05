@@ -17,6 +17,7 @@ _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
 _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
 _COM_SMARTPTR_TYPEDEF(IMFMediaTypeHandler, __uuidof(IMFMediaTypeHandler));
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
+_COM_SMARTPTR_TYPEDEF(IMFSample, __uuidof(IMFSample));
 
 
 namespace WebmMfSourceLib
@@ -244,6 +245,14 @@ WebmMfStreamAudio::~WebmMfStreamAudio()
 }
 
 
+#if 0
+void WebmMfStreamAudio::SetCurrBlock(const mkvparser::BlockEntry* pCurr)
+{
+    m_pCurr = pCurr;
+}
+#endif
+
+
 HRESULT WebmMfStreamAudio::Seek(
     const PROPVARIANT& var,
     const mkvparser::BlockEntry* pCurr,
@@ -252,7 +261,13 @@ HRESULT WebmMfStreamAudio::Seek(
     m_bDiscontinuity = true;
 
     m_pCurr = pCurr;
-    m_pSource->m_file.LockPage(m_pCurr);
+
+    const int status = m_pSource->m_file.LockPage(m_pCurr);
+    status;
+    assert(status == 0);
+
+    //m_pNextCluster = 0;
+    m_pNextBlock = 0;
 
     if (bStart)
         return OnStart(var);
@@ -260,6 +275,177 @@ HRESULT WebmMfStreamAudio::Seek(
         return OnSeek(var);
 }
 
+
+bool WebmMfStreamAudio::IsEOS() const
+{
+    return ((m_pCurr == 0) || m_pCurr->EOS());
+}
+
+
+HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
+{
+    assert(m_pCurr);
+    assert(!m_pCurr->EOS());
+    assert(m_pLocked);
+    assert(m_pLocked == m_pCurr);
+
+    HRESULT hr;
+
+    if (m_pNextBlock == 0)
+    {
+        hr = GetNextBlock(m_pCurr);
+
+        if (FAILED(hr))  //no next entry found on current cluster
+            return hr;
+    }
+
+    IMFSamplePtr pSample;
+
+    hr = MFCreateSample(&pSample);
+    assert(SUCCEEDED(hr));  //TODO
+    assert(pSample);
+
+    if (pToken)
+    {
+        hr = pSample->SetUnknown(MFSampleExtension_Token, pToken);
+        assert(SUCCEEDED(hr));
+    }
+
+    const mkvparser::Block* const pCurrBlock = m_pCurr->GetBlock();
+    assert(pCurrBlock);
+    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
+
+    const mkvparser::Cluster* const pCurrCluster = m_pCurr->GetCluster();
+    assert(pCurrCluster);
+
+    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(curr_ns >= 0);
+
+    const int frame_count = pCurrBlock->GetFrameCount();
+    assert(frame_count > 0);  //TODO
+
+    mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
+
+    for (int i = 0; i < frame_count; ++i)
+    {
+        const mkvparser::Block::Frame& f = pCurrBlock->GetFrame(i);
+
+        const long cbBuffer = f.len;
+        assert(cbBuffer > 0);
+
+        IMFMediaBufferPtr pBuffer;
+
+        hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
+        assert(SUCCEEDED(hr));
+        assert(pBuffer);
+
+        BYTE* ptr;
+        DWORD cbMaxLength;
+
+        hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
+        assert(SUCCEEDED(hr));
+        assert(ptr);
+        assert(cbMaxLength >= DWORD(cbBuffer));
+
+        const long status = f.Read(pReader, ptr);
+        assert(status == 0);
+
+        hr = pBuffer->SetCurrentLength(cbBuffer);
+        assert(SUCCEEDED(hr));
+
+        hr = pBuffer->Unlock();
+        assert(SUCCEEDED(hr));
+
+        hr = pSample->AddBuffer(pBuffer);
+        assert(SUCCEEDED(hr));
+    }
+
+    hr = pSample->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
+    assert(SUCCEEDED(hr));
+
+    if (m_bDiscontinuity)
+    {
+        //TODO: resolve whether to set this for first of the preroll samples,
+        //or wait until last of preroll samples has been pushed downstream.
+
+        hr = pSample->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
+        assert(SUCCEEDED(hr));
+
+        m_bDiscontinuity = false;  //TODO: must set back to true during a seek
+    }
+
+    const LONGLONG sample_time = curr_ns / 100;
+
+    hr = pSample->SetSampleTime(sample_time);
+    assert(SUCCEEDED(hr));
+
+    //TODO: this might not be accurate, if there are gaps in the
+    //audio blocks.  (How do we detect gaps?)
+
+    const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
+    const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
+
+    LONGLONG duration_ns = -1;  //duration of sample
+
+    const mkvparser::BlockEntry* const pNextEntry = m_pNextBlock;  //TODO
+
+    if ((pNextEntry != 0) && !pNextEntry->EOS())
+    {
+        const mkvparser::Block* const b = pNextEntry->GetBlock();
+        assert(b);
+
+        const mkvparser::Cluster* const c = pNextEntry->GetCluster();
+        assert(c);
+
+        const __int64 next_ns = b->GetTime(c);
+        assert(next_ns >= curr_ns);
+
+        duration_ns = (next_ns - curr_ns);
+        assert(duration_ns >= 0);
+    }
+    else if (pInfo)
+    {
+        const LONGLONG next_ns = pInfo->GetDuration();
+
+        if ((next_ns >= 0) && (next_ns > curr_ns))  //have duration
+            duration_ns = next_ns - curr_ns;
+    }
+
+    if (duration_ns < 0)
+    {
+        const LONGLONG ns_per_frame = 10000000;  //10ms
+        duration_ns = LONGLONG(frame_count) * ns_per_frame;
+    }
+
+    if (duration_ns >= 0)
+    {
+        const LONGLONG sample_duration = duration_ns / 100;
+        assert(sample_duration >= 0);
+
+        hr = pSample->SetSampleDuration(sample_duration);
+        assert(SUCCEEDED(hr));
+    }
+
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = 0;
+
+    m_pCurr = m_pNextBlock;
+
+    const int status = f.LockPage(m_pCurr);
+    assert(status == 0);
+
+    if (status == 0)
+        m_pLocked = m_pCurr;
+
+    m_pNextBlock = 0;
+
+    return ProcessSample(pSample);
+}
+
+
+#if 0
 HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
 {
     assert(pSample);
@@ -400,12 +586,15 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
 
     return S_OK;
 }
+#endif
 
 
 void WebmMfStreamAudio::OnStop()
 {
     MkvReader& f = m_pSource->m_file;
-    f.UnlockPage(m_pCurr);
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = 0;
 }
 
 
@@ -420,5 +609,23 @@ void WebmMfStreamAudio::SetRate(BOOL, float)
     //TODO
 }
 
+
+int WebmMfStreamAudio::LockCurrBlock()
+{
+    assert(m_pCurr);
+    assert(!m_pCurr->EOS());
+    assert(m_pLocked == 0);
+
+    MkvReader& f = m_pSource->m_file;
+
+    const int status = f.LockPage(m_pCurr);
+    assert(status == 0);
+
+    if (status)  //should never happen
+        return status;
+
+    m_pLocked = m_pCurr;
+    return 0;  //succeeded
+}
 
 }  //end namespace WebmMfSourceLib
