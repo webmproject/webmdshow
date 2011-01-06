@@ -66,7 +66,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtestd.lib gtest_maind.lib libogg_static.lib libvorbis_static.lib vpxmtd.lib SDL.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtestd.lib gtest_maind.lib libogg_static.lib libvorbis_static.lib vpxmtd.lib SDL.lib dsound.lib dxguid.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x86\debug;$(SolutionDir)..\third_party\libogg\x86\debug;$(SolutionDir)..\third_party\libvorbis\x86\debug;$(SolutionDir)..\third_party\libvpx\x86\debug;$(SolutionDir)..\third_party\sdl\x86\debug"
 				GenerateDebugInformation="true"
@@ -147,7 +147,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtestd.lib gtest_maind.lib libogg_static.lib libvorbis_static.lib vpxmtd.lib SDL.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtestd.lib gtest_maind.lib libogg_static.lib libvorbis_static.lib vpxmtd.lib SDL.lib dsound.lib dxguid.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x64\debug;$(SolutionDir)..\third_party\libogg\x64\debug;$(SolutionDir)..\third_party\libvorbis\x64\debug;$(SolutionDir)..\third_party\libvpx\x64\debug;$(SolutionDir)..\third_party\sdl\x64\debug"
 				GenerateDebugInformation="true"
@@ -226,7 +226,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtest.lib gtest_main.lib libogg_static.lib libvorbis_static.lib vpxmt.lib SDL.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtest.lib gtest_main.lib libogg_static.lib libvorbis_static.lib vpxmt.lib SDL.lib dsound.lib dxguid.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x86\release;$(SolutionDir)..\third_party\libogg\x86\release;$(SolutionDir)..\third_party\libvorbis\x86\release;$(SolutionDir)..\third_party\libvpx\x86\release;$(SolutionDir)..\third_party\sdl\x86\release"
 				GenerateDebugInformation="true"
@@ -308,7 +308,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtest.lib gtest_main.lib libogg_static.lib libvorbis_static.lib vpxmt.lib SDL.lib"
+				AdditionalDependencies="mf.lib mfplat.lib mfuuid.lib strmiids.lib shlwapi.lib winmm.lib gtest.lib gtest_main.lib libogg_static.lib libvorbis_static.lib vpxmt.lib SDL.lib dsound.lib dxguid.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x64\release;$(SolutionDir)..\third_party\libogg\x64\release;$(SolutionDir)..\third_party\libvorbis\x64\release;$(SolutionDir)..\third_party\libvpx\x64\release;$(SolutionDir)..\third_party\sdl\x64\release"
 				GenerateDebugInformation="true"
@@ -435,6 +435,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\webmdsound.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\webmdsound.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\webmsdl.cpp"
 				>
 			</File>
@@ -475,6 +483,10 @@
 				</File>
 				<File
 					RelativePath=".\sdlvideoplayer_tests.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\common\tests\webmdsound_tests.cpp"
 					>
 				</File>
 				<File
