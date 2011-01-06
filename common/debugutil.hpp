@@ -12,9 +12,6 @@
 #include "hrtext.hpp"
 #include "iidstr.hpp"
 
-// keep the compiler quiet about do/while(0)'s used in log macros
-#pragma warning(disable:4127)
-
 #define DBGLOG(X) \
 do { \
     wodbgstream wos; \
@@ -22,7 +19,9 @@ do { \
 } while(0)
 
 // TODO(tomfinegan): replace the hard coded hr w/expansion of X
-#define HRLOG(X) L" {hr=" << X << L" (" << hrtext(X) << L")}"
+#define \
+    HRLOG(X) L" {hr=" << X << "/" << std::hex << X << std::dec << \
+    L" (" << hrtext(X) << L")}"
 
 #define REFTIMETOSECONDS(X) (double(X) / 10000000.0f)
 
@@ -30,5 +29,16 @@ do { \
 #define DBGLOG(X)
 #define REFTIMETOSECONDS(X)
 #endif
+
+// keep the compiler quiet about do/while(0)'s used in log macros
+#pragma warning(disable:4127)
+
+#define CHK(X, Y) \
+do { \
+    if (FAILED(X=(Y))) \
+    { \
+        DBGLOG(#Y << HRLOG(X)); \
+    } \
+} while (0)
 
 #endif // __WEBMDSHOW_COMMON_DEBUGUTIL_HPP__
