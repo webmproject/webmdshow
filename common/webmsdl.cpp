@@ -12,6 +12,8 @@
 #include <mferror.h>
 #include <mfidl.h>
 
+#include <new>
+
 #include "debugutil.hpp"
 #include "webmsdl.hpp"
 #include "webmtypes.hpp"

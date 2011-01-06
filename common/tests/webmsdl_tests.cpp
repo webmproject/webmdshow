@@ -13,6 +13,8 @@
 #include <mferror.h>
 #include <mfidl.h>
 
+#include <string>
+
 #include "debugutil.hpp"
 #include "comdllwrapper.hpp"
 #include "eventutil.hpp"
