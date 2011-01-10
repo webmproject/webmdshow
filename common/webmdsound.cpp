@@ -9,11 +9,19 @@
 #include <windows.h>
 #include <mmreg.h>
 
+#include <cassert>
+#include <vector>
+
 #include "debugutil.hpp"
 #include "webmdsound.hpp"
 
 namespace WebmDirectSound
 {
+
+const UINT32 kF32BytesPerSample = sizeof(float);
+const UINT32 kF32BitsPerSample = kF32BytesPerSample * 8;
+const UINT32 kS16BytesPerSample = sizeof(INT16);
+const UINT32 kS16BitsPerSample = kS16BytesPerSample * 8;
 
 template <typename COMOBJ>
 ULONG safe_rel(COMOBJ*& comobj)
@@ -25,6 +33,172 @@ ULONG safe_rel(COMOBJ*& comobj)
         comobj = NULL;
     }
     return refcnt;
+}
+
+// Note: AudioBufferTemplate is not in use!!
+template <class SampleType>
+AudioBufferTemplate<SampleType>::AudioBufferTemplate():
+  sample_size_(sizeof SampleType)
+{
+    DBGLOG("ctor, sample_size_=" << sample_size_);
+}
+
+template <class SampleType>
+AudioBufferTemplate<SampleType>::~AudioBufferTemplate()
+{
+    DBGLOG("dtor");
+}
+
+template <class SampleType>
+HRESULT AudioBufferTemplate<SampleType>::Read(UINT32 out_buf_size,
+                                      UINT32* ptr_bytes_written,
+                                      SampleType* ptr_samples)
+{
+    if (!out_buf_size || !ptr_bytes_written || !ptr_samples)
+    {
+        return E_INVALIDARG;
+    }
+    if (audio_buf_.empty())
+    {
+        DBGLOG("buffer empty");
+        return S_FALSE;
+    }
+    UINT32 aud_bytes_available = SamplesToBytes(audio_buf_.size());
+    UINT32 bytes_to_copy = out_buf_size >= aud_bytes_available ?
+        aud_bytes_available : out_buf_size;
+    void* ptr_out_data = reinterpret_cast<void*>(ptr_samples);
+    HRESULT hr = ::memcpy_s(ptr_out_data, max_bytes, &audio_buf_[0],
+                            bytes_to_copy);
+    if (SUCCEEDED(hr))
+    {
+        UINT32 samples_to_erase = BytesToSamples(bytes_to_copy);
+        audio_buf_.erase(audio_buf_[0], audio_buf_[samples_to_erase]);
+    }
+    return hr;
+}
+
+template <class SampleType>
+HRESULT AudioBufferTemplate<SampleType>::Write(SampleType* ptr_samples,
+                                       UINT32 length_in_bytes)
+{
+    if (!ptr_samples || !length_in_bytes)
+    {
+        return E_INVALIDARG;
+    }
+    UINT32 num_samples = BytesToSamples(length_in_bytes);
+    audio_buf_.insert(audio_buf_.end(), num_samples, ptr_samples);
+    return hr;
+}
+
+AudioBuffer::AudioBuffer()
+{
+    DBGLOG("ctor");
+}
+
+AudioBuffer::~AudioBuffer()
+{
+    DBGLOG("dtor");
+}
+
+F32AudioBuffer::F32AudioBuffer():
+  sample_size_(sizeof(float))
+{
+    assert(kF32BytesPerSample == 4);
+    DBGLOG("ctor");
+}
+
+F32AudioBuffer::~F32AudioBuffer()
+{
+    DBGLOG("dtor");
+}
+
+HRESULT F32AudioBuffer::Read(UINT32 out_buf_size, UINT32* ptr_bytes_written,
+                             void* ptr_samples)
+{
+    if (!out_buf_size || !ptr_bytes_written || !ptr_samples)
+    {
+        return E_INVALIDARG;
+    }
+    if (audio_buf_.empty())
+    {
+        DBGLOG("buffer empty");
+        return S_FALSE;
+    }
+    UINT64 aud_bytes_available = SamplesToBytes(audio_buf_.size());
+    UINT64 bytes_to_copy = out_buf_size >= aud_bytes_available ?
+        aud_bytes_available : out_buf_size;
+    void* ptr_out_data = reinterpret_cast<void*>(ptr_samples);
+    HRESULT hr = ::memcpy_s(ptr_out_data, out_buf_size, &audio_buf_[0],
+                            bytes_to_copy);
+    if (SUCCEEDED(hr))
+    {
+        UINT64 samples_to_erase = BytesToSamples(bytes_to_copy);
+        audio_buf_.erase(audio_buf_.begin(), audio_buf_.begin()+samples_to_erase);
+    }
+    return hr;
+}
+
+HRESULT F32AudioBuffer::Write(void* ptr_samples, UINT32 length_in_bytes)
+{
+    if (!ptr_samples || !length_in_bytes)
+    {
+        return E_INVALIDARG;
+    }
+    UINT64 num_samples = BytesToSamples(length_in_bytes);
+    float* ptr_fp_samples = reinterpret_cast<float*>(ptr_samples);
+    audio_buf_.insert(audio_buf_.end(), num_samples, *ptr_fp_samples);
+    return S_OK;
+}
+
+S16AudioBuffer::S16AudioBuffer():
+  sample_size_(sizeof(float))
+{
+    assert(kS16BytesPerSample == 2);
+    DBGLOG("ctor");
+}
+
+S16AudioBuffer::~S16AudioBuffer()
+{
+    DBGLOG("dtor");
+}
+
+HRESULT S16AudioBuffer::Read(UINT32 out_buf_size, UINT32* ptr_bytes_written,
+                             void* ptr_samples)
+{
+    if (!out_buf_size || !ptr_bytes_written || !ptr_samples)
+    {
+        return E_INVALIDARG;
+    }
+    if (audio_buf_.empty())
+    {
+        DBGLOG("buffer empty");
+        return S_FALSE;
+    }
+    UINT64 aud_bytes_available = SamplesToBytes(audio_buf_.size());
+    UINT64 bytes_to_copy = out_buf_size >= aud_bytes_available ?
+        aud_bytes_available : out_buf_size;
+    void* ptr_out_data = reinterpret_cast<void*>(ptr_samples);
+    HRESULT hr = ::memcpy_s(ptr_out_data, out_buf_size, &audio_buf_[0],
+                            bytes_to_copy);
+    if (SUCCEEDED(hr))
+    {
+        UINT64 samples_to_erase = BytesToSamples(bytes_to_copy);
+        audio_buf_.erase(audio_buf_.begin(),
+                         audio_buf_.begin()+samples_to_erase);
+    }
+    return hr;
+}
+
+HRESULT S16AudioBuffer::Write(void* ptr_samples, UINT32 length_in_bytes)
+{
+    if (!ptr_samples || !length_in_bytes)
+    {
+        return E_INVALIDARG;
+    }
+    UINT64 num_samples = BytesToSamples(length_in_bytes);
+    INT16* ptr_s16_samples = reinterpret_cast<INT16*>(ptr_samples);
+    audio_buf_.insert(audio_buf_.end(), num_samples, *ptr_s16_samples);
+    return S_OK;
 }
 
 HRESULT AudioPlaybackDevice::Open(HWND hwnd,
@@ -53,7 +227,13 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
     {
         return hr;
     }
-    CHK(hr, CreateBuffer_(ptr_wfx));
+    CHK(hr, CreateAudioBuffer_(ptr_wfx->Format.wFormatTag,
+                               ptr_wfx->Format.wBitsPerSample));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, CreateDirectSoundBuffer_(ptr_wfx));
     if (FAILED(hr))
     {
         return hr;
@@ -74,7 +254,27 @@ AudioPlaybackDevice::~AudioPlaybackDevice()
     safe_rel(ptr_dsound_buf_);
 }
 
-HRESULT AudioPlaybackDevice::CreateBuffer_(
+HRESULT AudioPlaybackDevice::CreateAudioBuffer_(WORD fmt_tag, WORD bits)
+{
+    if (WAVE_FORMAT_PCM != fmt_tag && WAVE_FORMAT_IEEE_FLOAT != fmt_tag)
+    {
+        DBGLOG("unsupported format tag!");
+        return E_INVALIDARG;
+    }
+    // Create our internal audio buffer based on input sample type
+    // (we support only S16 and float samples)
+    if (WAVE_FORMAT_PCM == fmt_tag && kS16BitsPerSample == bits)
+    {
+        ptr_audio_buffer_.reset(new S16AudioBuffer());
+    }
+    else if (WAVE_FORMAT_IEEE_FLOAT == fmt_tag && kF32BitsPerSample == bits)
+    {
+        ptr_audio_buffer_.reset(new F32AudioBuffer());
+    }
+    return ptr_audio_buffer_.get() ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT AudioPlaybackDevice::CreateDirectSoundBuffer_(
     const WAVEFORMATEXTENSIBLE* const ptr_wfx)
 {
     if (!ptr_wfx)
