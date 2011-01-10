@@ -30,9 +30,11 @@ do { \
 #define REFTIMETOSECONDS(X)
 #endif
 
-// keep the compiler quiet about do/while(0)'s used in log macros
+// keep the compiler quiet about do/while(0)'s (constant conditional) used in
+// log macros
 #pragma warning(disable:4127)
 
+// check the HRESULT for failure (<0), and log it if we're in debug mode
 #define CHK(X, Y) \
 do { \
     if (FAILED(X=(Y))) \
