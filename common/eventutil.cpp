@@ -54,6 +54,22 @@ HRESULT EventWaiter::Wait()
     return hr;
 }
 
+HRESULT EventWaiter::ZeroWait()
+{
+    DWORD wr;
+    HRESULT hr = CoWaitForMultipleHandles(COWAIT_WAITALL, 0, 1, 
+                                          &event_handle_, &wr);
+    if (SUCCEEDED(hr) && WAIT_OBJECT_0 == wr)
+    {
+        hr = S_OK;
+    }
+    else
+    {
+        hr = S_FALSE;
+    }
+    return hr;
+}
+
 HRESULT EventWaiter::MessageWait()
 {
     HRESULT hr = E_FAIL;

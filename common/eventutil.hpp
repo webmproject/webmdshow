@@ -21,9 +21,9 @@ public:
     HRESULT Set();
     HRESULT Wait();
     HRESULT MessageWait();
+    HRESULT ZeroWait();
 private:
     HANDLE event_handle_;
-
     DISALLOW_COPY_AND_ASSIGN(EventWaiter);
 };
 
