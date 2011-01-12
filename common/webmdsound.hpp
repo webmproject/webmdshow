@@ -99,7 +99,7 @@ private:
     DISALLOW_COPY_AND_ASSIGN(S16AudioBuffer);
 };
 
-class AudioPlaybackDevice
+class AudioPlaybackDevice : public CLockable
 {
 public:
     AudioPlaybackDevice();
