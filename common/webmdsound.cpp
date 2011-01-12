@@ -15,7 +15,7 @@
 #include "debugutil.hpp"
 #include "webmdsound.hpp"
 
-namespace WebmDirectSound
+namespace WebmDirectX
 {
 
 const UINT32 kF32BytesPerSample = sizeof(float);
@@ -319,4 +319,4 @@ HRESULT AudioPlaybackDevice::CreateDirectSoundBuffer_(
     return hr;
 }
 
-} // WebmDirectSound namespace
+} // WebmDirectX namespace

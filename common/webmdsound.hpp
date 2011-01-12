@@ -11,7 +11,7 @@
 
 #include <dsound.h>
 
-namespace WebmDirectSound
+namespace WebmDirectX
 {
 
 // Note: AudioBufferTemplate is not in use!!
@@ -115,6 +115,6 @@ private:
     DISALLOW_COPY_AND_ASSIGN(AudioPlaybackDevice);
 };
 
-} // WebmDirectSound
+} // WebmDirectX
 
 #endif // __WEBMDSHOW_COMMON_WEBDSOUND_HPP__
