@@ -16,41 +16,16 @@
 namespace WebmMfUtil
 {
 
-HRESULT SimpleThread::Create(SimpleThread** ptr_instance)
-{
-    *ptr_instance = new SimpleThread();
-    if (!*ptr_instance)
-        return E_OUTOFMEMORY;
-    (*ptr_instance)->AddRef();
-    return S_OK;
-}
-
 SimpleThread::SimpleThread():
   ptr_user_thread_data_(NULL),
   ptr_thread_func_(NULL),
   ptr_thread_(0),
-  ref_count_(0),
   thread_id_(0)
 {
 }
 
 SimpleThread::~SimpleThread()
 {
-}
-
-UINT SimpleThread::AddRef()
-{
-    return InterlockedIncrement(&ref_count_);
-}
-
-UINT SimpleThread::Release()
-{
-    UINT ref_count = InterlockedDecrement(&ref_count_);
-    if (ref_count == 0)
-    {
-        delete this;
-    }
-    return ref_count;
 }
 
 HRESULT SimpleThread::Run(LPTHREAD_START_ROUTINE ptr_thread_func,
@@ -96,9 +71,41 @@ UINT WINAPI SimpleThread::ThreadWrapper_(LPVOID ptr_this)
 
     CoUninitialize();
 
-    ptr_sthread->Release();
-
     return thread_result;
+}
+
+
+HRESULT RefCountedThread::Create(RefCountedThread** ptr_instance)
+{
+    *ptr_instance = new RefCountedThread();
+    if (!*ptr_instance)
+        return E_OUTOFMEMORY;
+    (*ptr_instance)->AddRef();
+    return S_OK;
+}
+
+RefCountedThread::RefCountedThread():
+  ref_count_(0)
+{
+}
+
+RefCountedThread::~RefCountedThread()
+{
+}
+
+UINT RefCountedThread::AddRef()
+{
+    return InterlockedIncrement(&ref_count_);
+}
+
+UINT RefCountedThread::Release()
+{
+    UINT ref_count = InterlockedDecrement(&ref_count_);
+    if (ref_count == 0)
+    {
+        delete this;
+    }
+    return ref_count;
 }
 
 } // WebmMfUtil namespace

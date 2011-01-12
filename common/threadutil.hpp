@@ -15,23 +15,29 @@ namespace WebmMfUtil
 class SimpleThread
 {
 public:
-    ~SimpleThread();
-    static HRESULT Create(SimpleThread** ptr_instance);
-    HRESULT Run(LPTHREAD_START_ROUTINE ptr_thread_func, LPVOID ptr_data);
-    UINT AddRef();
-    UINT Release();
-
-private:
     SimpleThread();
+    virtual ~SimpleThread();
+    HRESULT Run(LPTHREAD_START_ROUTINE ptr_thread_func, LPVOID ptr_data);
+protected:
     static UINT WINAPI ThreadWrapper_(LPVOID ptr_this);
-
-    UINT ref_count_;
     UINT thread_id_;
     UINT_PTR ptr_thread_;
     LPTHREAD_START_ROUTINE ptr_thread_func_;
     LPVOID ptr_user_thread_data_;
-
     DISALLOW_COPY_AND_ASSIGN(SimpleThread);
+};
+
+class RefCountedThread : public SimpleThread
+{
+public:
+    virtual ~RefCountedThread();
+    static HRESULT Create(RefCountedThread** ptr_instance);
+    UINT AddRef();
+    UINT Release();
+private:
+    RefCountedThread();
+    UINT ref_count_;
+    DISALLOW_COPY_AND_ASSIGN(RefCountedThread);
 };
 
 } // WebmMfUtil namespace
