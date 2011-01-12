@@ -277,18 +277,23 @@ HRESULT AudioPlaybackDevice::CreateAudioBuffer_(WORD fmt_tag, WORD bits)
 {
     if (WAVE_FORMAT_PCM != fmt_tag && WAVE_FORMAT_IEEE_FLOAT != fmt_tag)
     {
-        DBGLOG("unsupported format tag!");
+        DBGLOG("ERROR unsupported format tag");
         return E_INVALIDARG;
     }
     // Create our internal audio buffer based on input sample type
     // (we support only S16 and float samples)
     if (WAVE_FORMAT_PCM == fmt_tag && kS16BitsPerSample == bits)
     {
-        ptr_audio_buffer_.reset(new S16AudioBuffer());
+        ptr_audio_buffer_.reset(new (std::nothrow) S16AudioBuffer());
     }
     else if (WAVE_FORMAT_IEEE_FLOAT == fmt_tag && kF32BitsPerSample == bits)
     {
-        ptr_audio_buffer_.reset(new F32AudioBuffer());
+        ptr_audio_buffer_.reset(new (std::nothrow) F32AudioBuffer());
+    }
+    else
+    {
+        DBGLOG("ERROR unsupported sample size");
+        return E_INVALIDARG;
     }
     return ptr_audio_buffer_.get() ? S_OK : E_OUTOFMEMORY;
 }
