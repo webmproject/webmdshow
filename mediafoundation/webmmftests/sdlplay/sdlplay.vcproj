@@ -351,6 +351,14 @@
 			Name="common"
 			>
 			<File
+				RelativePath="..\..\..\common\clockable.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\clockable.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\common\comdllwrapper.cpp"
 				>
 			</File>
@@ -416,6 +424,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\common\mfutil.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\threadutil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\common\threadutil.hpp"
 				>
 			</File>
 			<File
