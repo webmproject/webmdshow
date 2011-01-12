@@ -12,17 +12,20 @@
 #include "hrtext.hpp"
 #include "iidstr.hpp"
 
+// Simple trace logging macro that expands to nothing in release mode builds.
+// Output is sent to the vs console.
 #define DBGLOG(X) \
 do { \
     wodbgstream wos; \
     wos << "["__FUNCTION__"] " << X << std::endl; \
 } while(0)
 
-// TODO(tomfinegan): replace the hard coded hr w/expansion of X
+// Extract error from the HRESULT, and output its hex and decimal values.
 #define \
-    HRLOG(X) L" {hr=" << X << "/" << std::hex << X << std::dec << \
-    L" (" << hrtext(X) << L")}"
+    HRLOG(X) L" {" << #X << L"=" << X << L"/" << std::hex << X << std::dec \
+    << L" (" << hrtext(X) << L")}"
 
+// Convert 100ns units to seconds
 #define REFTIMETOSECONDS(X) (double(X) / 10000000.0f)
 
 #else
@@ -30,16 +33,17 @@ do { \
 #define REFTIMETOSECONDS(X)
 #endif
 
-// keep the compiler quiet about do/while(0)'s (constant conditional) used in
-// log macros
+// Keep the compiler quiet about do/while(0)'s (constant conditional) used in
+// log macros.
 #pragma warning(disable:4127)
 
-// check the HRESULT for failure (<0), and log it if we're in debug mode
+// Check the HRESULT for failure (<0), and log it if we're in debug mode, and
+// format the failure text so that it is clickable in vs output window.
 #define CHK(X, Y) \
 do { \
     if (FAILED(X=(Y))) \
     { \
-        DBGLOG(#Y << HRLOG(X)); \
+        DBGLOG(__FILE__ << "(" << __LINE__ << ") : " << #Y << HRLOG(X)); \
     } \
 } while (0)
 
