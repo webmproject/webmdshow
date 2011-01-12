@@ -109,7 +109,10 @@ public:
                              UINT32 length_in_bytes);
 private:
     HRESULT CreateAudioBuffer_(WORD fmt_tag, WORD bits);
-    HRESULT CreateDirectSoundBuffer_(const WAVEFORMATEXTENSIBLE* const ptr_wfx);
+    HRESULT CreateDirectSoundBuffer_(
+        const WAVEFORMATEXTENSIBLE* const ptr_wfx);
+    HRESULT WriteDSoundBuffer_(const void* const ptr_samples,
+                               UINT32 length_in_bytes);
     std::auto_ptr<AudioBuffer> ptr_audio_buffer_;
     HWND hwnd_;
     IDirectSound8* ptr_dsound_;

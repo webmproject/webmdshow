@@ -267,10 +267,119 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
     return hr;
 }
 
+HRESULT AudioPlaybackDevice::WriteAudioBuffer(const void* const ptr_samples,
+                                              UINT32 length_in_bytes)
 {
+    if (!ptr_audio_buffer_.get() || !ptr_audio_buffer_->GetSampleSize())
+    {
+        DBGLOG("ERROR not configured");
+        return E_UNEXPECTED;
+    }
+    if (!ptr_samples || !length_in_bytes)
+    {
+        DBGLOG("ERROR bad arg(s)");
+        return E_INVALIDARG;
+    }
+    if (length_in_bytes < ptr_audio_buffer_->GetSampleSize())
+    {
+        DBGLOG("ERROR less than 1 sample in user input buffer");
+        return E_INVALIDARG;
+    }
+    Lock lock;
+    HRESULT hr = S_OK;
+    CHK(hr, lock.Seize(this));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    UINT32 samples_written = 0;
+    CHK(hr, ptr_audio_buffer_->Write(ptr_samples, length_in_bytes,
+                                     &samples_written));
+    if (SUCCEEDED(hr))
+    {
+        samples_buffered_ += samples_written;
+    }
+    return hr;
 }
 
+HRESULT AudioPlaybackDevice::WriteDSoundBuffer_(const void* const ptr_samples,
+                                                UINT32 length_in_bytes)
 {
+    if (!ptr_audio_buffer_.get() || !ptr_dsound_ || !ptr_dsound_buf_)
+    {
+        DBGLOG("ERROR not configured");
+        return E_UNEXPECTED;
+    }
+    if (!ptr_samples || !length_in_bytes)
+    {
+        DBGLOG("ERROR bad arg(s)");
+        return E_INVALIDARG;
+    }
+    if (length_in_bytes < ptr_audio_buffer_->GetSampleSize())
+    {
+        DBGLOG("ERROR less than 1 sample in buffer");
+        return E_INVALIDARG;
+    }
+    Lock lock;
+    HRESULT hr = S_OK;
+    CHK(hr, lock.Seize(this));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    // We own our internal lock, try to lock the dsound buffer...
+    DWORD write_offset = 0;
+    // DirectSound buffers are circular, so we might get two write pointers
+    // back.  When we do, we must write to both if Lock gives us two non-null
+    // pointers to satisfy our |length_in_bytes| requirement.
+    void* ptr_write1 = NULL;
+    void* ptr_write2 = NULL;
+    DWORD write_space1 = 0;
+    DWORD write_space2 = 0;
+    // Always lock the dsound buffer at the current write cursor position
+    DWORD lock_flags = DSBLOCK_FROMWRITECURSOR;
+    CHK(hr, ptr_dsound_buf_->Lock(write_offset, length_in_bytes, &ptr_write1,
+                                  &write_space1, &ptr_write2, &write_space2,
+                                  lock_flags));
+    if (FAILED(hr))
+    {
+        DBGLOG("ERROR Lock failed.");
+        return hr;
+    }
+    DWORD bytes_written1 = 0;
+    if (ptr_write1)
+    {
+        const UINT32 bytes_to_write =
+            write_space1 > length_in_bytes ? length_in_bytes : write_space1;
+        hr = ::memcpy_s(ptr_write1, write_space1, ptr_samples, bytes_to_write);
+        if (SUCCEEDED(hr))
+        {
+            bytes_written1 = bytes_to_write;
+        }
+    }
+    DWORD bytes_written2 = 0;
+    if (ptr_write2 && write_space2 < length_in_bytes)
+    {
+        UINT32 bytes_left = length_in_bytes - write_space1;
+        const BYTE* const ptr_bytes =
+            static_cast<const BYTE* const>(ptr_samples);
+        const void* const ptr_remaining_samples = ptr_bytes + write_space1;
+        hr = ::memcpy_s(ptr_write2, write_space2, ptr_remaining_samples,
+                        bytes_left);
+        if (SUCCEEDED(hr))
+        {
+            bytes_written2 = bytes_left;
+        }
+    }
+    CHK(hr, ptr_dsound_buf_->Unlock(ptr_write1, bytes_written1, ptr_write2,
+                                    bytes_written2));
+    // TODO(tomfinegan): disable this log message... it's going to be ultra
+    //                   spammy/distracting.
+    DBGLOG("length_in_bytes=" << length_in_bytes
+        << "bytes_written1=" << bytes_written1
+        << "bytes_written2=" << bytes_written2
+        << "total bytes written=" << bytes_written1 + bytes_written2);
+    return hr;
 }
 
 HRESULT AudioPlaybackDevice::CreateAudioBuffer_(WORD fmt_tag, WORD bits)
