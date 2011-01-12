@@ -52,8 +52,8 @@ AudioBufferTemplate<SampleType>::~AudioBufferTemplate()
 
 template <class SampleType>
 HRESULT AudioBufferTemplate<SampleType>::Read(UINT32 out_buf_size,
-                                      UINT32* ptr_bytes_written,
-                                      SampleType* ptr_samples)
+                                              UINT32* ptr_bytes_written,
+                                              SampleType* ptr_samples)
 {
     if (!out_buf_size || !ptr_bytes_written || !ptr_samples)
     {
@@ -80,7 +80,7 @@ HRESULT AudioBufferTemplate<SampleType>::Read(UINT32 out_buf_size,
 
 template <class SampleType>
 HRESULT AudioBufferTemplate<SampleType>::Write(SampleType* ptr_samples,
-                                       UINT32 length_in_bytes)
+                                               UINT32 length_in_bytes)
 {
     if (!ptr_samples || !length_in_bytes)
     {
@@ -240,7 +240,7 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
     if (!hwnd)
     {
         HWND desktop_hwnd = GetDesktopWindow();
-        // TODO(tomfinegan): using |desktop_hwnd| is wrong, we need our own
+        // TODO(tomfinegan): Using |desktop_hwnd| is wrong, we need our own
         //                   window here.  Using the desktop window means that
         //                   users are stuck hearing our audio when the desktop
         //                   window is active, and might not be able to hear
