@@ -12,6 +12,7 @@
 #include <cassert>
 #include <vector>
 
+#include "clockable.hpp"
 #include "debugutil.hpp"
 #include "webmdsound.hpp"
 
@@ -210,6 +211,22 @@ HRESULT S16AudioBuffer::Write(const void* const ptr_samples,
     return S_OK;
 }
 
+AudioPlaybackDevice::AudioPlaybackDevice():
+  dsound_buffer_size_(0),
+  hwnd_(NULL),
+  ptr_dsound_(NULL),
+  ptr_dsound_buf_(NULL),
+  samples_buffered_(0),
+  samples_played_(0)
+{
+}
+
+AudioPlaybackDevice::~AudioPlaybackDevice()
+{
+    safe_rel(ptr_dsound_);
+    safe_rel(ptr_dsound_buf_);
+}
+
 HRESULT AudioPlaybackDevice::Open(HWND hwnd,
                                   const WAVEFORMATEXTENSIBLE* const ptr_wfx)
 {
@@ -250,17 +267,10 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
     return hr;
 }
 
-AudioPlaybackDevice::AudioPlaybackDevice():
-  hwnd_(NULL),
-  ptr_dsound_(NULL),
-  ptr_dsound_buf_(NULL)
 {
 }
 
-AudioPlaybackDevice::~AudioPlaybackDevice()
 {
-    safe_rel(ptr_dsound_);
-    safe_rel(ptr_dsound_buf_);
 }
 
 HRESULT AudioPlaybackDevice::CreateAudioBuffer_(WORD fmt_tag, WORD bits)
@@ -306,11 +316,13 @@ HRESULT AudioPlaybackDevice::CreateDirectSoundBuffer_(
     aud_buffer_desc.dwSize = sizeof DSBUFFERDESC;
     aud_buffer_desc.guid3DAlgorithm = DS3DALG_DEFAULT;
     aud_buffer_desc.lpwfxFormat = (WAVEFORMATEX*)ptr_wfx;
-    aud_buffer_desc.dwBufferBytes = ptr_wfx->Format.nAvgBytesPerSec;
+    dsound_buffer_size_ = ptr_wfx->Format.nAvgBytesPerSec;
+    aud_buffer_desc.dwBufferBytes = dsound_buffer_size_;
     aud_buffer_desc.dwFlags = DSBCAPS_GETCURRENTPOSITION2;
-    // Obtain our IDirectSoundBuffer8 interface pointer, |ptr_dsound_buf_|, via
-    // creation of an IDirectSoundBuffer, and then use QI on the
-    // IDirectSoundBuffer instance to obtain the IDirectSoundBuffer8 instance.
+    // Obtain our IDirectSoundBuffer8 interface pointer, |ptr_dsound_buf_|, by:
+    // 1. Create an IDirectSoundBuffer.
+    // 2. Call QueryInterface on the IDirectSoundBuffer instance to obtain the
+    //    IDirectSoundBuffer8 instance.
     HRESULT hr;
     IDirectSoundBuffer* ptr_dsbuf;
     CHK(hr, ptr_dsound_->CreateSoundBuffer(&aud_buffer_desc, &ptr_dsbuf, NULL));

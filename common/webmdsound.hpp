@@ -105,6 +105,8 @@ public:
     AudioPlaybackDevice();
     ~AudioPlaybackDevice();
     HRESULT Open(HWND hwnd, const WAVEFORMATEXTENSIBLE* const ptr_wfx);
+    HRESULT WriteAudioBuffer(const void* const ptr_samples,
+                             UINT32 length_in_bytes);
 private:
     HRESULT CreateAudioBuffer_(WORD fmt_tag, WORD bits);
     HRESULT CreateDirectSoundBuffer_(const WAVEFORMATEXTENSIBLE* const ptr_wfx);
@@ -112,6 +114,9 @@ private:
     HWND hwnd_;
     IDirectSound8* ptr_dsound_;
     IDirectSoundBuffer8* ptr_dsound_buf_;
+    UINT32 dsound_buffer_size_;
+    UINT64 samples_buffered_;
+    UINT64 samples_played_;
     DISALLOW_COPY_AND_ASSIGN(AudioPlaybackDevice);
 };
 
