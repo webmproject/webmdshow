@@ -90,7 +90,8 @@ HRESULT AudioBufferTemplate<SampleType>::Write(SampleType* ptr_samples,
     return hr;
 }
 
-AudioBuffer::AudioBuffer()
+AudioBuffer::AudioBuffer():
+  sample_size_(0)
 {
     DBGLOG("ctor");
 }
@@ -100,9 +101,9 @@ AudioBuffer::~AudioBuffer()
     DBGLOG("dtor");
 }
 
-F32AudioBuffer::F32AudioBuffer():
-  sample_size_(sizeof(float))
+F32AudioBuffer::F32AudioBuffer()
 {
+    AudioBuffer::sample_size_ = kF32BytesPerSample;
     assert(kF32BytesPerSample == 4);
     DBGLOG("ctor");
 }
@@ -150,9 +151,9 @@ HRESULT F32AudioBuffer::Write(void* ptr_samples, UINT32 length_in_bytes)
     return S_OK;
 }
 
-S16AudioBuffer::S16AudioBuffer():
-  sample_size_(sizeof(float))
+S16AudioBuffer::S16AudioBuffer()
 {
+    AudioBuffer::sample_size_ = kS16BytesPerSample;
     assert(kS16BytesPerSample == 2);
     DBGLOG("ctor");
 }
