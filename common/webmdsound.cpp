@@ -139,15 +139,19 @@ HRESULT F32AudioBuffer::Read(UINT32 out_buf_size, UINT32* ptr_bytes_written,
     return hr;
 }
 
-HRESULT F32AudioBuffer::Write(void* ptr_samples, UINT32 length_in_bytes)
+HRESULT F32AudioBuffer::Write(const void* const ptr_samples,
+                              UINT32 length_in_bytes,
+                              UINT32* ptr_samples_written)
 {
-    if (!ptr_samples || !length_in_bytes)
+    if (!ptr_samples || !length_in_bytes || !ptr_samples_written)
     {
         return E_INVALIDARG;
     }
     UINT64 num_samples = BytesToSamples(length_in_bytes);
-    float* ptr_fp_samples = reinterpret_cast<float*>(ptr_samples);
+    typedef const float* const f32_read_ptr;
+    f32_read_ptr ptr_fp_samples = reinterpret_cast<f32_read_ptr>(ptr_samples);
     audio_buf_.insert(audio_buf_.end(), num_samples, *ptr_fp_samples);
+    *ptr_samples_written = static_cast<UINT32>(num_samples);
     return S_OK;
 }
 
@@ -190,15 +194,19 @@ HRESULT S16AudioBuffer::Read(UINT32 out_buf_size, UINT32* ptr_bytes_written,
     return hr;
 }
 
-HRESULT S16AudioBuffer::Write(void* ptr_samples, UINT32 length_in_bytes)
+HRESULT S16AudioBuffer::Write(const void* const ptr_samples,
+                              UINT32 length_in_bytes,
+                              UINT32* ptr_samples_written)
 {
-    if (!ptr_samples || !length_in_bytes)
+    if (!ptr_samples || !length_in_bytes || !ptr_samples_written)
     {
         return E_INVALIDARG;
     }
     UINT64 num_samples = BytesToSamples(length_in_bytes);
-    INT16* ptr_s16_samples = reinterpret_cast<INT16*>(ptr_samples);
+    typedef const INT16* const s16_read_ptr;
+    s16_read_ptr ptr_s16_samples = reinterpret_cast<s16_read_ptr>(ptr_samples);
     audio_buf_.insert(audio_buf_.end(), num_samples, *ptr_s16_samples);
+    *ptr_samples_written = (UINT32)num_samples;
     return S_OK;
 }
 

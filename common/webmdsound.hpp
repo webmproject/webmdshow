@@ -50,7 +50,9 @@ public:
     };
     virtual HRESULT Read(UINT32 max_bytes, UINT32* ptr_bytes_written,
                          void* ptr_out_data) = 0;
-    virtual HRESULT Write(void* ptr_data, UINT32 length_in_bytes) = 0;
+    virtual HRESULT Write(const void* const ptr_data,
+                          UINT32 length_in_bytes,
+                          UINT32* ptr_samples_written) = 0;
 protected:
     UINT64 BytesToSamples(UINT64 num_bytes)
     {
@@ -72,8 +74,9 @@ public:
     virtual ~F32AudioBuffer();
     virtual HRESULT Read(UINT32 max_bytes, UINT32* ptr_bytes_written,
                          void* ptr_out_data);
-    virtual HRESULT Write(void* ptr_data, UINT32 length_in_bytes);
     virtual HRESULT Write(const void* const ptr_data,
+                          UINT32 length_in_bytes,
+                          UINT32* ptr_samples_written);
 private:
     typedef std::vector<float> SampleBuffer;
     SampleBuffer audio_buf_;
@@ -87,7 +90,9 @@ public:
     virtual ~S16AudioBuffer();
     virtual HRESULT Read(UINT32 max_bytes, UINT32* ptr_bytes_written,
                          void* ptr_out_data);
-    virtual HRESULT Write(void* ptr_data, UINT32 length_in_bytes);
+    virtual HRESULT Write(const void* const ptr_data,
+                          UINT32 length_in_bytes,
+                          UINT32* ptr_samples_written);
 private:
     typedef std::vector<INT16> SampleBuffer;
     SampleBuffer audio_buf_;
