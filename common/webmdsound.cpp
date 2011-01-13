@@ -14,6 +14,8 @@
 
 #include "clockable.hpp"
 #include "debugutil.hpp"
+#include "eventutil.hpp"
+#include "threadutil.hpp"
 #include "webmdsound.hpp"
 
 namespace WebmDirectX
@@ -216,8 +218,11 @@ AudioPlaybackDevice::AudioPlaybackDevice():
   hwnd_(NULL),
   ptr_dsound_(NULL),
   ptr_dsound_buf_(NULL),
+  ptr_dsound_thread_event_(NULL),
+  ptr_dsound_thread_(NULL),
   samples_buffered_(0),
-  samples_played_(0)
+  samples_played_(0),
+  state_(STATE_STOPPED)
 {
 }
 
@@ -247,7 +252,6 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
         //                   anything when our own window is active.
         hwnd_ = desktop_hwnd;
     }
-
     CHK(hr, ptr_dsound_->SetCooperativeLevel(hwnd_, DSSCL_PRIORITY));
     if (FAILED(hr))
     {
@@ -264,6 +268,42 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
     {
         return hr;
     }
+    return hr;
+}
+
+HRESULT AudioPlaybackDevice::Start()
+{
+    if (ptr_dsound_thread_.get() || ptr_dsound_thread_event_.get() ||
+        state_ != STATE_STOPPED)
+    {
+        DBGLOG("ERROR Already started.");
+        return E_UNEXPECTED;
+    }
+    // Create the event we'll use to control |DSoundWriterThread_|
+    using WebmMfUtil::EventWaiter;
+    ptr_dsound_thread_event_.reset(new (std::nothrow) EventWaiter());
+    if (!ptr_dsound_thread_event_.get())
+    {
+        DBGLOG("ERROR no memory for thread event.");
+        return E_OUTOFMEMORY;
+    }
+    HRESULT hr;
+    CHK(hr, ptr_dsound_thread_event_->Create());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    // Create the thread, |ptr_dsound_thread_|
+    using WebmMfUtil::SimpleThread;
+    ptr_dsound_thread_.reset(new (std::nothrow) WebmMfUtil::SimpleThread());
+    if (!ptr_dsound_thread_.get())
+    {
+        DBGLOG("ERROR no memory for thread.");
+        return E_OUTOFMEMORY;
+    }
+    // Start the thread
+    CHK(hr, ptr_dsound_thread_->Run(DSoundWriterThread_,
+                                    reinterpret_cast<void*>(this)));
     return hr;
 }
 
@@ -380,6 +420,37 @@ HRESULT AudioPlaybackDevice::WriteDSoundBuffer_(const void* const ptr_samples,
         << "bytes_written2=" << bytes_written2
         << "total bytes written=" << bytes_written1 + bytes_written2);
     return hr;
+}
+
+DWORD AudioPlaybackDevice::DSoundWriterThread_(void* ptr_this)
+{
+    if (!ptr_this)
+    {
+        DBGLOG("ERROR NULL thread data pointer");
+        return EXIT_FAILURE;
+    }
+    AudioPlaybackDevice* ptr_apd =
+        reinterpret_cast<AudioPlaybackDevice*>(ptr_this);
+    WebmMfUtil::EventWaiter* apd_event =
+        ptr_apd->ptr_dsound_thread_event_.get();
+    HRESULT hr;
+    for (;;)
+    {
+        if (apd_event->ZeroWait() == S_OK)
+        {
+            // received a message, at present that means it's time to stop
+            CHK(hr, apd_event->Set());
+            break;
+        }
+        Lock lock;
+        CHK(hr, lock.Seize(ptr_apd));
+        if (SUCCEEDED(hr))
+        {
+            // move samples from |ptr_audio_buffer_| to |ptr_dsound_buf_|
+        }
+        Sleep(0);
+    }
+    return EXIT_SUCCESS;
 }
 
 HRESULT AudioPlaybackDevice::CreateAudioBuffer_(WORD fmt_tag, WORD bits)

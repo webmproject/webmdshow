@@ -14,6 +14,13 @@
 namespace WebmDirectX
 {
 
+enum AudioPlaybackState
+{
+    STATE_STOPPED = 0,
+    STATE_PLAY = 1,
+    STATE_PAUSE = 2
+};
+
 // Note: AudioBufferTemplate is not in use!!
 template <class SampleType>
 class AudioBufferTemplate
@@ -105,14 +112,17 @@ public:
     AudioPlaybackDevice();
     ~AudioPlaybackDevice();
     HRESULT Open(HWND hwnd, const WAVEFORMATEXTENSIBLE* const ptr_wfx);
+    HRESULT Start();
     HRESULT WriteAudioBuffer(const void* const ptr_samples,
                              UINT32 length_in_bytes);
 private:
+    static DWORD DSoundWriterThread_(void* ptr_this);
     HRESULT CreateAudioBuffer_(WORD fmt_tag, WORD bits);
     HRESULT CreateDirectSoundBuffer_(
         const WAVEFORMATEXTENSIBLE* const ptr_wfx);
     HRESULT WriteDSoundBuffer_(const void* const ptr_samples,
                                UINT32 length_in_bytes);
+    AudioPlaybackState state_;
     std::auto_ptr<AudioBuffer> ptr_audio_buffer_;
     HWND hwnd_;
     IDirectSound8* ptr_dsound_;
@@ -120,6 +130,8 @@ private:
     UINT32 dsound_buffer_size_;
     UINT64 samples_buffered_;
     UINT64 samples_played_;
+    std::auto_ptr<WebmMfUtil::SimpleThread> ptr_dsound_thread_;
+    std::auto_ptr<WebmMfUtil::EventWaiter> ptr_dsound_thread_event_;
     DISALLOW_COPY_AND_ASSIGN(AudioPlaybackDevice);
 };
 

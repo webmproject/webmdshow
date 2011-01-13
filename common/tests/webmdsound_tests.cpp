@@ -16,13 +16,16 @@
 
 #include <cassert>
 
+#include "clockable.hpp"
 #include "debugutil.hpp"
+#include "eventutil.hpp"
 #include "gtest/gtest.h"
+#include "threadutil.hpp"
 #include "webmdsound.hpp"
 
 extern wchar_t* g_test_input_file;
 
-using WebmDirectSound::AudioPlaybackDevice;
+using WebmDirectX::AudioPlaybackDevice;
 
 void init_wfextensible(WORD format_tag, WORD channels, DWORD sample_rate,
                        WORD bits_per_sample, WORD reserved, DWORD channel_mask,
