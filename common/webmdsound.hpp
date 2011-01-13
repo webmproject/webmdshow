@@ -51,6 +51,8 @@ class AudioBuffer
 public:
     AudioBuffer();
     virtual ~AudioBuffer();
+    virtual HRESULT Available(UINT32* ptr_num_samples, 
+                              UINT32* ptr_num_bytes) = 0;
     UINT32 GetSampleSize()
     {
         return sample_size_;
@@ -79,6 +81,24 @@ class F32AudioBuffer : public AudioBuffer
 public:
     F32AudioBuffer();
     virtual ~F32AudioBuffer();
+    virtual HRESULT Available(UINT32* ptr_num_samples, 
+                              UINT32* ptr_num_bytes)
+    {
+        if (!ptr_num_samples || !ptr_num_bytes)
+        {
+            return E_INVALIDARG;
+        }
+        *ptr_num_samples = (UINT32)audio_buf_.size();
+        if (*ptr_num_samples)
+        {
+            *ptr_num_bytes = (UINT32)SamplesToBytes(*ptr_num_samples);
+        }
+        else
+        {
+            *ptr_num_bytes = 0;
+        }
+        return S_OK;
+    };
     virtual HRESULT Read(UINT32 max_bytes, UINT32* ptr_bytes_written,
                          void* ptr_out_data);
     virtual HRESULT Write(const void* const ptr_data,
@@ -95,6 +115,24 @@ class S16AudioBuffer : public AudioBuffer
 public:
     S16AudioBuffer();
     virtual ~S16AudioBuffer();
+    virtual HRESULT Available(UINT32* ptr_num_samples, 
+                              UINT32* ptr_num_bytes)
+    {
+        if (!ptr_num_samples || !ptr_num_bytes)
+        {
+            return E_INVALIDARG;
+        }
+        *ptr_num_samples = (UINT32)audio_buf_.size();
+        if (*ptr_num_samples)
+        {
+            *ptr_num_bytes = (UINT32)SamplesToBytes(*ptr_num_samples);
+        }
+        else
+        {
+            *ptr_num_bytes = 0;
+        }
+        return S_OK;
+    };
     virtual HRESULT Read(UINT32 max_bytes, UINT32* ptr_bytes_written,
                          void* ptr_out_data);
     virtual HRESULT Write(const void* const ptr_data,
@@ -113,6 +151,7 @@ public:
     ~AudioPlaybackDevice();
     HRESULT Open(HWND hwnd, const WAVEFORMATEXTENSIBLE* const ptr_wfx);
     HRESULT Start();
+    HRESULT Stop();
     HRESULT WriteAudioBuffer(const void* const ptr_samples,
                              UINT32 length_in_bytes);
 private:
@@ -120,10 +159,9 @@ private:
     HRESULT CreateAudioBuffer_(WORD fmt_tag, WORD bits);
     HRESULT CreateDirectSoundBuffer_(
         const WAVEFORMATEXTENSIBLE* const ptr_wfx);
-    HRESULT WriteDSoundBuffer_(const void* const ptr_samples,
-                               UINT32 length_in_bytes);
+    HRESULT WriteDSoundBuffer_();
     AudioPlaybackState state_;
-    std::auto_ptr<AudioBuffer> ptr_audio_buffer_;
+    std::auto_ptr<AudioBuffer> ptr_audio_buf_;
     HWND hwnd_;
     IDirectSound8* ptr_dsound_;
     IDirectSoundBuffer8* ptr_dsound_buf_;

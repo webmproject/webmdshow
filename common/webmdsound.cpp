@@ -273,8 +273,7 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
 
 HRESULT AudioPlaybackDevice::Start()
 {
-    if (ptr_dsound_thread_.get() || ptr_dsound_thread_event_.get() ||
-        state_ != STATE_STOPPED)
+    if (state_ != STATE_STOPPED)
     {
         DBGLOG("ERROR Already started.");
         return E_UNEXPECTED;
@@ -307,10 +306,34 @@ HRESULT AudioPlaybackDevice::Start()
     return hr;
 }
 
+HRESULT AudioPlaybackDevice::Stop()
+{
+    if (state_ == STATE_STOPPED)
+    {
+        DBGLOG("ERROR Already stopped.");
+        return E_UNEXPECTED;
+    }
+    HRESULT hr;
+    // tell the |DSoundWriterThread_| to stop
+    CHK(hr, ptr_dsound_thread_event_->Set());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    // wait for |DSoundWriterThread_| to signal
+    CHK(hr, ptr_dsound_thread_event_->Wait());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    state_ = STATE_STOPPED;
+    return hr;
+}
+
 HRESULT AudioPlaybackDevice::WriteAudioBuffer(const void* const ptr_samples,
                                               UINT32 length_in_bytes)
 {
-    if (!ptr_audio_buffer_.get() || !ptr_audio_buffer_->GetSampleSize())
+    if (!ptr_audio_buf_.get() || !ptr_audio_buf_->GetSampleSize())
     {
         DBGLOG("ERROR not configured");
         return E_UNEXPECTED;
@@ -320,7 +343,7 @@ HRESULT AudioPlaybackDevice::WriteAudioBuffer(const void* const ptr_samples,
         DBGLOG("ERROR bad arg(s)");
         return E_INVALIDARG;
     }
-    if (length_in_bytes < ptr_audio_buffer_->GetSampleSize())
+    if (length_in_bytes < ptr_audio_buf_->GetSampleSize())
     {
         DBGLOG("ERROR less than 1 sample in user input buffer");
         return E_INVALIDARG;
@@ -333,8 +356,8 @@ HRESULT AudioPlaybackDevice::WriteAudioBuffer(const void* const ptr_samples,
         return hr;
     }
     UINT32 samples_written = 0;
-    CHK(hr, ptr_audio_buffer_->Write(ptr_samples, length_in_bytes,
-                                     &samples_written));
+    CHK(hr, ptr_audio_buf_->Write(ptr_samples, length_in_bytes,
+                                  &samples_written));
     if (SUCCEEDED(hr))
     {
         samples_buffered_ += samples_written;
@@ -342,23 +365,12 @@ HRESULT AudioPlaybackDevice::WriteAudioBuffer(const void* const ptr_samples,
     return hr;
 }
 
-HRESULT AudioPlaybackDevice::WriteDSoundBuffer_(const void* const ptr_samples,
-                                                UINT32 length_in_bytes)
+HRESULT AudioPlaybackDevice::WriteDSoundBuffer_()
 {
-    if (!ptr_audio_buffer_.get() || !ptr_dsound_ || !ptr_dsound_buf_)
+    if (!ptr_audio_buf_.get() || !ptr_dsound_buf_)
     {
         DBGLOG("ERROR not configured");
         return E_UNEXPECTED;
-    }
-    if (!ptr_samples || !length_in_bytes)
-    {
-        DBGLOG("ERROR bad arg(s)");
-        return E_INVALIDARG;
-    }
-    if (length_in_bytes < ptr_audio_buffer_->GetSampleSize())
-    {
-        DBGLOG("ERROR less than 1 sample in buffer");
-        return E_INVALIDARG;
     }
     Lock lock;
     HRESULT hr = S_OK;
@@ -367,8 +379,25 @@ HRESULT AudioPlaybackDevice::WriteDSoundBuffer_(const void* const ptr_samples,
     {
         return hr;
     }
+    UINT32 bytes_available = 0;
+    UINT32 samples_available = 0;
+    CHK(hr, ptr_audio_buf_->Available(&samples_available, &bytes_available));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (!samples_available)
+    {
+        DBGLOG("no samples in buffer");
+        return S_FALSE;
+    }
+    // adjust |bytes_available| to ensure we avoid trying to lock a portion
+    // of |ptr_dsound_buf_| that's larger than the entire buffer
+    bytes_available = bytes_available > dsound_buffer_size_ ?
+        dsound_buffer_size_ : bytes_available;
     // We own our internal lock, try to lock the dsound buffer...
-    DWORD write_offset = 0;
+    DWORD write_offset = 0; // ignored by dsound because we set the
+                            // DSBLOCK_FROMWRITECURSOR flag
     // DirectSound buffers are circular, so we might get two write pointers
     // back.  When we do, we must write to both if Lock gives us two non-null
     // pointers to satisfy our |length_in_bytes| requirement.
@@ -378,7 +407,7 @@ HRESULT AudioPlaybackDevice::WriteDSoundBuffer_(const void* const ptr_samples,
     DWORD write_space2 = 0;
     // Always lock the dsound buffer at the current write cursor position
     DWORD lock_flags = DSBLOCK_FROMWRITECURSOR;
-    CHK(hr, ptr_dsound_buf_->Lock(write_offset, length_in_bytes, &ptr_write1,
+    CHK(hr, ptr_dsound_buf_->Lock(write_offset, bytes_available, &ptr_write1,
                                   &write_space1, &ptr_write2, &write_space2,
                                   lock_flags));
     if (FAILED(hr))
@@ -386,37 +415,40 @@ HRESULT AudioPlaybackDevice::WriteDSoundBuffer_(const void* const ptr_samples,
         DBGLOG("ERROR Lock failed.");
         return hr;
     }
-    DWORD bytes_written1 = 0;
+    UINT32 bytes_written1 = 0;
     if (ptr_write1)
     {
         const UINT32 bytes_to_write =
-            write_space1 > length_in_bytes ? length_in_bytes : write_space1;
-        hr = ::memcpy_s(ptr_write1, write_space1, ptr_samples, bytes_to_write);
-        if (SUCCEEDED(hr))
-        {
-            bytes_written1 = bytes_to_write;
-        }
+            write_space1 > bytes_available ? bytes_available : write_space1;
+        //hr = ::memcpy_s(ptr_write1, write_space1, ptr_samples, bytes_to_write);
+        //if (SUCCEEDED(hr))
+        //{
+        //    bytes_written1 = bytes_to_write;
+        //}
+        CHK(hr, ptr_audio_buf_->Read(bytes_to_write, &bytes_written1,
+                                     ptr_write1));
     }
-    DWORD bytes_written2 = 0;
-    if (ptr_write2 && write_space2 < length_in_bytes)
+    UINT32 bytes_written2 = 0;
+    UINT32 bytes_left = bytes_available - write_space1;
+    if (ptr_write2 && bytes_available > write_space1 && bytes_left)
     {
-        UINT32 bytes_left = length_in_bytes - write_space1;
-        const BYTE* const ptr_bytes =
-            static_cast<const BYTE* const>(ptr_samples);
-        const void* const ptr_remaining_samples = ptr_bytes + write_space1;
-        hr = ::memcpy_s(ptr_write2, write_space2, ptr_remaining_samples,
-                        bytes_left);
-        if (SUCCEEDED(hr))
-        {
-            bytes_written2 = bytes_left;
-        }
+        //const BYTE* const ptr_bytes =
+        //    static_cast<const BYTE* const>(ptr_samples);
+        //const void* const ptr_remaining_samples = ptr_bytes + write_space1;
+        //hr = ::memcpy_s(ptr_write2, write_space2, ptr_remaining_samples,
+        //                bytes_left);
+        //if (SUCCEEDED(hr))
+        //{
+        //    bytes_written2 = bytes_left;
+        //}
+        CHK(hr, ptr_audio_buf_->Read(write_space2, &bytes_written2,
+                                     ptr_write2));
     }
     CHK(hr, ptr_dsound_buf_->Unlock(ptr_write1, bytes_written1, ptr_write2,
                                     bytes_written2));
     // TODO(tomfinegan): disable this log message... it's going to be ultra
     //                   spammy/distracting.
-    DBGLOG("length_in_bytes=" << length_in_bytes
-        << "bytes_written1=" << bytes_written1
+    DBGLOG("bytes_written1=" << bytes_written1
         << "bytes_written2=" << bytes_written2
         << "total bytes written=" << bytes_written1 + bytes_written2);
     return hr;
@@ -442,12 +474,10 @@ DWORD AudioPlaybackDevice::DSoundWriterThread_(void* ptr_this)
             CHK(hr, apd_event->Set());
             break;
         }
-        Lock lock;
-        CHK(hr, lock.Seize(ptr_apd));
-        if (SUCCEEDED(hr))
-        {
-            // move samples from |ptr_audio_buffer_| to |ptr_dsound_buf_|
-        }
+        // we intentionally ignore the return value from |WriteDsoundBuffer_|,
+        // though we log it for sanity's sake in debug mode
+        CHK(hr, ptr_apd->WriteDSoundBuffer_());
+        // and now we yield
         Sleep(0);
     }
     return EXIT_SUCCESS;
@@ -464,18 +494,18 @@ HRESULT AudioPlaybackDevice::CreateAudioBuffer_(WORD fmt_tag, WORD bits)
     // (we support only S16 and float samples)
     if (WAVE_FORMAT_PCM == fmt_tag && kS16BitsPerSample == bits)
     {
-        ptr_audio_buffer_.reset(new (std::nothrow) S16AudioBuffer());
+        ptr_audio_buf_.reset(new (std::nothrow) S16AudioBuffer());
     }
     else if (WAVE_FORMAT_IEEE_FLOAT == fmt_tag && kF32BitsPerSample == bits)
     {
-        ptr_audio_buffer_.reset(new (std::nothrow) F32AudioBuffer());
+        ptr_audio_buf_.reset(new (std::nothrow) F32AudioBuffer());
     }
     else
     {
         DBGLOG("ERROR unsupported sample size");
         return E_INVALIDARG;
     }
-    return ptr_audio_buffer_.get() ? S_OK : E_OUTOFMEMORY;
+    return ptr_audio_buf_.get() ? S_OK : E_OUTOFMEMORY;
 }
 
 HRESULT AudioPlaybackDevice::CreateDirectSoundBuffer_(
