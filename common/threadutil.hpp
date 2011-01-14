@@ -9,6 +9,8 @@
 #ifndef __WEBMDSHOW_COMMON_THREADUTIL_HPP__
 #define __WEBMDSHOW_COMMON_THREADUTIL_HPP__
 
+#include "debugutil.hpp"
+
 namespace WebmMfUtil
 {
 
@@ -17,13 +19,15 @@ class SimpleThread
 public:
     SimpleThread();
     virtual ~SimpleThread();
+    bool Running();
     HRESULT Run(LPTHREAD_START_ROUTINE ptr_thread_func, LPVOID ptr_data);
 protected:
     static UINT WINAPI ThreadWrapper_(LPVOID ptr_this);
     UINT thread_id_;
-    UINT_PTR ptr_thread_;
+    UINT_PTR thread_hndl_;
     LPTHREAD_START_ROUTINE ptr_thread_func_;
     LPVOID ptr_user_thread_data_;
+private:
     DISALLOW_COPY_AND_ASSIGN(SimpleThread);
 };
 

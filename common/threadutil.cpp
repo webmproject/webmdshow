@@ -11,6 +11,7 @@
 #include <process.h>
 
 #include "debugutil.hpp"
+#include "eventutil.hpp"
 #include "threadutil.hpp"
 
 namespace WebmMfUtil
@@ -19,13 +20,27 @@ namespace WebmMfUtil
 SimpleThread::SimpleThread():
   ptr_user_thread_data_(NULL),
   ptr_thread_func_(NULL),
-  ptr_thread_(0),
+  thread_hndl_(0),
   thread_id_(0)
 {
 }
 
 SimpleThread::~SimpleThread()
 {
+}
+
+bool SimpleThread::Running()
+{
+    HANDLE thread_handle = reinterpret_cast<HANDLE>(thread_hndl_);
+    if (thread_handle && INVALID_HANDLE_VALUE != thread_handle)
+    {
+        HRESULT hr = zero_cowait(thread_handle);
+        if (SUCCEEDED(hr))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 HRESULT SimpleThread::Run(LPTHREAD_START_ROUTINE ptr_thread_func,
@@ -39,11 +54,11 @@ HRESULT SimpleThread::Run(LPTHREAD_START_ROUTINE ptr_thread_func,
 
     HRESULT hr = E_FAIL;
 
-    ptr_thread_ = _beginthreadex(NULL, 0, ThreadWrapper_,
-                                 reinterpret_cast<LPVOID>(this), 0,
-                                 &thread_id_);
+    thread_hndl_ = _beginthreadex(NULL, 0, ThreadWrapper_,
+                                  reinterpret_cast<LPVOID>(this), 0,
+                                  &thread_id_);
 
-    if (0 != ptr_thread_ && -1 != ptr_thread_)
+    if (0 != thread_hndl_ && -1 != thread_hndl_)
         hr = S_OK;
 
     return hr;
