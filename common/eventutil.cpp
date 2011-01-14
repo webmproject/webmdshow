@@ -43,31 +43,12 @@ HRESULT EventWaiter::Create()
 
 HRESULT EventWaiter::Wait()
 {
-    DWORD wr;
-    HRESULT hr = CoWaitForMultipleHandles(COWAIT_WAITALL, INFINITE, 1,
-                                          &event_handle_, &wr);
-    if (wr != WAIT_OBJECT_0 || FAILED(hr))
-    {
-        DBGLOG(L"event wait failed" << hr);
-        hr = E_FAIL;
-    }
-    return hr;
+    return infinite_cowait(event_handle_);
 }
 
 HRESULT EventWaiter::ZeroWait()
 {
-    DWORD wr;
-    HRESULT hr = CoWaitForMultipleHandles(COWAIT_WAITALL, 0, 1, 
-                                          &event_handle_, &wr);
-    if (SUCCEEDED(hr) && WAIT_OBJECT_0 == wr)
-    {
-        hr = S_OK;
-    }
-    else
-    {
-        hr = S_FALSE;
-    }
-    return hr;
+    return zero_cowait(event_handle_);
 }
 
 HRESULT EventWaiter::MessageWait()
@@ -97,6 +78,34 @@ HRESULT EventWaiter::Set()
 {
     HRESULT hr = S_OK;
     if (!SetEvent(event_handle_))
+    {
+        hr = E_FAIL;
+    }
+    return hr;
+}
+
+HRESULT infinite_cowait(HANDLE hndl)
+{
+    DWORD wr;
+    HRESULT hr = CoWaitForMultipleHandles(COWAIT_WAITALL, INFINITE, 1,
+                                          &hndl, &wr);
+    if (wr != WAIT_OBJECT_0 || FAILED(hr))
+    {
+        DBGLOG(L"event wait failed" << hr);
+        hr = E_FAIL;
+    }
+    return hr;
+}
+
+HRESULT zero_cowait(HANDLE hndl)
+{
+    DWORD wr;
+    HRESULT hr = CoWaitForMultipleHandles(COWAIT_WAITALL, 0, 1, &hndl, &wr);
+    if (SUCCEEDED(hr) && WAIT_OBJECT_0 == wr)
+    {
+        hr = S_OK;
+    }
+    else
     {
         hr = E_FAIL;
     }

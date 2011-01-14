@@ -27,6 +27,9 @@ private:
     DISALLOW_COPY_AND_ASSIGN(EventWaiter);
 };
 
+HRESULT infinite_cowait(HANDLE hndl);
+HRESULT zero_cowait(HANDLE hndl);
+
 } // WebmMfUtil namespace
 
 #endif // __WEBMDSHOW_COMMON_EVENTUTIL_HPP__
