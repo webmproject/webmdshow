@@ -56,11 +56,8 @@ HRESULT CreateHandler(
 WebmMfByteStreamHandler::WebmMfByteStreamHandler(
     IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
-    //m_pByteStream(0),
     m_cRef(1),
     m_bCancel(FALSE),
-    //m_pResult(0),
-    m_pSource(0),
     m_async_load(this)
 {
 #ifdef _DEBUG
@@ -86,24 +83,6 @@ WebmMfByteStreamHandler::~WebmMfByteStreamHandler()
        << (const void*)this
        << endl;
 #endif
-
-    //if (m_pResult)  //weird
-    //{
-    //    m_pResult->Release();
-    //    m_pResult = 0;
-    //}
-
-    //if (m_pByteStream)  //weird
-    //{
-    //    m_pByteStream->Release();
-    //    m_pByteStream = 0;
-    //}
-    
-    if (m_pSource)  //weird
-    {
-        m_pSource->Release();
-        m_pSource = 0;
-    }
 
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
@@ -204,7 +183,7 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     if ((dwFlags & MF_RESOLUTION_MEDIASOURCE) == 0)
         return E_INVALIDARG;
         
-    if (m_pSource)  //assume one-at-a-time creation
+    if (m_pResult)  //assume one-at-a-time creation
         return MF_E_UNEXPECTED;
         
     DWORD dw;
@@ -253,11 +232,11 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     if (FAILED(hr))
         return hr;
         
-    const IMFMediaSourcePtr pSource_(pSource, false);
+    const IMFMediaSourcePtr pUnk(pSource, false);
     
     IMFAsyncResultPtr pResult;
     
-    hr = MFCreateAsyncResult(0, pCallback, pState, &pResult);
+    hr = MFCreateAsyncResult(pUnk, pCallback, pState, &pResult);
 
     if (FAILED(hr))
         return hr;
@@ -267,9 +246,8 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     if (FAILED(hr))
         return hr;
         
-    m_pSource = pSource_;
-    m_pResult = pResult;
-    
+    m_pResult = pResult;    
+
     m_bCancel = FALSE;    
     m_pByteStream = pByteStream;
     
@@ -314,12 +292,11 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
     if (FAILED(hr))  //for example, cancelled
         return hr;
 
-#if 0
     IUnknownPtr pUnk;
 
     hr = pResult->GetObject(&pUnk);
 
-    if (FAILED(hr))
+    if (FAILED(hr))  //shouldn't happen
         return hr;
 
     assert(pUnk);
@@ -328,12 +305,6 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
 
     if (FAILED(hr))
         return hr;
-#else
-    if (!m_pSource)  //should never happen
-        return MF_E_UNEXPECTED;
-        
-    pObject = m_pSource.Detach();
-#endif
         
     type = MF_OBJECT_MEDIASOURCE;
 
@@ -377,9 +348,7 @@ HRESULT WebmMfByteStreamHandler::GetMaxNumberOfBytesRequiredForResolution(
     if (pcb == 0)
         return E_POINTER;
 
-    QWORD& cb = *pcb;
-
-    cb = 1024;  //TODO: ask the webm parser for this value
+    *pcb = 1024;  //TODO: ask the webm parser for this value
 
     return S_OK;
 }
@@ -461,34 +430,38 @@ HRESULT WebmMfByteStreamHandler::CAsyncLoad::Invoke(IMFAsyncResult* pResult)
 }
 
 
-HRESULT WebmMfByteStreamHandler::EndLoad(IMFAsyncResult* pResult)
+HRESULT WebmMfByteStreamHandler::EndLoad(IMFAsyncResult* pLoadResult)
 {
     if (!m_pResult)  //should never happen
         return MF_E_UNEXPECTED;
 
-    HRESULT hr;
+    HRESULT hrLoad;
     
     if (m_bCancel)
-        hr = MF_E_OPERATION_CANCELLED;
-    
-    else if (m_pSource == 0)  //should never happen
-        hr = MF_E_UNEXPECTED;
-
+        hrLoad = MF_E_OPERATION_CANCELLED;    
     else
-    {
-        IMFMediaSource* const pSource_ = m_pSource;
-        WebmMfSource* const pSource = static_cast<WebmMfSource*>(pSource_);
-        
-        hr = pSource->EndLoad(pResult);
+        hrLoad = pLoadResult->GetStatus();
+    
+    HRESULT hr = m_pResult->SetStatus(hrLoad);
+    assert(SUCCEEDED(hr));
+
+    if (FAILED(hrLoad))
+    {    
+        IUnknownPtr pUnk;
+
+        hr = m_pResult->GetObject(&pUnk);
+
+        if (SUCCEEDED(hr))
+        {
+            const IMFMediaSourcePtr pSource(pUnk);
+            assert(pSource);
+            
+            hr = pSource->Shutdown();
+        }
     }
-        
-    const HRESULT hrSetStatus = m_pResult->SetStatus(hr);
-    hrSetStatus;
-    assert(SUCCEEDED(hrSetStatus));
     
     hr = MFInvokeCallback(m_pResult);
-    
-    //m_pSource = 0;
+
     m_pByteStream = 0;
     m_pResult = 0;
 

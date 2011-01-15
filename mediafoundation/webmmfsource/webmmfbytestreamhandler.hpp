@@ -60,7 +60,7 @@ private:
     
     IClassFactory* const m_pClassFactory;
     LONG m_cRef;
-    IMFMediaSourcePtr m_pSource;
+    //IMFMediaSourcePtr m_pSource;
     IMFAsyncResultPtr m_pResult;
     BOOL m_bCancel;
     IMFByteStreamPtr m_pByteStream;

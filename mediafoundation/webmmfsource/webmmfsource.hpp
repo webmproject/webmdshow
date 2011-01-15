@@ -96,7 +96,7 @@ public:
     //local methods
 
     HRESULT BeginLoad(IMFAsyncCallback*);
-    HRESULT EndLoad(IMFAsyncResult*);
+    //HRESULT EndLoad(IMFAsyncResult*);
 
     HRESULT RequestSample(WebmMfStream*, IUnknown*);
 

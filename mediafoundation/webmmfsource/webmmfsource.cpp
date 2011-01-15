@@ -519,6 +519,7 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
 }
 
 
+#if 0
 HRESULT WebmMfSource::EndLoad(IMFAsyncResult* pLoadResult)
 {
     if (pLoadResult == 0)
@@ -531,6 +532,7 @@ HRESULT WebmMfSource::EndLoad(IMFAsyncResult* pLoadResult)
         
     return hrLoad;
 }
+#endif
 
 
 WebmMfSource::thread_state_t
@@ -546,9 +548,9 @@ WebmMfSource::LoadComplete(HRESULT hrLoad)
         
         m_pLoadResult = 0;
     }
-    
+
     if (FAILED(hrLoad))
-        return 0;  //doesn't really matter
+        return &WebmMfSource::StateQuit;
         
     return &WebmMfSource::StateRequestSample;
 }
