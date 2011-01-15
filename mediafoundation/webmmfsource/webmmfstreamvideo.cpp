@@ -264,6 +264,8 @@ HRESULT WebmMfStreamVideo::Seek(
     const SeekInfo& info,
     bool bStart)
 {
+    assert(m_pLocked == 0);
+
     m_bDiscontinuity = true;
     m_curr = info;
     m_pNextBlock = 0;  //means "we don't know yet"
@@ -274,20 +276,6 @@ HRESULT WebmMfStreamVideo::Seek(
     assert(reftime >= 0);
 
     const mkvparser::BlockEntry* const pBE = info.pBE;
-
-    MkvReader& f = m_pSource->m_file;
-
-    f.UnlockPage(m_pLocked);
-
-#if 0  //TODO: restore this(?)
-    m_pLocked = pBE;
-
-    const int status = f.LockPage(m_pLocked);
-    status;
-    assert(status == 0);
-#else
-    m_pLocked = 0;
-#endif
 
     if ((pBE != 0) && !pBE->EOS())
     {

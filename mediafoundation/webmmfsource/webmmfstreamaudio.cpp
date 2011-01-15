@@ -258,15 +258,10 @@ HRESULT WebmMfStreamAudio::Seek(
     const mkvparser::BlockEntry* pCurr,
     bool bStart)
 {
+    assert(m_pLocked == 0);
+
     m_bDiscontinuity = true;
-
     m_pCurr = pCurr;
-
-    const int status = m_pSource->m_file.LockPage(m_pCurr);
-    status;
-    assert(status == 0);
-
-    //m_pNextCluster = 0;
     m_pNextBlock = 0;
 
     if (bStart)

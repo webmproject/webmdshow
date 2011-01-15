@@ -799,99 +799,10 @@ HRESULT MkvReader::AsyncReadInit(
     assert(m_async_pos < 0);
     assert(m_async_len <= 0);
 
-    //TODO: if we're attempting to load a new cluster, we assume
-    //few (if any) of the pages containing that cluster have
-    //been loaded already.  The exception is the pages near the
-    //beginning of the cluster -- these would contain the end of
-    //the previous cluster, so there's a good change they're already
-    //in the cache (and hence don't need to be loaded).
-
-    //TODO: we have been assuming that a request to load a cluster
-    //happens without gaps.  In other words we are not preloading
-    //clusters because Segment::GetCues returns a non-NULL value.
-    //If the byte stream allows us to read anywhere in the stream
-    //(that is, the stream is seekable), then it would be nice to
-    //take advantage of that.  Does that mean not playing
-    //tricks with m_avail?
-    //
-    //If Segment::GetNext detects preloaded clusters, then it
-    //assumes that it's free to preload them again.  I think
-    //the only way to get a preloaded cluster is if Cues is non-NULL,
-    //and the only way for that to be true is if avail >= total.
-    //But that's probably wrong if the Cues element happens to
-    //be declared at the beginning of the file (before the first
-    //cluster).  So we might need an explicit check somewhere to
-    //determine whether it's OK to seek ahead in the stream.
-    //
-    //But who calls Segment::GetNext?  Track::GetFirst and Track::GetNext.
-    //Also WebmMfSource::GetDuration.  The Track ops might be OK,
-    //since they return E_BUFFER_NOT_FULL if underflow occurs.  But
-    //that's not quite right: if Segment::GetNext is called with
-    //a (fully) loaded cluster, then it returns EOS in the normal
-    //way (leaving it up to the caller to decide to call LoadCluster
-    //explicitly).  If preloaded clusters are detected, then it
-    //simply preloads the next cluster, and assumes that the
-    //(synchronous) read will succeed.
-    //
-    //Alternatively, we can use the Cues, but only up to
-    //the limit of what has been parsed so far (that is,
-    //among the fully-loaded clusters).
-    //
-    //Seeking is hard.  You have to (pre)load many clusters
-    //just to find the one you're looking for.  (But is this
-    //only true when NOT using cues?)  Maybe this media source
-    //object needs to allowing seeking when:
-    //  this is a file-based source; or,
-    //  this is a network source, and we have a cues.
-    //Does the pipeline query for the ability to seek just
-    //once?  For example, if this is a network source we
-    //don't necessarily have the cues element right away.
-    //I suppose that "have cues" is true if the cues
-    //are at the beginning of the file.  It's no great
-    //loss if we lose the ability to seek if this is a
-    //network source and the cues are at the end of the
-    //file.
-    //
-    //But if we do support seeking in a network source,
-    //then we will have to also support preloading clusters.
-    //The problem is in Segment::GetNext.  If the current
-    //cluster is preloaded (it corresponded to a cue point, say),
-    //then GetNext will first parse the ID and Size fields
-    //in order to consume the payload of the current cluster.
-    //This involves synchronous reads.  (We parse enough of
-    //the file to determine whether the next element is a cluster,
-    //and if so, we parse enough of that cluster to determine
-    //whether is has block entries.)  The problem is that
-    //these reads can block if network I/O is slow.  Maybe
-    //the solution is to not call Track::GetNext (which is
-    //the op that calls Segment::GetNext).
-    //
-    //We search the cues to find the cue point, and then
-    //call GetBlock to get the block corresponding to that
-    //cue point.  That's the process that creates the first
-    //preloaded cluster.  We could replace the track-based
-    //navigation ops by simply iterating over clusters
-    //(this is what Jeff K. does in the QT filter) -- that
-    //would at least give us control of when clusters
-    //are (pre)loaded.  We need to do things at the cluster
-    //level (not the block level) because loading a cluster
-    //is the only thing we can do asynchronously.
-    //LoadCluster will tell us the pos and size of the thing
-    //that needs to be read (untimately, read asynchronously),
-    //but that op only works on the cluster that immediately
-    //follows the fully-loaded clusters.  We might need
-    //a new op that allows us to preload a cluster asynchronously.
-    //We might be able to fix up Segment::GetNext the same way
-    //we did Segment::LoadCluster, by returing the pos and size
-    //of the thing we need to (asynchrously) read in order
-    //to continue parsing.
-
     typedef cache_t::iterator iter_t;
     iter_t next;
 
     const DWORD page_size = m_info.dwPageSize;
-
-    //int n = 0;
 
     if (m_cache.empty() || (pos < (*m_cache.front()).pos))
         next = m_cache.begin();
@@ -910,9 +821,6 @@ HRESULT MkvReader::AsyncReadInit(
         if (pos < page_end)  //cache hit
         {
             Read(page_iter, pos, len, 0);
-            //TODO: ++page.cRef;
-            //++n;
-
             m_avail = pos;
         }
     }
@@ -931,13 +839,13 @@ HRESULT MkvReader::AsyncReadInit(
             const cache_t::value_type page_iter = *curr;
 
             Page& page = *page_iter;
-            assert(page.pos == pos);
+            assert(page.pos <= pos);
 
             if (hr == S_FALSE)  //async read in progress
             {
                 assert(page.cRef < 0);
 
-                m_async_pos = page.pos;
+                m_async_pos = pos;
                 m_async_len = len;
 
                 return S_FALSE;  //tell caller to wait for completion
@@ -947,9 +855,6 @@ HRESULT MkvReader::AsyncReadInit(
             assert((next == m_cache.end()) || ((*next)->pos > page.pos));
 
             Read(page_iter, pos, len, 0);
-            //TODO: ++page.cRef;
-            //++n;
-
             m_avail = pos;
         }
         else
@@ -960,9 +865,6 @@ HRESULT MkvReader::AsyncReadInit(
             assert(pos < (page.pos + page_size));
 
             Read(page_iter, pos, len, 0);
-            //TODO: ++page.cRef;
-            //++n;
-
             m_avail = pos;
         }
     }
@@ -1017,7 +919,7 @@ HRESULT MkvReader::AsyncReadContinue(
             const cache_t::value_type page_iter = *curr;
 
             Page& page = *page_iter;
-            assert(page.pos == pos);
+            assert(page.pos <= pos);
 
             if (hr == S_FALSE)  //async read in progress
             {
@@ -1029,9 +931,6 @@ HRESULT MkvReader::AsyncReadContinue(
             assert((next == m_cache.end()) || ((*next)->pos > page.pos));
 
             Read(page_iter, pos, len, 0);
-            //TODO: ++page.cRef;
-            //++n;
-
             m_avail = pos;
         }
         else
@@ -1043,9 +942,6 @@ HRESULT MkvReader::AsyncReadContinue(
             assert(pos < (page.pos + page_size));
 
             Read(page_iter, pos, len, 0);
-            //TODO: ++page.cRef;
-            //++n;
-
             m_avail = pos;
         }
     }
@@ -1067,13 +963,14 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
     const iter_t i = m_cache.begin();
     const iter_t j = m_cache.end();
 
-    const iter_t curr = std::lower_bound(i, j, m_async_pos, PageLess());
-    assert(curr != j);
+    const iter_t next = std::upper_bound(i, j, m_async_pos, PageLess());
+    assert(next != i);
 
+    const iter_t curr = --iter_t(next);
     const cache_t::value_type page_iter = *curr;
 
     Page& page = *page_iter;
-    assert(page.pos == m_async_pos);
+    assert(page.pos <= m_async_pos);
     assert(page.cRef < 0);
 
     const DWORD page_size = m_info.dwPageSize;
@@ -1087,14 +984,7 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
 
     page.cRef = 0;  //async read is complete
 
-    const iter_t next = ++iter_t(curr);
-    next;
-    assert((next == m_cache.end()) || ((*next)->pos > page.pos));
-
     Read(page_iter, m_async_pos, m_async_len, 0);
-    //TODO: ++page.cRef;
-    //++n;
-
     m_avail = m_async_pos;
 
     if (m_async_len > 0)
