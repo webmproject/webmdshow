@@ -53,11 +53,11 @@ private:
 
     explicit WebmMfByteStreamHandler(IClassFactory*);
     virtual ~WebmMfByteStreamHandler();
-    
+
     _COM_SMARTPTR_TYPEDEF(IMFByteStream, __uuidof(IMFByteStream));
     _COM_SMARTPTR_TYPEDEF(IMFAsyncResult, __uuidof(IMFAsyncResult));
     _COM_SMARTPTR_TYPEDEF(IMFMediaSource, __uuidof(IMFMediaSource));
-    
+
     IClassFactory* const m_pClassFactory;
     LONG m_cRef;
     //IMFMediaSourcePtr m_pSource;
@@ -83,9 +83,9 @@ private:
         HRESULT STDMETHODCALLTYPE GetParameters(DWORD*, DWORD*);
         HRESULT STDMETHODCALLTYPE Invoke(IMFAsyncResult*);
     };
-    
+
     CAsyncLoad m_async_load;
-    
+
     HRESULT EndLoad(IMFAsyncResult*);
 
 };

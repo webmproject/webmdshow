@@ -34,7 +34,7 @@ namespace WebmMfSourceLib
 {
 
 HRESULT WebmMfSource::CreateSource(
-    IClassFactory* pCF, 
+    IClassFactory* pCF,
     IMFByteStream* pBS,
     WebmMfSource*& pSource)
 {
@@ -60,7 +60,8 @@ WebmMfSource::WebmMfSource(
     m_hQuit(0),
     m_hRequestSample(0),
     m_hAsyncRead(0),
-    m_hThread(0)
+    m_hThread(0),
+    m_track_init(0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -99,6 +100,8 @@ WebmMfSource::~WebmMfSource()
         const ULONG n = m_pEvents->Release();
         n;
         assert(n == 0);
+
+        m_pEvents = 0;
     }
 
     while (!m_stream_descriptors.empty())
@@ -126,7 +129,10 @@ WebmMfSource::~WebmMfSource()
 
         delete pStream;
     }
-    
+
+    delete m_pSegment;
+    m_pSegment = 0;
+
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
 }
@@ -484,17 +490,17 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
 
     if (FAILED(hr))
         return hr;
-        
+
     if (m_pLoadResult)
         return MF_E_UNEXPECTED;
-        
+
     IMFAsyncResultPtr pLoadResult;
-    
+
     hr = MFCreateAsyncResult(0, pCB, 0, &pLoadResult);
-    
+
     if (FAILED(hr))
         return hr;
-        
+
     assert(m_thread_state == &WebmMfSource::StateAsyncRead);
 
     m_file.ResetAvailable();
@@ -513,7 +519,7 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
         const BOOL b = SetEvent(m_hAsyncRead);
         assert(b);
     }
-    
+
     m_pLoadResult = pLoadResult;
     return S_OK;
 }
@@ -524,12 +530,12 @@ HRESULT WebmMfSource::EndLoad(IMFAsyncResult* pLoadResult)
 {
     if (pLoadResult == 0)
         return E_INVALIDARG;
-        
+
     const HRESULT hrLoad = pLoadResult->GetStatus();
-    
+
     if (FAILED(hrLoad))
         Shutdown();
-        
+
     return hrLoad;
 }
 #endif
@@ -542,16 +548,16 @@ WebmMfSource::LoadComplete(HRESULT hrLoad)
     {
         HRESULT hr = m_pLoadResult->SetStatus(hrLoad);
         assert(SUCCEEDED(hr));
-        
+
         hr = MFInvokeCallback(m_pLoadResult);
         assert(SUCCEEDED(hr));
-        
+
         m_pLoadResult = 0;
     }
 
     if (FAILED(hrLoad))
         return &WebmMfSource::StateQuit;
-        
+
     return &WebmMfSource::StateRequestSample;
 }
 
@@ -716,6 +722,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 
     m_file.EnableBuffering(GetDuration());
 
+    m_track_init = 0;
     m_async_state = &WebmMfSource::StateAsyncInitStreams;
     m_async_read.m_hrStatus = S_OK;
 
@@ -754,15 +761,17 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
             if (hr == S_FALSE)  //async read in progress
                 return 0;
         }
+
+        assert(m_pSegment->GetCount() == 1);
     }
 
     const mkvparser::Cluster* const pCluster = m_pSegment->GetLast();
     assert(pCluster);
     assert(!pCluster->EOS());
 
+#if 0
     bool bMore = false;
 
-#if 0
     typedef streams_t::const_iterator iter_t;
 
     iter_t i = m_streams.begin();
@@ -785,21 +794,27 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         if (FAILED(hr))  //underflow
             bMore = true;
     }
+
+    if (!bMore)
+        return LoadComplete(S_OK);
 #else
-    //TODO: THIS IS WRONG
-    
     const mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
     assert(pTracks);
 
     const ULONG nTracks = pTracks->GetTracksCount();
     assert(nTracks > 0);
 
-    for (ULONG idx = 0; idx < nTracks; ++idx)
+    ULONG& idx = m_track_init;
+
+    while (idx < nTracks)
     {
         const mkvparser::Track* const pTrack = pTracks->GetTrackByIndex(idx);
 
-        if (pTrack == 0)
+        if (pTrack == 0)  //weird
+        {
+            ++idx;
             continue;
+        }
 
         const LONGLONG tn = pTrack->GetNumber();
 
@@ -817,15 +832,14 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         }
 
         if (pCurr == 0)  //no matching track found in this cluster
-        {
-            bMore = true;
             break;
-        }
-    }
-#endif
 
-    if (!bMore)
+        ++idx;  //this track has now been initialized
+    }
+
+    if (idx >= nTracks)
         return LoadComplete(S_OK);
+#endif
 
     if (m_pSegment->GetCount() >= 10)
         return LoadComplete(E_FAIL);

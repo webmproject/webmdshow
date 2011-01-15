@@ -182,10 +182,10 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
 
     if ((dwFlags & MF_RESOLUTION_MEDIASOURCE) == 0)
         return E_INVALIDARG;
-        
+
     if (m_pResult)  //assume one-at-a-time creation
         return MF_E_UNEXPECTED;
-        
+
     DWORD dw;
     hr = pByteStream->GetCapabilities(&dw);
 
@@ -226,31 +226,31 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     }
 
     WebmMfSource* pSource;
-    
+
     hr = WebmMfSource::CreateSource(m_pClassFactory, pByteStream, pSource);
 
     if (FAILED(hr))
         return hr;
-        
+
     const IMFMediaSourcePtr pUnk(pSource, false);
-    
+
     IMFAsyncResultPtr pResult;
-    
+
     hr = MFCreateAsyncResult(pUnk, pCallback, pState, &pResult);
 
     if (FAILED(hr))
         return hr;
-        
+
     hr = pSource->BeginLoad(&m_async_load);
-    
+
     if (FAILED(hr))
         return hr;
-        
-    m_pResult = pResult;    
 
-    m_bCancel = FALSE;    
+    m_pResult = pResult;
+
+    m_bCancel = FALSE;
     m_pByteStream = pByteStream;
-    
+
     return S_OK;
 }
 
@@ -261,9 +261,9 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
     IUnknown** ppObject)
 {
     Lock lock;
-    
+
     HRESULT hr = lock.Seize(this);
-    
+
     if (FAILED(hr))
         return hr;
 
@@ -305,7 +305,7 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
 
     if (FAILED(hr))
         return hr;
-        
+
     type = MF_OBJECT_MEDIASOURCE;
 
 #ifdef _DEBUG
@@ -355,7 +355,7 @@ HRESULT WebmMfByteStreamHandler::GetMaxNumberOfBytesRequiredForResolution(
 
 
 WebmMfByteStreamHandler::CAsyncLoad::CAsyncLoad(
-    WebmMfByteStreamHandler* p) : 
+    WebmMfByteStreamHandler* p) :
     m_pHandler(p)
 {
 }
@@ -425,7 +425,7 @@ HRESULT WebmMfByteStreamHandler::CAsyncLoad::Invoke(IMFAsyncResult* pResult)
 
     if (FAILED(hr))
         return hr;
-        
+
     return m_pHandler->EndLoad(pResult);
 }
 
@@ -436,17 +436,17 @@ HRESULT WebmMfByteStreamHandler::EndLoad(IMFAsyncResult* pLoadResult)
         return MF_E_UNEXPECTED;
 
     HRESULT hrLoad;
-    
+
     if (m_bCancel)
-        hrLoad = MF_E_OPERATION_CANCELLED;    
+        hrLoad = MF_E_OPERATION_CANCELLED;
     else
         hrLoad = pLoadResult->GetStatus();
-    
+
     HRESULT hr = m_pResult->SetStatus(hrLoad);
     assert(SUCCEEDED(hr));
 
     if (FAILED(hrLoad))
-    {    
+    {
         IUnknownPtr pUnk;
 
         hr = m_pResult->GetObject(&pUnk);
@@ -455,11 +455,11 @@ HRESULT WebmMfByteStreamHandler::EndLoad(IMFAsyncResult* pLoadResult)
         {
             const IMFMediaSourcePtr pSource(pUnk);
             assert(pSource);
-            
+
             hr = pSource->Shutdown();
         }
     }
-    
+
     hr = MFInvokeCallback(m_pResult);
 
     m_pByteStream = 0;

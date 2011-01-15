@@ -27,7 +27,7 @@ class WebmMfSource : public IMFMediaSource,
 public:
 
     static HRESULT CreateSource(
-            IClassFactory*, 
+            IClassFactory*,
             IMFByteStream*,
             WebmMfSource*&);
 
@@ -209,6 +209,7 @@ private:
     thread_state_t OnAsyncRead();
     thread_state_t OnRequestSample();
 
+    ULONG m_track_init;
     const mkvparser::Cluster* m_pCurr;
     const mkvparser::Cluster* m_pNext;
 
@@ -229,7 +230,7 @@ private:
 
     HRESULT ParseEbmlHeader(LONGLONG&);
     void PurgeCache();
-    
+
     thread_state_t LoadComplete(HRESULT);
 
 };
