@@ -5,6 +5,9 @@
 #include <vector>
 #include <map>
 #include <string>
+#ifndef _INC_COMDEF
+#include <comdef.h>
+#endif
 
 namespace WebmMfSourceLib
 {
@@ -18,12 +21,15 @@ class WebmMfSource : public IMFMediaSource,
                      public IMFGetService,
                      public CLockable
 {
-    friend HRESULT CreateSource(WebmMfByteStreamHandler*, WebmMfSource**);
-
     WebmMfSource(const WebmMfSource&);
     WebmMfSource& operator=(const WebmMfSource&);
 
 public:
+
+    static HRESULT CreateSource(
+            IClassFactory*, 
+            IMFByteStream*,
+            WebmMfSource*&);
 
     //IUnknown
 
@@ -89,23 +95,27 @@ public:
 
     //local methods
 
-    HRESULT AsyncLoad();
+    HRESULT BeginLoad(IMFAsyncCallback*);
+    HRESULT EndLoad(IMFAsyncResult*);
+
     HRESULT RequestSample(WebmMfStream*, IUnknown*);
 
 private:
 
     static std::wstring ConvertFromUTF8(const char*);
 
-    explicit WebmMfSource(WebmMfByteStreamHandler*);
+    WebmMfSource(IClassFactory*, IMFByteStream*);
     virtual ~WebmMfSource();
 
     //HRESULT SyncLoad();
     LONGLONG GetDuration() const;
 
     IClassFactory* const m_pClassFactory;
-    WebmMfByteStreamHandler* m_pHandler;
     LONG m_cRef;
     IMFMediaEventQueue* m_pEvents;
+
+    _COM_SMARTPTR_TYPEDEF(IMFAsyncResult, __uuidof(IMFAsyncResult));
+    IMFAsyncResultPtr m_pLoadResult;
 
     typedef std::vector<IMFStreamDescriptor*> stream_descriptors_t;
     stream_descriptors_t m_stream_descriptors;
@@ -219,6 +229,8 @@ private:
 
     HRESULT ParseEbmlHeader(LONGLONG&);
     void PurgeCache();
+    
+    thread_state_t LoadComplete(HRESULT);
 
 };
 

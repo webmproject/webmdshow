@@ -6,9 +6,6 @@
 #include "webmmfsource.hpp"
 #include <new>
 #include <cassert>
-#ifndef _INC_COMDEF
-#include <comdef.h>
-#endif
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -55,17 +52,17 @@ HRESULT CreateHandler(
 }
 
 
+#pragma warning(disable:4355)  //'this' ptr in member init list
 WebmMfByteStreamHandler::WebmMfByteStreamHandler(
     IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
-    m_pByteStream(0),
-    m_bCancel(FALSE),
+    //m_pByteStream(0),
     m_cRef(1),
-    m_pResult(0)
+    m_bCancel(FALSE),
+    //m_pResult(0),
+    m_pSource(0),
+    m_async_load(this)
 {
-    HRESULT hr = m_pClassFactory->LockServer(TRUE);
-    assert(SUCCEEDED(hr));
-
 #ifdef _DEBUG
     wodbgstream os;
     os << L"WebmMfByteStreamHandler: ctor: this=0x"
@@ -73,10 +70,13 @@ WebmMfByteStreamHandler::WebmMfByteStreamHandler(
        << endl;
 #endif
 
+    HRESULT hr = m_pClassFactory->LockServer(TRUE);
+    assert(SUCCEEDED(hr));
+
     hr = CLockable::Init();
     assert(SUCCEEDED(hr));
 }
-
+#pragma warning(default:4355)
 
 WebmMfByteStreamHandler::~WebmMfByteStreamHandler()
 {
@@ -87,16 +87,22 @@ WebmMfByteStreamHandler::~WebmMfByteStreamHandler()
        << endl;
 #endif
 
-    if (m_pResult)  //weird
-    {
-        m_pResult->Release();
-        m_pResult = 0;
-    }
+    //if (m_pResult)  //weird
+    //{
+    //    m_pResult->Release();
+    //    m_pResult = 0;
+    //}
 
-    if (m_pByteStream)
+    //if (m_pByteStream)  //weird
+    //{
+    //    m_pByteStream->Release();
+    //    m_pByteStream = 0;
+    //}
+    
+    if (m_pSource)  //weird
     {
-        m_pByteStream->Release();
-        m_pByteStream = 0;
+        m_pSource->Release();
+        m_pSource = 0;
     }
 
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
@@ -189,9 +195,6 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
     if (ppCancelCookie)
         *ppCancelCookie = 0;
 
-    if (m_pResult)  //assume one-at-a-time creation
-        return MF_E_UNEXPECTED;
-
     if (pByteStream == 0)
         return E_INVALIDARG;
 
@@ -200,29 +203,77 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
 
     if ((dwFlags & MF_RESOLUTION_MEDIASOURCE) == 0)
         return E_INVALIDARG;
+        
+    if (m_pSource)  //assume one-at-a-time creation
+        return MF_E_UNEXPECTED;
+        
+    DWORD dw;
+    hr = pByteStream->GetCapabilities(&dw);
 
-    if (m_pByteStream)  //weird
-        m_pByteStream->Release();
+    if (SUCCEEDED(hr))
+    {
+#ifdef _DEBUG
+        odbgstream os;
+        os << "webmmfsource::BeginCreateObject: caps:";
 
-    m_pByteStream = pByteStream;
-    m_pByteStream->AddRef();
+        if (dw & MFBYTESTREAM_IS_READABLE)
+            os << " READABLE";
+
+        if (dw & MFBYTESTREAM_IS_WRITABLE)
+            os << " WRITABLE";
+
+        if (dw & MFBYTESTREAM_IS_SEEKABLE)
+            os << " SEEKABLE";
+
+        if (dw & MFBYTESTREAM_IS_REMOTE)
+            os << " REMOTE";
+
+        if (dw & MFBYTESTREAM_IS_DIRECTORY)
+            os << " DIRECTORY";
+
+        if (dw & MFBYTESTREAM_HAS_SLOW_SEEK)
+            os << " SLOW_SEEK";
+
+        if (dw & MFBYTESTREAM_IS_PARTIALLY_DOWNLOADED)
+            os << " PARTIALLY_DOWNLOADED";
+
+        if (dw & MFBYTESTREAM_SHARE_WRITE)
+            os << " SHARE_WRITE";
+
+        os << endl;
+#endif
+
+        __noop;  //TODO: vet capabilities
+    }
 
     WebmMfSource* pSource;
-
-    hr = CreateSource(this, &pSource);
+    
+    hr = WebmMfSource::CreateSource(m_pClassFactory, pByteStream, pSource);
 
     if (FAILED(hr))
         return hr;
+        
+    const IMFMediaSourcePtr pSource_(pSource, false);
+    
+    IMFAsyncResultPtr pResult;
+    
+    hr = MFCreateAsyncResult(0, pCallback, pState, &pResult);
 
-    IMFMediaSource* const pObject = pSource;
-
-    hr = MFCreateAsyncResult(pObject, pCallback, pState, &m_pResult);
-
-    if (SUCCEEDED(hr))
-        hr = pSource->AsyncLoad();
-
-    pObject->Release();
-    return hr;
+    if (FAILED(hr))
+        return hr;
+        
+    hr = pSource->BeginLoad(&m_async_load);
+    
+    if (FAILED(hr))
+        return hr;
+        
+    m_pSource = pSource_;
+    m_pResult = pResult;
+    
+    m_bCancel = FALSE;    
+    m_pByteStream = pByteStream;
+    
+    return S_OK;
 }
 
 
@@ -231,12 +282,12 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
     MF_OBJECT_TYPE* pObjectType,
     IUnknown** ppObject)
 {
-    //lock lock;
-    //
-    //HRESULT hr = lock.seize(this);
-    //
-    //if (failed(hr))
-    //    return hr;
+    Lock lock;
+    
+    HRESULT hr = lock.Seize(this);
+    
+    if (FAILED(hr))
+        return hr;
 
 #ifdef _DEBUG
     wodbgstream os;
@@ -258,11 +309,12 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
     if (pResult == 0)
         return E_INVALIDARG;
 
-    HRESULT hr = pResult->GetStatus();
+    hr = pResult->GetStatus();
 
     if (FAILED(hr))  //for example, cancelled
         return hr;
 
+#if 0
     IUnknownPtr pUnk;
 
     hr = pResult->GetObject(&pUnk);
@@ -276,7 +328,13 @@ HRESULT WebmMfByteStreamHandler::EndCreateObject(
 
     if (FAILED(hr))
         return hr;
-
+#else
+    if (!m_pSource)  //should never happen
+        return MF_E_UNEXPECTED;
+        
+    pObject = m_pSource.Detach();
+#endif
+        
     type = MF_OBJECT_MEDIASOURCE;
 
 #ifdef _DEBUG
@@ -304,7 +362,7 @@ HRESULT WebmMfByteStreamHandler::CancelObjectCreation(IUnknown*)
     if (m_bCancel)
         return S_OK;
 
-    if (m_pByteStream == 0)
+    if (!m_pByteStream)
         return S_OK;
 
     m_bCancel = TRUE;
@@ -327,61 +385,112 @@ HRESULT WebmMfByteStreamHandler::GetMaxNumberOfBytesRequiredForResolution(
 }
 
 
-HRESULT WebmMfByteStreamHandler::AsyncLoadComplete(HRESULT hrLoad)
+WebmMfByteStreamHandler::CAsyncLoad::CAsyncLoad(
+    WebmMfByteStreamHandler* p) : 
+    m_pHandler(p)
 {
-    //TODO: does implementing this using IMFAsyncCallback
-    //(AsyncLoadComplete then becomes Invoke) break the
-    //cyclic dependency between the byte stream handler
-    //and the media source?  If so, would this allow us
-    //to not derive from CLockable?
+}
 
-#ifdef _DEBUG
-    wodbgstream os;
-    os << L"WebmMfByteStreamHandler::AsyncLoadComplete" << endl;
-#endif
+
+WebmMfByteStreamHandler::CAsyncLoad::~CAsyncLoad()
+{
+}
+
+
+HRESULT WebmMfByteStreamHandler::CAsyncLoad::QueryInterface(
+    const IID& iid,
+    void** ppv)
+{
+    if (ppv == 0)
+        return E_POINTER;
+
+    IUnknown*& pUnk = reinterpret_cast<IUnknown*&>(*ppv);
+
+    if (iid == __uuidof(IUnknown))
+    {
+        pUnk = static_cast<IMFAsyncCallback*>(this);  //must be nondelegating
+    }
+    else if (iid == __uuidof(IMFAsyncCallback))
+    {
+        pUnk = static_cast<IMFAsyncCallback*>(this);
+    }
+    else
+    {
+        pUnk = 0;
+        return E_NOINTERFACE;
+    }
+
+    pUnk->AddRef();
+    return S_OK;
+}
+
+
+ULONG WebmMfByteStreamHandler::CAsyncLoad::AddRef()
+{
+    return m_pHandler->AddRef();
+}
+
+
+ULONG WebmMfByteStreamHandler::CAsyncLoad::Release()
+{
+    return m_pHandler->Release();
+}
+
+
+HRESULT WebmMfByteStreamHandler::CAsyncLoad::GetParameters(
+    DWORD*,
+    DWORD*)
+{
+    return E_NOTIMPL;  //means "assume default behavior"
+}
+
+
+HRESULT WebmMfByteStreamHandler::CAsyncLoad::Invoke(IMFAsyncResult* pResult)
+{
+    if (pResult == 0)
+        return E_INVALIDARG;
 
     Lock lock;
 
-    HRESULT hr = lock.Seize(this);
+    HRESULT hr = lock.Seize(m_pHandler);
 
     if (FAILED(hr))
         return hr;
+        
+    return m_pHandler->EndLoad(pResult);
+}
 
-    //TODO: do we still call invoke if we're cancelled?
 
-    const BOOL bCancel = m_bCancel;
-
-    IMFAsyncResult* const pResult = m_pResult;
-
-    if (pResult == 0)  //weird
+HRESULT WebmMfByteStreamHandler::EndLoad(IMFAsyncResult* pResult)
+{
+    if (!m_pResult)  //should never happen
         return MF_E_UNEXPECTED;
 
-    m_pResult = 0;  //has not been Release'd yet
+    HRESULT hr;
+    
+    if (m_bCancel)
+        hr = MF_E_OPERATION_CANCELLED;
+    
+    else if (m_pSource == 0)  //should never happen
+        hr = MF_E_UNEXPECTED;
 
-    if (m_pByteStream)
+    else
     {
-        m_pByteStream->Release();
-        m_pByteStream = 0;
+        IMFMediaSource* const pSource_ = m_pSource;
+        WebmMfSource* const pSource = static_cast<WebmMfSource*>(pSource_);
+        
+        hr = pSource->EndLoad(pResult);
     }
-
-    lock.Release();
-
-    if (bCancel)
-        hrLoad = MF_E_OPERATION_CANCELLED;  //?
-
-    hr = pResult->SetStatus(hrLoad);
-    assert(SUCCEEDED(hr));
-
-    //IUnknown* pObject;
-    //
-    //hr = pResult->GetObject(&pObject);
-    //assert(SUCCEEDED(hr));
-    //assert(pObject);
-
-    hr = MFInvokeCallback(pResult);
-    assert(SUCCEEDED(hr));
-
-    pResult->Release();  //TODO: resolve refcount issues
+        
+    const HRESULT hrSetStatus = m_pResult->SetStatus(hr);
+    hrSetStatus;
+    assert(SUCCEEDED(hrSetStatus));
+    
+    hr = MFInvokeCallback(m_pResult);
+    
+    //m_pSource = 0;
+    m_pByteStream = 0;
+    m_pResult = 0;
 
     return hr;
 }

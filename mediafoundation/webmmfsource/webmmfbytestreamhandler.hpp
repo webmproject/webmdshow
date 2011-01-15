@@ -1,5 +1,8 @@
 #pragma once
 #include "clockable.hpp"
+#ifndef _INC_COMDEF
+#include <comdef.h>
+#endif
 
 namespace WebmMfSourceLib
 {
@@ -46,21 +49,44 @@ public:
 
     HRESULT STDMETHODCALLTYPE GetMaxNumberOfBytesRequiredForResolution(QWORD*);
 
-    //local members
-
-    IClassFactory* const m_pClassFactory;
-    IMFByteStream* m_pByteStream;
-
-    HRESULT AsyncLoadComplete(HRESULT);
-
 private:
 
     explicit WebmMfByteStreamHandler(IClassFactory*);
     virtual ~WebmMfByteStreamHandler();
-
+    
+    _COM_SMARTPTR_TYPEDEF(IMFByteStream, __uuidof(IMFByteStream));
+    _COM_SMARTPTR_TYPEDEF(IMFAsyncResult, __uuidof(IMFAsyncResult));
+    _COM_SMARTPTR_TYPEDEF(IMFMediaSource, __uuidof(IMFMediaSource));
+    
+    IClassFactory* const m_pClassFactory;
     LONG m_cRef;
-    IMFAsyncResult* m_pResult;
+    IMFMediaSourcePtr m_pSource;
+    IMFAsyncResultPtr m_pResult;
     BOOL m_bCancel;
+    IMFByteStreamPtr m_pByteStream;
+
+    class CAsyncLoad : public IMFAsyncCallback
+    {
+        CAsyncLoad(const CAsyncLoad&);
+        CAsyncLoad& operator=(const CAsyncLoad&);
+
+    public:
+        explicit CAsyncLoad(WebmMfByteStreamHandler*);
+        virtual ~CAsyncLoad();
+
+        WebmMfByteStreamHandler* const m_pHandler;
+
+        HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
+        ULONG STDMETHODCALLTYPE AddRef();
+        ULONG STDMETHODCALLTYPE Release();
+
+        HRESULT STDMETHODCALLTYPE GetParameters(DWORD*, DWORD*);
+        HRESULT STDMETHODCALLTYPE Invoke(IMFAsyncResult*);
+    };
+    
+    CAsyncLoad m_async_load;
+    
+    HRESULT EndLoad(IMFAsyncResult*);
 
 };
 

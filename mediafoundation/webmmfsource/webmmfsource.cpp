@@ -33,71 +33,23 @@ _COM_SMARTPTR_TYPEDEF(IMFMediaEvent, __uuidof(IMFMediaEvent));
 namespace WebmMfSourceLib
 {
 
-HRESULT CreateSource(
-    WebmMfByteStreamHandler* pHandler,
-    WebmMfSource** ppSource)
+HRESULT WebmMfSource::CreateSource(
+    IClassFactory* pCF, 
+    IMFByteStream* pBS,
+    WebmMfSource*& pSource)
 {
-    if (ppSource == 0)
-        return E_POINTER;
-
-    WebmMfSource*& pSource = *ppSource;
-    pSource = 0;
-
-    if (pHandler == 0)
-        return E_INVALIDARG;
-
-    pSource = new (std::nothrow) WebmMfSource(pHandler);
-
-    if (pSource == 0)
-        return E_OUTOFMEMORY;
-
-#ifdef _DEBUG
-    DWORD dw;
-    const HRESULT hr = pHandler->m_pByteStream->GetCapabilities(&dw);
-
-    if (SUCCEEDED(hr))
-    {
-        odbgstream os;
-        os << "webmmfsource::BeginCreateObject: caps:";
-
-        if (dw & MFBYTESTREAM_IS_READABLE)
-            os << " READABLE";
-
-        if (dw & MFBYTESTREAM_IS_WRITABLE)
-            os << " WRITABLE";
-
-        if (dw & MFBYTESTREAM_IS_SEEKABLE)
-            os << " SEEKABLE";
-
-        if (dw & MFBYTESTREAM_IS_REMOTE)
-            os << " REMOTE";
-
-        if (dw & MFBYTESTREAM_IS_DIRECTORY)
-            os << " DIRECTORY";
-
-        if (dw & MFBYTESTREAM_HAS_SLOW_SEEK)
-            os << " SLOW_SEEK";
-
-        if (dw & MFBYTESTREAM_IS_PARTIALLY_DOWNLOADED)
-            os << " PARTIALLY_DOWNLOADED";
-
-        if (dw & MFBYTESTREAM_SHARE_WRITE)
-            os << " SHARE_WRITE";
-
-        os << endl;
-    }
-#endif
-
-    return S_OK;
+    pSource = new (std::nothrow) WebmMfSource(pCF, pBS);
+    return pSource ? S_OK : E_OUTOFMEMORY;
 }
 
 
 #pragma warning(disable:4355)  //'this' ptr in member init list
-WebmMfSource::WebmMfSource(WebmMfByteStreamHandler* pH) :
-    m_pClassFactory(pH->m_pClassFactory),
-    m_pHandler(pH),
+WebmMfSource::WebmMfSource(
+    IClassFactory* pCF,
+    IMFByteStream* pBS) :
+    m_pClassFactory(pCF),
     m_cRef(1),
-    m_file(pH->m_pByteStream),
+    m_file(pBS),
     m_pSegment(0),
     m_state(kStateStopped),
     m_preroll_ns(-1),
@@ -124,8 +76,6 @@ WebmMfSource::WebmMfSource(WebmMfByteStreamHandler* pH) :
 
     hr = InitThread();
     assert(SUCCEEDED(hr));
-
-    m_pHandler->AddRef();  //TODO: resolve cyclic dependencies
 
 #ifdef _DEBUG
     wodbgstream os;
@@ -176,13 +126,7 @@ WebmMfSource::~WebmMfSource()
 
         delete pStream;
     }
-
-    if (m_pHandler)  //weird
-    {
-        m_pHandler->Release();
-        m_pHandler = 0;
-    }
-
+    
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
 }
@@ -532,7 +476,7 @@ HRESULT WebmMfSource::SyncLoad()
 #endif
 
 
-HRESULT WebmMfSource::AsyncLoad()
+HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
 {
     Lock lock;
 
@@ -540,7 +484,17 @@ HRESULT WebmMfSource::AsyncLoad()
 
     if (FAILED(hr))
         return hr;
-
+        
+    if (m_pLoadResult)
+        return MF_E_UNEXPECTED;
+        
+    IMFAsyncResultPtr pLoadResult;
+    
+    hr = MFCreateAsyncResult(0, pCB, 0, &pLoadResult);
+    
+    if (FAILED(hr))
+        return hr;
+        
     assert(m_thread_state == &WebmMfSource::StateAsyncRead);
 
     m_file.ResetAvailable();
@@ -559,8 +513,44 @@ HRESULT WebmMfSource::AsyncLoad()
         const BOOL b = SetEvent(m_hAsyncRead);
         assert(b);
     }
-
+    
+    m_pLoadResult = pLoadResult;
     return S_OK;
+}
+
+
+HRESULT WebmMfSource::EndLoad(IMFAsyncResult* pLoadResult)
+{
+    if (pLoadResult == 0)
+        return E_INVALIDARG;
+        
+    const HRESULT hrLoad = pLoadResult->GetStatus();
+    
+    if (FAILED(hrLoad))
+        Shutdown();
+        
+    return hrLoad;
+}
+
+
+WebmMfSource::thread_state_t
+WebmMfSource::LoadComplete(HRESULT hrLoad)
+{
+    if (m_pLoadResult)  //should always be true
+    {
+        HRESULT hr = m_pLoadResult->SetStatus(hrLoad);
+        assert(SUCCEEDED(hr));
+        
+        hr = MFInvokeCallback(m_pLoadResult);
+        assert(SUCCEEDED(hr));
+        
+        m_pLoadResult = 0;
+    }
+    
+    if (FAILED(hrLoad))
+        return 0;  //doesn't really matter
+        
+    return &WebmMfSource::StateRequestSample;
 }
 
 
@@ -611,10 +601,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseEbmlHeader()
     const HRESULT hr = ParseEbmlHeader(pos);
 
     if (FAILED(hr))
-    {
-        m_pHandler->AsyncLoadComplete(E_FAIL);
-        return 0;
-    }
+        return LoadComplete(E_FAIL);
 
     using mkvparser::Segment;
 
@@ -623,10 +610,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseEbmlHeader()
     const LONGLONG result = Segment::CreateInstance(&m_file, pos, m_pSegment);
 
     if (result != 0)  //TODO: liberalize
-    {
-        m_pHandler->AsyncLoadComplete(E_FAIL);
-        return 0;
-    }
+        return LoadComplete(E_FAIL);
 
     m_async_state = &WebmMfSource::StateAsyncParseSegmentHeaders;
     m_async_read.m_hrStatus = S_OK;
@@ -650,10 +634,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
             break;
 
         if (status < 0)
-        {
-            m_pHandler->AsyncLoadComplete(E_FAIL);
-            return 0;  //TODO: must resolve issue of non-NULL m_pSegment
-        }
+            return LoadComplete(E_FAIL);
 
         assert(status <= LONG_MAX);
         const LONG len = static_cast<LONG>(status);
@@ -661,10 +642,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
         const HRESULT hr = m_file.AsyncReadInit(0, len, &m_async_read);
 
         if (FAILED(hr))
-        {
-            m_pHandler->AsyncLoadComplete(E_FAIL);
-            return 0;  //TODO
-        }
+            return LoadComplete(E_FAIL);
 
         if (hr == S_FALSE)  //async read in progress
             return 0;
@@ -690,10 +668,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     const mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
 
     if (pTracks == 0)
-    {
-        m_pHandler->AsyncLoadComplete(E_FAIL);
-        return 0;  //TODO: deallocate pSegment
-    }
+        return LoadComplete(E_FAIL);
 
     assert(m_stream_descriptors.empty());
     assert(m_streams.empty());
@@ -735,10 +710,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     }
 
     if (m_stream_descriptors.empty())
-    {
-        m_pHandler->AsyncLoadComplete(E_FAIL);
-        return 0;  //TODO: deallocate pSegment
-    }
+        return LoadComplete(E_FAIL);
 
     m_file.EnableBuffering(GetDuration());
 
@@ -767,24 +739,15 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
                 break;
 
             if (status > 0)  //EOF
-            {
-                m_pHandler->AsyncLoadComplete(E_FAIL);
-                return 0;
-            }
+                return LoadComplete(E_FAIL);
 
             if (status != mkvparser::E_BUFFER_NOT_FULL)
-            {
-                m_pHandler->AsyncLoadComplete(E_FAIL);
-                return 0;
-            }
+                return LoadComplete(E_FAIL);
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
             if (FAILED(hr))
-            {
-                m_pHandler->AsyncLoadComplete(E_FAIL);
-                return 0;
-            }
+                return LoadComplete(E_FAIL);
 
             if (hr == S_FALSE)  //async read in progress
                 return 0;
@@ -821,6 +784,8 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
             bMore = true;
     }
 #else
+    //TODO: THIS IS WRONG
+    
     const mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
     assert(pTracks);
 
@@ -858,21 +823,10 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
 #endif
 
     if (!bMore)
-    {
-        m_pHandler->AsyncLoadComplete(S_OK);
-
-        //TODO: verify this behavior
-        m_pHandler->Release();
-        m_pHandler = 0;
-
-        return &WebmMfSource::StateRequestSample;
-    }
+        return LoadComplete(S_OK);
 
     if (m_pSegment->GetCount() >= 10)
-    {
-        m_pHandler->AsyncLoadComplete(E_FAIL);
-        return 0;
-    }
+        return LoadComplete(E_FAIL);
 
     //must load another cluster to init stream(s)
 
@@ -894,24 +848,15 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         }
 
         if (status > 0)  //EOF (weird)
-        {
-            m_pHandler->AsyncLoadComplete(E_FAIL);
-            return 0;
-        }
+            return LoadComplete(E_FAIL);
 
         if (status != mkvparser::E_BUFFER_NOT_FULL)  //parse error
-        {
-            m_pHandler->AsyncLoadComplete(E_FAIL);
-            return 0;
-        }
+            return LoadComplete(E_FAIL);
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
         if (FAILED(hr))
-        {
-            m_pHandler->AsyncLoadComplete(E_FAIL);
-            return 0;
-        }
+            return LoadComplete(E_FAIL);
 
         if (hr == S_FALSE)  //async read in progress
             return 0;
