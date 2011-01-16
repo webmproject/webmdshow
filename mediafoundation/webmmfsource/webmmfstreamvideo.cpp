@@ -335,13 +335,6 @@ void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
 }
 
 
-bool WebmMfStreamVideo::IsEOS() const
-{
-    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
-    return ((pCurr == 0) || pCurr->EOS());
-}
-
-
 HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 {
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
@@ -363,7 +356,7 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     {
         if (m_pNextBlock == 0)
         {
-            const HRESULT hr = GetNextBlock(pCurr);
+            const HRESULT hr = GetNextBlock();
 
             if (FAILED(hr))  //no next entry found on current cluster
                 return hr;
@@ -950,22 +943,6 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 #endif
 
 
-void WebmMfStreamVideo::OnStop()
-{
-    MkvReader& f = m_pSource->m_file;
-
-    f.UnlockPage(m_pLocked);
-    m_pLocked = 0;
-}
-
-
-
-const mkvparser::BlockEntry* WebmMfStreamVideo::GetCurrBlock() const
-{
-    return m_curr.pBE;
-}
-
-
 void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
 {
     assert(rate >= 0);  //TODO
@@ -1024,26 +1001,6 @@ void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
 
     m_thin_ns = pBlock->GetTime(pCluster);
     assert(m_thin_ns >= 0);
-}
-
-
-int WebmMfStreamVideo::LockCurrBlock()
-{
-    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
-    assert(pCurr);
-    assert(!pCurr->EOS());
-    assert(m_pLocked == 0);
-
-    MkvReader& f = m_pSource->m_file;
-
-    const int status = f.LockPage(pCurr);
-    assert(status == 0);
-
-    if (status)  //should never happen
-        return status;
-
-    m_pLocked = pCurr;
-    return 0;  //succeeded
 }
 
 

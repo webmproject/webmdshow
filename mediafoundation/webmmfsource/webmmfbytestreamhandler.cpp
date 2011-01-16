@@ -16,10 +16,6 @@ _COM_SMARTPTR_TYPEDEF(IMFMediaSource, __uuidof(IMFMediaSource));
 namespace WebmMfSourceLib
 {
 
-//See webmmfsource.cpp:
-HRESULT CreateSource(WebmMfByteStreamHandler*, WebmMfSource**);
-
-
 HRESULT CreateHandler(
     IClassFactory* pClassFactory,
     IUnknown* pOuter,

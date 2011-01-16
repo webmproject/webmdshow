@@ -68,19 +68,29 @@ public:
     HRESULT Pause();
     HRESULT Shutdown();
 
+    struct SeekInfo
+    {
+        const mkvparser::BlockEntry* pBE;
+        const mkvparser::CuePoint* pCP;
+        const mkvparser::CuePoint::TrackPosition* pTP;
+    };
+
+    virtual HRESULT Seek(
+        const PROPVARIANT& time,
+        const SeekInfo&,
+        bool bStart) = 0;
+
     virtual void SetRate(BOOL, float) = 0;
 
-    virtual bool IsEOS() const = 0;
+    bool IsEOS() const;
     HRESULT SetEOS();
 
     virtual HRESULT GetSample(IUnknown*) = 0;
 
-    //const mkvparser::Cluster* GetCurrCluster() const;
-    virtual const mkvparser::BlockEntry* GetCurrBlock() const = 0;
+    const mkvparser::BlockEntry* GetCurrBlock() const;
     bool IsCurrBlockLocked() const;
 
-    //HRESULT NotifyCurrCluster(const mkvparser::Cluster*);
-    virtual int LockCurrBlock() = 0;
+    int LockCurrBlock();
     HRESULT NotifyNextCluster(const mkvparser::Cluster*);
 
     WebmMfSource* const m_pSource;
@@ -91,15 +101,14 @@ protected:
 
     HRESULT OnStart(const PROPVARIANT& time);
     HRESULT OnSeek(const PROPVARIANT& time);
-    virtual void OnStop() = 0;
 
-    //virtual void SetCurrBlock(const mkvparser::BlockEntry*) = 0;
-    const mkvparser::BlockEntry* m_pNextBlock;
-
-    HRESULT GetNextBlock(const mkvparser::BlockEntry* pCurr);
+    HRESULT GetNextBlock();
     HRESULT ProcessSample(IMFSample*);
 
+    SeekInfo m_curr;
     const mkvparser::BlockEntry* m_pLocked;
+    const mkvparser::BlockEntry* m_pNextBlock;
+    bool m_bDiscontinuity;
 
 private:
 

@@ -37,6 +37,10 @@ WebmMfStream::WebmMfStream(
     const HRESULT hr = MFCreateEventQueue(&m_pEvents);
     assert(SUCCEEDED(hr));
     assert(m_pEvents);
+
+    m_curr.pBE = 0;
+    m_curr.pCP = 0;
+    m_curr.pTP = 0;
 }
 
 
@@ -447,7 +451,11 @@ HRESULT WebmMfStream::Stop()
     const HRESULT hr = QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
 
-    OnStop();
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = 0;
+
     return S_OK;
 }
 
@@ -589,6 +597,20 @@ HRESULT WebmMfStream::Restart()
 }
 
 
+bool WebmMfStream::IsEOS() const
+{
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+    return ((pCurr == 0) || pCurr->EOS());
+}
+
+
+const mkvparser::BlockEntry* WebmMfStream::GetCurrBlock() const
+{
+    return m_curr.pBE;
+}
+
+
+
 HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 {
     //source object already locked by caller
@@ -665,8 +687,9 @@ HRESULT WebmMfStream::NotifyCurrCluster(const mkvparser::Cluster* pCluster)
 #endif
 
 
-HRESULT WebmMfStream::GetNextBlock(const mkvparser::BlockEntry* pCurr)
+HRESULT WebmMfStream::GetNextBlock()
 {
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
 
@@ -725,6 +748,25 @@ bool WebmMfStream::IsCurrBlockLocked() const
     return (m_pLocked != 0);
 }
 
+
+int WebmMfStream::LockCurrBlock()
+{
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+    assert(pCurr);
+    assert(!pCurr->EOS());
+    assert(m_pLocked == 0);
+
+    MkvReader& f = m_pSource->m_file;
+
+    const int status = f.LockPage(pCurr);
+    assert(status == 0);
+
+    if (status)  //should never happen
+        return status;
+
+    m_pLocked = pCurr;
+    return 0;  //succeeded
+}
 
 
 }  //end namespace WebmMfSource

@@ -28,13 +28,6 @@ public:
                     const mkvparser::Track*,
                     WebmMfStream*&);
 
-    struct SeekInfo
-    {
-        const mkvparser::BlockEntry* pBE;
-        const mkvparser::CuePoint* pCP;
-        const mkvparser::CuePoint::TrackPosition* pTP;
-    };
-
     HRESULT GetCurrMediaTime(LONGLONG&) const;
     void GetSeekInfo(LONGLONG, SeekInfo&) const;
 
@@ -45,23 +38,10 @@ public:
 
     void SetRate(BOOL, float);
 
-    const mkvparser::BlockEntry* GetCurrBlock() const;
-
-    bool IsEOS() const;
     HRESULT GetSample(IUnknown* pToken);
-    //const mkvparser::Cluster* GetCurrCluster() const;
-
-    int LockCurrBlock();
-
-protected:
-
-    //void SetCurrBlock(const mkvparser::BlockEntry*);
-    void OnStop();
 
 private:
 
-    bool m_bDiscontinuity;
-    SeekInfo m_curr;
     float m_rate;
     LONGLONG m_thin_ns;
 

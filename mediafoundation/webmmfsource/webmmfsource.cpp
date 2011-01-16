@@ -2243,7 +2243,7 @@ void WebmMfSource::Seek(
     struct VideoStream
     {
         WebmMfStreamVideo* pStream;
-        WebmMfStreamVideo::SeekInfo info;
+        WebmMfStream::SeekInfo info;
     };
 
     typedef std::vector<VideoStream> vs_t;
@@ -2255,9 +2255,6 @@ void WebmMfSource::Seek(
 
     typedef std::vector<WebmMfStreamAudio*> as_t;
     as_t as;
-
-    //TODO: here all page refcounts should be set to 0.
-    //We should also
 
     typedef streams_t::iterator iter_t;
 
@@ -2293,7 +2290,7 @@ void WebmMfSource::Seek(
         vs.push_back(VideoStream());
 
         VideoStream& s = vs.back();
-        WebmMfStreamVideo::SeekInfo& i = s.info;
+        WebmMfStream::SeekInfo& i = s.info;
 
         s.pStream = static_cast<WebmMfStreamVideo*>(pStream);
         s.pStream->GetSeekInfo(time_ns, i);
@@ -2331,15 +2328,14 @@ void WebmMfSource::Seek(
 
     const mkvparser::Cluster* pBaseCluster;
 
-    if (base >= 0)
+    if (base >= 0)  //have video
         pBaseCluster = vs[base].info.pBE->GetCluster();
     else  //no video stream(s)
     {
         //TODO: we can do better here, by trying to see if
         //the audio streams have cue points of their own.
 
-        const long status = m_pSegment->LoadCluster();
-        assert(status >= 0);  //TODO: handle underflow
+        assert(m_pSegment->GetCount() >= 1);
 
         pBaseCluster = m_pSegment->FindCluster(time_ns);
         assert(pBaseCluster);
@@ -2352,10 +2348,13 @@ void WebmMfSource::Seek(
         WebmMfStreamAudio* const s = as[idx];
         assert(s->IsSelected());
 
-        const mkvparser::Track* const t = s->m_pTrack;
-        const mkvparser::BlockEntry* const e = pBaseCluster->GetEntry(t);
+        WebmMfStream::SeekInfo i;
 
-        s->Seek(var, e, bStart);
+        i.pBE = pBaseCluster->GetEntry(s->m_pTrack);
+        i.pCP = 0;
+        i.pTP = 0;
+
+        s->Seek(var, i, bStart);
     }
 }
 
