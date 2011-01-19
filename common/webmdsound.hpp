@@ -17,8 +17,9 @@ namespace WebmDirectX
 enum AudioPlaybackState
 {
     STATE_STOPPED = 0,
-    STATE_PLAY = 1,
-    STATE_PAUSE = 2
+    STATE_STARTED = 1,
+    STATE_PLAY = 2,
+    STATE_PAUSE = 3
 };
 
 // Note: AudioBufferTemplate is not in use!!
@@ -62,7 +63,6 @@ public:
     virtual HRESULT Write(const void* const ptr_data,
                           UINT32 length_in_bytes,
                           UINT32* ptr_samples_written) = 0;
-protected:
     UINT64 BytesToSamples(UINT64 num_bytes)
     {
         return num_bytes + (sample_size_ - 1) / sample_size_;
@@ -150,26 +150,41 @@ public:
     AudioPlaybackDevice();
     ~AudioPlaybackDevice();
     HRESULT Open(HWND hwnd, const WAVEFORMATEXTENSIBLE* const ptr_wfx);
+    HRESULT Pause();
+    HRESULT Play();
     HRESULT Start();
     HRESULT Stop();
     HRESULT WriteAudioBuffer(const void* const ptr_samples,
                              UINT32 length_in_bytes);
+    HRESULT GetMediaTimePlayed(INT64* ptr_100ns_ticks_played);
+    UINT64 GetSamplesBuffered() const
+    {
+        return samples_buffered_;
+    };
+    UINT64 GetSamplesPlayed() const
+    {
+        return samples_played_;
+    };
 private:
     static DWORD DSoundWriterThread_(void* ptr_this);
     HRESULT CreateAudioBuffer_(WORD fmt_tag, WORD bits);
     HRESULT CreateDirectSoundBuffer_(
         const WAVEFORMATEXTENSIBLE* const ptr_wfx);
     HRESULT WriteDSoundBuffer_();
+    void UpdateSamplesPlayed_();
     AudioPlaybackState state_;
-    std::auto_ptr<AudioBuffer> ptr_audio_buf_;
+    DWORD play_cursor_;
     HWND hwnd_;
     IDirectSound8* ptr_dsound_;
     IDirectSoundBuffer8* ptr_dsound_buf_;
+    std::auto_ptr<AudioBuffer> ptr_audio_buf_;
+    // TODO(tomfinegan): add a thread util w/stop event-- we could get rid of
+    //                   |ptr_dsound_thread_event_|
+    std::auto_ptr<WebmMfUtil::EventWaiter> ptr_dsound_thread_event_;
+    std::auto_ptr<WebmMfUtil::SimpleThread> ptr_dsound_thread_;
     UINT32 dsound_buffer_size_;
     UINT64 samples_buffered_;
     UINT64 samples_played_;
-    std::auto_ptr<WebmMfUtil::SimpleThread> ptr_dsound_thread_;
-    std::auto_ptr<WebmMfUtil::EventWaiter> ptr_dsound_thread_event_;
     DISALLOW_COPY_AND_ASSIGN(AudioPlaybackDevice);
 };
 

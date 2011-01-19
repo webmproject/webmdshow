@@ -216,6 +216,7 @@ HRESULT S16AudioBuffer::Write(const void* const ptr_samples,
 AudioPlaybackDevice::AudioPlaybackDevice():
   dsound_buffer_size_(0),
   hwnd_(NULL),
+  play_cursor_(0),
   ptr_dsound_(NULL),
   ptr_dsound_buf_(NULL),
   ptr_dsound_thread_event_(NULL),
@@ -273,7 +274,7 @@ HRESULT AudioPlaybackDevice::Open(HWND hwnd,
 
 HRESULT AudioPlaybackDevice::Start()
 {
-    if (state_ != STATE_STOPPED)
+    if (STATE_STOPPED != state_)
     {
         DBGLOG("ERROR Already started.");
         return E_UNEXPECTED;
@@ -303,6 +304,10 @@ HRESULT AudioPlaybackDevice::Start()
     // Start the thread
     CHK(hr, ptr_dsound_thread_->Run(DSoundWriterThread_,
                                     reinterpret_cast<void*>(this)));
+    if (SUCCEEDED(hr))
+    {
+        state_ = STATE_STARTED;
+    }
     return hr;
 }
 
@@ -313,20 +318,56 @@ HRESULT AudioPlaybackDevice::Stop()
         DBGLOG("ERROR Already stopped.");
         return E_UNEXPECTED;
     }
+    HRESULT hr = S_OK;
+    if (ptr_dsound_thread_->Running())
+    {
+        // tell the |DSoundWriterThread_| to stop
+        CHK(hr, ptr_dsound_thread_event_->Set());
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+        // wait for |DSoundWriterThread_| to signal
+        CHK(hr, ptr_dsound_thread_event_->Wait());
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+        state_ = STATE_STOPPED;
+    }
+    return hr;
+}
+
+HRESULT AudioPlaybackDevice::Pause()
+{
+    if (STATE_PLAY != state_)
+    {
+        DBGLOG("ERROR wrong state, not playing.");
+        return E_UNEXPECTED;
+    }
     HRESULT hr;
-    // tell the |DSoundWriterThread_| to stop
-    CHK(hr, ptr_dsound_thread_event_->Set());
-    if (FAILED(hr))
+    CHK(hr, ptr_dsound_buf_->Stop());
+    if (SUCCEEDED(hr))
     {
-        return hr;
+        state_ = STATE_PAUSE;
     }
-    // wait for |DSoundWriterThread_| to signal
-    CHK(hr, ptr_dsound_thread_event_->Wait());
-    if (FAILED(hr))
+    return hr;
+}
+
+HRESULT AudioPlaybackDevice::Play()
+{
+    bool wrong_state = (STATE_PAUSE != state_ && STATE_STARTED != state_);
+    if (wrong_state)
     {
-        return hr;
+        DBGLOG("ERROR wrong state.");
+        return E_UNEXPECTED;
     }
-    state_ = STATE_STOPPED;
+    HRESULT hr;
+    CHK(hr, ptr_dsound_buf_->Play(0, 0, DSBPLAY_LOOPING));
+    if (SUCCEEDED(hr))
+    {
+        state_ = STATE_PLAY;
+    }
     return hr;
 }
 
@@ -415,16 +456,17 @@ HRESULT AudioPlaybackDevice::WriteDSoundBuffer_()
         DBGLOG("ERROR Lock failed.");
         return hr;
     }
+    bool buffer_full = (write_space1 + write_space2) == 0;
+    if (buffer_full)
+    {
+        UpdateSamplesPlayed_();
+        return S_FALSE;
+    }
     UINT32 bytes_written1 = 0;
     if (ptr_write1)
     {
         const UINT32 bytes_to_write =
             write_space1 > bytes_available ? bytes_available : write_space1;
-        //hr = ::memcpy_s(ptr_write1, write_space1, ptr_samples, bytes_to_write);
-        //if (SUCCEEDED(hr))
-        //{
-        //    bytes_written1 = bytes_to_write;
-        //}
         CHK(hr, ptr_audio_buf_->Read(bytes_to_write, &bytes_written1,
                                      ptr_write1));
     }
@@ -432,26 +474,44 @@ HRESULT AudioPlaybackDevice::WriteDSoundBuffer_()
     UINT32 bytes_left = bytes_available - write_space1;
     if (ptr_write2 && bytes_available > write_space1 && bytes_left)
     {
-        //const BYTE* const ptr_bytes =
-        //    static_cast<const BYTE* const>(ptr_samples);
-        //const void* const ptr_remaining_samples = ptr_bytes + write_space1;
-        //hr = ::memcpy_s(ptr_write2, write_space2, ptr_remaining_samples,
-        //                bytes_left);
-        //if (SUCCEEDED(hr))
-        //{
-        //    bytes_written2 = bytes_left;
-        //}
         CHK(hr, ptr_audio_buf_->Read(write_space2, &bytes_written2,
                                      ptr_write2));
     }
     CHK(hr, ptr_dsound_buf_->Unlock(ptr_write1, bytes_written1, ptr_write2,
                                     bytes_written2));
-    // TODO(tomfinegan): disable this log message... it's going to be ultra
-    //                   spammy/distracting.
-    DBGLOG("bytes_written1=" << bytes_written1
-        << "bytes_written2=" << bytes_written2
-        << "total bytes written=" << bytes_written1 + bytes_written2);
+    UpdateSamplesPlayed_();
+    //DBGLOG("bytes_written1=" << bytes_written1
+    //    << "bytes_written2=" << bytes_written2
+    //    << "total bytes written=" << bytes_written1 + bytes_written2);
     return hr;
+}
+
+void AudioPlaybackDevice::UpdateSamplesPlayed_()
+{
+    DWORD play_cursor = 0, write_cursor = 0;
+    // get |ptr_dsound_buf_| cursor positions
+    HRESULT hr;
+    CHK(hr, ptr_dsound_buf_->GetCurrentPosition(&play_cursor, &write_cursor));
+    UINT64 bytes_played = 0;
+    if (play_cursor < play_cursor_)
+    {
+        // wrapped
+        bytes_played = play_cursor + play_cursor_ - dsound_buffer_size_;
+    }
+    else
+    {
+        bytes_played = play_cursor - play_cursor_;
+    }
+    if (bytes_played && bytes_played >= ptr_audio_buf_->GetSampleSize())
+    {
+        // store total samples played in |samples_played_| for user playback
+        // timing
+        UINT64 samples_played = ptr_audio_buf_->BytesToSamples(bytes_played);
+        samples_played_ += samples_played;
+        //DBGLOG("samples_played=" << samples_played);
+    }
+    //DBGLOG("total samples_played_=" << samples_played_);
+    play_cursor_ = play_cursor;
 }
 
 DWORD AudioPlaybackDevice::DSoundWriterThread_(void* ptr_this)
@@ -474,11 +534,28 @@ DWORD AudioPlaybackDevice::DSoundWriterThread_(void* ptr_this)
             CHK(hr, apd_event->Set());
             break;
         }
-        // we intentionally ignore the return value from |WriteDsoundBuffer_|,
-        // though we log it for sanity's sake in debug mode
-        CHK(hr, ptr_apd->WriteDSoundBuffer_());
-        // and now we yield
-        Sleep(0);
+        if (STATE_PLAY == ptr_apd->state_)
+        {
+            // we intentionally ignore the return values other than S_FALSE from
+            // |WriteDsoundBuffer_|, though we log failures for sanity's sake in
+            // debug mode
+            CHK(hr, ptr_apd->WriteDSoundBuffer_());
+            // and now we yield
+            if (S_FALSE == hr)
+            {
+                // direct sound buffer full, let it play out for a bit
+                Sleep(1);
+            }
+            else
+            {
+                Sleep(0);
+            }
+        }
+        else
+        {
+            // paused or stopping, just sleep for a millisecond
+            Sleep(1);
+        }
     }
     return EXIT_SUCCESS;
 }
