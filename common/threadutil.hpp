@@ -10,6 +10,7 @@
 #define __WEBMDSHOW_COMMON_THREADUTIL_HPP__
 
 #include "debugutil.hpp"
+#include "eventutil.hpp"
 
 namespace WebmMfUtil
 {
@@ -42,6 +43,24 @@ private:
     RefCountedThread();
     UINT ref_count_;
     DISALLOW_COPY_AND_ASSIGN(RefCountedThread);
+};
+
+class StoppableThread : public SimpleThread
+{
+public:
+    virtual ~StoppableThread();
+    HRESULT Create(StoppableThread** ptr_instance);
+    bool StopRequested();
+    void* GetUserData() const
+    {
+        return ptr_user_thread_data_;
+    };
+    HRESULT Stop();  // not implemented
+    // TODO(tomfinegan): make Run virtual and override
+private:
+    StoppableThread();
+    std::auto_ptr<EventWaiter> ptr_event_;
+    DISALLOW_COPY_AND_ASSIGN(StoppableThread);
 };
 
 } // WebmMfUtil namespace

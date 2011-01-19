@@ -10,6 +10,8 @@
 #include <windowsx.h>
 #include <process.h>
 
+#include <memory>
+
 #include "debugutil.hpp"
 #include "eventutil.hpp"
 #include "threadutil.hpp"
@@ -121,6 +123,50 @@ UINT RefCountedThread::Release()
         delete this;
     }
     return ref_count;
+}
+
+StoppableThread::StoppableThread():
+  ptr_event_(NULL)
+{
+}
+
+StoppableThread::~StoppableThread()
+{
+}
+
+HRESULT StoppableThread::Create(StoppableThread **ptr_instance)
+{
+    StoppableThread* ptr_thread = new (std::nothrow) StoppableThread();
+    if (!ptr_thread)
+    {
+        DBGLOG("NULL thread, no memory!");
+        return E_OUTOFMEMORY;
+    }
+    ptr_event_.reset(new (std::nothrow) EventWaiter());
+    if (!ptr_event_.get())
+    {
+        DBGLOG("NULL event, no memory!");
+        return E_OUTOFMEMORY;
+    }
+    HRESULT hr;
+    CHK(hr, ptr_event_->Create());
+    if (SUCCEEDED(hr))
+    {
+        *ptr_instance = ptr_thread;
+    }
+    return hr;
+}
+
+bool StoppableThread::StopRequested()
+{
+    if (ptr_event_.get() && Running())
+    {
+        if (FAILED(ptr_event_->ZeroWait()))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // WebmMfUtil namespace
