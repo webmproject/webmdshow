@@ -24,9 +24,14 @@ WebmMfStream::WebmMfStream(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     const mkvparser::Track* pTrack) :
+    //ULONG context_key,
+    //ULONG stream_key) :
+    m_cRef(0),  //yes
     m_pSource(pSource),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
+    //m_context_key(context_key),
+    //m_stream_key(stream_key),
     m_bSelected(true),
     m_bEOS(false),
     m_pNextBlock(0),
@@ -38,15 +43,12 @@ WebmMfStream::WebmMfStream(
     assert(SUCCEEDED(hr));
     assert(m_pEvents);
 
-    m_curr.pBE = 0;
-    m_curr.pCP = 0;
-    m_curr.pTP = 0;
+    m_curr.Init();
 }
 
 
 WebmMfStream::~WebmMfStream()
 {
-    //PurgeTokens();
     PurgeSamples();
 
     if (m_pEvents)
@@ -94,13 +96,29 @@ HRESULT WebmMfStream::QueryInterface(const IID& iid, void** ppv)
 
 ULONG WebmMfStream::AddRef()
 {
-    return m_pSource->AddRef();
+    const ULONG cSource = m_pSource->AddRef();
+    cSource;
+
+    const ULONG cStream = InterlockedIncrement(&m_cRef);
+
+    return cStream;
 }
 
 
 ULONG WebmMfStream::Release()
 {
-    return m_pSource->Release();
+    assert(m_cRef > 0);
+    const ULONG cStream = InterlockedDecrement(&m_cRef);
+
+    //WebmMfSource* const pSource = m_pSource;  //cache
+
+    //if (cStream == 0)  //client is done with stream
+    //    pSource->OnDestroy(this);
+
+    const ULONG cSource = m_pSource->Release();
+    cSource;
+
+    return cStream;
 }
 
 
@@ -235,9 +253,6 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
-    if (!m_bSelected)
-        return MF_E_INVALIDREQUEST;
-
     //This return value is incorrrect:
     //if (m_pSource->m_state == WebmMfSource::kStateStopped)
     //    return MF_E_INVALIDREQUEST;
@@ -253,8 +268,11 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     //
     //This is the correct behavior:
 
-    if (m_pSource->m_state == WebmMfSource::kStateStopped)
+    if (m_pSource->IsStopped())
         return MF_E_MEDIA_SOURCE_WRONGSTATE;
+
+    if (!m_bSelected)
+        return MF_E_INVALIDREQUEST;
 
     return m_pSource->RequestSample(this, pToken);
 }
@@ -265,10 +283,10 @@ HRESULT WebmMfStream::ProcessSample(IMFSample* pSample)
     if (m_pEvents == 0)  //shutdown has been requested
         return S_FALSE;
 
-    if (m_pSource->m_state == WebmMfSource::kStateStopped)
+    if (m_pSource->IsStopped())
         return S_FALSE;  //throw this sample away
 
-    if (m_pSource->m_state == WebmMfSource::kStatePaused)
+    if (m_pSource->IsPaused())
     {
         pSample->AddRef();
         m_samples.push_back(pSample);
@@ -446,6 +464,8 @@ HRESULT WebmMfStream::Stop()
     if (!m_bSelected)
         return S_FALSE;
 
+    m_bSelected = false;
+
     PurgeSamples();
 
     const HRESULT hr = QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
@@ -455,6 +475,8 @@ HRESULT WebmMfStream::Stop()
 
     f.UnlockPage(m_pLocked);
     m_pLocked = 0;
+    
+    m_curr.Init();
 
     return S_OK;
 }
@@ -466,6 +488,22 @@ HRESULT WebmMfStream::Pause()
         return S_FALSE;
 
     const HRESULT hr = QueueEvent(MEStreamPaused, GUID_NULL, S_OK, 0);
+    assert(SUCCEEDED(hr));
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfStream::Update()
+{
+    m_bSelected = true;
+
+    HRESULT hr = m_pEvents->QueueEventParamUnk(
+                    MEUpdatedStream,
+                    GUID_NULL,
+                    S_OK,
+                    this);
+
     assert(SUCCEEDED(hr));
 
     return S_OK;
@@ -494,20 +532,29 @@ HRESULT WebmMfStream::Shutdown()
 
 HRESULT WebmMfStream::Select()
 {
-    assert(m_samples.empty());
+    //TODO: resolve this
+    //assert(m_samples.empty());
 
     m_bSelected = true;
-    m_bEOS = false;
-
     return S_OK;
 }
 
 
 HRESULT WebmMfStream::Deselect()
 {
+    //This is like a stop, except that we don't
+    //send any notifications to the pipeline.
+
     PurgeSamples();
 
     m_bSelected = false;
+
+    MkvReader& f = m_pSource->m_file;
+
+    f.UnlockPage(m_pLocked);
+    m_pLocked = 0;
+
+    m_curr.Init();
 
     return S_OK;
 }
@@ -537,7 +584,7 @@ HRESULT WebmMfStream::OnStart(const PROPVARIANT& var)
 
     assert(SUCCEEDED(hr));
 
-    return S_OK;
+    return hr;
 }
 
 
@@ -601,6 +648,16 @@ bool WebmMfStream::IsEOS() const
 {
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     return ((pCurr == 0) || pCurr->EOS());
+}
+
+
+void WebmMfStream::SetCurrBlock(const mkvparser::BlockEntry* pBE)
+{
+    m_curr.pBE = pBE;
+    m_curr.pCP = 0;
+    m_curr.pTP = 0;
+
+    m_bEOS = false;
 }
 
 
@@ -768,5 +825,11 @@ int WebmMfStream::LockCurrBlock()
     return 0;  //succeeded
 }
 
+void WebmMfStream::SeekInfo::Init()
+{
+    pBE = 0;
+    pCP = 0;
+    pTP = 0;
+}
 
 }  //end namespace WebmMfSource

@@ -11,12 +11,16 @@ class WebmMfStream : public IMFMediaStream
     WebmMfStream(const WebmMfStream&);
     WebmMfStream& operator=(const WebmMfStream&);
 
+public:
+
 protected:
 
     WebmMfStream(
         WebmMfSource*,
         IMFStreamDescriptor*,
         const mkvparser::Track*);
+        //ULONG context_key,
+        //ULONG stream_key);
 
 public:
 
@@ -62,6 +66,7 @@ public:
     HRESULT Deselect();
     bool IsSelected() const;
 
+    HRESULT Update();
     HRESULT Restart();
 
     HRESULT Stop();
@@ -73,12 +78,15 @@ public:
         const mkvparser::BlockEntry* pBE;
         const mkvparser::CuePoint* pCP;
         const mkvparser::CuePoint::TrackPosition* pTP;
+
+        void Init();
     };
 
-    virtual HRESULT Seek(
-        const PROPVARIANT& time,
-        const SeekInfo&,
-        bool bStart) = 0;
+    //virtual HRESULT Seek(
+    //    const PROPVARIANT& time,
+    //    const SeekInfo&,
+    //    bool bStart) = 0;
+    virtual HRESULT Start(const PROPVARIANT&) = 0;
 
     virtual void SetRate(BOOL, float) = 0;
 
@@ -87,15 +95,19 @@ public:
 
     virtual HRESULT GetSample(IUnknown*) = 0;
 
+    void SetCurrBlock(const mkvparser::BlockEntry*);  //TODO: pass cue point
     const mkvparser::BlockEntry* GetCurrBlock() const;
     bool IsCurrBlockLocked() const;
 
     int LockCurrBlock();
     HRESULT NotifyNextCluster(const mkvparser::Cluster*);
 
+    ULONG m_cRef;
     WebmMfSource* const m_pSource;
     IMFStreamDescriptor* const m_pDesc;
     const mkvparser::Track* const m_pTrack;
+    //const ULONG m_context_key;
+    //const ULONG m_stream_key;
 
 protected:
 

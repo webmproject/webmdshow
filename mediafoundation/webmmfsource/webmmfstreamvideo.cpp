@@ -222,8 +222,6 @@ HRESULT WebmMfStreamVideo::CreateStream(
     pStream = new (std::nothrow) WebmMfStreamVideo(pSource, pSD, pTrack);
     assert(pStream);  //TODO
 
-    //TODO: handle time
-
     return pStream ? S_OK : E_OUTOFMEMORY;
 }
 
@@ -236,11 +234,6 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     m_rate(1),
     m_thin_ns(-2)
 {
-    m_curr.pBE = 0;
-    m_curr.pCP = 0;
-    m_curr.pTP = 0;
-
-    m_pLocked = 0;
 }
 
 
@@ -249,16 +242,7 @@ WebmMfStreamVideo::~WebmMfStreamVideo()
 }
 
 
-#if 0
-void WebmMfStreamVideo::SetCurrBlock(const mkvparser::BlockEntry* pCurr)
-{
-    m_curr.pBE = pCurr;
-    m_curr.pCP = 0;
-    m_curr.pTP = 0;
-}
-#endif
-
-
+#if 0  //TODO: restore this
 HRESULT WebmMfStreamVideo::Seek(
     const PROPVARIANT& var,
     const SeekInfo& info,
@@ -297,8 +281,46 @@ HRESULT WebmMfStreamVideo::Seek(
     else
         return OnSeek(var);
 }
+#else
+HRESULT WebmMfStreamVideo::Start(const PROPVARIANT& var)
+{
+    assert(m_pLocked == 0);
+
+    m_bDiscontinuity = true;
+    //TODO: m_curr = info;
+    assert(m_curr.pBE);
+    m_pNextBlock = 0;  //means "we don't know yet"
+
+    assert(var.vt == VT_I8);
+
+    const LONGLONG reftime = var.hVal.QuadPart;
+    assert(reftime >= 0);
+
+#if 0  //TODO: restore this
+    const mkvparser::BlockEntry* const pBE = info.pBE;
+
+    if ((pBE != 0) && !pBE->EOS())
+    {
+        const mkvparser::Block* const pB = pBE->GetBlock();
+        assert(pB);
+        assert(pB->IsKey());
+
+        const mkvparser::Cluster* const pCluster = pBE->GetCluster();
+
+        const LONGLONG time_ns = pB->GetTime(pCluster);
+        assert(time_ns >= 0);
+
+        if (m_thin_ns >= -1)  //rate change has been requested
+            m_thin_ns = time_ns;
+    }
+#endif
+
+    return OnStart(var);
+}
+#endif
 
 
+#if 0
 void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
 {
 #if 0  //TODO: RESTORE THIS
@@ -333,6 +355,7 @@ void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
     const long status = m_pTrack->Seek(time_ns, i.pBE);
     assert(status >= 0);
 }
+#endif
 
 
 HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
@@ -954,6 +977,7 @@ void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
         return;
     }
 
+#if 0 //TODO: restore this
     if (m_pSource->m_state == WebmMfSource::kStateStopped)
     {
         m_thin_ns = -1;  //request
@@ -1001,6 +1025,9 @@ void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
 
     m_thin_ns = pBlock->GetTime(pCluster);
     assert(m_thin_ns >= 0);
+#else
+    m_thin_ns = -2;  //TODO: this is temporary
+#endif
 }
 
 

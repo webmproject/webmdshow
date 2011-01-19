@@ -11,8 +11,6 @@ class WebmMfStreamVideo : public WebmMfStream
         IMFStreamDescriptor*,
         const mkvparser::VideoTrack*);
 
-    virtual ~WebmMfStreamVideo();
-
     WebmMfStreamVideo(const WebmMfStreamVideo&);
     WebmMfStreamVideo& operator=(const WebmMfStreamVideo&);
 
@@ -26,15 +24,21 @@ public:
                     IMFStreamDescriptor*,
                     WebmMfSource*,
                     const mkvparser::Track*,
+                    //ULONG context_key,
+                    //ULONG stream_key,
                     WebmMfStream*&);
 
-    HRESULT GetCurrMediaTime(LONGLONG&) const;
-    void GetSeekInfo(LONGLONG, SeekInfo&) const;
+    virtual ~WebmMfStreamVideo();
 
-    HRESULT Seek(
-        const PROPVARIANT& time,
-        const SeekInfo&,
-        bool bStart);
+    HRESULT GetCurrMediaTime(LONGLONG&) const;
+    //void GetSeekInfo(LONGLONG, SeekInfo&) const;
+
+    //HRESULT Seek(
+    //    const PROPVARIANT& time,
+    //    const SeekInfo&,
+    //    bool bStart);
+
+    HRESULT Start(const PROPVARIANT&);
 
     void SetRate(BOOL, float);
 

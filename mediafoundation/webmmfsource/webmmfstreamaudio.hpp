@@ -10,8 +10,6 @@ class WebmMfStreamAudio : public WebmMfStream
         IMFStreamDescriptor*,
         const mkvparser::AudioTrack*);
 
-    virtual ~WebmMfStreamAudio();
-
     WebmMfStreamAudio(const WebmMfStreamAudio&);
     WebmMfStreamAudio& operator=(const WebmMfStreamAudio&);
 
@@ -27,12 +25,16 @@ public:
                     const mkvparser::Track*,
                     WebmMfStream*&);
 
+    virtual ~WebmMfStreamAudio();
+
     HRESULT GetCurrMediaTime(LONGLONG&) const;
 
-    HRESULT Seek(
-        const PROPVARIANT& time,
-        const SeekInfo&,
-        bool bStart);
+    //HRESULT Seek(
+    //    const PROPVARIANT& time,
+    //    const SeekInfo&,
+    //    bool bStart);
+
+    HRESULT Start(const PROPVARIANT&);
 
     void SetRate(BOOL, float);
 

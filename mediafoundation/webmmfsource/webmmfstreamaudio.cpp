@@ -213,7 +213,7 @@ HRESULT WebmMfStreamAudio::CreateStream(
     IMFStreamDescriptor* pSD,
     WebmMfSource* pSource,
     const mkvparser::Track* pTrack_,
-    WebmMfStream*& pStream)
+    WebmMfStream*& p)
 {
     assert(pTrack_);
     assert(pTrack_->GetType() == 2);
@@ -221,12 +221,10 @@ HRESULT WebmMfStreamAudio::CreateStream(
     typedef mkvparser::AudioTrack AT;
     const AT* const pTrack = static_cast<const AT*>(pTrack_);
 
-    pStream = new (std::nothrow) WebmMfStreamAudio(pSource, pSD, pTrack);
-    assert(pStream);  //TODO
+    p = new (std::nothrow) WebmMfStreamAudio(pSource, pSD, pTrack);
+    assert(p);  //TODO
 
-    //TODO: handle time
-
-    return pStream ? S_OK : E_OUTOFMEMORY;
+    return p ? S_OK : E_OUTOFMEMORY;
 }
 
 
@@ -244,6 +242,7 @@ WebmMfStreamAudio::~WebmMfStreamAudio()
 }
 
 
+#if 0  //TODO: restore this
 HRESULT WebmMfStreamAudio::Seek(
     const PROPVARIANT& var,
     const SeekInfo& curr,
@@ -260,6 +259,19 @@ HRESULT WebmMfStreamAudio::Seek(
     else
         return OnSeek(var);
 }
+#else
+HRESULT WebmMfStreamAudio::Start(const PROPVARIANT& var)
+{
+    assert(m_pLocked == 0);
+
+    m_bDiscontinuity = true;
+    //TODO: m_curr = curr;
+    assert(m_curr.pBE);
+    m_pNextBlock = 0;
+
+    return OnStart(var);
+}
+#endif
 
 
 HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)

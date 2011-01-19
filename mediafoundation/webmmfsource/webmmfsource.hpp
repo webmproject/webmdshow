@@ -98,6 +98,8 @@ public:
     HRESULT BeginLoad(IMFAsyncCallback*);
     //HRESULT EndLoad(IMFAsyncResult*);
 
+    bool IsStopped() const;
+    bool IsPaused() const;
     HRESULT RequestSample(WebmMfStream*, IUnknown*);
 
 private:
@@ -107,7 +109,6 @@ private:
     WebmMfSource(IClassFactory*, IMFByteStream*);
     virtual ~WebmMfSource();
 
-    //HRESULT SyncLoad();
     LONGLONG GetDuration() const;
 
     IClassFactory* const m_pClassFactory;
@@ -120,34 +121,20 @@ private:
     typedef std::vector<IMFStreamDescriptor*> stream_descriptors_t;
     stream_descriptors_t m_stream_descriptors;
 
-    typedef std::map<ULONG, WebmMfStream*> streams_t;
-    streams_t m_streams;
-
-    HRESULT NewStream(IMFStreamDescriptor*, const mkvparser::Track*);
-    HRESULT UpdateStream(WebmMfStream*);
+    HRESULT NewStream(
+                IMFStreamDescriptor*,
+                const mkvparser::Track*,
+                WebmMfStream*&);
 
     void GetTime(
         IMFPresentationDescriptor*,
         const PROPVARIANT& request,
         PROPVARIANT& actual) const;
 
-    void WebmMfSource::Seek(
-        const PROPVARIANT& var,
-        bool bStart);  //true = start, false = seek
-
-    HRESULT StartStreams(const PROPVARIANT&);
-    HRESULT SeekStreams(const PROPVARIANT&);
-    HRESULT RestartStreams();
-
-    ULONG m_cEOS;
-
 public:
 
     MkvReader m_file;
     mkvparser::Segment* m_pSegment;
-
-    enum State { kStateStopped, kStatePaused, kStateStarted };
-    State m_state;
     LONGLONG m_preroll_ns;
 
 private:
@@ -160,6 +147,9 @@ private:
         WebmMfStream* pStream;
         IUnknown* pToken;
     };
+
+    typedef std::list<Request> requests_t;
+    requests_t m_requests;
 
     void NotifyEOS();
 
@@ -185,9 +175,6 @@ private:
 
     CAsyncRead m_async_read;
 
-    typedef std::list<Request> requests_t;
-    requests_t m_requests;
-
     HANDLE m_hThread;
     HANDLE m_hQuit;
     HANDLE m_hRequestSample;
@@ -208,6 +195,7 @@ private:
 
     thread_state_t OnAsyncRead();
     thread_state_t OnRequestSample();
+    thread_state_t OnCommand();
 
     ULONG m_track_init;
     const mkvparser::Cluster* m_pCurr;
@@ -217,11 +205,16 @@ private:
     thread_state_t StateAsyncParseEbmlHeader();
     thread_state_t StateAsyncParseSegmentHeaders();
     thread_state_t StateAsyncInitStreams();
+    thread_state_t StateAsyncParseCues();
 
     //for async locking:
     thread_state_t StateAsyncLockCurr();
 
-    //for async cluster parsing:
+    //for async cluster parsing of curr cluster:
+    thread_state_t StateAsyncParseCurr();
+    thread_state_t StateAsyncLoadCurr();
+
+    //for async cluster parsing of next cluster:
     thread_state_t StateAsyncParseNext();
     thread_state_t StateAsyncLoadNext();
 
@@ -233,9 +226,57 @@ private:
 
     thread_state_t LoadComplete(HRESULT);
 
+    class Command
+    {
+        Command& operator=(const Command&);
+
+    public:
+        enum Kind
+        {
+            kStart,
+            kSeek,
+            kRestart,  //un-pause
+            kPause,
+            kStop
+        };
+
+        const Kind m_kind;
+
+        explicit Command(Kind k);
+        Command(const Command&);
+
+        ~Command();
+
+        void SetDesc(IMFPresentationDescriptor*);
+        void SetTime(const PROPVARIANT&);
+
+        bool OnStart(WebmMfSource*);
+        void OnStop(WebmMfSource*);
+        void OnPause(WebmMfSource*);
+        void OnRestart(WebmMfSource*);  //un-pause
+
+    private:
+        IMFPresentationDescriptor* m_pDesc;
+        PROPVARIANT m_time;
+
+        //for start command
+        bool StateStartInitStreams(WebmMfSource*);
+        bool (Command::*m_state)(WebmMfSource*);
+        DWORD m_index;
+
+    };
+
+    typedef std::list<Command> commands_t;
+    commands_t m_commands;
+
+    //The map key is stream identifier of the stream descriptor,
+    //which is the same as MKV track number.
+    typedef std::map<ULONG, WebmMfStream*> streams_t;
+    streams_t m_streams;
+
+    UINT64 GetActualStartTime(IMFPresentationDescriptor*) const;
+
 };
 
 
 }  //end namespace WebmMfSourceLib
-
-
