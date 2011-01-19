@@ -319,6 +319,14 @@ HRESULT AudioPlaybackDevice::Stop()
         return E_UNEXPECTED;
     }
     HRESULT hr = S_OK;
+    if (STATE_PLAY == state_)
+    {
+        CHK(hr, Pause());
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
     if (ptr_dsound_thread_->Running())
     {
         // tell the |DSoundWriterThread_| to stop
