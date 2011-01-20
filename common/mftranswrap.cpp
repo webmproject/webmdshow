@@ -73,7 +73,7 @@ ULONG MfTransformWrapper::Release()
 }
 
 MfTransformWrapper::MfTransformWrapper():
-  ptr_com_dll_(NULL),
+  ptr_transform_dll_(NULL),
   ref_count_(0),
   transform_buffer_(0, 0)
 {
@@ -85,14 +85,15 @@ MfTransformWrapper::~MfTransformWrapper()
 
 HRESULT MfTransformWrapper::Create_(std::wstring dll_path, GUID mfobj_clsid)
 {
-    HRESULT hr = ComDllWrapper::Create(dll_path, mfobj_clsid, &ptr_com_dll_);
-    if (FAILED(hr) || !ptr_com_dll_)
+    HRESULT hr = ComDllWrapper::Create(dll_path, mfobj_clsid,
+                                       &ptr_transform_dll_);
+    if (FAILED(hr) || !ptr_transform_dll_)
     {
         DBGLOG("ComDllWrapper::Create failed path=" << dll_path.c_str()
             << HRLOG(hr));
         return hr;
     }
-    hr = ptr_com_dll_->CreateInstance(IID_IMFTransform,
+    hr = ptr_transform_dll_->CreateInstance(IID_IMFTransform,
         reinterpret_cast<void**>(&ptr_transform_));
     if (FAILED(hr) || !ptr_transform_)
     {

@@ -38,8 +38,8 @@ private:
     ~MfTransformWrapper();
     HRESULT Create_(std::wstring dll_path, GUID mfobj_clsid);
 
-    ComDllWrapper* ptr_com_dll_;
     WebmUtil::auto_array<BYTE> transform_buffer_;
+    ComDllWrapper* ptr_transform_dll_;
     IMFTransformPtr ptr_transform_;
     IMFMediaTypePtr ptr_input_type_;
     IMFMediaTypePtr ptr_output_type_;
