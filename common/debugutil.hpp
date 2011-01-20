@@ -43,7 +43,7 @@ do { \
 do { \
     if (FAILED(X=(Y))) \
     { \
-        DBGLOG(__FILE__ << "(" << __LINE__ << ") : " << #Y << HRLOG(X)); \
+        DBGLOG("\n" << __FILE__ << "(" << __LINE__ << ") : " << #Y << HRLOG(X)); \
     } \
 } while (0)
 
