@@ -421,6 +421,103 @@ TEST(MfTransformWrapper, SetVideoOutputType)
     ASSERT_EQ(S_OK, mf_shutdown());
 }
 
+TEST(MfBasicPipeline, SetupAudioDecoder)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_source(WEBM_SOURCE_PATH,
+                                                 g_test_input_file,
+                                                 &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_GT(ptr_mf_bsh->GetAudioStreamCount(), 0UL);
+    using WebmTypes::CLSID_WebmMfVorbisDec;
+    MfTransformWrapper* ptr_transform = NULL;
+    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_decoder(VORBISDEC_PATH,
+                                                  CLSID_WebmMfVorbisDec,
+                                                  &ptr_transform));
+    ASSERT_EQ(S_OK, WebmMfUtil::setup_webm_decode(ptr_mf_bsh, ptr_transform,
+                                                  MFMediaType_Audio));
+    ptr_transform->Release();
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfBasicPipeline, SetupVideoDecoder)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_source(WEBM_SOURCE_PATH,
+                                                 g_test_input_file,
+                                                 &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_GT(ptr_mf_bsh->GetVideoStreamCount(), 0UL);
+    using WebmTypes::CLSID_WebmMfVp8Dec;
+    MfTransformWrapper* ptr_transform = NULL;
+    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_decoder(VP8DEC_PATH,
+                                                  CLSID_WebmMfVp8Dec,
+                                                  &ptr_transform));
+    ASSERT_EQ(S_OK, WebmMfUtil::setup_webm_decode(ptr_mf_bsh, ptr_transform,
+                                                  MFMediaType_Video));
+    ptr_transform->Release();
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+#if 0
+TEST(MfBasicPipeline, TransformAudioSample)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_source(WEBM_SOURCE_PATH,
+                                                 g_test_input_file,
+                                                 &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    ASSERT_GT(ptr_mf_bsh->GetAudioStreamCount(), 0UL);
+    using WebmTypes::CLSID_WebmMfVorbisDec;
+    MfTransformWrapper* ptr_transform = NULL;
+    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_transform(VORBISDEC_PATH,
+                                                    CLSID_WebmMfVorbisDec,
+                                                    &ptr_transform));
+    ASSERT_EQ(S_OK, WebmMfUtil::setup_webm_decode(ptr_mf_bsh, ptr_transform));
+
+    _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
+    IMFSamplePtr ptr_sample;
+    ASSERT_EQ(S_OK, ptr_mf_bsh->GetAudioSample(&ptr_sample));
+    DWORD buffer_count = 0;
+    ASSERT_EQ(S_OK, ptr_sample->GetBufferCount(&buffer_count));
+    ASSERT_GT(buffer_count, 0UL);
+    ASSERT_EQ(true, ptr_sample != NULL);
+
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+
+TEST(MfBasicPipeline, GetVideoSample)
+{
+    ASSERT_EQ(S_OK, mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    ASSERT_EQ(S_OK,
+        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
+                                           CLSID_WebmMfByteStreamHandler,
+                                           &ptr_mf_bsh));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
+    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
+    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
+    if (ptr_mf_bsh->GetAudioStreamCount() > 0)
+    {
+        _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
+        IMFSamplePtr ptr_sample;
+        ASSERT_EQ(S_OK, ptr_mf_bsh->GetVideoSample(&ptr_sample));
+        DWORD buffer_count = 0;
+        ASSERT_EQ(S_OK, ptr_sample->GetBufferCount(&buffer_count));
+        ASSERT_GT(buffer_count, 0UL);
+        ASSERT_EQ(true, ptr_sample != NULL);
+    }
+    ptr_mf_bsh->Release();
+    ASSERT_EQ(S_OK, mf_shutdown());
+}
+#endif
+
 TEST(BSHBasicFuzz, PauseWithoutStart)
 {
     ASSERT_EQ(S_OK, mf_startup());

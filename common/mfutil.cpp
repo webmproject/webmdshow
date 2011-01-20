@@ -13,9 +13,14 @@
 #include <mferror.h>
 #include <mfidl.h>
 
+#include <string>
+
 #include "debugutil.hpp"
 #include "eventutil.hpp"
+#include "mfsrcwrap.hpp"
+#include "mftranswrap.hpp"
 #include "mfutil.hpp"
+#include "webmtypes.hpp"
 
 namespace WebmMfUtil
 {
@@ -149,6 +154,83 @@ HRESULT mf_shutdown()
     {
         DBGLOG("ERROR, MFShutdown failed, hr=" << hr);
     }
+    return hr;
+}
+
+HRESULT open_webm_source(const std::wstring& dll_path,
+                         const std::wstring& url,
+                         MfByteStreamHandlerWrapper** ptr_wrapper_instance)
+{
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    HRESULT hr;
+    using WebmTypes::CLSID_WebmMfByteStreamHandler;
+    CHK(hr, MfByteStreamHandlerWrapper::Create(dll_path,
+                                               CLSID_WebmMfByteStreamHandler,
+                                               &ptr_mf_bsh));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, ptr_mf_bsh->OpenURL(url));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, ptr_mf_bsh->LoadMediaStreams());
+    if (SUCCEEDED(hr))
+    {
+        *ptr_wrapper_instance = ptr_mf_bsh;
+    }
+    return hr;
+}
+
+HRESULT open_webm_decoder(const std::wstring& dll_path, const GUID& clsid,
+                          MfTransformWrapper** ptr_decoder_instance)
+{
+    MfTransformWrapper* ptr_transform = NULL;
+    HRESULT hr;
+    CHK(hr, MfTransformWrapper::CreateInstance(dll_path, clsid,
+                                               &ptr_transform));
+    if (SUCCEEDED(hr))
+    {
+        *ptr_decoder_instance = ptr_transform;
+    }
+    return hr;
+}
+
+HRESULT setup_webm_decode(MfByteStreamHandlerWrapper* ptr_source,
+                          MfTransformWrapper* ptr_decoder,
+                          const GUID& major_type)
+{
+    if (!ptr_source || !ptr_decoder)
+    {
+        DBGLOG("ERROR NULL ptr_source or ptr_decoder.");
+        return E_INVALIDARG;
+    }
+    HRESULT hr = E_INVALIDARG;
+    IMFMediaTypePtr ptr_type;
+    // get output type from |ptr_source|
+    if (MFMediaType_Audio == major_type)
+    {
+        CHK(hr, ptr_source->GetAudioMediaType(&ptr_type));
+    }
+    else if (MFMediaType_Video == major_type)
+    {
+        CHK(hr, ptr_source->GetVideoMediaType(&ptr_type));
+    }
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    // set |ptr_decoder| input type to the output type from |ptr_source|
+    CHK(hr, ptr_decoder->SetInputType(ptr_type));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    // clear |ptr_type|: using an empty type lets the decoder use its default
+    ptr_type = 0;
+    CHK(hr, ptr_decoder->SetOutputType(ptr_type));
     return hr;
 }
 
