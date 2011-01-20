@@ -19,6 +19,7 @@
 #include "comdllwrapper.hpp"
 #include "eventutil.hpp"
 #include "gtest/gtest.h"
+#include "memutil.hpp"
 #include "mfsrcwrap.hpp"
 #include "mftranswrap.hpp"
 #include "mfutil.hpp"

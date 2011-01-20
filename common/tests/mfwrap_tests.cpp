@@ -21,6 +21,7 @@
 #include "comreg.hpp"
 #include "comdllwrapper.hpp"
 #include "gtest/gtest.h"
+#include "memutil.hpp"
 #include "mfsrcwrap.hpp"
 #include "mftranswrap.hpp"
 #include "mfutil.hpp"

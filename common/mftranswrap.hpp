@@ -9,6 +9,9 @@
 #ifndef __WEBMDSHOW_COMMON_MFTRANSWRAP_HPP__
 #define __WEBMDSHOW_COMMON_MFTRANSWRAP_HPP__
 
+#include "debugutil.hpp"
+#include "memutilfwd.hpp"
+
 namespace WebmMfUtil
 {
 
@@ -36,6 +39,7 @@ private:
     HRESULT Create_(std::wstring dll_path, GUID mfobj_clsid);
 
     ComDllWrapper* ptr_com_dll_;
+    WebmUtil::auto_array<BYTE> transform_buffer_;
     IMFTransformPtr ptr_transform_;
     IMFMediaTypePtr ptr_input_type_;
     IMFMediaTypePtr ptr_output_type_;

@@ -19,6 +19,7 @@
 #include "comdllwrapper.hpp"
 #include "eventutil.hpp"
 #include "hrtext.hpp"
+#include "memutil.hpp"
 #include "mftranswrap.hpp"
 #include "mfutil.hpp"
 
@@ -73,7 +74,8 @@ ULONG MfTransformWrapper::Release()
 
 MfTransformWrapper::MfTransformWrapper():
   ptr_com_dll_(NULL),
-  ref_count_(0)
+  ref_count_(0),
+  transform_buffer_(0, 0)
 {
 }
 
@@ -157,6 +159,20 @@ HRESULT MfTransformWrapper::SetOutputType(IMFMediaTypePtr& ptr_type)
         return hr;
     }
     ptr_output_type_ = ptr_type;
+    // TODO(tomfinegan): relocate |transform_buffer_| setup
+    MFT_OUTPUT_STREAM_INFO stream_info = {0};
+    CHK(hr, ptr_transform_->GetOutputStreamInfo(0, &stream_info));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    const size_t buffer_size = stream_info.cbSize;
+    transform_buffer_.reset(new (std::nothrow) BYTE[buffer_size], buffer_size);
+    if (!transform_buffer_.get())
+    {
+        DBGLOG("ERROR, transform buffer alloc failed, E_OUTOFMEMORY");
+        return E_OUTOFMEMORY;
+    }
     return hr;
 }
 
