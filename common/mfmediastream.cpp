@@ -320,10 +320,7 @@ HRESULT MfMediaStream::GetSample(IMFSample **ptr_sample)
         DBGLOG("ERROR, null sample");
         return E_OUTOFMEMORY;
     }
-    // AddRef for the caller since we're releasing our copy
-    ptr_sample_->AddRef();
-    *ptr_sample = ptr_sample_;
-    ptr_sample_ = 0;
+    *ptr_sample = ptr_sample_.Detach();
     return hr;
 }
 
