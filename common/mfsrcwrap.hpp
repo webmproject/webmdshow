@@ -20,6 +20,7 @@ enum MfState
     MFSTATE_ERROR = 3
 };
 
+class ComDllWrapper;
 class MfMediaStream;
 
 class MfByteStreamHandlerWrapper : public IMFAsyncCallback
