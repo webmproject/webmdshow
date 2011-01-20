@@ -17,12 +17,15 @@ namespace WebmMfUtil
 
 class ComDllWrapper;
 _COM_SMARTPTR_TYPEDEF(IMFMediaType, IID_IMFMediaType);
+_COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
 
 class MfTransformWrapper : public IUnknown
 {
 public:
     static HRESULT CreateInstance(std::wstring dll_path, GUID mfobj_clsid,
                                   MfTransformWrapper** ptr_instance);
+    HRESULT Transform(IMFSample* ptr_in_sample,
+                      IMFSample** ptr_out_sample);
     HRESULT GetInputType(IMFMediaType** ptr_type) const;
     HRESULT GetOutputType(IMFMediaType** ptr_type) const;
     HRESULT SetInputType(IMFMediaTypePtr& ptr_type);
@@ -32,17 +35,19 @@ public:
     STDMETHODIMP_(ULONG) AddRef();
     STDMETHODIMP_(ULONG) Release();
 private:
+    _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, IID_IMFMediaBuffer);
     _COM_SMARTPTR_TYPEDEF(IMFTransform, IID_IMFTransform);
 
     MfTransformWrapper();
     ~MfTransformWrapper();
     HRESULT Create_(std::wstring dll_path, GUID mfobj_clsid);
-
-    WebmUtil::auto_array<BYTE> transform_buffer_;
+    
     ComDllWrapper* ptr_transform_dll_;
-    IMFTransformPtr ptr_transform_;
+    IMFMediaBufferPtr ptr_buf_;
     IMFMediaTypePtr ptr_input_type_;
     IMFMediaTypePtr ptr_output_type_;
+    IMFTransformPtr ptr_transform_;
+    size_t buf_size_;
     ULONG ref_count_;
 
     DISALLOW_COPY_AND_ASSIGN(MfTransformWrapper);

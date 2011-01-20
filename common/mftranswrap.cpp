@@ -75,7 +75,7 @@ ULONG MfTransformWrapper::Release()
 MfTransformWrapper::MfTransformWrapper():
   ptr_transform_dll_(NULL),
   ref_count_(0),
-  transform_buffer_(0, 0)
+  buf_size_(0)
 {
 }
 
@@ -160,22 +160,58 @@ HRESULT MfTransformWrapper::SetOutputType(IMFMediaTypePtr& ptr_type)
         return hr;
     }
     ptr_output_type_ = ptr_type;
-    // TODO(tomfinegan): relocate |transform_buffer_| setup
+    // TODO(tomfinegan): relocate |ptr_transform_buffer_| setup
     MFT_OUTPUT_STREAM_INFO stream_info = {0};
     CHK(hr, ptr_transform_->GetOutputStreamInfo(0, &stream_info));
     if (FAILED(hr))
     {
         return hr;
     }
-    const size_t buffer_size = stream_info.cbSize;
-    transform_buffer_.reset(new (std::nothrow) BYTE[buffer_size], buffer_size);
-    if (!transform_buffer_.get())
-    {
-        DBGLOG("ERROR, transform buffer alloc failed, E_OUTOFMEMORY");
-        return E_OUTOFMEMORY;
-    }
+    buf_size_ = stream_info.cbSize;
+    CHK(hr, MFCreateMemoryBuffer((DWORD)buf_size_, &ptr_buf_));
     return hr;
 }
 
+HRESULT MfTransformWrapper::Transform(IMFSample* ptr_in_sample,
+                                      IMFSample** ptr_out_sample)
+{
+    if (!ptr_in_sample)
+    {
+        DBGLOG("ERROR, NULL sample, E_INVALIDARG");
+        return E_INVALIDARG;
+    }
+    HRESULT hr;
+    CHK(hr, ptr_transform_->ProcessInput(0, ptr_in_sample, 0));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    IMFSamplePtr output_sample;
+    CHK(hr, MFCreateSample(&output_sample));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, output_sample->AddBuffer(ptr_buf_));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    MFT_OUTPUT_DATA_BUFFER mf_sample_buffer = {0};
+    mf_sample_buffer.pSample = output_sample;
+    // can't use CHK: MF_E_TRANSFORM_NEEDS_MORE_INPUT is an expected error, and
+    // we don't want lies about that being an error in debugging output
+    hr = ptr_transform_->ProcessOutput(0, 1, &mf_sample_buffer, NULL);
+    if (MF_E_TRANSFORM_NEED_MORE_INPUT == hr)
+    {
+        // caller must discard the input sample: the MFT now owns it
+        return S_FALSE;
+    }
+    if (SUCCEEDED(hr))
+    {
+        *ptr_out_sample = output_sample.Detach();
+    }
+    return hr;
+}
 
 } // WebmMfUtil namespace
