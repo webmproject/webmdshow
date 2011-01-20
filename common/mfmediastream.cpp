@@ -289,6 +289,12 @@ HRESULT MfMediaStream::GetSample(IMFSample **ptr_sample)
         DBGLOG("ERROR, stream not set, E_UNEXPECTED");
         return E_UNEXPECTED;
     }
+    // TODO(tomfinegan): need to handle pause; RequestSample will succeed while
+    //                   paused, but the stream won't deliver the sample.
+    //                   This means we'll block in |WaitForStreamEvent|...? 
+    //                   Curse you for not being specific MSDN.  I guess I have
+    //                   to return a wrong state error when paused to avoid the 
+    //                   situation altogether.
     HRESULT hr = ptr_stream_->RequestSample(NULL);
     // MF_E_MEDIA_SOURCE_WRONGSTATE is not treated as an error by the pipeline
     if (FAILED(hr))
@@ -314,8 +320,10 @@ HRESULT MfMediaStream::GetSample(IMFSample **ptr_sample)
         DBGLOG("ERROR, null sample");
         return E_OUTOFMEMORY;
     }
+    // AddRef for the caller since we're releasing our copy
     ptr_sample_->AddRef();
     *ptr_sample = ptr_sample_;
+    ptr_sample_ = 0;
     return hr;
 }
 
