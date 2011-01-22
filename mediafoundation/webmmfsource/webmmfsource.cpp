@@ -4054,7 +4054,10 @@ WebmMfSource::thread_state_t WebmMfSource::OnAsyncRead()
         if (FAILED(hr))
             return &WebmMfSource::StateQuit;  //TODO
 
-        return 0;  //wait for async read to complete
+        if (hr == S_FALSE)  //async read in progress
+            return 0;       //wait for async read to complete
+
+        assert(hr == S_OK);
     }
 
     //All bytes requested are now in the cache.

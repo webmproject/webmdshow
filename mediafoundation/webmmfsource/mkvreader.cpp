@@ -890,6 +890,7 @@ HRESULT MkvReader::AsyncReadContinue(
 
     const DWORD page_size = m_info.dwPageSize;
 
+#if 0  //this is wrong
     {
         const iter_t i = m_cache.begin();
         const iter_t j = m_cache.end();
@@ -904,6 +905,32 @@ HRESULT MkvReader::AsyncReadContinue(
         page_end;
         assert(pos >= page_end);
     }
+#else
+    if (m_cache.empty() || (pos < (*m_cache.front()).pos))
+        next = m_cache.begin();
+    else
+    {
+        const iter_t i = m_cache.begin();
+        const iter_t j = m_cache.end();
+
+        next = std::upper_bound(i, j, pos, PageLess());
+        assert(next != i);
+
+        const cache_t::value_type page_iter = *--iter_t(next);
+
+        Page& page = *page_iter;
+        assert(page.cRef >= 0);
+        assert(page.pos <= pos);
+
+        const LONGLONG page_end = page.pos + page_size;
+
+        if (pos < page_end)  //cache hit
+        {
+            Read(page_iter, pos, len, 0);
+            m_avail = pos;
+        }
+    }
+#endif
 
     while (len > 0)
     {
@@ -938,6 +965,7 @@ HRESULT MkvReader::AsyncReadContinue(
             const cache_t::value_type page_iter = *next++;
 
             Page& page = *page_iter;
+            assert(page.cRef >= 0);
             assert(page.pos <= pos);
             assert(pos < (page.pos + page_size));
 
