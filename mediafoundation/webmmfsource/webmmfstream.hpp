@@ -19,8 +19,6 @@ protected:
         WebmMfSource*,
         IMFStreamDescriptor*,
         const mkvparser::Track*);
-        //ULONG context_key,
-        //ULONG stream_key);
 
 public:
 
@@ -90,7 +88,8 @@ public:
 
     virtual void SetRate(BOOL, float) = 0;
 
-    bool IsEOS() const;
+    bool IsCurrBlockEOS() const;
+    bool GetEOS() const;
     HRESULT SetEOS();
 
     virtual HRESULT GetSample(IUnknown*) = 0;

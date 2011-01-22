@@ -24,16 +24,12 @@ WebmMfStream::WebmMfStream(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     const mkvparser::Track* pTrack) :
-    //ULONG context_key,
-    //ULONG stream_key) :
     m_cRef(0),  //yes
     m_pSource(pSource),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
-    //m_context_key(context_key),
-    //m_stream_key(stream_key),
     m_bSelected(true),
-    m_bEOS(false),
+    m_bEOS(true),
     m_pNextBlock(0),
     m_pLocked(0)
 {
@@ -465,6 +461,7 @@ HRESULT WebmMfStream::Stop()
         return S_FALSE;
 
     m_bSelected = false;
+    m_bEOS = true;
 
     PurgeSamples();
 
@@ -475,7 +472,7 @@ HRESULT WebmMfStream::Stop()
 
     f.UnlockPage(m_pLocked);
     m_pLocked = 0;
-    
+
     m_curr.Init();
 
     return S_OK;
@@ -497,6 +494,7 @@ HRESULT WebmMfStream::Pause()
 HRESULT WebmMfStream::Update()
 {
     m_bSelected = true;
+    m_bEOS = false;
 
     HRESULT hr = m_pEvents->QueueEventParamUnk(
                     MEUpdatedStream,
@@ -532,9 +530,6 @@ HRESULT WebmMfStream::Shutdown()
 
 HRESULT WebmMfStream::Select()
 {
-    //TODO: resolve this
-    //assert(m_samples.empty());
-
     m_bSelected = true;
     return S_OK;
 }
@@ -548,6 +543,7 @@ HRESULT WebmMfStream::Deselect()
     PurgeSamples();
 
     m_bSelected = false;
+    m_bEOS = true;
 
     MkvReader& f = m_pSource->m_file;
 
@@ -644,7 +640,12 @@ HRESULT WebmMfStream::Restart()
 }
 
 
-bool WebmMfStream::IsEOS() const
+bool WebmMfStream::GetEOS() const
+{
+    return m_bEOS;
+}
+
+bool WebmMfStream::IsCurrBlockEOS() const
 {
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     return ((pCurr == 0) || pCurr->EOS());
@@ -709,9 +710,7 @@ HRESULT WebmMfStream::SetEOS()
 
     assert(SUCCEEDED(hr));
 
-    //TODO: m_pSource->NotifyEOS();
-
-    return hr;
+    return S_OK;
 }
 
 

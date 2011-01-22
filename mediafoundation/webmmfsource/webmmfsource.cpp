@@ -2947,9 +2947,24 @@ void WebmMfSource::NotifyEOS()
     if (m_pEvents == 0)  //weird
         return;
 
-    //TODO: send end-of-presentation when all selected streams have reached eos
+    typedef streams_t::const_iterator iter_t;
 
-#if 0  //TODO: restore this:
+    iter_t i = m_streams.begin();
+    const iter_t j = m_streams.end();
+
+    while (i != j)
+    {
+        const streams_t::value_type& v = *i++;
+
+        const WebmMfStream* const pStream = v.second;
+        assert(pStream);
+
+        if (!pStream->IsSelected())
+            continue;
+
+        if (!pStream->GetEOS())
+            return;
+    }
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEEndOfPresentation,
@@ -2958,8 +2973,6 @@ void WebmMfSource::NotifyEOS()
                         0);
 
     assert(SUCCEEDED(hr));
-
-#endif
 }
 #endif  //TODO: restore this
 
@@ -3182,8 +3195,10 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         Request& r = m_requests.front();
 
         //TODO: check whether stream still selected?
+        //assert(r.pStream);
+        //assert(r.pStream->IsSelected());
 
-        if (r.pStream->IsEOS())
+        if (r.pStream->IsCurrBlockEOS())
         {
             if (r.pToken)
             {
