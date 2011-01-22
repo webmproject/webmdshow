@@ -1864,6 +1864,7 @@ HRESULT WebmMfSource::Shutdown()
 
     m_pEvents = 0;
 
+#if 0
     //TODO: do this in dtor only?
     //The problem is that we haven't addressed the
     //issue of requests that haven't been serviced yet.
@@ -1873,6 +1874,10 @@ HRESULT WebmMfSource::Shutdown()
 
     const BOOL b = SetEvent(m_hQuit);
     assert(b);
+#else
+    const BOOL b = SetEvent(m_hRequestSample);
+    assert(b);
+#endif
 
     return S_OK;
 }
@@ -3201,25 +3206,36 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
     if (FAILED(hr))
         return &WebmMfSource::StateQuit;
 
-    if (m_pEvents == 0)  //shutdown
-        return &WebmMfSource::StateQuit;
+    requests_t& rr = m_requests;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     odbgstream os;
     os << "WebmMfSource::OnRequestSample: rr.size="
-       << m_requests.size()
+       << rr.size()
        << " cc.size="
        << m_commands.size()
        << endl;
 #endif
 
-    while (!m_requests.empty())
+    while (!rr.empty())
     {
-        Request& r = m_requests.front();
+        Request& r = rr.front();
 
         //TODO: check whether stream still selected?
         //assert(r.pStream);
         //assert(r.pStream->IsSelected());
+
+        if (m_pEvents == 0)  //shutdown
+        {
+            if (r.pToken)
+            {
+                r.pToken->Release();
+                r.pToken = 0;
+            }
+
+            rr.pop_front();
+            continue;
+        }
 
         if (r.pStream->IsCurrBlockEOS())
         {
@@ -3235,7 +3251,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
             const HRESULT hr = pStream->SetEOS();
             assert(SUCCEEDED(hr));  //TODO
 
-            m_requests.pop_front();
+            rr.pop_front();
 
             NotifyEOS();
             continue;
@@ -3287,7 +3303,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
                 r.pToken = 0;
             }
 
-            m_requests.pop_front();
+            rr.pop_front();
             continue;
         }
 
@@ -3315,6 +3331,9 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         return &WebmMfSource::StateAsyncRead;
     }
+
+    if (m_pEvents == 0)  //shutdown
+        return &WebmMfSource::StateQuit;
 
     PurgeCache();
 
