@@ -626,7 +626,7 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
     switch (message)
     {
     case MFT_MESSAGE_COMMAND_FLUSH:
-        DBGLOG("MFT_MESSAGE_COMMAND_FLUSH");
+        //DBGLOG("MFT_MESSAGE_COMMAND_FLUSH");
 
         m_decode_start_time = -1;
 
@@ -643,17 +643,17 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
         break;
 
     case MFT_MESSAGE_NOTIFY_BEGIN_STREAMING:
-        DBGLOG("MFT_MESSAGE_NOTIFY_BEGIN_STREAMING");
+        //DBGLOG("MFT_MESSAGE_NOTIFY_BEGIN_STREAMING");
         break;
 
     case MFT_MESSAGE_NOTIFY_END_STREAMING:
-        DBGLOG("MFT_MESSAGE_NOTIFY_END_STREAMING");
+        //DBGLOG("MFT_MESSAGE_NOTIFY_END_STREAMING");
         break;
 
     case MFT_MESSAGE_COMMAND_DRAIN:
         // Drain: Tells the MFT not to accept any more input until
         // all of the pending output has been processed.
-        DBGLOG("MFT_MESSAGE_COMMAND_DRAIN");
+        //DBGLOG("MFT_MESSAGE_COMMAND_DRAIN");
         break;
 
     case MFT_MESSAGE_SET_D3D_MANAGER:
@@ -661,15 +661,15 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
         // has the MF_SA_D3D_AWARE attribute set to TRUE. However, if we
         // do get this message, it's invalid and we don't implement it.
         hr = E_NOTIMPL;
-        DBGLOG("MFT_MESSAGE_SET_D3D_MANAGER");
+        //DBGLOG("MFT_MESSAGE_SET_D3D_MANAGER");
         break;
 
     case MFT_MESSAGE_NOTIFY_END_OF_STREAM:
-        DBGLOG("MFT_MESSAGE_NOTIFY_END_OF_STREAM");
+        //DBGLOG("MFT_MESSAGE_NOTIFY_END_OF_STREAM");
         break;
 
     case MFT_MESSAGE_NOTIFY_START_OF_STREAM:
-        DBGLOG("MFT_MESSAGE_NOTIFY_START_OF_STREAM");
+        //DBGLOG("MFT_MESSAGE_NOTIFY_START_OF_STREAM");
         break;
     }
 
@@ -897,15 +897,15 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
         m_start_time = m_decode_start_time;
 
-        DBGLOG("m_decode_start_time="
-               << REFTIMETOSECONDS(m_decode_start_time));
+        //DBGLOG("m_decode_start_time="
+        //       << REFTIMETOSECONDS(m_decode_start_time));
     }
 
     LONGLONG input_duration = 0;
     status = p_mf_input_sample->GetSampleDuration(&input_duration);
     if (FAILED(status) && MF_E_NO_SAMPLE_DURATION != status)
     {
-        DBGLOG("no duration on input sample!");
+        //DBGLOG("no duration on input sample!");
         assert(SUCCEEDED(status));
     }
 

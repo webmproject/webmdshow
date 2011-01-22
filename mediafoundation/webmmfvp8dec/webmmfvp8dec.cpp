@@ -11,12 +11,12 @@
 #include <comdef.h>
 #include <cassert>
 #include <new>
-#ifdef _DEBUG
-#include "odbgstream.hpp"
+//#ifdef _DEBUG
+//#include "odbgstream.hpp"
 //#include "iidstr.hpp"
-using std::endl;
-using std::boolalpha;
-#endif
+//using std::endl;
+//using std::boolalpha;
+//#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 _COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
@@ -1090,7 +1090,7 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
     MFT_MESSAGE_TYPE m,
     ULONG_PTR)
 {
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     odbgstream os;
     os << "WebmMfVp8Dec::ProcessMessage(samples.size="
        << m_samples.size() << "): ";
@@ -1099,7 +1099,7 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
     switch (m)
     {
         case MFT_MESSAGE_COMMAND_FLUSH:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "COMMAND_FLUSH" << endl;
 #endif
 
@@ -1109,7 +1109,7 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             return S_OK;
 
         case MFT_MESSAGE_COMMAND_DRAIN:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "COMMAND_DRAIN" << endl;
 #endif
 
@@ -1121,21 +1121,21 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             return S_OK;
 
         case MFT_MESSAGE_SET_D3D_MANAGER:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "SET_D3D" << endl;
 #endif
 
             return S_OK;
 
         case MFT_MESSAGE_DROP_SAMPLES:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "DROP_SAMPLES" << endl;
 #endif
 
             return S_OK;
 
         case MFT_MESSAGE_NOTIFY_BEGIN_STREAMING:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "NOTIFY_BEGIN_STREAMING" << endl;
 #endif
 
@@ -1146,7 +1146,7 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             return S_OK;
 
         case MFT_MESSAGE_NOTIFY_END_STREAMING:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "NOTIFY_END_STREAMING" << endl;
 #endif
 
@@ -1157,7 +1157,7 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             return S_OK;
 
         case MFT_MESSAGE_NOTIFY_END_OF_STREAM:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "NOTIFY_EOS" << endl;
 #endif
 
@@ -1168,14 +1168,14 @@ HRESULT WebmMfVp8Dec::ProcessMessage(
             return S_OK;
 
         case MFT_MESSAGE_NOTIFY_START_OF_STREAM:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "NOTIFY_START_OF_STREAM" << endl;
 #endif
 
             return S_OK;
 
         case MFT_MESSAGE_COMMAND_MARKER:
-#ifdef _DEBUG
+#if 0 //def _DEBUG
             os << "COMMAND_MARKER" << endl;
 #endif
 
