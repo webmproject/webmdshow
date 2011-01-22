@@ -612,7 +612,7 @@ HRESULT WebmMfStream::Restart()
     if (!m_bSelected)
         return S_FALSE;
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     {
         wodbgstream os;
         os << L"WebmMfStream::Restart" << endl;

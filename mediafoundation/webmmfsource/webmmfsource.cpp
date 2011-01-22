@@ -657,6 +657,10 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 
 WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
 {
+    //TODO: I think we can get rid of this, since the async start
+    //handler already does something very similar.  We only needed
+    //this as a temporary hack when start was still synchronoous.
+
     if (m_pSegment->GetCount() == 0)
     {
         for (;;)
@@ -670,15 +674,15 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
                 break;
 
             if (status > 0)  //EOF
-                return LoadComplete(E_FAIL);
+                return &WebmMfSource::StateQuit;
 
             if (status != mkvparser::E_BUFFER_NOT_FULL)
-                return LoadComplete(E_FAIL);
+                return &WebmMfSource::StateQuit;
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
             if (FAILED(hr))
-                return LoadComplete(E_FAIL);
+                return &WebmMfSource::StateQuit;
 
             if (hr == S_FALSE)  //async read in progress
                 return 0;
@@ -759,15 +763,15 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         }
 
         if (status > 0)  //EOF (weird)
-            return LoadComplete(E_FAIL);
+            return &WebmMfSource::StateQuit;
 
         if (status != mkvparser::E_BUFFER_NOT_FULL)  //parse error
-            return LoadComplete(E_FAIL);
+            return &WebmMfSource::StateQuit;
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
         if (FAILED(hr))
-            return LoadComplete(E_FAIL);
+            return &WebmMfSource::StateQuit;
 
         if (hr == S_FALSE)  //async read in progress
             return 0;
@@ -1516,6 +1520,11 @@ HRESULT WebmMfSource::Start(
     if (FAILED(hr))
         return hr;
 
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Start" << endl;
+#endif
+
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
 
@@ -1645,6 +1654,11 @@ HRESULT WebmMfSource::Stop()
 
     if (FAILED(hr))
         return hr;
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << L"WebmMfSource::Stop (begin)" << endl;
+#endif
 
     if (m_pEvents == 0)
         return MF_E_SHUTDOWN;
@@ -3190,6 +3204,15 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
     if (m_pEvents == 0)  //shutdown
         return &WebmMfSource::StateQuit;
 
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::OnRequestSample: rr.size="
+       << m_requests.size()
+       << " cc.size="
+       << m_commands.size()
+       << endl;
+#endif
+
     while (!m_requests.empty())
     {
         Request& r = m_requests.front();
@@ -3360,6 +3383,13 @@ WebmMfSource::thread_state_t WebmMfSource::OnCommand()
 
     commands_t& cc = m_commands;
 
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::OnCommand (begin): cmds.size="
+       << cc.size()
+       << endl;
+#endif
+
     typedef commands_t::iterator iter_t;
 
     while (cc.size() > 1)
@@ -3408,6 +3438,12 @@ WebmMfSource::thread_state_t WebmMfSource::OnCommand()
 
         cc.pop_front();
     }
+
+#ifdef _DEBUG
+    os << "WebmMfSource::OnCommand (end): cmds.size="
+       << cc.size()
+       << endl;
+#endif
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
@@ -3473,6 +3509,11 @@ void WebmMfSource::Command::SetTime(const PROPVARIANT& time)
 
 bool WebmMfSource::Command::OnStart(WebmMfSource* pSource)
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::Command::OnStart" << endl;
+#endif
+
     assert(pSource);
     assert(m_kind == kStart);
     assert(m_pDesc);
@@ -3760,6 +3801,11 @@ bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
 
 void WebmMfSource::Command::OnStop(WebmMfSource* pSource)
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::Command::OnStop" << endl;
+#endif
+
     streams_t& ss = pSource->m_streams;
 
     typedef streams_t::const_iterator iter_t;
@@ -3790,6 +3836,11 @@ void WebmMfSource::Command::OnStop(WebmMfSource* pSource)
 
 void WebmMfSource::Command::OnPause(WebmMfSource* pSource)
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::Command::OnPause" << endl;
+#endif
+
     streams_t& ss = pSource->m_streams;
 
     typedef streams_t::const_iterator iter_t;
@@ -3833,6 +3884,15 @@ void WebmMfSource::Command::OnRestart(WebmMfSource* pSource)  //unpause
     //  from one of them
 
     const UINT64 reftime = pSource->GetActualStartTime(m_pDesc);
+
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::Command::OnRestart: reftime="
+       << reftime
+       << " sec="
+       << (double(reftime) / 10000000)
+       << endl;
+#endif
 
     DWORD count;
 
