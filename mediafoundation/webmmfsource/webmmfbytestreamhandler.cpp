@@ -218,8 +218,22 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
         os << endl;
 #endif
 
-        __noop;  //TODO: vet capabilities
+        if (!(dw & MFBYTESTREAM_IS_READABLE))
+            return E_FAIL;
+
+        if (!(dw & MFBYTESTREAM_IS_SEEKABLE))
+            return MF_E_BYTESTREAM_NOT_SEEKABLE;
     }
+
+    QWORD length;
+
+    hr = pByteStream->GetLength(&length);
+
+    if (FAILED(hr))  //MF_E_BYTESTREAM_UNKNOWN_LENGTH
+        return hr;
+
+    if (length == 0)
+        return MF_E_INVALID_FILE_FORMAT;  //TODO: use this elsewhere
 
     WebmMfSource* pSource;
 
