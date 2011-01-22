@@ -64,7 +64,7 @@ public:
     HRESULT Deselect();
     bool IsSelected() const;
 
-    HRESULT Update();
+    //HRESULT Update();
     HRESULT Restart();
 
     HRESULT Stop();

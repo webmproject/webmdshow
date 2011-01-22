@@ -2367,6 +2367,19 @@ HRESULT WebmMfSource::NewStream(
 
     return S_OK;
 }
+
+HRESULT WebmMfSource::UpdatedStream(WebmMfStream* pStream)
+{
+    const HRESULT hr = m_pEvents->QueueEventParamUnk(
+                        MEUpdatedStream,
+                        GUID_NULL,
+                        S_OK,
+                        pStream);
+
+    assert(SUCCEEDED(hr));
+
+    return S_OK;
+}
 #endif
 
 
@@ -3791,7 +3804,21 @@ bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
             WebmMfStream* const pStream = iter->second;
             assert(pStream);
 
-            hr = pStream->Update();
+            //TODO:
+            //MEUpdatedStream Event
+            //http://msdn.microsoft.com/en-us/library/ms696195(v=vs.85).aspx
+            //
+            //This page is saying that there are some circumstances under which
+            //you would send MENewStream instead of MEUpdatedStream (namely,
+            //if this stream wasn't selected in the previous start request).
+            //
+            //TODO: this means that before we set the stream to selected,
+            //we must query its current value.
+
+            hr = pStream->Select();
+            assert(SUCCEEDED(hr));
+
+            hr = pSource->UpdatedStream(pStream);
             assert(SUCCEEDED(hr));
 
             pStream->SetCurrBlock(pBlock);
@@ -3967,8 +3994,15 @@ void WebmMfSource::Command::OnRestart(WebmMfSource* pSource)  //unpause
 
             //TODO: it's not clear whether we need to send
             //this if the stream was already selected.
+            //
+            //For the answer see the page here:
+            //MEUpdatedStream Event
+            //http://msdn.microsoft.com/en-us/library/ms696195(v=vs.85).aspx
 
-            hr = pStream->Update();
+            hr = pStream->Select();
+            assert(SUCCEEDED(hr));
+
+            hr = pSource->UpdatedStream(pStream);
             assert(SUCCEEDED(hr));
 
             continue;

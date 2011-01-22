@@ -491,6 +491,9 @@ HRESULT WebmMfStream::Pause()
 }
 
 
+#if 0
+//This is the wrong event queue: it must
+//be sent on the source's queue, not the stream's.
 HRESULT WebmMfStream::Update()
 {
     m_bSelected = true;
@@ -506,6 +509,7 @@ HRESULT WebmMfStream::Update()
 
     return S_OK;
 }
+#endif
 
 
 HRESULT WebmMfStream::Shutdown()
@@ -613,10 +617,10 @@ HRESULT WebmMfStream::Restart()
         return S_FALSE;
 
 #if 0 //def _DEBUG
-    {
-        wodbgstream os;
-        os << L"WebmMfStream::Restart" << endl;
-    }
+    wodbgstream os;
+    os << L"WebmMfStream::Restart; track.type="
+       << m_pTrack->GetType()
+       << endl;
 #endif
 
     PROPVARIANT var;

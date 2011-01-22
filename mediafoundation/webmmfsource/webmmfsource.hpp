@@ -126,6 +126,8 @@ private:
                 const mkvparser::Track*,
                 WebmMfStream*&);
 
+    HRESULT UpdatedStream(WebmMfStream*);
+
     void GetTime(
         IMFPresentationDescriptor*,
         const PROPVARIANT& request,
