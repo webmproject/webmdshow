@@ -4212,10 +4212,14 @@ WebmMfSource::StateAsyncLoadNext()
     {
         //we have next cluster, now load it into cache
 
+        //Cluster::m_pos is the (relative) position of Cluster ID
         LONGLONG pos = m_pNext->m_pos;  //relative to segment
         assert(pos >= 0);
 
-        const LONGLONG len_ = m_pNext->m_size;
+        //Cluster::m_size is the size of the payload (only).  We
+        //must add the (max) size of the cluster id and size fields
+        //to determine the total amount we need in cache.
+        const LONGLONG len_ = 8 + 8 + m_pNext->m_size;
         assert(len_ > 0);
         assert(len_ <= LONG_MAX);
 

@@ -36,6 +36,8 @@ MkvReader::MkvReader(IMFByteStream* pStream) :
     //dwPageSize
     //dwAllocationGranularity
 
+    //TODO: this crashed when I used the URL from MS:
+    //MF_E_BYTESTREAM_UNKNOWN_LENGTH
     hr = m_pStream->GetLength(&m_length);
     assert(SUCCEEDED(hr));
 
@@ -798,6 +800,11 @@ HRESULT MkvReader::AsyncReadInit(
     assert(pCB);
     assert(m_async_pos < 0);
     assert(m_async_len <= 0);
+
+    const QWORD end = pos + len;
+
+    if (end > m_length)
+        len -= static_cast<LONG>(end - m_length);
 
     typedef cache_t::iterator iter_t;
     iter_t next;
