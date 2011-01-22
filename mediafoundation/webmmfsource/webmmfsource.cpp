@@ -3713,7 +3713,15 @@ bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
     assert(!pCurr->EOS());
     assert(pCurr->m_pos >= 0);
     assert(pCurr->m_size >= 0);
-    assert(pCurr->GetTime() <= time_ns);
+
+    //TODO:
+    //For now, we cannot assert this:
+    //assert(pCurr->GetTime() <= time_ns);
+    //It is possible that the first cluster (or first few clusters)
+    //do not have any keyframes, and if the requested seek time is 0,
+    //then the cluster containing the first keyframe will not have
+    //a timecode less or equal to the requested time.
+    //END TODO.
 
     mkvparser::Segment* const pSegment = pSource->m_pSegment;
 
@@ -3782,10 +3790,30 @@ bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
 
         using mkvparser::BlockEntry;
 
-        const BlockEntry* const pBlock = pCurr->GetEntry(pTrack, time_ns);
-        assert(pBlock);           //TODO:
-        assert(!pBlock->EOS());   //TODO
-        assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
+        const BlockEntry* pBlock;
+
+        if (pCurr->GetTime() <= time_ns)
+        {
+            pBlock = pCurr->GetEntry(pTrack, time_ns);
+            assert(pBlock);           //TODO:
+            assert(!pBlock->EOS());   //TODO
+            assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
+        }
+        else
+        {
+            //To handle the pathological case when the first cluster(s)
+            //doesn't have a keyframe, and so the cluster containing
+            //the first keyframe has a timecode greater than the requested
+            //seek time.  See comments above (where we check the cluster).
+
+            pBlock = pCurr->GetEntry(pTrack);  //means return first keyframe
+            assert(pBlock);           //TODO:
+            assert(!pBlock->EOS());   //TODO
+            assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
+
+            //TODO: it would be nice to handle this case by arranging for
+            //the poster frame (first keyframe we send) to have t=0.
+        }
 
         const iter_t iter = streams.find(id);
 
