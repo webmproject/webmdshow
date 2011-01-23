@@ -28,8 +28,9 @@ WebmMfStream::WebmMfStream(
     m_pSource(pSource),
     m_pDesc(pDesc),
     m_pTrack(pTrack),
-    m_bSelected(true),
+    m_bSelected(-1),
     m_bEOS(true),
+    m_pFirstBlock(0),
     m_pNextBlock(0),
     m_pLocked(0)
 {
@@ -267,7 +268,7 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
     if (m_pSource->IsStopped())
         return MF_E_MEDIA_SOURCE_WRONGSTATE;
 
-    if (!m_bSelected)
+    if (m_bSelected <= 0)  //not selected
         return MF_E_INVALIDREQUEST;
 
     return m_pSource->RequestSample(this, pToken);
@@ -457,10 +458,10 @@ void WebmMfStream::DeliverSamples()
 
 HRESULT WebmMfStream::Stop()
 {
-    if (!m_bSelected)
+    if (m_bSelected <= 0)
         return S_FALSE;
 
-    m_bSelected = false;
+    m_bSelected = 0;
     m_bEOS = true;
 
     PurgeSamples();
@@ -468,9 +469,7 @@ HRESULT WebmMfStream::Stop()
     const HRESULT hr = QueueEvent(MEStreamStopped, GUID_NULL, S_OK, 0);
     assert(SUCCEEDED(hr));
 
-    MkvReader& f = m_pSource->m_file;
-
-    f.UnlockPage(m_pLocked);
+    m_pSource->m_file.UnlockPage(m_pLocked);
     m_pLocked = 0;
 
     m_curr.Init();
@@ -481,7 +480,7 @@ HRESULT WebmMfStream::Stop()
 
 HRESULT WebmMfStream::Pause()
 {
-    if (!m_bSelected)
+    if (m_bSelected <= 0)
         return S_FALSE;
 
     const HRESULT hr = QueueEvent(MEStreamPaused, GUID_NULL, S_OK, 0);
@@ -532,10 +531,13 @@ HRESULT WebmMfStream::Shutdown()
 }
 
 
-HRESULT WebmMfStream::Select()
+MediaEventType WebmMfStream::Select()
 {
-    m_bSelected = true;
-    return S_OK;
+    const int b = m_bSelected;
+
+    m_bSelected = 1;
+
+    return (b < 0) ? MENewStream : MEUpdatedStream;
 }
 
 
@@ -546,12 +548,12 @@ HRESULT WebmMfStream::Deselect()
 
     PurgeSamples();
 
-    m_bSelected = false;
+    assert(m_bSelected > 0);
+    m_bSelected = 0;
+
     m_bEOS = true;
 
-    MkvReader& f = m_pSource->m_file;
-
-    f.UnlockPage(m_pLocked);
+    m_pSource->m_file.UnlockPage(m_pLocked);
     m_pLocked = 0;
 
     m_curr.Init();
@@ -562,14 +564,14 @@ HRESULT WebmMfStream::Deselect()
 
 bool WebmMfStream::IsSelected() const
 {
-    return m_bSelected;
+    return (m_bSelected > 0);
 }
 
 
 HRESULT WebmMfStream::OnStart(const PROPVARIANT& var)
 {
     //assert(pCurr);
-    assert(m_bSelected);
+    assert(m_bSelected > 0);
     assert(m_samples.empty());
     assert(m_pEvents);
 
@@ -591,7 +593,7 @@ HRESULT WebmMfStream::OnStart(const PROPVARIANT& var)
 HRESULT WebmMfStream::OnSeek(const PROPVARIANT& var)
 {
     //assert(pCurr);
-    assert(m_bSelected);
+    assert(m_bSelected > 0);
     assert(m_pEvents);
 
     PurgeSamples();
@@ -613,7 +615,7 @@ HRESULT WebmMfStream::OnSeek(const PROPVARIANT& var)
 
 HRESULT WebmMfStream::Restart()
 {
-    if (!m_bSelected)
+    if (m_bSelected <= 0)
         return S_FALSE;
 
 #if 0 //def _DEBUG
@@ -656,12 +658,39 @@ bool WebmMfStream::IsCurrBlockEOS() const
 }
 
 
+HRESULT WebmMfStream::SetFirstBlock(const mkvparser::Cluster* pCluster)
+{
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    if (m_pFirstBlock)
+        return S_FALSE;  //already have a value, so nothing else to do
+
+    const mkvparser::BlockEntry* const pBlock = pCluster->GetEntry(m_pTrack);
+
+    if (pBlock == 0)     //weird: no entries on this cluster
+        return E_FAIL;   //so try the next cluster
+
+    if (pBlock->EOS())   //no (acceptable) entry for this track
+        return E_FAIL;   //so try the next cluster
+
+    m_pFirstBlock = pBlock;  //have an acceptable entry
+    return S_OK;             //first block for this stream has been found
+}
+
+
+const mkvparser::BlockEntry* WebmMfStream::GetFirstBlock() const
+{
+    return m_pFirstBlock;
+}
+
+
 void WebmMfStream::SetCurrBlock(const mkvparser::BlockEntry* pBE)
 {
-    m_curr.pBE = pBE;
-    m_curr.pCP = 0;
-    m_curr.pTP = 0;
+    m_pSource->m_file.UnlockPage(m_pLocked);
+    m_pLocked = 0;
 
+    m_curr.Init(pBE);
     m_bEOS = false;
 }
 
@@ -816,9 +845,7 @@ int WebmMfStream::LockCurrBlock()
     assert(!pCurr->EOS());
     assert(m_pLocked == 0);
 
-    MkvReader& f = m_pSource->m_file;
-
-    const int status = f.LockPage(pCurr);
+    const int status = m_pSource->m_file.LockPage(pCurr);
     assert(status == 0);
 
     if (status)  //should never happen
@@ -828,11 +855,13 @@ int WebmMfStream::LockCurrBlock()
     return 0;  //succeeded
 }
 
-void WebmMfStream::SeekInfo::Init()
+
+void WebmMfStream::SeekInfo::Init(const mkvparser::BlockEntry* pBE_)
 {
-    pBE = 0;
+    pBE = pBE_;
     pCP = 0;
     pTP = 0;
 }
+
 
 }  //end namespace WebmMfSource

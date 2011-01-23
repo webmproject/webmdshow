@@ -11,8 +11,6 @@ class WebmMfStream : public IMFMediaStream
     WebmMfStream(const WebmMfStream&);
     WebmMfStream& operator=(const WebmMfStream&);
 
-public:
-
 protected:
 
     WebmMfStream(
@@ -58,9 +56,9 @@ public:
 
     //Local methods and properties
 
-    HRESULT GetCurrMediaTime(LONGLONG&) const;  //not presentation time!
+    HRESULT GetCurrMediaTime(LONGLONG&) const;
 
-    HRESULT Select();
+    MediaEventType Select();
     HRESULT Deselect();
     bool IsSelected() const;
 
@@ -77,7 +75,7 @@ public:
         const mkvparser::CuePoint* pCP;
         const mkvparser::CuePoint::TrackPosition* pTP;
 
-        void Init();
+        void Init(const mkvparser::BlockEntry* pBE = 0);
     };
 
     //virtual HRESULT Seek(
@@ -93,6 +91,9 @@ public:
     HRESULT SetEOS();
 
     virtual HRESULT GetSample(IUnknown*) = 0;
+
+    HRESULT SetFirstBlock(const mkvparser::Cluster*);
+    const mkvparser::BlockEntry* GetFirstBlock() const;
 
     void SetCurrBlock(const mkvparser::BlockEntry*);  //TODO: pass cue point
     const mkvparser::BlockEntry* GetCurrBlock() const;
@@ -117,8 +118,9 @@ protected:
     HRESULT ProcessSample(IMFSample*);
 
     SeekInfo m_curr;
-    const mkvparser::BlockEntry* m_pLocked;
+    const mkvparser::BlockEntry* m_pFirstBlock;
     const mkvparser::BlockEntry* m_pNextBlock;
+    const mkvparser::BlockEntry* m_pLocked;
     bool m_bDiscontinuity;
 
 private:
@@ -128,7 +130,7 @@ private:
     typedef std::list<IMFSample*> samples_t;
     samples_t m_samples;
 
-    bool m_bSelected;
+    int m_bSelected;
     bool m_bEOS;  //indicates whether we have posted EOS event
 
     void PurgeSamples();

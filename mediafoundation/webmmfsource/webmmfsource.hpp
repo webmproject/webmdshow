@@ -121,12 +121,10 @@ private:
     typedef std::vector<IMFStreamDescriptor*> stream_descriptors_t;
     stream_descriptors_t m_stream_descriptors;
 
-    HRESULT NewStream(
-                IMFStreamDescriptor*,
-                const mkvparser::Track*,
-                WebmMfStream*&);
+    HRESULT CreateStream(IMFStreamDescriptor*, const mkvparser::Track*);
 
-    HRESULT UpdatedStream(WebmMfStream*);
+    //HRESULT UpdatedStream(WebmMfStream*);
+    HRESULT QueueStreamEvent(MediaEventType, WebmMfStream*) const;
 
     void GetTime(
         IMFPresentationDescriptor*,
@@ -199,7 +197,7 @@ private:
     thread_state_t OnRequestSample();
     thread_state_t OnCommand();
 
-    ULONG m_track_init;
+    //ULONG m_track_init;
     const mkvparser::Cluster* m_pCurr;
     const mkvparser::Cluster* m_pNext;
 
@@ -261,10 +259,13 @@ private:
         IMFPresentationDescriptor* m_pDesc;
         PROPVARIANT m_time;
 
-        //for start command
+        //for sync handling of start command
+        bool OnStartNoSeek(WebmMfSource*);
+
+        //for async handling of start command
         bool StateStartInitStreams(WebmMfSource*);
         bool (Command::*m_state)(WebmMfSource*);
-        DWORD m_index;
+        //DWORD m_index;
 
     };
 

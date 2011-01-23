@@ -27,6 +27,44 @@ using std::boolalpha;
 //"D:\src\mediafoundation\topoedit\app\Debug\topoedit.exe"
 //"C:\Program Files (x86)\Windows Media Player\wmplayer.exe"
 
+//For debugging, send MEError event:
+//http://msdn.microsoft.com/en-us/library/aa380072(VS.85).aspx
+//http://msdn.microsoft.com/en-us/library/bb762305(VS.85).aspx
+//
+//VT_LPWSTR must be allocated with CoTaskMemAlloc
+//(Presumably this also applies to VT_LPSTR)
+//
+//VT_LPWSTR is described as being a string pointer with no
+//information on how it is allocated. You might then assume
+//that the PROPVARIANT doesn't own the string and just has a
+//pointer to it, but you'd be wrong.
+//
+//In fact, the string stored in a VT_LPWSTR PROPVARIANT must
+//be allocated using CoTaskMemAlloc and be freed using CoTaskMemFree.
+//
+//Evidence for this:
+//
+//Look at what the inline InitPropVariantFromString function does:
+//It sets a VT_LPWSTR using SHStrDupW, which in turn allocates the
+//string using CoTaskMemAlloc. Knowing that, it's obvious that
+//PropVariantClear is expected to free the string using CoTaskMemFree.
+//
+//I can't find this explicitly documented anywhere, which is a shame,
+//but step through this code in a debugger and you can confirm that
+//the string is freed by PropVariantClear:
+//
+//#include <Propvarutil.h>
+//
+//int wmain(int argc, TCHAR *lpszArgv[])
+//{
+//    PROPVARIANT pv;
+//    InitPropVariantFromString(L"Moo", &pv);
+//    ::PropVariantClear(&pv);
+//}
+//
+//If  you put some other kind of string pointer into
+//a VT_LPWSTR PROPVARIANT your program is probably going to crash.
+
 using std::wstring;
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaEventQueue, __uuidof(IMFMediaEventQueue));
@@ -62,8 +100,8 @@ WebmMfSource::WebmMfSource(
     m_hQuit(0),
     m_hRequestSample(0),
     m_hAsyncRead(0),
-    m_hThread(0),
-    m_track_init(0)
+    m_hThread(0)
+    //m_track_init(0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -335,6 +373,7 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
     m_file.ResetAvailable();
 
     hr = m_file.AsyncReadInit(0, 1024, &m_async_read);
+    assert(SUCCEEDED(hr));  //TODO
 
     if (FAILED(hr))
         return hr;
@@ -477,6 +516,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
         const LONG len = static_cast<LONG>(status);
 
         const HRESULT hr = m_file.AsyncReadInit(0, len, &m_async_read);
+        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
             return LoadComplete(E_FAIL);
@@ -525,25 +565,21 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
         HRESULT hr;
 
         if (type == 1)  //video
-        {
             hr = WebmMfStreamVideo::CreateStreamDescriptor(pTrack, pDesc);
 
-            if (hr != S_OK)
-                continue;
-
-            assert(pDesc);
-            m_stream_descriptors.push_back(pDesc);
-        }
         else if (type == 2)  //audio
-        {
             hr = WebmMfStreamAudio::CreateStreamDescriptor(pTrack, pDesc);
 
-            if (hr != S_OK)
-                continue;
+        else
+            continue;  //weird
 
-            assert(pDesc);
-            m_stream_descriptors.push_back(pDesc);
-        }
+        if (hr != S_OK)
+            continue;
+
+        m_stream_descriptors.push_back(pDesc);
+
+        hr = CreateStream(pDesc, pTrack);
+        assert(SUCCEEDED(hr));
     }
 
     if (m_stream_descriptors.empty())
@@ -602,7 +638,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
                 assert(m_pSegment->GetCues() == 0);
 
                 m_file.ResetAvailable();
-                m_track_init = 0;
+                //m_track_init = 0;
 
                 //here we transition to a new async (sub)state:
                 m_async_state = &WebmMfSource::StateAsyncInitStreams;
@@ -625,6 +661,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
             }
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+            assert(SUCCEEDED(hr));  //TODO
 
             if (FAILED(hr))
                 return &WebmMfSource::StateQuit;  //TODO: announce error
@@ -640,7 +677,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
     if (!pCues->LoadCuePoint())
     {
         m_file.ResetAvailable();
-        m_track_init = 0;
+        //m_track_init = 0;
 
         m_async_state = &WebmMfSource::StateAsyncInitStreams;
     }
@@ -673,13 +710,14 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
             if (status == 0)  //have new cluster
                 break;
 
-            if (status > 0)  //EOF
+            if (status > 0)  //EOF  //TODO: liberalize this
                 return &WebmMfSource::StateQuit;
 
             if (status != mkvparser::E_BUFFER_NOT_FULL)
                 return &WebmMfSource::StateQuit;
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+            assert(SUCCEEDED(hr));  //TODO
 
             if (FAILED(hr))
                 return &WebmMfSource::StateQuit;
@@ -701,6 +739,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
     const ULONG nTracks = pTracks->GetTracksCount();
     assert(nTracks > 0);
 
+#if 0
     ULONG& idx = m_track_init;
 
     while (idx < nTracks)
@@ -710,7 +749,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         if (pTrack == 0)  //weird
         {
             ++idx;
-            continue;
+            continue;  //stay on same cluster, but move to next track
         }
 
         const LONGLONG tn = pTrack->GetNumber();
@@ -739,9 +778,33 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         m_file.EnableBuffering(GetDuration());  //do this here, or sooner?
         return &WebmMfSource::StateRequestSample;
     }
+#else
+    bool bDone = true;
 
-    if (m_pSegment->GetCount() >= 10)
-        return &WebmMfSource::StateQuit;  //TODO: handle as EOS
+    typedef streams_t::const_iterator iter_t;
+
+    iter_t iter = m_streams.begin();
+    const iter_t iter_end = m_streams.end();
+
+    while (iter != iter_end)
+    {
+        const streams_t::value_type& v = *iter++;
+
+        WebmMfStream* const pStream = v.second;
+        assert(pStream);
+
+        const HRESULT hr = pStream->SetFirstBlock(pCluster);
+
+        if (FAILED(hr))  //no acceptable block on this cluster
+            bDone = false;
+    }
+#endif
+
+    if (bDone || (m_pSegment->GetCount() >= 10))
+    {
+        m_file.EnableBuffering(GetDuration());  //do this here, or sooner?
+        return &WebmMfSource::StateRequestSample;
+    }
 
     //must load another cluster to init stream(s)
 
@@ -769,6 +832,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
             return &WebmMfSource::StateQuit;
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
             return &WebmMfSource::StateQuit;
@@ -928,6 +992,26 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
          MFMEDIASOURCE_CAN_SEEK;
 #else
     dw = MFMEDIASOURCE_CAN_PAUSE;
+
+    if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
+        dw |= MFMEDIASOURCE_CAN_SEEK;
+
+    else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
+    {
+        const int count = pSH->GetCount();
+
+        for (int idx = 0; idx < count; ++idx)
+        {
+            const mkvparser::SeekHead::Entry* const p = pSH->GetEntry(idx);
+            assert(p);
+
+            if (p->id == 0x0C53BB6B)  //Cues ID
+            {
+                dw |= MFMEDIASOURCE_CAN_SEEK;
+                break;
+            }
+        }
+    }
 #endif
 
     return S_OK;
@@ -1565,7 +1649,7 @@ HRESULT WebmMfSource::Start(
             m_async_state = &WebmMfSource::StateAsyncParseCues;
         else
         {
-            m_track_init = 0;
+            //m_track_init = 0;
             m_async_state = &WebmMfSource::StateAsyncInitStreams;
         }
 
@@ -2308,15 +2392,15 @@ HRESULT WebmMfSource::NewStream(
     return S_OK;
 }
 #else
-HRESULT WebmMfSource::NewStream(
+HRESULT WebmMfSource::CreateStream(
     IMFStreamDescriptor* pSD,
-    const mkvparser::Track* pTrack,
-    WebmMfStream*& pStream)
+    const mkvparser::Track* pTrack)
 {
     assert(pSD);
     assert(pTrack);
 
     const LONGLONG type = pTrack->GetType();
+    WebmMfStream* pStream;
 
     if (type == 1)  //video
     {
@@ -2357,17 +2441,17 @@ HRESULT WebmMfSource::NewStream(
     assert(status.first->first == id);
     assert(status.first->second == pStream);
 
-    hr = m_pEvents->QueueEventParamUnk(
-            MENewStream,
-            GUID_NULL,
-            S_OK,
-            pStream);
-
-    assert(SUCCEEDED(hr));
+    //hr = m_pEvents->QueueEventParamUnk(
+    //        MENewStream,
+    //        GUID_NULL,
+    //        S_OK,
+    //        pStream);
+    //assert(SUCCEEDED(hr));
 
     return S_OK;
 }
 
+#if 0
 HRESULT WebmMfSource::UpdatedStream(WebmMfStream* pStream)
 {
     const HRESULT hr = m_pEvents->QueueEventParamUnk(
@@ -2375,10 +2459,18 @@ HRESULT WebmMfSource::UpdatedStream(WebmMfStream* pStream)
                         GUID_NULL,
                         S_OK,
                         pStream);
-
     assert(SUCCEEDED(hr));
 
     return S_OK;
+}
+#endif
+
+
+HRESULT WebmMfSource::QueueStreamEvent(
+    MediaEventType met,
+    WebmMfStream* pStream) const
+{
+    return m_pEvents->QueueEventParamUnk(met, GUID_NULL, S_OK, pStream);
 }
 #endif
 
@@ -3535,7 +3627,16 @@ void WebmMfSource::Command::SetDesc(IMFPresentationDescriptor* pDesc)
 void WebmMfSource::Command::SetTime(const PROPVARIANT& time)
 {
     PropVariantClear(&m_time);
+
     m_time = time;
+
+    if (m_time.vt == VT_I8)
+    {
+        LONGLONG& reftime = m_time.hVal.QuadPart;
+
+        if (reftime < 0)
+            reftime = 0;
+    }
 }
 
 
@@ -3562,15 +3663,9 @@ bool WebmMfSource::Command::OnStart(WebmMfSource* pSource)
         m_time.vt = VT_I8;
         reftime = 0;
     }
-    else
-    {
-        assert(m_time.vt == VT_I8);
-
-        if (reftime < 0)
-            reftime = 0;
-    }
 
     const LONGLONG time_ns = reftime * 100;
+    assert(time_ns >= 0);
 
     pSource->m_preroll_ns = time_ns;  //TODO: better way to handle this?
 
@@ -3585,107 +3680,101 @@ bool WebmMfSource::Command::OnStart(WebmMfSource* pSource)
     assert(SUCCEEDED(hr));
     assert(count > 0);
 
-    const mkvparser::Cues* const pCues = pSegment->GetCues();
+    LONGLONG base_pos = -2;  // -2 = audio only
 
-    LONGLONG base_pos = -2;
-
-    for (DWORD index = 0; index < count; ++index)
-    {
-        BOOL bSelected;
-        IMFStreamDescriptorPtr pSD;
-
-        hr = m_pDesc->GetStreamDescriptorByIndex(index, &bSelected, &pSD);
-        assert(SUCCEEDED(hr));
-        assert(pSD);
-
-        if (!bSelected)
-            continue;
-
-        DWORD id;  //MKV track number
-
-        hr = pSD->GetStreamIdentifier(&id);
-        assert(SUCCEEDED(hr));
-
-        const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
-        assert(pTrack);
-        assert(pTrack->GetNumber() == id);
-
-        if (pTrack->GetType() != 1)  //not video
-            continue;
-
-        if (base_pos == -2)
-            base_pos = -1;  // base_pos >= -1 means we have video
-
-        if (pCues)
+    if (const mkvparser::Cues* pCues = pSegment->GetCues())
+        for (DWORD index = 0; index < count; ++index)
         {
-            const mkvparser::CuePoint* pCP;
-            const mkvparser::CuePoint::TrackPosition* pTP;
+            BOOL bSelected;
+            IMFStreamDescriptorPtr pSD;
 
-            const bool bFound = pCues->Find(time_ns, pTrack, pCP, pTP);
+            hr = m_pDesc->GetStreamDescriptorByIndex(index, &bSelected, &pSD);
+            assert(SUCCEEDED(hr));
+            assert(pSD);
 
-            if (bFound)
-            {
-                assert(pCP);
-                assert(pTP);
-                assert(pTP->m_pos >= 0);
-
-                if ((base_pos < 0) || (pTP->m_pos < base_pos))
-                    base_pos = pTP->m_pos;
-
+            if (!bSelected)
                 continue;
-            }
+
+            DWORD id;  //MKV track number
+
+            hr = pSD->GetStreamIdentifier(&id);
+            assert(SUCCEEDED(hr));
+
+            using mkvparser::Track;
+
+            const Track* const pTrack = pTracks->GetTrackByNumber(id);
+            assert(pTrack);
+            assert(pTrack->GetNumber() == id);
+
+            if (pTrack->GetType() != 1)  //not video
+                continue;
+
+            if (base_pos == -2)
+                base_pos = -1;  // base_pos >= -1 means we have video
+
+            using mkvparser::CuePoint;
+
+            const CuePoint* pCP;
+            const CuePoint::TrackPosition* pTP;
+
+            if (!pCues->Find(time_ns, pTrack, pCP, pTP))
+                continue;
+
+            assert(pCP);
+            assert(pTP);
+            assert(pTP->m_pos >= 0);
+
+            if ((base_pos < 0) || (pTP->m_pos < base_pos))
+                base_pos = pTP->m_pos;
         }
-    }
+
+    if (base_pos < 0)  //no video, or no cue points
+        return OnStartNoSeek(pSource);
+
+    //have have a cue point, so we have a cluster pos
+    //we must load that cluster in the cache
+    //but that's only the base cluster -- we must still search
+    //the subsequent clusters
+    //  as req'd for each stream, so that each stream has a pCurr
+
+    //Segment::GetBlock will search for this pos among existing cluster
+    //objects
+    //(either loaded or pre-loaded), and if not found then it will
+    //preload the cluster.
+    //normally this wouldn't be a problem but we require that the cluster
+    //be at least
+    //partially loaded (so have a non-negative pos, len, and timecode).
 
     const mkvparser::Cluster*& pCurr = pSource->m_pCurr;
 
-    if (base_pos < 0)  //no video, or no cue points
-    {
-        //we don't have anything but a time
-        //without cue points we cannot jump to anywhere in the file,
-        //  so where are forced to search among already-loaded clusters
-        //  that's exactly what segment::findcluster does for us
-        //
-        //we don't necessarily have a guarantee that we even have a cluster
-        //  unless we make that guarantee.  I suppose we have that
-        //  with AsyncReadInitStreams.
+    pCurr = pSegment->FindOrPreloadCluster(base_pos);
+    assert(pCurr);
+    assert(!pCurr->EOS());
 
-        pCurr = pSegment->FindCluster(time_ns);
-        assert(pCurr);
-        assert(!pCurr->EOS());     //because of AsyncReadInitStreams
-        assert(pCurr->m_pos > 0);  //because we always partially load
-        assert(pCurr->m_size > 0);
-        assert(pCurr->GetTime() <= time_ns);
+    //Since we found this cluster via a cue point, we assume
+    //that it contains a keyframe, so there's nothing else
+    //we need to do for video (except load the cluster in cache).
+    //
+    //If the webm file is correctly formatted, then, if we have an
+    //audio stream, the audio should appear on the same cluster as
+    //the keyframe.  If it doesn't, then we can either search
+    //for audio on later clusters, or treat this as a badly-formatted
+    //file, or just set the audio stream to EOS.
+    //
+    //The streams are already initialized to pCurr=NULL (because
+    //we're stopped), so if we
+    //don't find an audio block on that cluster, then pCurr for
+    //the audio stream will remain set to NULL.  We treat this
+    //value as an EOS indication, so there's nothing special we
+    //need to do in this case.
 
-        //we have the cluster object, that we can guarantee is at least
-        //partially loaded
-        //we need to load it into the cache
-    }
-    else
-    {
-        //have have a cue point, so we have a cluster pos
-        //we must load that cluster in the cache
-        //but that's only the base cluster -- we must still search
-        //the subsequent clusters
-        //  as req'd for each stream, so that each stream has a pCurr
-
-        //Segment::GetBlock will search for this pos among existing cluster
-        //objects
-        //(either loaded or pre-loaded), and if not found then it will
-        //preload the cluster.
-        //normally this wouldn't be a problem but we require that the cluster
-        //be at least
-        //partially loaded (so have a non-negative pos, len, and timecode).
-
-        pCurr = pSegment->FindOrPreloadCluster(base_pos);
-        assert(pCurr);
-        assert(!pCurr->EOS());
-    }
+    //We must reset the parse pointer, because we might have
+    //preloaded a new cluster, so it will need to be parsed.
 
     pSource->m_file.ResetAvailable();
 
     m_state = &Command::StateStartInitStreams;
-    m_index = 0;
+    //m_index = 0;
 
     pSource->m_async_state = &WebmMfSource::StateAsyncLoadCurr;
     pSource->m_async_read.m_hrStatus = S_OK;
@@ -3697,18 +3786,218 @@ bool WebmMfSource::Command::OnStart(WebmMfSource* pSource)
 }
 
 
+bool WebmMfSource::Command::OnStartNoSeek(WebmMfSource* pSource)
+{
+    //we don't have anything but a time
+    //without cue points we cannot jump to anywhere in the file,
+    //  so where are forced to search among already-loaded clusters
+    //  that's exactly what segment::findcluster does for us
+    //
+    //we don't necessarily have a guarantee that we even have a cluster
+    //  unless we make that guarantee.  I suppose we have that
+    //  with AsyncReadInitStreams.
+
+    //Calling FindCluster is only meaningful if have parsed
+    //one or more clusters.
+    //Should be even bother trying to seek in this case?
+    //MF treats the stopped state as having time=0, which
+    //we can interpret (for the purposes of the "start" command)
+    //to mean "start from first cluster".
+    //
+    //We have been assuming that if we don't have a Cues element,
+    //that we can seek by searching among clusters.  But if
+    //we haven't parsed any clusters yet, or there are fewer parsed
+    //clusters then exist in the file, the seeking isn't really
+    //a meaningful operation.
+    //
+    //This is especially true if time.vt = VT_EMPTY, which is an
+    //explicit request to start from beginning.  If the client
+    //attempts to issue a "start" command, and time.vt == VT_I8,
+    //and time.t > 0, and we don't have any cues (which means
+    //we said we cannot seek), then we could just say too bad,
+    //you can't search and so we're starting from the beginning
+    //of thie file irrespective of this non-zero time request.
+    //
+    //If we say that we cannot seek, then we assume either
+    //that the requested time will be VT_EMPTY, or time will be 0.
+    //If t > 0 then should be return an error?
+    //
+    //This still leaves the issue of handing the "start" command
+    //if we haven't parsed any clusters.  We do parse a few clusters
+    //when we first initialize (in AsyncStateInitStreams), so
+    //we have a guarntee here that if clusters exist, then
+    //at least one of them will be parsed, and so FindCluster
+    //will return a non-EOS cluster.
+    //
+    //If we decide that we cannot seek (because we do not have Cues),
+    //this only means that we don't search for a cluster -- we just
+    //immediately start on the first cluster.  We have a guarantee
+    //that at least one cluster has been loaded.  But this doesn't
+    //relieve us of the burden of searching for the first block
+    //for each stream.
+
+
+    //TODO SUN AM:
+    //If we can't seek (don't have cues), then
+    //we just set each stream to its first block.
+    //We cached the first value when we call StateAsyncInitStreams.
+    //That means we don't need to bother calling FindCluster here,
+    //since we already have the first block for each stream.
+    //
+    //The only issue is how to handle loading the current cluster.
+    //In principle we could have different clusters for each
+    //stream.  We could iterate over the streams to find the
+    //cluster with the lowest pos.  (Can we just start with
+    //first cluster in segment?  This is a start following a
+    //stop, which by definition of stop means t=0.)
+    //
+    //As long as we call file.resetavail, the OnRequestSample
+    //will do the right thing when it checks whether pCurr
+    //is locked.
+
+    //SUN AM UPDATE:
+    //I think we still need this logic, because it's still possible
+    //that even with a Cues element we won't find any matching
+    //cue points.
+
+#if 0
+    pCurr = pSegment->FindCluster(time_ns);
+    assert(pCurr);
+    assert(!pCurr->EOS());     //because of AsyncReadInitStreams
+    assert(pCurr->m_pos > 0);  //because we always partially load
+    assert(pCurr->m_size > 0);
+
+    //We cannot assert this for the reasons explained in
+    //StateStartInitStreams.
+    //assert(pCurr->GetTime() <= time_ns);
+#endif
+
+    //The problem here is that we're simply finding a cluster.
+    //We don't have a guarantee that we have a keyframe on that
+    //cluster.  It would be weird if we seeked to a cluster
+    //that happened to not have any keyframes, and then we
+    //immediately reached EOS, especially because there might
+    //be surrounding clusters that do have keyframes, and we'd
+    //prefer to navigate to one of those.
+    //
+    //Do we have a guarantee here that cluster pCurr has been
+    //fully loaded?  It would be nice to search this cluster
+    //right here to determine whether it has a keyframe.
+    //If it does have a keyframe then we're done.  If no keyframe
+    //on this cluster then we have to decide where to search:
+    //either before or after.  We prefer before, but if we
+    //reach the first cluster there's nothing else we can do
+    //except search forward.
+    //
+    //The alternative is for us to build our own keyframe
+    //index.  That would be optimal.
+
+    //if (pCurr->GetTime() <= time_ns)
+    //  we have at least one cluster less than the requested time
+    //
+    //
+    //else
+    //  there were no clusters less than the requested time
+    //  can we assume this is the first cluster?
+    //  if we search, we only need to search forward
+    //
+    //
+    //endif
+
+    //we have the cluster object, that we can guarantee is at least
+    //partially loaded
+    //we need to load it into the cache
+
+    mkvparser::Segment* const pSegment = pSource->m_pSegment;
+
+    const mkvparser::Tracks* const pTracks = pSegment->GetTracks();
+    assert(pTracks);
+
+    typedef streams_t::const_iterator iter_t;
+    const iter_t iter_end = pSource->m_streams.end();
+
+    DWORD count;
+
+    HRESULT hr = m_pDesc->GetStreamDescriptorCount(&count);
+    assert(SUCCEEDED(hr));
+    assert(count > 0);
+
+    for (DWORD index = 0; index < count; ++index)
+    {
+        BOOL bSelected;
+        IMFStreamDescriptorPtr pSD;
+
+        hr = m_pDesc->GetStreamDescriptorByIndex(index, &bSelected, &pSD);
+        assert(SUCCEEDED(hr));
+        assert(pSD);
+
+        DWORD id;  //MKV track number
+
+        hr = pSD->GetStreamIdentifier(&id);
+        assert(SUCCEEDED(hr));
+
+        using mkvparser::Track;
+
+        const Track* const pTrack = pTracks->GetTrackByNumber(id);
+        assert(pTrack);
+        assert(pTrack->GetNumber() == id);
+
+        const iter_t iter = pSource->m_streams.find(id);
+
+        if (iter == iter_end)  //weird
+            continue;
+
+        WebmMfStream* const pStream = iter->second;
+        assert(pStream);
+
+        if (!bSelected)
+        {
+            //Because we're transitioning from a stopped state,
+            //or perhaps because the stream has been created
+            //but never started, we should already be deselected.
+            //
+            //We need to only deselect from a selected state,
+            //in order to detect when we originally transitioned
+            //from deselected (when the stream was created) to
+            //selected, so we can send the MENewStream event.
+
+            assert(!pStream->IsSelected());
+            continue;
+        }
+
+        const MediaEventType met = pStream->Select();
+
+        hr = pSource->QueueStreamEvent(met, pStream);
+        assert(SUCCEEDED(hr));
+
+        pStream->SetCurrBlock(pStream->GetFirstBlock());
+    }
+
+    hr = pSource->QueueEvent(MESourceStarted, GUID_NULL, S_OK, &m_time);
+    assert(SUCCEEDED(hr));
+
+    iter_t iter = pSource->m_streams.begin();
+
+    while (iter != iter_end)
+    {
+        const streams_t::value_type& v = *iter++;
+
+        WebmMfStream* const s = v.second;
+        assert(s);
+
+        hr = s->Start(m_time);
+        assert(SUCCEEDED(hr));
+    }
+
+    return true;   //done with start request
+}
+
+
 bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
 {
     //we have loaded m_pCurr (the base cluster for this seek) in the cache
 
-    assert(m_time.vt == VT_I8);
-
-    const LONGLONG reftime = m_time.hVal.QuadPart;
-    assert(reftime >= 0);
-
-    const LONGLONG time_ns = reftime * 100;
-
-    const mkvparser::Cluster*& pCurr = pSource->m_pCurr;
+    const mkvparser::Cluster* const pCurr = pSource->m_pCurr;
     assert(pCurr);
     assert(!pCurr->EOS());
     assert(pCurr->m_pos >= 0);
@@ -3722,6 +4011,19 @@ bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
     //then the cluster containing the first keyframe will not have
     //a timecode less or equal to the requested time.
     //END TODO.
+
+    assert(m_time.vt == VT_I8);
+
+    const LONGLONG reftime = m_time.hVal.QuadPart;
+    assert(reftime >= 0);
+
+    //To handle the pathological case when the first cluster(s)
+    //doesn't have a keyframe, and so the cluster containing
+    //the first keyframe has a timecode greater than the requested
+    //seek time.  See comments above (where we check the cluster).
+
+    const LONGLONG time_ns_ = reftime * 100;
+    const LONGLONG time_ns = (pCurr->GetTime() <= time_ns_) ? time_ns_ : -1;
 
     mkvparser::Segment* const pSegment = pSource->m_pSegment;
 
@@ -3740,29 +4042,14 @@ bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
     const streams_t& streams = pSource->m_streams;
     const iter_t iter_end = streams.end();
 
-    //TODO: InitStreams will need to called multiple times,
-    //in order to find the cluster containing the pCurr block for this track
-    for (m_index = 0; m_index < count; ++m_index)
+    for (DWORD index = 0; index < count; ++index)
     {
         BOOL bSelected;
         IMFStreamDescriptorPtr pSD;
 
-        hr = m_pDesc->GetStreamDescriptorByIndex(m_index, &bSelected, &pSD);
+        hr = m_pDesc->GetStreamDescriptorByIndex(index, &bSelected, &pSD);
         assert(SUCCEEDED(hr));
         assert(pSD);
-
-        //When we're born, we're in a stopped state, but not stream instances
-        //have been created yet, so a stream isn't selected then there's
-        //nothing we need to do here.
-        //
-        //After we have been started and then stopped, stream instances have
-        //been created, but are stopped when we handled the stop command.
-        //During stop we automatically deselect the streams, so again there's
-        //nothing we need to here to handle an stream that is not selected
-        //for this start request.
-
-        if (!bSelected)
-            continue;
 
         DWORD id;  //MKV track number
 
@@ -3788,70 +4075,79 @@ bool WebmMfSource::Command::StateStartInitStreams(WebmMfSource* pSource)
         //this is wrong, because we have no guarantee that we have a
         //matching track in this cluster, or a keyframe.
 
-        using mkvparser::BlockEntry;
-
-        const BlockEntry* pBlock;
-
-        if (pCurr->GetTime() <= time_ns)
-        {
-            pBlock = pCurr->GetEntry(pTrack, time_ns);
-            assert(pBlock);           //TODO:
-            assert(!pBlock->EOS());   //TODO
-            assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
-        }
-        else
-        {
-            //To handle the pathological case when the first cluster(s)
-            //doesn't have a keyframe, and so the cluster containing
-            //the first keyframe has a timecode greater than the requested
-            //seek time.  See comments above (where we check the cluster).
-
-            pBlock = pCurr->GetEntry(pTrack);  //means return first keyframe
-            assert(pBlock);           //TODO:
-            assert(!pBlock->EOS());   //TODO
-            assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
-
-            //TODO: it would be nice to handle this case by arranging for
-            //the poster frame (first keyframe we send) to have t=0.
-        }
+        //When we're born, we're in a stopped state, but not stream instances
+        //have been created yet, so a stream isn't selected then there's
+        //nothing we need to do here.
+        //
+        //After we have been started and then stopped, stream instances have
+        //been created, but are stopped when we handled the stop command.
+        //During stop we automatically deselect the streams, so again there's
+        //nothing we need to here to handle an stream that is not selected
+        //for this start request.
 
         const iter_t iter = streams.find(id);
 
-        if (iter == iter_end)  //stream does not already exist
+        if (iter == iter_end)  //weird
+            continue;
+
+        WebmMfStream* const pStream = iter->second;
+        assert(pStream);
+
+        if (!bSelected)
         {
-            WebmMfStream* pStream;
-
-            hr = pSource->NewStream(pSD, pTrack, pStream);
-            assert(SUCCEEDED(hr));
-            assert(pStream);
-
-            pStream->SetCurrBlock(pBlock);
+            assert(!pStream->IsSelected());
+            continue;
         }
-        else
-        {
-            WebmMfStream* const pStream = iter->second;
-            assert(pStream);
 
-            //TODO:
-            //MEUpdatedStream Event
-            //http://msdn.microsoft.com/en-us/library/ms696195(v=vs.85).aspx
-            //
-            //This page is saying that there are some circumstances under which
-            //you would send MENewStream instead of MEUpdatedStream (namely,
-            //if this stream wasn't selected in the previous start request).
-            //
-            //TODO: this means that before we set the stream to selected,
-            //we must query its current value.
+        const MediaEventType met = pStream->Select();
 
-            hr = pStream->Select();
-            assert(SUCCEEDED(hr));
+        //TODO:
+        //MEUpdatedStream Event
+        //http://msdn.microsoft.com/en-us/library/ms696195(v=vs.85).aspx
+        //
+        //This page is saying that there are some circumstances under which
+        //you would send MENewStream instead of MEUpdatedStream (namely,
+        //if this stream wasn't selected in the previous start request).
+        //
+        //TODO: this means that before we set the stream to selected,
+        //we must query its current value.
+        //
+        //"On the first call to Start in which a stream becomes active,
+        //the media source sends an MENewStream event for the stream.
+        //On subsequent calls to Start, the media source sends an
+        //MEUpdatedStream event, until the stream is deselected."
 
-            hr = pSource->UpdatedStream(pStream);
-            assert(SUCCEEDED(hr));
+        hr = pSource->QueueStreamEvent(met, pStream);
+        assert(SUCCEEDED(hr));
 
-            pStream->SetCurrBlock(pBlock);
-        }
+        using mkvparser::BlockEntry;
+        const BlockEntry* const pBlock = pCurr->GetEntry(pTrack, time_ns);
+
+        pStream->SetCurrBlock(pBlock);
     }
+
+    //TODO:
+    //MESourceStarted Event
+    //http://msdn.microsoft.com/en-us/library/ms701823(VS.85).aspx
+    //
+    //"A media source raises this event when it starts from a stopped state,
+    //or starts from a paused state at the same position in the source. The
+    //event is raised if the IMFMediaSource::Start method returns S_OK.
+    //
+    //If the media source starts from the current position and the source's
+    //previous state was running or paused, the event data can empty
+    //(VT_EMPTY).
+    //If the event data is VT_EMPTY, the media source might set the
+    //MF_EVENT_SOURCE_ACTUAL_START
+    //attribute with the actual starting time.
+    //
+    //If the media source starts from a new position, or the source's
+    //previous state
+    //was stopped, the event data must be the starting time (VT_I8).
+    //
+    //If the Start method causes a seek, the media source sends the
+    //MESourceSeeked
+    //event instead of MESourceStarted.
 
     hr = pSource->QueueEvent(MESourceStarted, GUID_NULL, S_OK, &m_time);
     assert(SUCCEEDED(hr));
@@ -3998,70 +4294,56 @@ void WebmMfSource::Command::OnRestart(WebmMfSource* pSource)  //unpause
 
         const iter_t iter = streams.find(id);
 
+        if (iter == iter_end)  //weird
+            continue;
+
+        WebmMfStream* const pStream = iter->second;
+        assert(pStream);
+        assert(pStream->m_pTrack == pTrack);
+
         if (!bSelected)
         {
-            if (iter != iter_end)  //already exists
-            {
-                WebmMfStream* const pStream = iter->second;
-                assert(pStream);
-                assert(pStream->m_pTrack == pTrack);
-
-                pStream->Deselect();
-            }
-
+            pStream->Deselect();
             continue;
         }
 
         //stream selected in this restart
 
-        if (iter != iter_end)  //stream exists already
+        //TODO: it's not clear whether we need to send
+        //this if the stream was already selected.
+        //
+        //For the answer see the page here:
+        //MEUpdatedStream Event
+        //http://msdn.microsoft.com/en-us/library/ms696195(v=vs.85).aspx
+
+        const MediaEventType met = pStream->Select();
+
+        if (met == MENewStream)
         {
-            WebmMfStream* const pStream = iter->second;
-            assert(pStream);
-            assert(pStream->m_pTrack == pTrack);
+            //TODO: verify this
 
-            //TODO: it's not clear whether we need to send
-            //this if the stream was already selected.
-            //
-            //For the answer see the page here:
-            //MEUpdatedStream Event
-            //http://msdn.microsoft.com/en-us/library/ms696195(v=vs.85).aspx
+            const LONGLONG time_ns = reftime * 100LL;  //reftime to ns
 
-            hr = pStream->Select();
-            assert(SUCCEEDED(hr));
+            using mkvparser::Cluster;
+            using mkvparser::BlockEntry;
 
-            hr = pSource->UpdatedStream(pStream);
-            assert(SUCCEEDED(hr));
+            const Cluster* const pCurr = pSegment->FindCluster(time_ns);
+            assert(pCurr);
+            assert(!pCurr->EOS());
+            assert(pCurr->m_pos > 0);
+            assert(pCurr->m_size > 0);
+            assert(pCurr->GetTime() <= time_ns);
 
-            continue;
+            const BlockEntry* const pBlock = pCurr->GetEntry(pTrack, time_ns);
+            assert(pBlock);           //TODO:
+            assert(!pBlock->EOS());   //TODO
+            assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
+
+            pStream->SetCurrBlock(pBlock);
         }
 
-        //stream selected, but doesn't exist yet
-
-        const LONGLONG time_ns = reftime * 100LL;  //reftime to ns
-
-        using mkvparser::Cluster;
-        using mkvparser::BlockEntry;
-
-        const Cluster* const pCurr = pSegment->FindCluster(time_ns);
-        assert(pCurr);
-        assert(!pCurr->EOS());
-        assert(pCurr->m_pos > 0);
-        assert(pCurr->m_size > 0);
-        assert(pCurr->GetTime() <= time_ns);
-
-        const BlockEntry* const pBlock = pCurr->GetEntry(pTrack, time_ns);
-        assert(pBlock);           //TODO:
-        assert(!pBlock->EOS());   //TODO
-        assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
-
-        WebmMfStream* pStream;
-
-        hr = pSource->NewStream(pSD, pTrack, pStream);
+        hr = pSource->QueueStreamEvent(met, pStream);
         assert(SUCCEEDED(hr));
-        assert(pStream);
-
-        pStream->SetCurrBlock(pBlock);
     }
 
     IMFMediaEventPtr pEvent;
@@ -4131,6 +4413,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnAsyncRead()
     if (hr == S_FALSE)  //not all bytes requested are in cache yet
     {
         hr = m_file.AsyncReadContinue(&m_async_read);
+        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
             return &WebmMfSource::StateQuit;  //TODO
@@ -4164,7 +4447,7 @@ WebmMfSource::StateAsyncLockCurr()
     status;
     assert(status == 0);
 
-    m_async_read.m_hrStatus = S_OK;
+    //m_async_read.m_hrStatus = S_OK;
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
@@ -4189,6 +4472,7 @@ WebmMfSource::StateAsyncParseNext()
         assert(status == mkvparser::E_BUFFER_NOT_FULL);  //TODO
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+        assert(SUCCEEDED(hr));  //TODO: handle cancellation
 
         if (FAILED(hr))
             return &WebmMfSource::StateQuit;  //TODO
@@ -4228,6 +4512,7 @@ WebmMfSource::StateAsyncLoadNext()
         pos += m_pSegment->m_start;  //absolute pos
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+        assert(SUCCEEDED(hr));  //TODO: handle cancellation
 
         if (FAILED(hr))
             return &WebmMfSource::StateQuit;  //TODO
@@ -4295,15 +4580,13 @@ WebmMfSource::StateAsyncLoadCurr()
             return &WebmMfSource::StateQuit;  //TODO
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
             return &WebmMfSource::StateQuit;  //TODO
 
         if (hr == S_FALSE)  //async read in progress
-        {
-            m_async_state = &WebmMfSource::StateAsyncLoadCurr;
             return 0;
-        }
     }
 
     LONGLONG pos = m_pCurr->m_pos;
@@ -4311,22 +4594,20 @@ WebmMfSource::StateAsyncLoadCurr()
 
     pos += m_pSegment->m_start;  //absolute pos
 
-    const LONGLONG len_ = m_pCurr->m_size;
+    const LONGLONG len_ = 8 + 8 + m_pCurr->m_size;
     assert(len_ > 0);
     assert(len_ <= LONG_MAX);
 
     const LONG len = static_cast<LONG>(len_);
 
     const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+    assert(SUCCEEDED(hr));
 
     if (FAILED(hr))
         return &WebmMfSource::StateQuit;  //TODO
 
     if (hr == S_FALSE)  //event will be set in Invoke
-    {
-        m_async_state = &WebmMfSource::StateAsyncLoadCurr;
         return 0;
-    }
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
