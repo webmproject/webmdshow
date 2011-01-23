@@ -41,7 +41,7 @@ MkvReader::MkvReader(IMFByteStream* pStream) :
     hr = m_pStream->GetLength(&m_length);
     assert(SUCCEEDED(hr));
 
-    m_avail = m_length;  //does get adjusted during async read
+    m_avail = 0;  //does get adjusted during async read
 }
 
 
@@ -124,8 +124,14 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
     if (pos < 0)
         return -1;
 
+    if (QWORD(pos) > m_length)
+        return -1;
+
     if (len <= 0)
         return 0;
+
+    if (QWORD(pos + len) > m_length)
+        return -1;
 
     if (buf == 0)
         return -1;
@@ -334,6 +340,11 @@ void MkvReader::Read(
     long& requested_len,
     unsigned char** pdst) const
 {
+    assert(pos >= 0);
+    assert(QWORD(pos) < m_length);
+    assert(requested_len > 0);
+    assert(QWORD(pos + requested_len) <= m_length);
+
     const Page& page = *page_iter;
     assert(pos >= page.pos);
     assert(page.cRef >= 0);
@@ -796,6 +807,7 @@ HRESULT MkvReader::AsyncReadInit(
     IMFAsyncCallback* pCB)
 {
     assert(pos >= 0);
+    assert(QWORD(pos) < m_length);
     assert(len > 0);
     assert(pCB);
     assert(m_async_pos < 0);
@@ -891,6 +903,8 @@ HRESULT MkvReader::AsyncReadContinue(
 
     LONGLONG& pos = m_async_pos;
     assert(pos > (*m_cache.front()).pos);
+    assert(QWORD(pos) < m_length);
+    assert(QWORD(pos + len) <= m_length);
 
     typedef cache_t::iterator iter_t;
     iter_t next;
@@ -990,7 +1004,9 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
 {
     assert(pResult);
     assert(m_async_pos >= 0);
+    assert(QWORD(m_async_pos) < m_length);
     assert(m_async_len > 0);
+    assert(QWORD(m_async_pos + m_async_len) <= m_length);
     assert(!m_cache.empty());
 
     typedef cache_t::iterator iter_t;
@@ -1008,16 +1024,27 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
     assert(page.pos <= m_async_pos);
     assert(page.cRef < 0);
 
-    const DWORD page_size = m_info.dwPageSize;
+    page.cRef = 0;  //unmark this page, now that I/O is complete
 
     ULONG cbRead;
 
     const HRESULT hr = m_pStream->EndRead(pResult, &cbRead);
-    assert(SUCCEEDED(hr));  //TODO
-    assert((cbRead == page_size) ||
-           (QWORD(page.pos + cbRead) == m_length));
+    assert(SUCCEEDED(hr));
 
-    page.cRef = 0;  //async read is complete
+    if (FAILED(hr))
+    {
+        m_cache.erase(curr);
+
+        page.pos = -1;  //means "we don't have any data on this page"
+
+        const free_pages_t::value_type value(page.pos, page_iter);
+        m_free_pages.insert(value);
+
+        return hr;
+    }
+
+    assert((cbRead == m_info.dwPageSize) ||
+           (QWORD(page.pos + cbRead) == m_length));
 
     Read(page_iter, m_async_pos, m_async_len, 0);
     m_avail = m_async_pos;
@@ -1036,6 +1063,9 @@ HRESULT MkvReader::AsyncReadPage(
     IMFAsyncCallback* pCB,
     cache_t::iterator& curr)
 {
+    assert(pos >= 0);
+    assert(QWORD(pos) < m_length);
+
     const DWORD page_size = m_info.dwPageSize;
 
     //TODO: purge as necessary
@@ -1045,6 +1075,7 @@ HRESULT MkvReader::AsyncReadPage(
 
     const LONGLONG key = page_size * LONGLONG(pos / page_size);
     assert((next == m_cache.end()) || ((*next)->pos > key));
+    assert(QWORD(key) < m_length);
 
     free_pages_t::iterator free_page = m_free_pages.find(key);
 
@@ -1064,12 +1095,16 @@ HRESULT MkvReader::AsyncReadPage(
         return S_OK;
     }
 
-    page.pos = key;
     QWORD new_pos;
 
-    HRESULT hr = m_pStream->Seek(msoBegin, page.pos, 0, &new_pos);
-    assert(SUCCEEDED(hr));
-    assert(new_pos == QWORD(page.pos));
+    HRESULT hr = m_pStream->Seek(msoBegin, key, 0, &new_pos);
+    assert(SUCCEEDED(hr) && (new_pos == QWORD(key)));
+
+    if (FAILED(hr))
+        return hr;
+
+    if (new_pos != QWORD(key))
+        return E_FAIL;
 
     const Region& r = *page.region;
     const pages_vector_t::size_type offset = page_iter - r.pages.begin();
@@ -1080,6 +1115,7 @@ HRESULT MkvReader::AsyncReadPage(
     if (FAILED(hr))
         return hr;
 
+    page.pos = key;
     page.cRef = -1;  //means "async read in progress"
 
     m_free_pages.erase(free_page);  //page is no longer free
