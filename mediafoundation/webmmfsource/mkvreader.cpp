@@ -474,7 +474,7 @@ int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
         }
     }
 
-#ifdef _DEBUG
+#if 0 //def _DEBUG
     if (n >= 10)  //to debug PurgeOne
     {
         odbgstream os;
@@ -768,30 +768,52 @@ void MkvReader::Purge(ULONGLONG pos)
 {
     const DWORD page_size = m_info.dwPageSize;
 
-    while (!m_cache.empty())
+#if 0 //def _DEBUG
+    const free_pages_t::size_type old_size = m_free_pages.size();
+#endif
+
+    int i = 0;
+
+    while (!m_cache.empty() && (i < 16))
     {
         const cache_t::value_type page_iter = m_cache.front();
 
         const Page& page = *page_iter;
 
         if (page.cRef < 0)  //async read in progress
-            return;
+            break;
 
         if (page.cRef > 0)  //locked
-            return;
+            break;
 
         assert(page.pos >= 0);
 
         const ULONGLONG page_end = page.pos + page_size;
 
         if (page_end > pos)
-            return;
+            break;
 
         m_cache.pop_front();
 
         const free_pages_t::value_type value(page.pos, page_iter);
         m_free_pages.insert(value);
+
+        ++i;
     }
+
+#if 0 //def _DEBUG
+    const free_pages_t::size_type new_size = m_free_pages.size();
+    const free_pages_t::size_type n = new_size - old_size;
+
+    if (n)
+    {
+        odbgstream os;
+        os << "mkvreader::purge: n=" << n
+           << " cache.size=" << m_cache.size()
+           << " free.size=" << new_size
+           << endl;
+    }
+#endif
 }
 
 
