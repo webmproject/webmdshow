@@ -546,11 +546,12 @@ HRESULT WebmMfStream::Deselect()
     //This is like a stop, except that we don't
     //send any notifications to the pipeline.
 
+    if (m_bSelected <= 0)
+        return S_FALSE;
+
     PurgeSamples();
 
-    assert(m_bSelected > 0);
     m_bSelected = 0;
-
     m_bEOS = true;
 
     m_pSource->m_file.UnlockPage(m_pLocked);
