@@ -84,6 +84,9 @@ public:
     //    bool bStart) = 0;
     virtual HRESULT Start(const PROPVARIANT&) = 0;
 
+    //TODO: implement thinning
+    HRESULT Seek(const PROPVARIANT&);
+
     virtual void SetRate(BOOL, float) = 0;
 
     bool IsCurrBlockEOS() const;

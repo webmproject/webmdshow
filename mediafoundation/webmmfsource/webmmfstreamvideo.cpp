@@ -284,6 +284,9 @@ HRESULT WebmMfStreamVideo::Seek(
 #else
 HRESULT WebmMfStreamVideo::Start(const PROPVARIANT& var)
 {
+    if (!IsSelected())
+        return S_FALSE;
+
     assert(m_pLocked == 0);
 
     m_bDiscontinuity = true;

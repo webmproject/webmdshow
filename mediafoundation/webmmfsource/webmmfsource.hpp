@@ -241,8 +241,9 @@ private:
         };
 
         const Kind m_kind;
+        WebmMfSource* const m_pSource;
 
-        explicit Command(Kind k);
+        Command(Kind, WebmMfSource*);
         Command(const Command&);
 
         ~Command();
@@ -250,22 +251,26 @@ private:
         void SetDesc(IMFPresentationDescriptor*);
         void SetTime(const PROPVARIANT&);
 
-        bool OnStart(WebmMfSource*);
-        void OnStop(WebmMfSource*);
-        void OnPause(WebmMfSource*);
-        void OnRestart(WebmMfSource*);  //un-pause
+        bool OnStart();
+        bool OnSeek();
+        void OnRestart();  //un-pause
+        void OnPause();
+        void OnStop();
 
     private:
         IMFPresentationDescriptor* m_pDesc;
         PROPVARIANT m_time;
 
-        //for sync handling of start command
-        bool OnStartNoSeek(WebmMfSource*);
+        LONGLONG GetClusterPos(LONGLONG time_ns) const;
 
-        //for async handling of start command
-        bool StateStartInitStreams(WebmMfSource*);
-        bool (Command::*m_state)(WebmMfSource*);
-        //DWORD m_index;
+        //for sync handling of start command
+        void OnStartComplete();
+        void OnSeekComplete();
+        void OnStartNoSeek();
+
+        //for async handling of start/seek command
+        bool (Command::*m_state)();
+        bool StateStartInitStreams();
 
     };
 
