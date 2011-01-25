@@ -4107,9 +4107,6 @@ void WebmMfSource::Command::OnStartNoSeek()
         assert(SUCCEEDED(hr));
         assert(pSD);
 
-        if (!bSelected)
-            continue;
-
         DWORD id;  //MKV track number
 
         hr = pSD->GetStreamIdentifier(&id);
@@ -4128,6 +4125,12 @@ void WebmMfSource::Command::OnStartNoSeek()
 
         WebmMfStream* const pStream = iter->second;
         assert(pStream);
+
+        if (!bSelected)
+        {
+            pStream->Deselect();
+            continue;
+        }
 
         const MediaEventType met = pStream->Select();
 
@@ -4250,9 +4253,6 @@ bool WebmMfSource::Command::StateStartInitStreams()
         assert(SUCCEEDED(hr));
         assert(pSD);
 
-        if (!bSelected)
-            continue;
-
         DWORD id;  //MKV track number
 
         hr = pSD->GetStreamIdentifier(&id);
@@ -4295,6 +4295,12 @@ bool WebmMfSource::Command::StateStartInitStreams()
         WebmMfStream* const pStream = iter->second;
         assert(pStream);
 
+        if (!bSelected)
+        {
+            pStream->Deselect();
+            continue;
+        }
+
         const MediaEventType met = pStream->Select();
 
         //TODO:
@@ -4317,8 +4323,32 @@ bool WebmMfSource::Command::StateStartInitStreams()
         assert(SUCCEEDED(hr));
 
         using mkvparser::BlockEntry;
-        const BlockEntry* const pBlock = pCurr->GetEntry(pTrack, time_ns);
+        using mkvparser::Cluster;
 
+        const BlockEntry* const pFirstEntry = pStream->GetFirstBlock();
+
+        if ((pFirstEntry == 0) || pFirstEntry->EOS())  //weird: empty stream
+        {
+            pStream->SetCurrBlock(pFirstEntry);  //implies immediate EOS
+            continue;
+        }
+
+        const mkvparser::Block* const pFirstBlock = pFirstEntry->GetBlock();
+        assert(pFirstBlock);
+
+        const Cluster* const pFirstCluster = pFirstEntry->GetCluster();
+        assert(pFirstCluster);
+        assert(!pFirstCluster->EOS());
+
+        const LONGLONG first_time_ns = pFirstBlock->GetTime(pFirstCluster);
+
+        if (time_ns <= first_time_ns)
+        {
+            pStream->SetCurrBlock(pFirstEntry);
+            continue;
+        }
+
+        const BlockEntry* const pBlock = pCurr->GetEntry(pTrack, time_ns);
         pStream->SetCurrBlock(pBlock);
     }
 
