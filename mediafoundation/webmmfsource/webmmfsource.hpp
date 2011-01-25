@@ -284,6 +284,8 @@ private:
 
     UINT64 GetActualStartTime(IMFPresentationDescriptor*) const;
 
+    HRESULT Error(const wchar_t*, HRESULT) const;
+
 };
 
 

@@ -16,6 +16,7 @@
 #include <utility>  //std::make_pair
 #include <process.h>
 #include <algorithm>
+#include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
@@ -373,10 +374,12 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
     m_file.ResetAvailable();
 
     hr = m_file.AsyncReadInit(0, 1024, &m_async_read);
-    assert(SUCCEEDED(hr));  //TODO
 
     if (FAILED(hr))
+    {
+        Error(L"BeginLoad AsyncReadInit failed.", hr);
         return hr;
+    }
 
     m_async_state = &WebmMfSource::StateAsyncParseEbmlHeader;
 
@@ -516,10 +519,12 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
         const LONG len = static_cast<LONG>(status);
 
         const HRESULT hr = m_file.AsyncReadInit(0, len, &m_async_read);
-        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
-            return LoadComplete(E_FAIL);
+        {
+            Error(L"ParseSegmentHeaders AsyncReadInit failed.", hr);
+            return LoadComplete(hr);
+        }
 
         if (hr == S_FALSE)  //async read in progress
             return 0;
@@ -661,15 +666,16 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
             }
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-            assert(SUCCEEDED(hr));  //TODO
 
             if (FAILED(hr))
-                return &WebmMfSource::StateQuit;  //TODO: announce error
+            {
+                Error(L"ParseCues AsyncReadInit failed.", hr);
+                return &WebmMfSource::StateQuit;
+            }
 
             if (hr == S_FALSE)  //async read in progress
                 return 0;       //no transition here
 
-            hr;  //requested bytes were already in cache
             continue;
         }  //parsing cues element
     }
@@ -717,10 +723,12 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
                 return &WebmMfSource::StateQuit;
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-            assert(SUCCEEDED(hr));  //TODO
 
             if (FAILED(hr))
+            {
+                Error(L"InitStreams AsyncReadInit failed (#1).", hr);
                 return &WebmMfSource::StateQuit;
+            }
 
             if (hr == S_FALSE)  //async read in progress
                 return 0;
@@ -832,10 +840,12 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
             return &WebmMfSource::StateQuit;
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
+        {
+            Error(L"InitStreams AsyncReadInit failed (#2).", hr);
             return &WebmMfSource::StateQuit;
+        }
 
         if (hr == S_FALSE)  //async read in progress
             return 0;
@@ -3410,7 +3420,12 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
             const LONG len = static_cast<LONG>(size_);
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-            assert(SUCCEEDED(hr));  //TODO
+
+            if (FAILED(hr))
+            {
+                Error(L"OnRequestSample AsyncReadInit failed.", hr);
+                return &WebmMfSource::StateQuit;
+            }
 
             if (hr == S_FALSE)  //async read in progress
             {
@@ -4639,20 +4654,23 @@ WebmMfSource::thread_state_t WebmMfSource::OnAsyncRead()
     hr = m_async_read.m_hrStatus;  //assigned a value in Invoke
 
     if (FAILED(hr))
-        return &WebmMfSource::StateQuit;  //TODO: announce error
+    {
+        Error(L"OnAsyncRead AsyncReadCompletion failed.", hr);
+        return &WebmMfSource::StateQuit;
+    }
 
     if (hr == S_FALSE)  //not all bytes requested are in cache yet
     {
         hr = m_file.AsyncReadContinue(&m_async_read);
-        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
-            return &WebmMfSource::StateQuit;  //TODO
+        {
+            Error(L"OnAsyncRead AsyncReadContinue failed.", hr);
+            return &WebmMfSource::StateQuit;
+        }
 
         if (hr == S_FALSE)  //async read in progress
             return 0;       //wait for async read to complete
-
-        assert(hr == S_OK);
     }
 
     //All bytes requested are now in the cache.
@@ -4703,10 +4721,12 @@ WebmMfSource::StateAsyncParseNext()
         assert(status == mkvparser::E_BUFFER_NOT_FULL);  //TODO
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-        assert(SUCCEEDED(hr));  //TODO: handle cancellation
 
         if (FAILED(hr))
+        {
+            Error(L"ParseNext AsyncReadInit failed.", hr);
             return &WebmMfSource::StateQuit;  //TODO
+        }
 
         if (hr == S_FALSE)
         {
@@ -4743,10 +4763,12 @@ WebmMfSource::StateAsyncLoadNext()
         pos += m_pSegment->m_start;  //absolute pos
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-        assert(SUCCEEDED(hr));  //TODO: handle cancellation
 
         if (FAILED(hr))
+        {
+            Error(L"LoadNext AsyncReadInit failed.", hr);
             return &WebmMfSource::StateQuit;  //TODO
+        }
 
         if (hr == S_FALSE)  //event will be set in Invoke
         {
@@ -4811,10 +4833,12 @@ WebmMfSource::StateAsyncLoadCurr()
             return &WebmMfSource::StateQuit;  //TODO
 
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-        assert(SUCCEEDED(hr));  //TODO
 
         if (FAILED(hr))
-            return &WebmMfSource::StateQuit;  //TODO
+        {
+            Error(L"LoadCurr AsyncReadInit failed (#1).", hr);
+            return &WebmMfSource::StateQuit;
+        }
 
         if (hr == S_FALSE)  //async read in progress
             return 0;
@@ -4832,10 +4856,12 @@ WebmMfSource::StateAsyncLoadCurr()
     const LONG len = static_cast<LONG>(len_);
 
     const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-    assert(SUCCEEDED(hr));
 
     if (FAILED(hr))
-        return &WebmMfSource::StateQuit;  //TODO
+    {
+        Error(L"LoadCurr AsyncReadInit failed (#2).", hr);
+        return &WebmMfSource::StateQuit;
+    }
 
     if (hr == S_FALSE)  //event will be set in Invoke
         return 0;
@@ -4844,6 +4870,30 @@ WebmMfSource::StateAsyncLoadCurr()
     assert(b);
 
     return &WebmMfSource::StateRequestSample;
+}
+
+
+HRESULT WebmMfSource::Error(const wchar_t* str, HRESULT hrStatus) const
+{
+    if (m_pEvents == 0)
+        return S_FALSE;
+
+    PROPVARIANT var;
+
+    HRESULT hr = InitPropVariantFromString(str, &var);
+    assert(SUCCEEDED(hr));
+
+    const HRESULT hrResult = m_pEvents->QueueEventParamVar(
+                                MEError,
+                                GUID_NULL,
+                                hrStatus,
+                                &var);
+    assert(SUCCEEDED(hrResult));
+
+    hr = PropVariantClear(&var);
+    assert(SUCCEEDED(hr));
+
+    return hrResult;
 }
 
 
