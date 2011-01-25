@@ -394,10 +394,25 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         assert(c);
 
         const __int64 next_ns = b->GetTime(c);
-        assert(next_ns >= curr_ns);
+        //assert(next_ns >= curr_ns);
 
         duration_ns = (next_ns - curr_ns);
-        assert(duration_ns >= 0);
+        //assert(duration_ns >= 0);
+
+#ifdef _DEBUG
+        if (duration_ns < 0)
+        {
+            odbgstream os;
+            os << "WebmMfStreamAudio::GetSample: bad time on next block:"
+               << " curr_ns=" << curr_ns
+               << " curr[sec]=" << (double(curr_ns) / 1000000000)
+               << " next_ns=" << next_ns
+               << " next[sec]=" << (double(next_ns) / 1000000000)
+               << " duration_ns=" << duration_ns
+               << " duration[sec]=" << (double(duration_ns) / 1000000000)
+               << endl;
+        }
+#endif
     }
     else if (pInfo)
     {
