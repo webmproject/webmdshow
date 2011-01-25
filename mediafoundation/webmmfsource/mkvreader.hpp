@@ -35,6 +35,7 @@ public:
 
     HRESULT AsyncReadCompletion(IMFAsyncResult*);
     HRESULT AsyncReadContinue(IMFAsyncCallback*);
+    HRESULT AsyncReadCancel();
 
     void Purge(ULONGLONG);
 

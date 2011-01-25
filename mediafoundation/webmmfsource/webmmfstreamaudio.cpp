@@ -265,12 +265,11 @@ HRESULT WebmMfStreamAudio::Start(const PROPVARIANT& var)
     if (!IsSelected())
         return S_FALSE;
 
-    assert(m_pLocked == 0);
-
-    m_bDiscontinuity = true;
-    //TODO: m_curr = curr;
-    assert(m_curr.pBE);
-    m_pNextBlock = 0;
+    //assert(m_pLocked == 0);
+    //m_bDiscontinuity = true;
+    ////TODO: m_curr = curr;
+    //assert(m_curr.pBE);
+    //m_pNextBlock = 0;
 
     return OnStart(var);
 }

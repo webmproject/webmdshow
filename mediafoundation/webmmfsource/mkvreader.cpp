@@ -1022,6 +1022,15 @@ HRESULT MkvReader::AsyncReadContinue(
 }
 
 
+HRESULT MkvReader::AsyncReadCancel()
+{
+    m_async_len = 0;
+    m_async_pos = -1;
+
+    return S_OK;
+}
+
+
 HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
 {
     assert(pResult);
@@ -1051,7 +1060,6 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
     ULONG cbRead;
 
     const HRESULT hr = m_pStream->EndRead(pResult, &cbRead);
-    assert(SUCCEEDED(hr));
 
     if (FAILED(hr))
     {
@@ -1061,6 +1069,9 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
 
         const free_pages_t::value_type value(page.pos, page_iter);
         m_free_pages.insert(value);
+
+        m_async_len = 0;
+        m_async_pos = -1;
 
         return hr;
     }
@@ -1120,7 +1131,7 @@ HRESULT MkvReader::AsyncReadPage(
     QWORD new_pos;
 
     HRESULT hr = m_pStream->Seek(msoBegin, key, 0, &new_pos);
-    assert(SUCCEEDED(hr) && (new_pos == QWORD(key)));
+    //assert(SUCCEEDED(hr) && (new_pos == QWORD(key)));
 
     if (FAILED(hr))
         return hr;

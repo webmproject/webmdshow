@@ -27,7 +27,7 @@ public:
 
     virtual ~WebmMfStreamAudio();
 
-    HRESULT GetCurrMediaTime(LONGLONG&) const;
+    //HRESULT GetCurrMediaTime(LONGLONG&) const;
 
     //HRESULT Seek(
     //    const PROPVARIANT& time,

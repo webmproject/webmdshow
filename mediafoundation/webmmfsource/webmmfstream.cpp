@@ -32,7 +32,9 @@ WebmMfStream::WebmMfStream(
     m_bEOS(true),
     m_pFirstBlock(0),
     m_pNextBlock(0),
-    m_pLocked(0)
+    m_pLocked(0),
+    m_time_ns(-1),
+    m_cluster_pos(-1)
 {
     m_pDesc->AddRef();
 
@@ -558,6 +560,7 @@ HRESULT WebmMfStream::Deselect()
     m_pLocked = 0;
 
     m_curr.Init();
+    m_pNextBlock = 0;
 
     return S_OK;
 }
@@ -596,12 +599,11 @@ HRESULT WebmMfStream::Seek(const PROPVARIANT& var)
     if (m_bSelected <= 0)
         return S_FALSE;
 
-    assert(m_pLocked == 0);
-
-    m_bDiscontinuity = true;
-    //TODO: m_curr = curr;
-    assert(m_curr.pBE);
-    m_pNextBlock = 0;
+    //assert(m_pLocked == 0);
+    //m_bDiscontinuity = true;
+    ////TODO: m_curr = curr;
+    //assert(m_curr.pBE);
+    //m_pNextBlock = 0;
 
     return OnSeek(var);
 }
@@ -668,20 +670,26 @@ bool WebmMfStream::GetEOS() const
     return m_bEOS;
 }
 
+
 bool WebmMfStream::IsCurrBlockEOS() const
 {
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
-    return ((pCurr == 0) || pCurr->EOS());
+    return ((pCurr != 0) && pCurr->EOS());
 }
 
 
 HRESULT WebmMfStream::SetFirstBlock(const mkvparser::Cluster* pCluster)
 {
-    assert(pCluster);
-    assert(!pCluster->EOS());
-
     if (m_pFirstBlock)
         return S_FALSE;  //already have a value, so nothing else to do
+
+    assert(pCluster);
+
+    if (pCluster->EOS())
+    {
+        m_pFirstBlock = m_pTrack->GetEOS();
+        return S_OK;
+    }
 
     const mkvparser::BlockEntry* const pBlock = pCluster->GetEntry(m_pTrack);
 
@@ -698,7 +706,7 @@ HRESULT WebmMfStream::SetFirstBlock(const mkvparser::Cluster* pCluster)
 
 const mkvparser::BlockEntry* WebmMfStream::GetFirstBlock() const
 {
-    return m_pFirstBlock;
+    return m_pFirstBlock;  //should be initialized to EOS
 }
 
 
@@ -708,7 +716,51 @@ void WebmMfStream::SetCurrBlock(const mkvparser::BlockEntry* pBE)
     m_pLocked = 0;
 
     m_curr.Init(pBE);
+    m_pNextBlock = 0;
+
+    m_bDiscontinuity = true;
     m_bEOS = false;
+
+    m_time_ns = -1;
+    m_cluster_pos = -1;
+}
+
+
+void WebmMfStream::SetCurrBlockInit(
+    LONGLONG time_ns,
+    LONGLONG cluster_pos)
+{
+    assert(time_ns >= 0);
+    assert(cluster_pos >= 0);
+
+    m_pSource->m_file.UnlockPage(m_pLocked);
+    m_pLocked = 0;
+
+    m_curr.Init();
+    m_pNextBlock = 0;
+
+    m_bDiscontinuity = true;
+    m_bEOS = false;
+
+    m_time_ns = time_ns;
+    m_cluster_pos = cluster_pos;
+}
+
+
+void WebmMfStream::SetCurrBlockCompletion(const mkvparser::Cluster* pCluster)
+{
+    assert(pCluster);
+    assert(!pCluster->EOS());
+    assert(pCluster->GetEntryCount() > 0);
+    assert(m_curr.pBE == 0);
+    assert(m_time_ns >= 0);
+
+    m_curr.pBE = pCluster->GetEntry(m_pTrack, m_time_ns);
+    assert(m_curr.pBE);
+    assert(!m_curr.pBE->EOS());
+
+    m_cluster_pos = -1;
+    m_time_ns = -1;
 }
 
 
@@ -718,21 +770,35 @@ const mkvparser::BlockEntry* WebmMfStream::GetCurrBlock() const
 }
 
 
-
 HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 {
     //source object already locked by caller
 
     const mkvparser::BlockEntry* const pCurr = GetCurrBlock();
 
-    if (pCurr == 0)  //?
+    if (pCurr == 0)  //waiting to load curr block, following a start request
     {
-        reftime = 0;  //TODO: try to load the first cluster
+        if (m_time_ns < 0)
+            return E_FAIL;
+
+        reftime = m_time_ns / 100;
+        return S_OK;
+    }
+
+    if (pCurr->EOS())  //already reached end of stream
+    {
+        const LONGLONG time_ns = m_pSource->m_pSegment->GetDuration();
+
+        if (time_ns < 0)  //no duration
+            return E_FAIL;
+
+        reftime = time_ns / 100;
         return S_OK;
     }
 
     const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
+    assert(!pCurrCluster->EOS());
 
     const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
     assert(pCurrBlock);
@@ -878,6 +944,18 @@ void WebmMfStream::SeekInfo::Init(const mkvparser::BlockEntry* pBE_)
     pBE = pBE_;
     pCP = 0;
     pTP = 0;
+}
+
+
+bool WebmMfStream::IsCurrBlockLoaded(LONGLONG& pos) const
+{
+    if (m_curr.pBE)
+        return true;
+
+    pos = m_cluster_pos;
+    assert(pos >= 0);
+
+    return false;
 }
 
 

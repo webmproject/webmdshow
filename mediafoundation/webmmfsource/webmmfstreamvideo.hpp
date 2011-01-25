@@ -30,7 +30,7 @@ public:
 
     virtual ~WebmMfStreamVideo();
 
-    HRESULT GetCurrMediaTime(LONGLONG&) const;
+    //HRESULT GetCurrMediaTime(LONGLONG&) const;
     //void GetSeekInfo(LONGLONG, SeekInfo&) const;
 
     //HRESULT Seek(

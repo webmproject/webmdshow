@@ -177,8 +177,9 @@ private:
 
     HANDLE m_hThread;
     HANDLE m_hQuit;
-    HANDLE m_hRequestSample;
     HANDLE m_hAsyncRead;
+    HANDLE m_hRequestSample;
+    HANDLE m_hCommand;
 
     HRESULT InitThread();
     void FinalThread();
@@ -189,15 +190,15 @@ private:
     typedef bool (WebmMfSource::*thread_state_t)();
     thread_state_t m_thread_state;
 
+    bool StateAsyncCancel();
     bool StateAsyncRead();
     bool StateRequestSample();
     bool StateQuit();
 
     thread_state_t OnAsyncRead();
     thread_state_t OnRequestSample();
-    thread_state_t OnCommand();
+    bool OnCommand();
 
-    //ULONG m_track_init;
     const mkvparser::Cluster* m_pCurr;
     const mkvparser::Cluster* m_pNext;
 
@@ -251,8 +252,8 @@ private:
         void SetDesc(IMFPresentationDescriptor*);
         void SetTime(const PROPVARIANT&);
 
-        bool OnStart();
-        bool OnSeek();
+        void OnStart();
+        void OnSeek();
         void OnRestart();  //un-pause
         void OnPause();
         void OnStop();
@@ -264,13 +265,14 @@ private:
         LONGLONG GetClusterPos(LONGLONG time_ns) const;
 
         //for sync handling of start command
-        void OnStartComplete();
-        void OnSeekComplete();
-        void OnStartNoSeek();
+        void OnStartComplete() const;
+        void OnSeekComplete() const;
+        void OnStartNoSeek() const;
 
         //for async handling of start/seek command
-        bool (Command::*m_state)();
-        bool StateStartInitStreams();
+        //bool (Command::*m_state)();
+        //bool StateStartInitStreams();
+        void OnStartInitStreams(LONGLONG time_ns, LONGLONG base_pos) const;
 
     };
 
@@ -282,7 +284,7 @@ private:
     typedef std::map<ULONG, WebmMfStream*> streams_t;
     streams_t m_streams;
 
-    UINT64 GetActualStartTime(IMFPresentationDescriptor*) const;
+    LONGLONG GetActualStartTime(IMFPresentationDescriptor*) const;
 
     HRESULT Error(const wchar_t*, HRESULT) const;
 

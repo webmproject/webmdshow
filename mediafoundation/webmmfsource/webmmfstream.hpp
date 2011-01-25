@@ -99,7 +99,13 @@ public:
     const mkvparser::BlockEntry* GetFirstBlock() const;
 
     void SetCurrBlock(const mkvparser::BlockEntry*);  //TODO: pass cue point
+
+    void SetCurrBlockInit(LONGLONG time_ns, LONGLONG cluster_pos);
+    void SetCurrBlockCompletion(const mkvparser::Cluster*);
+
     const mkvparser::BlockEntry* GetCurrBlock() const;
+
+    bool IsCurrBlockLoaded(LONGLONG& cluster_pos) const;
     bool IsCurrBlockLocked() const;
 
     int LockCurrBlock();
@@ -135,6 +141,10 @@ private:
 
     int m_bSelected;
     bool m_bEOS;  //indicates whether we have posted EOS event
+
+    //to lazy-init the curr block entry following a start/seek:
+    LONGLONG m_time_ns;
+    LONGLONG m_cluster_pos;
 
     void PurgeSamples();
     void DeliverSamples();
