@@ -3309,6 +3309,11 @@ bool WebmMfSource::StateAsyncCancel()
 {
     //waiting for completion of obsolete async read
 
+#ifdef _DEBUG
+    odbgstream os;
+    os << "\n\nWebmMfSource::StateAsyncCancel(begin)" << endl;
+#endif
+
     enum { nh = 3 };
     const HANDLE ah[nh] = { m_hQuit, m_hAsyncRead, m_hCommand };
 
@@ -3334,6 +3339,11 @@ bool WebmMfSource::StateAsyncCancel()
 
         if (dw == (WAIT_OBJECT_0 + 1))  //hAsyncRead
         {
+#ifdef _DEBUG
+            os << "\nWebmMfSource::StateAsyncCancel(end):"
+               << " cancelling async read\n\n"
+               << endl;
+#endif
             m_file.AsyncReadCancel();
             m_thread_state = &WebmMfSource::StateRequestSample;
 
@@ -3341,6 +3351,13 @@ bool WebmMfSource::StateAsyncCancel()
         }
 
         assert(dw == (WAIT_OBJECT_0 + 2));  //hCommand
+
+#ifdef _DEBUG
+        os << "\nWebmMfSource::StateAsyncCancel(cont'd):"
+           << "handling command\n"
+           << endl;
+#endif
+
         OnCommand();
     }
 }
@@ -3406,8 +3423,6 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
     if (FAILED(hr))
         return &WebmMfSource::StateQuit;
 
-    requests_t& rr = m_requests;
-
 #if 0 //def _DEBUG
     odbgstream os;
     os << "WebmMfSource::OnRequestSample: rr.size="
@@ -3422,16 +3437,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
     if (m_pEvents == 0)  //shutdown
     {
         cc.clear();
-
-        while (!rr.empty())
-        {
-            Request& r = rr.front();
-
-            if (r.pToken)
-                r.pToken->Release();
-
-            rr.pop_front();
-        }
+        PurgeRequests();
 
         return &WebmMfSource::StateQuit;
     }
@@ -3446,23 +3452,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         return 0;  //come back here
     }
 
-    if (IsStopped())
-    {
-        while (!rr.empty())
-        {
-            Request& r = rr.front();
-
-            if (r.pToken)
-                r.pToken->Release();
-
-            rr.pop_front();
-        }
-
-        PurgeCache();
-        //TODO: verify that this completely clears the cache
-
-        return 0;
-    }
+    requests_t& rr = m_requests;
 
     if (rr.empty())
     {
@@ -3741,6 +3731,7 @@ bool WebmMfSource::OnCommand()
             break;
 
         case Command::kSeek:
+            //PurgeRequests();  //?
             c.OnSeek();
             bCancel = true;
             break;
@@ -3756,6 +3747,7 @@ bool WebmMfSource::OnCommand()
             break;
 
         case Command::kStop:
+            PurgeRequests();
             c.OnStop();
             bCancel = true;
             break;
@@ -5154,6 +5146,22 @@ HRESULT WebmMfSource::Error(const wchar_t* str, HRESULT hrStatus) const
     assert(SUCCEEDED(hr));
 
     return hrResult;
+}
+
+
+void WebmMfSource::PurgeRequests()
+{
+    requests_t& rr = m_requests;
+
+    while (!rr.empty())
+    {
+        Request& r = rr.front();
+
+        if (r.pToken)
+            r.pToken->Release();
+
+        rr.pop_front();
+    }
 }
 
 

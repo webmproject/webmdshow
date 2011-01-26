@@ -288,6 +288,8 @@ private:
 
     HRESULT Error(const wchar_t*, HRESULT) const;
 
+    void PurgeRequests();
+
 };
 
 
