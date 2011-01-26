@@ -1696,6 +1696,9 @@ HRESULT WebmMfSource::Start(
 
     commands_t& cc = m_commands;
 
+    if (cc.empty())
+        return E_FAIL;
+
     if (cc.back().m_kind == Command::kStop)  //start
         cc.push_back(Command(Command::kStart, this));
 
