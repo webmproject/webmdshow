@@ -25,16 +25,9 @@ namespace WebmMfSourceLib
             const IID&,
             void**);
 
-    //HRESULT CreateSource(
-    //        IClassFactory*,
-    //        IUnknown*,
-    //        const IID&,
-    //        void**);
-
 }  //end namespace WebmMfSourceLib
 
 
-//static CFactory s_source_factory(&s_cLock, &WebmMfSourceLib::CreateSource);
 static CFactory s_handler_factory(&s_cLock, &WebmMfSourceLib::CreateHandler);
 
 
@@ -82,17 +75,17 @@ STDAPI DllGetClassObject(
 
 STDAPI DllUnregisterServer()
 {
-    HRESULT hr = ComReg::UnRegisterCustomFileType(
+    HRESULT hr = ComReg::UnRegisterByteStreamHandler(
                     L".webm",
                     WebmTypes::CLSID_WebmMfByteStreamHandler);
     assert(SUCCEEDED(hr));  //TODO
 
-    hr = ComReg::UnRegisterCustomFileType(
+    hr = ComReg::UnRegisterByteStreamHandler(
                     L"video/webm",
                     WebmTypes::CLSID_WebmMfByteStreamHandler);
     assert(SUCCEEDED(hr));  //TODO
 
-    hr = ComReg::UnRegisterCustomFileType(
+    hr = ComReg::UnRegisterByteStreamHandler(
                     L"audio/webm",
                     WebmTypes::CLSID_WebmMfByteStreamHandler);
     assert(SUCCEEDED(hr));  //TODO
@@ -102,33 +95,6 @@ STDAPI DllUnregisterServer()
 
     return S_OK;
 }
-
-
-#if 0
-static void RegisterSource(const wchar_t* filename)
-{
-#if _DEBUG
-    const wchar_t friendlyname[] = L"WebM MF Source (Debug)";
-#else
-    const wchar_t friendlyname[] = L"WebM MF Source";
-#endif
-
-    const HRESULT hr = ComReg::RegisterCoclass(
-                        WebmTypes::CLSID_WebmMfSource,
-                        friendlyname,
-                        filename,
-                        L"Webm.MfSource",
-                        L"Webm.MfSource.1",
-                        false,  //not insertable
-                        false,  //not a control
-                        ComReg::kBoth,  //DShow filters must support "both"
-                        GUID_NULL,     //typelib
-                        0,    //no version specified
-                        0);   //no toolbox bitmap
-
-    assert(SUCCEEDED(hr));  //TODO
-}
-#endif
 
 
 static void RegisterHandler(const wchar_t* filename)
