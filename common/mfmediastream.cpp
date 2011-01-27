@@ -291,9 +291,9 @@ HRESULT MfMediaStream::GetSample(IMFSample **ptr_sample)
     }
     // TODO(tomfinegan): need to handle pause; RequestSample will succeed while
     //                   paused, but the stream won't deliver the sample.
-    //                   This means we'll block in |WaitForStreamEvent|...? 
+    //                   This means we'll block in |WaitForStreamEvent|...?
     //                   Curse you for not being specific MSDN.  I guess I have
-    //                   to return a wrong state error when paused to avoid the 
+    //                   to return a wrong state error when paused to avoid the
     //                   situation altogether.
     HRESULT hr = ptr_stream_->RequestSample(NULL);
     // MF_E_MEDIA_SOURCE_WRONGSTATE is not treated as an error by the pipeline
