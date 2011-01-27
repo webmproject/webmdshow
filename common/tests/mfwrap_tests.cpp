@@ -463,60 +463,67 @@ TEST(MfBasicPipeline, SetupVideoDecoder)
     ASSERT_EQ(S_OK, mf_shutdown());
 }
 
-#if 0
 TEST(MfBasicPipeline, TransformAudioSample)
 {
-    ASSERT_EQ(S_OK, mf_startup());
+    ASSERT_HRESULT_SUCCEEDED(mf_startup());
     MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
-    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_source(WEBM_SOURCE_PATH,
-                                                 g_test_input_file,
-                                                 &ptr_mf_bsh));
-    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
-    ASSERT_GT(ptr_mf_bsh->GetAudioStreamCount(), 0UL);
-    using WebmTypes::CLSID_WebmMfVorbisDec;
     MfTransformWrapper* ptr_transform = NULL;
-    ASSERT_EQ(S_OK, WebmMfUtil::open_webm_transform(VORBISDEC_PATH,
-                                                    CLSID_WebmMfVorbisDec,
-                                                    &ptr_transform));
-    ASSERT_EQ(S_OK, WebmMfUtil::setup_webm_decode(ptr_mf_bsh, ptr_transform));
-
+    ASSERT_HRESULT_SUCCEEDED(
+        WebmMfUtil::setup_webm_vorbis_decoder(g_test_input_file, &ptr_mf_bsh,
+                                              &ptr_transform));
     _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
-    IMFSamplePtr ptr_sample;
-    ASSERT_EQ(S_OK, ptr_mf_bsh->GetAudioSample(&ptr_sample));
+    IMFSamplePtr ptr_cx_sample; // compressed sample
+    ASSERT_HRESULT_SUCCEEDED(ptr_mf_bsh->GetAudioSample(&ptr_cx_sample));
     DWORD buffer_count = 0;
-    ASSERT_EQ(S_OK, ptr_sample->GetBufferCount(&buffer_count));
+    ASSERT_HRESULT_SUCCEEDED(ptr_cx_sample->GetBufferCount(&buffer_count));
     ASSERT_GT(buffer_count, 0UL);
-    ASSERT_EQ(true, ptr_sample != NULL);
-
-    ptr_mf_bsh->Release();
-    ASSERT_EQ(S_OK, mf_shutdown());
-}
-
-TEST(MfBasicPipeline, GetVideoSample)
-{
-    ASSERT_EQ(S_OK, mf_startup());
-    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
-    ASSERT_EQ(S_OK,
-        MfByteStreamHandlerWrapper::Create(WEBM_SOURCE_PATH,
-                                           CLSID_WebmMfByteStreamHandler,
-                                           &ptr_mf_bsh));
-    ASSERT_EQ(S_OK, ptr_mf_bsh->OpenURL(g_test_input_file));
-    ASSERT_EQ(S_OK, ptr_mf_bsh->LoadMediaStreams());
-    ASSERT_EQ(S_OK, ptr_mf_bsh->Start(false, 0LL));
-    if (ptr_mf_bsh->GetAudioStreamCount() > 0)
+    ASSERT_EQ(true, ptr_cx_sample != NULL);
+    // the vorbis decoder mft is almost certain to return
+    // MF_E_TRANSFORM_NEED_MORE_INPUT once before we can obtain
+    // uncompressed audio samples, so we loop until successful.
+    IMFSamplePtr ptr_dx_sample; // decompressed sample
+    HRESULT hr_transform;
+    for (;;)
     {
-        _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
-        IMFSamplePtr ptr_sample;
-        ASSERT_EQ(S_OK, ptr_mf_bsh->GetVideoSample(&ptr_sample));
-        DWORD buffer_count = 0;
-        ASSERT_EQ(S_OK, ptr_sample->GetBufferCount(&buffer_count));
-        ASSERT_GT(buffer_count, 0UL);
-        ASSERT_EQ(true, ptr_sample != NULL);
+        hr_transform = ptr_transform->Transform(ptr_cx_sample, &ptr_dx_sample);
+        if (FAILED(hr_transform))
+        {
+            // Our expected "failure", which means only that the decoder MFT
+            // needs more compressed samples before it can produce
+            // additional uncompressed samples.
+            ASSERT_EQ(MF_E_TRANSFORM_NEED_MORE_INPUT, hr_transform);
+        }
+        else
+        {
+            ASSERT_HRESULT_SUCCEEDED(hr_transform);
+            break;
+        }
     }
     ptr_mf_bsh->Release();
-    ASSERT_EQ(S_OK, mf_shutdown());
+    ASSERT_HRESULT_SUCCEEDED(mf_shutdown());
 }
-#endif
+
+TEST(MfBasicPipeline, TransformVideoSample)
+{
+    ASSERT_HRESULT_SUCCEEDED(mf_startup());
+    MfByteStreamHandlerWrapper* ptr_mf_bsh = NULL;
+    MfTransformWrapper* ptr_transform = NULL;
+    ASSERT_HRESULT_SUCCEEDED(
+        WebmMfUtil::setup_webm_vp8_decoder(g_test_input_file, &ptr_mf_bsh,
+                                           &ptr_transform));
+    _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
+    IMFSamplePtr ptr_cx_sample; // compressed sample
+    ASSERT_HRESULT_SUCCEEDED(ptr_mf_bsh->GetVideoSample(&ptr_cx_sample));
+    DWORD buffer_count = 0;
+    ASSERT_HRESULT_SUCCEEDED(ptr_cx_sample->GetBufferCount(&buffer_count));
+    ASSERT_GT(buffer_count, 0UL);
+    ASSERT_EQ(true, ptr_cx_sample != NULL);
+    IMFSamplePtr ptr_dx_sample; // decompressed sample
+    ASSERT_HRESULT_SUCCEEDED(ptr_transform->Transform(ptr_cx_sample,
+                                                      &ptr_dx_sample));
+    ptr_mf_bsh->Release();
+    ASSERT_HRESULT_SUCCEEDED(mf_shutdown());
+}
 
 TEST(BSHBasicFuzz, PauseWithoutStart)
 {
