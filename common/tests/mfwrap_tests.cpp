@@ -477,11 +477,8 @@ TEST(MfBasicPipeline, TransformAudioSample)
                                               &ptr_transform));
     _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
     IMFSamplePtr ptr_cx_sample; // compressed sample
-    ASSERT_HRESULT_SUCCEEDED(ptr_mf_bsh->GetAudioSample(&ptr_cx_sample));
-    DWORD buffer_count = 0;
-    ASSERT_HRESULT_SUCCEEDED(ptr_cx_sample->GetBufferCount(&buffer_count));
-    ASSERT_GT(buffer_count, 0UL);
-    ASSERT_EQ(true, ptr_cx_sample != NULL);
+    ASSERT_HRESULT_SUCCEEDED(
+        WebmMfUtil::get_webm_vorbis_sample(ptr_mf_bsh, &ptr_cx_sample));
     // the vorbis decoder mft is almost certain to return
     // MF_E_TRANSFORM_NEED_MORE_INPUT once before we can obtain
     // uncompressed audio samples, so we loop until successful.
@@ -517,11 +514,8 @@ TEST(MfBasicPipeline, TransformVideoSample)
                                            &ptr_transform));
     _COM_SMARTPTR_TYPEDEF(IMFSample, IID_IMFSample);
     IMFSamplePtr ptr_cx_sample; // compressed sample
-    ASSERT_HRESULT_SUCCEEDED(ptr_mf_bsh->GetVideoSample(&ptr_cx_sample));
-    DWORD buffer_count = 0;
-    ASSERT_HRESULT_SUCCEEDED(ptr_cx_sample->GetBufferCount(&buffer_count));
-    ASSERT_GT(buffer_count, 0UL);
-    ASSERT_EQ(true, ptr_cx_sample != NULL);
+    ASSERT_HRESULT_SUCCEEDED(
+        WebmMfUtil::get_webm_vp8_sample(ptr_mf_bsh, &ptr_cx_sample));
     IMFSamplePtr ptr_dx_sample; // decompressed sample
     ASSERT_HRESULT_SUCCEEDED(ptr_transform->Transform(ptr_cx_sample,
                                                       &ptr_dx_sample));
