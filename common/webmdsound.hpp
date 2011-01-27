@@ -166,6 +166,8 @@ public:
         return samples_played_;
     };
 private:
+    // TODO(tomfinegan): hide implementation w/opaque ptr (would be nice if
+    //                   the public interface worked w/SDL too)
     static DWORD DSoundWriterThread_(void* ptr_this);
     HRESULT CreateAudioBuffer_(WORD fmt_tag, WORD bits);
     HRESULT CreateDirectSoundBuffer_(

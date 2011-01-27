@@ -15,6 +15,7 @@
 #include "clockable.hpp"
 #include "debugutil.hpp"
 #include "eventutil.hpp"
+#include "memutil.hpp"
 #include "threadutil.hpp"
 #include "webmdsound.hpp"
 
@@ -25,18 +26,6 @@ const UINT32 kF32BytesPerSample = sizeof(float);
 const UINT32 kF32BitsPerSample = kF32BytesPerSample * 8;
 const UINT32 kS16BytesPerSample = sizeof(INT16);
 const UINT32 kS16BitsPerSample = kS16BytesPerSample * 8;
-
-template <typename COMOBJ>
-ULONG safe_rel(COMOBJ*& comobj)
-{
-    ULONG refcnt = 0;
-    if (comobj)
-    {
-        refcnt = comobj->Release();
-        comobj = NULL;
-    }
-    return refcnt;
-}
 
 // Note: AudioBufferTemplate is not in use!!
 template <class SampleType>
@@ -229,8 +218,8 @@ AudioPlaybackDevice::AudioPlaybackDevice():
 
 AudioPlaybackDevice::~AudioPlaybackDevice()
 {
-    safe_rel(ptr_dsound_);
-    safe_rel(ptr_dsound_buf_);
+    WebmUtil::safe_rel(ptr_dsound_);
+    WebmUtil::safe_rel(ptr_dsound_buf_);
 }
 
 HRESULT AudioPlaybackDevice::Open(HWND hwnd,
@@ -536,7 +525,7 @@ DWORD AudioPlaybackDevice::DSoundWriterThread_(void* ptr_this)
     HRESULT hr;
     for (;;)
     {
-        if (apd_event->ZeroWait() == S_OK)
+        if (S_OK == apd_event->ZeroWait())
         {
             // received a message, at present that means it's time to stop
             CHK(hr, apd_event->Set());
