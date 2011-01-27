@@ -31,6 +31,12 @@ HRESULT open_webm_decoder(const std::wstring& dll_path, const GUID& clsid,
 HRESULT setup_webm_decode(MfByteStreamHandlerWrapper* ptr_source,
                           MfTransformWrapper* ptr_decoder,
                           const GUID& major_type);
+HRESULT setup_webm_vorbis_decoder(const std::wstring& url,
+                                  MfByteStreamHandlerWrapper** ptr_source,
+                                  MfTransformWrapper** ptr_decoder);
+HRESULT setup_webm_vp8_decoder(const std::wstring& url,
+                               MfByteStreamHandlerWrapper** ptr_source,
+                               MfTransformWrapper** ptr_decoder);
 } // WebmMfUtil namespace
 
 #endif // __WEBMDSHOW_COMMON_MFUTIL_HPP__

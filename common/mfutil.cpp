@@ -17,9 +17,12 @@
 
 #include "debugutil.hpp"
 #include "eventutil.hpp"
+#include "memutil.hpp"
 #include "mfsrcwrap.hpp"
 #include "mftranswrap.hpp"
 #include "mfutil.hpp"
+// TODO(tomfinegan): relocate mf object dll paths include
+#include "tests/mfdllpaths.hpp"
 #include "webmtypes.hpp"
 
 namespace WebmMfUtil
@@ -231,6 +234,83 @@ HRESULT setup_webm_decode(MfByteStreamHandlerWrapper* ptr_source,
     // clear |ptr_type|: using an empty type lets the decoder use its default
     ptr_type = 0;
     CHK(hr, ptr_decoder->SetOutputType(ptr_type));
+    return hr;
+}
+
+HRESULT setup_webm_vorbis_decoder(const std::wstring& url,
+                                  MfByteStreamHandlerWrapper** ptr_bsh,
+                                  MfTransformWrapper** ptr_transform)
+{
+    HRESULT hr;
+    using WebmUtil::auto_ref_counted_obj_ptr;
+    auto_ref_counted_obj_ptr<MfByteStreamHandlerWrapper> ptr_source(NULL);
+    CHK(hr, open_webm_source(WEBM_SOURCE_PATH, url, &ptr_source));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, ptr_source->Start(false, 0LL));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (ptr_source->GetAudioStreamCount() < 1)
+    {
+        DBGLOG("ERROR no audio streams.");
+        return E_INVALIDARG;
+    }
+    using WebmTypes::CLSID_WebmMfVorbisDec;
+    auto_ref_counted_obj_ptr<MfTransformWrapper> ptr_decoder(NULL);
+    CHK(hr, open_webm_decoder(VORBISDEC_PATH, CLSID_WebmMfVorbisDec,
+                              &ptr_decoder));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, setup_webm_decode(ptr_source, ptr_decoder, MFMediaType_Audio));
+    if (SUCCEEDED(hr))
+    {
+        *ptr_bsh = ptr_source.detach();
+        *ptr_transform = ptr_decoder.detach();
+    }
+    return hr;
+}
+
+HRESULT setup_webm_vp8_decoder(const std::wstring& url,
+                               MfByteStreamHandlerWrapper** ptr_bsh,
+                               MfTransformWrapper** ptr_transform)
+{
+    HRESULT hr;
+    using WebmUtil::auto_ref_counted_obj_ptr;
+    auto_ref_counted_obj_ptr<MfByteStreamHandlerWrapper> ptr_source(NULL);
+    CHK(hr, open_webm_source(WEBM_SOURCE_PATH, url, &ptr_source));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, ptr_source->Start(false, 0LL));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (ptr_source->GetVideoStreamCount() < 1)
+    {
+        DBGLOG("ERROR no video streams.");
+        return E_INVALIDARG;
+    }
+    using WebmTypes::CLSID_WebmMfVp8Dec;
+    auto_ref_counted_obj_ptr<MfTransformWrapper> ptr_decoder(NULL);
+    CHK(hr, open_webm_decoder(VP8DEC_PATH, CLSID_WebmMfVp8Dec, &ptr_decoder));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    CHK(hr, setup_webm_decode(ptr_source, ptr_decoder, MFMediaType_Video));
+    if (SUCCEEDED(hr))
+    {
+        *ptr_bsh = ptr_source.detach();
+        *ptr_transform = ptr_decoder.detach();
+    }
     return hr;
 }
 
