@@ -13,6 +13,8 @@ namespace WebmUtil
 {
 
 template<typename BufferType> class auto_array;
+template<typename RefCountedObj> class auto_ref_counted_obj_ptr;
+template<typename COMOBJ> ULONG safe_rel(COMOBJ*& comobj);
 
 }
 
