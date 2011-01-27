@@ -24,6 +24,10 @@ HRESULT get_sub_type(IMFStreamDescriptor* ptr_desc, GUID* ptr_type);
 HRESULT mf_startup();
 HRESULT mf_shutdown();
 // WebM MediaFoundation Component specific utility functions
+HRESULT get_webm_vorbis_sample(MfByteStreamHandlerWrapper* ptr_source,
+                               IMFSample** ptr_sample);
+HRESULT get_webm_vp8_sample(MfByteStreamHandlerWrapper* ptr_source,
+                            IMFSample** ptr_sample);
 HRESULT open_webm_source(const std::wstring& dll_path, const std::wstring& url,
                          MfByteStreamHandlerWrapper** ptr_wrapper_instance);
 HRESULT open_webm_decoder(const std::wstring& dll_path, const GUID& clsid,

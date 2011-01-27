@@ -160,6 +160,76 @@ HRESULT mf_shutdown()
     return hr;
 }
 
+HRESULT get_webm_vorbis_sample(MfByteStreamHandlerWrapper* ptr_source,
+                               IMFSample** ptr_out_sample)
+{
+    if (!ptr_source)
+    {
+        DBGLOG("ERROR null ptr_source, E_INVALIDARG");
+        return E_INVALIDARG;
+    }
+    HRESULT hr;
+    IMFSamplePtr ptr_sample;
+    CHK(hr, ptr_source->GetAudioSample(&ptr_sample));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (!ptr_sample)
+    {
+        DBGLOG("ERROR null ptr_source, E_FAIL");
+        return E_FAIL;
+    }
+    DWORD buffer_count = 0;
+    CHK(hr, ptr_sample->GetBufferCount(&buffer_count));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (1 != buffer_count)
+    {
+        DBGLOG("ERROR sample buffer_count != 1");
+        return E_UNEXPECTED;
+    }
+    *ptr_out_sample = ptr_sample.Detach();
+    return hr;
+}
+
+HRESULT get_webm_vp8_sample(MfByteStreamHandlerWrapper* ptr_source,
+                            IMFSample** ptr_out_sample)
+{
+    if (!ptr_source)
+    {
+        DBGLOG("ERROR null ptr_source, E_INVALIDARG");
+        return E_INVALIDARG;
+    }
+    HRESULT hr;
+    IMFSamplePtr ptr_sample;
+    CHK(hr, ptr_source->GetVideoSample(&ptr_sample));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (!ptr_sample)
+    {
+        DBGLOG("ERROR null ptr_source, E_FAIL");
+        return E_FAIL;
+    }
+    DWORD buffer_count = 0;
+    CHK(hr, ptr_sample->GetBufferCount(&buffer_count));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (1 != buffer_count)
+    {
+        DBGLOG("ERROR sample buffer_count != 1");
+        return E_UNEXPECTED;
+    }
+    *ptr_out_sample = ptr_sample.Detach();
+    return hr;
+}
+
 HRESULT open_webm_source(const std::wstring& dll_path,
                          const std::wstring& url,
                          MfByteStreamHandlerWrapper** ptr_wrapper_instance)
