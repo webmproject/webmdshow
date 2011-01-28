@@ -415,7 +415,7 @@ int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
 
     const DWORD page_size = m_info.dwPageSize;
 
-    int n = 0;
+    cache_t pages;
 
     if (m_cache.empty() || (pos < (*m_cache.front()).pos))
         next = m_cache.begin();
@@ -428,14 +428,13 @@ int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
         assert(next != i);
 
         const cache_t::value_type page_iter = *--iter_t(next);
-        Page& page = *page_iter;
-        const LONGLONG page_end = page.pos + page_size;
+        //Page& page = *page_iter;
+        const LONGLONG page_end = page_iter->pos + page_size;
 
         if (pos < page_end)  //cache hit
         {
             Read(page_iter, pos, len, 0);
-            ++page.cRef;
-            ++n;
+            pages.push_back(page_iter);  //++page.cRef;
         }
     }
 
@@ -458,8 +457,7 @@ int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
             assert((next == m_cache.end()) || ((*next)->pos > page.pos));
 
             Read(page_iter, pos, len, 0);
-            ++page.cRef;
-            ++n;
+            pages.push_back(page_iter);  //++page.cRef;
         }
         else
         {
@@ -469,24 +467,21 @@ int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
             assert(pos < (page.pos + page_size));
 
             Read(page_iter, pos, len, 0);
-            ++page.cRef;
-            ++n;
+            pages.push_back(page_iter);  //++page.cRef;
         }
     }
 
-#if 0 //def _DEBUG
-    if (n >= 10)  //to debug PurgeOne
-    {
-        odbgstream os;
-        os << "MkvReader::LockPage: large multi-page lock: n="
-           << n
-           << " block.start=" << pBlock->m_start
-           << " block.size=" << pBlock->m_size
-           << endl;
-    }
-#endif
+    iter_t pages_iter = pages.begin();
+    const iter_t pages_end = pages.end();
 
-    return 0;
+    while (pages_iter != pages_end)
+    {
+        const cache_t::value_type page_iter = *pages_iter++;
+        Page& page = *page_iter;
+        ++page.cRef;
+    }
+
+    return 0;  //success
 }
 
 
