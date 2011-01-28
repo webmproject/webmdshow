@@ -40,14 +40,16 @@ public:
 
     HRESULT Start(const PROPVARIANT&);
 
-    void SetRate(BOOL, float);
+    //void SetRate(BOOL, float);
+
+    void SetCurrBlockCompletion(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
 
 private:
 
-    float m_rate;
-    LONGLONG m_thin_ns;
+    //float m_rate;
+    //LONGLONG m_thin_ns;
 
     static HRESULT GetFrameRate(
         const mkvparser::VideoTrack*,

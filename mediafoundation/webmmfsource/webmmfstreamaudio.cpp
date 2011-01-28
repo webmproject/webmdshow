@@ -7,7 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <comdef.h>
-#include <vfwmsgs.h>
+//#include <vfwmsgs.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -276,19 +276,60 @@ HRESULT WebmMfStreamAudio::Start(const PROPVARIANT& var)
 #endif
 
 
+void WebmMfStreamAudio::SetCurrBlockCompletion(
+    const mkvparser::Cluster* pCluster)
+{
+    assert(m_curr.pBE == 0);
+    assert(m_time_ns >= 0);
+
+    if ((pCluster == 0) ||
+        pCluster->EOS() ||
+        (pCluster->GetEntryCount() <= 0))
+    {
+        m_curr.Init(m_pTrack->GetEOS());  //weird
+        return;
+    }
+
+    using mkvparser::BlockEntry;
+
+    //TODO:
+    //This can be inefficient if this is a large cluster with many
+    //keyframes.  The cue point based search would succeed, and we'd
+    //even find the video keyframe in constant time, but we're still
+    //performing a linear search here to find the audio block.
+    //
+    //We can either pass -1 as the time_ns value here, which means
+    //"find the first audio block on this cluster", or we can
+    //re-implement Cluster::GetEntry to perform a binary search
+    //instead of a linear search.  (Our original assumption was that
+    //clusters would be small, with a single keyframe, near
+    //the beginning of the cluster.  However, that assumption really
+    //isn't valid for files we've see in the wild.)
+
+    if (const BlockEntry* pBE = pCluster->GetEntry(m_pTrack, m_time_ns))
+        m_curr.Init(pBE);
+    else
+        m_curr.Init(m_pTrack->GetEOS());  //weird
+
+    //m_cluster_pos = -1;
+    //m_time_ns = -1;
+}
+
+
 HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 {
+    if (!IsSelected())
+        return S_FALSE;
+
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
     assert(m_pLocked);
     assert(m_pLocked == pCurr);
 
-    HRESULT hr;
-
     if (m_pNextBlock == 0)
     {
-        hr = GetNextBlock();
+        const HRESULT hr = GetNextBlock();
 
         if (FAILED(hr))  //no next entry found on current cluster
             return hr;
@@ -296,7 +337,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
     IMFSamplePtr pSample;
 
-    hr = MFCreateSample(&pSample);
+    HRESULT hr = MFCreateSample(&pSample);
     assert(SUCCEEDED(hr));  //TODO
     assert(pSample);
 
@@ -599,10 +640,22 @@ HRESULT WebmMfStreamAudio::PopulateSample(IMFSample* pSample)
 #endif
 
 
-void WebmMfStreamAudio::SetRate(BOOL, float)
+#if 0
+void WebmMfStreamAudio::SetRate(BOOL bThin, float rate)
 {
-    __noop;  //TODO
+    m_rate = rate;
+    m_thin_ns = bThin ? -1 : -3;
+
+    //MEStreamThinMode Event
+    //http://msdn.microsoft.com/en-us/library/aa370815(v=VS.85).aspx
+
+    //Raised by a media stream when it starts or stops thinning the stream.
+
+    //TODO: the audio stream accepts the thinning request, but it does
+    //not actually implement thinning.  Hence, it does not send the
+    //MFStreamThinMode event, because its thinning status never changes.
 }
+#endif
 
 
 }  //end namespace WebmMfSourceLib

@@ -34,7 +34,9 @@ WebmMfStream::WebmMfStream(
     m_pNextBlock(0),
     m_pLocked(0),
     m_time_ns(-1),
-    m_cluster_pos(-1)
+    m_cluster_pos(-1),
+    m_rate(1),
+    m_thin_ns(-3)  //means "not thinning"
 {
     m_pDesc->AddRef();
 
@@ -465,6 +467,8 @@ HRESULT WebmMfStream::Stop()
 
     m_bSelected = 0;
     m_bEOS = true;
+    //m_thin_ns = -3;  //means "not thinning"
+    //m_rate = 1;
 
     PurgeSamples();
 
@@ -555,6 +559,8 @@ HRESULT WebmMfStream::Deselect()
 
     m_bSelected = 0;
     m_bEOS = true;
+    //m_thin_ns = -3;  //means "not thinning"
+    //m_rate = 1;
 
     m_pSource->m_file.UnlockPage(m_pLocked);
     m_pLocked = 0;
@@ -723,6 +729,9 @@ void WebmMfStream::SetCurrBlock(const mkvparser::BlockEntry* pBE)
 
     m_time_ns = -1;
     m_cluster_pos = -1;
+
+    if (m_thin_ns >= 0)
+        m_thin_ns = -1;  //TODO: for now, send new notification
 }
 
 
@@ -744,24 +753,33 @@ void WebmMfStream::SetCurrBlockInit(
 
     m_time_ns = time_ns;
     m_cluster_pos = cluster_pos;
+
+    if (m_thin_ns >= 0)
+        m_thin_ns = -1;  //TODO: for now, send new notification
 }
 
 
+#if 0
 void WebmMfStream::SetCurrBlockCompletion(const mkvparser::Cluster* pCluster)
 {
-    assert(pCluster);
-    assert(!pCluster->EOS());
-    assert(pCluster->GetEntryCount() > 0);
     assert(m_curr.pBE == 0);
     assert(m_time_ns >= 0);
 
-    m_curr.pBE = pCluster->GetEntry(m_pTrack, m_time_ns);
+    if ((pCluster == 0) ||
+        pCluster->EOS() ||
+        (pCluster->GetEntryCount() <= 0))
+    {
+        m_curr.Init(m_pTrack->GetEOS());
+        return;
+    }
+
+    m_curr.Init(pCluster->GetEntry(m_pTrack, m_time_ns));
     assert(m_curr.pBE);
-    assert(!m_curr.pBE->EOS());
 
     m_cluster_pos = -1;
     m_time_ns = -1;
 }
+#endif
 
 
 const mkvparser::BlockEntry* WebmMfStream::GetCurrBlock() const
@@ -956,6 +974,59 @@ bool WebmMfStream::IsCurrBlockLoaded(LONGLONG& pos) const
     assert(pos >= 0);
 
     return false;
+}
+
+
+void WebmMfStream::SetRate(BOOL bThin, float rate)
+{
+    m_rate = rate;
+    assert(m_rate >= 0);  //TODO: implement reverse playback
+
+    //m_thin_ns <= -3
+    //  in not thinning mode
+    //
+    //m_thin_ns == -2
+    //  we were in thinning mode
+    //  not thinning already requested, but
+    //  MEStreamThinMode has not been sent yet
+    //
+    //m_thin_ns == -1
+    //  we were in not thinning mode
+    //  thinning mode requested, but event
+    //  hasn't been sent yet
+    //
+    //m_thin_ns >= 0
+    //  in thinning mode
+    //  thinning mode had been requested, and event
+    //  has been sent
+
+    if (bThin)
+    {
+        if (m_thin_ns <= -3)  //not thinning
+        {
+            m_thin_ns = -1;   //send notice of transition
+            return;
+        }
+
+        if (m_thin_ns == -2)  //not thinning already requested
+        {
+            m_thin_ns = -1;   //go ahead and send notice of transition
+            return;
+        }
+
+        //no change req'd here
+    }
+    else if (m_thin_ns <= -3)  //already not thinning
+        return;
+
+    else if (m_thin_ns == -2)  //not thinning already requested
+        return;
+
+    else if (m_thin_ns == -1)  //thinning requested
+        m_thin_ns = -2;        //not thinning requested
+
+    else
+        m_thin_ns = -2;  //not thinning requested
 }
 
 

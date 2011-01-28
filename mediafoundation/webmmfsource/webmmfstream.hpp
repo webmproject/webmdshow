@@ -87,7 +87,8 @@ public:
     //TODO: implement thinning
     HRESULT Seek(const PROPVARIANT&);
 
-    virtual void SetRate(BOOL, float) = 0;
+    //virtual void SetRate(BOOL, float) = 0;
+    void SetRate(BOOL, float);
 
     bool IsCurrBlockEOS() const;
     bool GetEOS() const;
@@ -101,7 +102,8 @@ public:
     void SetCurrBlock(const mkvparser::BlockEntry*);  //TODO: pass cue point
 
     void SetCurrBlockInit(LONGLONG time_ns, LONGLONG cluster_pos);
-    void SetCurrBlockCompletion(const mkvparser::Cluster*);
+    //void SetCurrBlockCompletion(const mkvparser::Cluster*);
+    virtual void SetCurrBlockCompletion(const mkvparser::Cluster*) = 0;
 
     const mkvparser::BlockEntry* GetCurrBlock() const;
 
@@ -115,8 +117,6 @@ public:
     WebmMfSource* const m_pSource;
     IMFStreamDescriptor* const m_pDesc;
     const mkvparser::Track* const m_pTrack;
-    //const ULONG m_context_key;
-    //const ULONG m_stream_key;
 
 protected:
 
@@ -132,6 +132,13 @@ protected:
     const mkvparser::BlockEntry* m_pLocked;
     bool m_bDiscontinuity;
 
+    //to lazy-init the curr block entry following a start/seek:
+    LONGLONG m_time_ns;
+    LONGLONG m_cluster_pos;
+
+    float m_rate;
+    LONGLONG m_thin_ns;
+
 private:
 
     IMFMediaEventQueue* m_pEvents;
@@ -141,10 +148,6 @@ private:
 
     int m_bSelected;
     bool m_bEOS;  //indicates whether we have posted EOS event
-
-    //to lazy-init the curr block entry following a start/seek:
-    LONGLONG m_time_ns;
-    LONGLONG m_cluster_pos;
 
     void PurgeSamples();
     void DeliverSamples();

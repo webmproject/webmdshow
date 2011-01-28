@@ -1789,40 +1789,25 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
     if (rate < 0)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
 
-#if 0  //TODO: restore this
-    if ((m_pSegment->GetCues() == 0) && bThin)
+    if (bThin && !ThinningSupported())
         return MF_E_THINNING_UNSUPPORTED;
+
+#if 0
+    m_commands.push_back(Command(bThin, rate, this));
+
+    const BOOL b = SetEvent(m_hCommand);
+    assert(b);
 #else
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;
+    OnSetRate(bThin, rate);
 #endif
 
-    //IMFRateControl::SetRate Method
-    //http://msdn.microsoft.com/en-us/library/ms696979%28v=VS.85%29.aspx
+    return S_OK;
+}
 
-    //TODO:
-    //If the transition is not supported, the method returns
-    //MF_E_UNSUPPORTED_RATE_TRANSITION.
+HRESULT WebmMfSource::OnSetRate(BOOL bThin, float rate)
+{
+    assert(m_pEvents);
 
-    //When a media source completes a call to SetRate, it sends
-    //the MESourceRateChanged event. Other pipeline components do
-    //not send this event.
-
-    //TODO:
-    //If a media source switches between thinned and non-thinned playback,
-    //the streams send an MEStreamThinMode event to indicate the transition.
-    //Events from the media source are not synchronized with events from
-    //the media streams. After you receive the MESourceRateChanged event,
-    //you can still receive samples that were queued before the stream
-    //switched to thinned or non-thinned mode. The MEStreamThinMode event
-    //marks the exact point in the stream where the transition occurs.
-
-    //TODO: suppose bThin is false, but (m_rate != 1) ?
-
-    m_bThin = bThin;
-    m_rate = rate;
-
-#if 0  //TODO: restore this
     typedef streams_t::iterator iter_t;
 
     iter_t i = m_streams.begin();
@@ -1830,30 +1815,31 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
 
     while (i != j)
     {
-        streams_t::value_type& value = *i++;
+        const streams_t::value_type& v = *i++;
 
-        WebmMfStream* const pStream = value.second;
+        WebmMfStream* const pStream = v.second;
         assert(pStream);
 
-        if (pStream->IsSelected())
-            pStream->SetRate(m_bThin, m_rate);
+        pStream->SetRate(bThin, rate);
     }
+
+    m_bThin = bThin;
+    m_rate = rate;
 
     PROPVARIANT var;
 
     var.vt = VT_R4;
-    var.fltVal = rate;
+    var.fltVal = m_rate;
 
-    hr = m_pEvents->QueueEventParamVar(
-            MESourceRateChanged,
-            GUID_NULL,
-            S_OK,
-            &var);
+    const HRESULT hr = m_pEvents->QueueEventParamVar(
+                        MESourceRateChanged,
+                        GUID_NULL,
+                        S_OK,
+                        &var);
 
     assert(SUCCEEDED(hr));
-#endif
 
-    return S_OK;
+    return hr;
 }
 #endif
 
@@ -1913,13 +1899,8 @@ HRESULT WebmMfSource::GetSlowestRate(
     if (d == MFRATE_REVERSE)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
 
-#if 0  //TODO: restore this
-    if ((m_pSegment->GetCues() == 0) && bThin)
+    if (bThin && !ThinningSupported())
         return MF_E_THINNING_UNSUPPORTED;
-#else
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;
-#endif
 
     if (pRate == 0)
         return E_POINTER;
@@ -1954,19 +1935,14 @@ HRESULT WebmMfSource::GetFastestRate(
     if (d == MFRATE_REVERSE)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
 
-#if 0  //TODO: restore this
-    if ((m_pSegment->GetCues() == 0) && bThin)
+    if (bThin && !ThinningSupported())
         return MF_E_THINNING_UNSUPPORTED;
-#else
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;
-#endif
 
     if (pRate == 0)
         return E_POINTER;
 
     float& r = *pRate;
-    r = 128;  //more or less arbitrary
+    r = 128;  //arbitrary
 
     return S_OK;
 }
@@ -1995,13 +1971,8 @@ HRESULT WebmMfSource::IsRateSupported(
     if (rate < 0)
         return MF_E_REVERSE_UNSUPPORTED;  //TODO
 
-#if 0  //TODO: restore this
-    if ((m_pSegment->GetCues() == 0) && bThin)
+    if (bThin && !ThinningSupported())
         return MF_E_THINNING_UNSUPPORTED;
-#else
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;
-#endif
 
     //float int_part;
     //const float frac_part = modf(rate, &int_part);
@@ -2015,9 +1986,9 @@ HRESULT WebmMfSource::IsRateSupported(
     }
 
     if (pNearestRate)
-        *pNearestRate = rate;  //TODO
+        *pNearestRate = rate;
 
-    return S_OK;  //TODO
+    return S_OK;
 }
 
 
@@ -3211,7 +3182,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         //the
         //actual entries.
 
-        if (m_pCurr->GetEntryCount() < 0)  //merely preloaded
+        if (m_pCurr->GetEntryCount() < 0)  //only preloaded, not fully loaded
         {
             m_file.ResetAvailable();
 
@@ -3421,6 +3392,11 @@ bool WebmMfSource::OnCommand()
             bCancel = true;
             break;
 
+        //case Command::kSetRate:
+        //    c.OnSetRate();
+        //    bCancel = false;
+        //    break;
+
         default:
             assert(false);
             bCancel = false;
@@ -3446,16 +3422,33 @@ WebmMfSource::Command::Command(Kind k, WebmMfSource* pSource) :
     m_kind(k),
     m_pSource(pSource),
     m_pDesc(0)
-    //m_state(0)
+    //m_thin(-1),
+    //m_rate(-1)
 {
     PropVariantInit(&m_time);
 }
+
+
+//WebmMfSource::Command::Command(
+//    BOOL bThin,
+//    float rate,
+//    WebmMfSource* pSource) :
+//    m_kind(kSetRate),
+//    m_pSource(pSource),
+//    m_pDesc(0)
+//    //m_thin(bThin ? 1 : 0),
+//    //m_rate(rate)
+//{
+//    PropVariantInit(&m_time);
+//}
+
 
 WebmMfSource::Command::Command(const Command& rhs) :
     m_kind(rhs.m_kind),
     m_pSource(rhs.m_pSource),
     m_pDesc(rhs.m_pDesc)
-    //m_state(rhs.m_state)
+    //m_thin(rhs.m_thin),
+    //m_rate(rhs.m_rate)
 {
     if (m_pDesc)
         m_pDesc->AddRef();
@@ -3962,6 +3955,13 @@ void WebmMfSource::Command::OnStartNoSeek() const
         hr = m_pSource->QueueStreamEvent(met, pStream);
         assert(SUCCEEDED(hr));
 
+        //TODO: if this is an empty stream (no clusters contain
+        //blocks from this track), then we have to ensure that
+        //GetFirstBlock returns an EOS block, so that pCurr
+        //gets set to EOS.  If it gets initialized to pFirst=NULL,
+        //then pCurr=NULL, and this is intepreted to mean
+        //"use the requested seek time to find the block".
+
         pStream->SetCurrBlock(pStream->GetFirstBlock());
     }
 }
@@ -4209,7 +4209,7 @@ void WebmMfSource::Command::OnStartInitStreams(
     LONGLONG time_ns,
     LONGLONG base_pos) const
 {
-    m_pSource->m_preroll_ns = time_ns;  //TODO: better way to handle this?
+    m_pSource->m_preroll_ns = m_pSource->m_bThin ? -1 : time_ns;
 
     mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
 
@@ -4270,7 +4270,7 @@ void WebmMfSource::Command::OnStartInitStreams(
 #endif
 
 
-void WebmMfSource::Command::OnSeek()
+void WebmMfSource::Command::OnSeek() const
 {
     assert(m_kind == kSeek);
     assert(m_pDesc);
@@ -4302,7 +4302,7 @@ void WebmMfSource::Command::OnSeek()
 }
 
 
-void WebmMfSource::Command::OnStop()
+void WebmMfSource::Command::OnStop() const
 {
 #ifdef _DEBUG
     odbgstream os;
@@ -4334,10 +4334,12 @@ void WebmMfSource::Command::OnStop()
                         0);
 
     assert(SUCCEEDED(hr));
+
+    //m_pSource->OnSetRate(FALSE, 1);
 }
 
 
-void WebmMfSource::Command::OnPause()
+void WebmMfSource::Command::OnPause() const
 {
 #ifdef _DEBUG
     odbgstream os;
@@ -4371,7 +4373,7 @@ void WebmMfSource::Command::OnPause()
 }
 
 
-void WebmMfSource::Command::OnRestart()  //unpause
+void WebmMfSource::Command::OnRestart() const //unpause
 {
     //If an unpause interupts an async read in progress,
     //then it might make sense to not cancel
@@ -4533,6 +4535,12 @@ void WebmMfSource::Command::OnRestart()  //unpause
     }
 #endif
 }
+
+
+//void WebmMfSource::Command::OnSetRate() const
+//{
+//    m_pSource->OnSetRate(m_thin, m_rate);
+//}
 
 
 WebmMfSource::thread_state_t WebmMfSource::OnAsyncRead()
@@ -4831,6 +4839,44 @@ void WebmMfSource::PurgeRequests()
 
         rr.pop_front();
     }
+}
+
+
+bool WebmMfSource::ThinningSupported() const
+{
+    if (m_pSegment->GetCues() == 0)
+        return false;
+
+    typedef streams_t::const_iterator iter_t;
+
+    iter_t i = m_streams.begin();
+    const iter_t j = m_streams.end();
+
+    bool bThin = false;
+
+    while (i != j)
+    {
+        const streams_t::value_type& v = *i++;
+
+        const WebmMfStream* const pStream = v.second;
+        assert(pStream);
+
+        const mkvparser::Track* const pTrack = pStream->m_pTrack;
+        assert(pTrack);
+
+        if (pTrack->GetType() != 1)  //not video
+            continue;
+
+        //more we should test here?
+        //  stream selected
+        //  whether cues has entries for this track
+        //  etc
+
+        bThin = true;  //TODO
+        break;
+    }
+
+    return bThin;
 }
 
 

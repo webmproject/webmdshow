@@ -239,12 +239,14 @@ private:
             kRestart,  //un-pause
             kPause,
             kStop
+            //kSetRate
         };
 
         const Kind m_kind;
         WebmMfSource* const m_pSource;
 
         Command(Kind, WebmMfSource*);
+        //Command(BOOL, float, WebmMfSource*);  //kSetRate
         Command(const Command&);
 
         ~Command();
@@ -253,26 +255,24 @@ private:
         void SetTime(const PROPVARIANT&);
 
         void OnStart();
-        void OnSeek();
-        void OnRestart();  //un-pause
-        void OnPause();
-        void OnStop();
+        void OnSeek() const;
+        void OnRestart() const;  //un-pause
+        void OnPause() const;
+        void OnStop() const;
+        //void OnSetRate() const;
 
     private:
         IMFPresentationDescriptor* m_pDesc;
         PROPVARIANT m_time;
+        //const int m_thin;
+        //const float m_rate;
 
         LONGLONG GetClusterPos(LONGLONG time_ns) const;
 
-        //for sync handling of start command
+        void OnStartNoSeek() const;
+        void OnStartInitStreams(LONGLONG time_ns, LONGLONG base_pos) const;
         void OnStartComplete() const;
         void OnSeekComplete() const;
-        void OnStartNoSeek() const;
-
-        //for async handling of start/seek command
-        //bool (Command::*m_state)();
-        //bool StateStartInitStreams();
-        void OnStartInitStreams(LONGLONG time_ns, LONGLONG base_pos) const;
 
     };
 
@@ -289,6 +289,9 @@ private:
     HRESULT Error(const wchar_t*, HRESULT) const;
 
     void PurgeRequests();
+
+    bool ThinningSupported() const;
+    HRESULT OnSetRate(BOOL, float);
 
 };
 

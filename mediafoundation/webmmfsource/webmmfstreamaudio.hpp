@@ -36,7 +36,9 @@ public:
 
     HRESULT Start(const PROPVARIANT&);
 
-    void SetRate(BOOL, float);
+    //void SetRate(BOOL, float);
+
+    void SetCurrBlockCompletion(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
 

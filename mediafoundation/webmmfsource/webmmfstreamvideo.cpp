@@ -8,7 +8,8 @@
 #include <limits>
 #include <cmath>
 #include <comdef.h>
-#include <vfwmsgs.h>
+//#include <vfwmsgs.h>
+#include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -230,9 +231,9 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     const mkvparser::VideoTrack* pTrack) :
-    WebmMfStream(pSource, pDesc, pTrack),
-    m_rate(1),
-    m_thin_ns(-2)
+    WebmMfStream(pSource, pDesc, pTrack)
+    //m_rate(1),
+    //m_thin_ns(-2)
 {
 }
 
@@ -360,8 +361,72 @@ void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
 #endif
 
 
+
+void WebmMfStreamVideo::SetCurrBlockCompletion(
+    const mkvparser::Cluster* pCluster)
+{
+    assert(m_curr.pBE == 0);
+    assert(m_time_ns >= 0);
+    assert(m_cluster_pos >= 0);
+    //assert(m_time_ns >= 0);
+
+    if ((pCluster == 0) ||
+        pCluster->EOS() ||
+        (pCluster->GetEntryCount() <= 0))
+    {
+        m_curr.Init(m_pTrack->GetEOS());  //weird
+        return;
+    }
+
+    assert(pCluster->m_pos >= 0);
+
+    mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
+
+    const mkvparser::Cues* const pCues = pSegment->GetCues();
+    assert(pCues);
+
+    using mkvparser::BlockEntry;
+    using mkvparser::CuePoint;
+
+    const CuePoint* pCP;
+    const CuePoint::TrackPosition* pTP;
+
+    if (pCues->Find(m_time_ns, m_pTrack, pCP, pTP))
+    {
+        assert(pCP);
+        assert(pTP);
+        assert(pTP->m_track == m_pTrack->GetNumber());
+
+        if (pTP->m_pos == pCluster->m_pos)  //what we expect to be true
+        {
+            m_curr.pBE = pCluster->GetEntry(*pCP, *pTP);
+
+            if (m_curr.pBE)  //can be false if bad cue point
+            {
+                m_curr.pCP = pCP;
+                m_curr.pTP = pTP;
+
+                return;
+            }
+        }
+    }
+
+    //if (const BlockEntry* pBE = pCluster->GetEntry(m_pTrack, m_time_ns))
+    if (const BlockEntry* pBE = pCluster->GetEntry(m_pTrack))
+        m_curr.Init(pBE);
+    else
+        m_curr.Init(m_pTrack->GetEOS());
+
+    //m_cluster_pos = -1;
+    //m_time_ns = -1;
+}
+
+
 HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 {
+    if (!IsSelected())
+        return S_FALSE;
+
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
@@ -374,131 +439,49 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
     const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
+    assert(!pCurrCluster->EOS());
 
-    SeekInfo next;
-
-    if (m_thin_ns < 0)  //no thinning
+    if (m_pNextBlock == 0)
     {
-        if (m_pNextBlock == 0)
-        {
-            const HRESULT hr = GetNextBlock();
+        const HRESULT hr = GetNextBlock();
 
-            if (FAILED(hr))  //no next entry found on current cluster
-                return hr;
-        }
-
-        next.pBE = m_pNextBlock;
-        next.pCP = 0;
-        next.pTP = 0;
+        if (FAILED(hr))  //no next entry found on current cluster
+            return hr;
     }
-    else
+
+    //MEStreamThinMode
+    //http://msdn.microsoft.com/en-us/library/aa370815(v=VS.85).aspx
+
+    if (m_thin_ns == -2)  //non-thinning mode requested
     {
-        assert(false);  //TODO: restore this
+        PROPVARIANT v;
 
-#ifdef _DEBUG
-        {
-            const mkvparser::Block* const pBlock = pCurr->GetBlock();
-            assert(pBlock);
+        HRESULT hr = InitPropVariantFromBoolean(FALSE, &v);
+        assert(SUCCEEDED(hr));
 
-            const LONGLONG ns = pBlock->GetTime(pCurrCluster);
+        hr = QueueEvent(MEStreamThinMode, GUID_NULL, S_OK, &v);
+        assert(SUCCEEDED(hr));
 
-            const double c = double(ns) / 1000000000;
-            const double t = double(m_thin_ns) / 1000000000;
+        hr = PropVariantClear(&v);
+        assert(SUCCEEDED(hr));
 
-            odbgstream os;
-            os << "WebmMfSTreamVideo::PopulateSample: thin[sec]=" << t
-               << " curr[sec]=" << c
-               << " curr-thin=" << (c - t)
-               << " rate=" << m_rate
-               << endl;
-        }
-#endif
+        m_thin_ns = -3;  //non-thinning mode
+    }
+    else if (m_thin_ns == -1)  //thining mode requested
+    {
+        PROPVARIANT v;
 
-        assert(m_curr.pCP);
-        assert(m_curr.pTP);
+        HRESULT hr = InitPropVariantFromBoolean(TRUE, &v);
+        assert(SUCCEEDED(hr));
 
-        const mkvparser::Cues* const pCues = m_pTrack->m_pSegment->GetCues();
-        assert(pCues);
+        hr = QueueEvent(MEStreamThinMode, GUID_NULL, S_OK, &v);
+        assert(SUCCEEDED(hr));
 
-        if (m_rate <= 1)
-        {
-            next.pCP = pCues->GetNext(m_curr.pCP);
+        hr = PropVariantClear(&v);
+        assert(SUCCEEDED(hr));
 
-            if (next.pCP == 0)
-            {
-                next.pTP = 0;
-                next.pBE = 0;
-            }
-            else
-            {
-                next.pTP = next.pCP->Find(m_pTrack);
-                assert(next.pTP);  //TODO
-
-                next.pBE = pCues->GetBlock(next.pCP, next.pTP);
-            }
-        }
-        else
-        {
-            const double delta_ns_ = double(m_rate) * 1000000000.0;
-            const LONGLONG delta_ns = static_cast<LONGLONG>(delta_ns_);
-            LONGLONG next_ns = m_thin_ns + delta_ns;  //target
-
-            typedef mkvparser::CuePoint CP;
-            typedef mkvparser::CuePoint::TrackPosition TP;
-            typedef mkvparser::BlockEntry BE;
-            typedef mkvparser::Block B;
-
-            const CP* pCurr = m_curr.pCP;
-            assert(pCurr);
-
-            for (;;)
-            {
-                const CP* const pNext = pCues->GetNext(pCurr);
-
-                if (pNext == 0)  //no more cue points: done
-                {
-                    next.pTP = 0;
-                    next.pBE = 0;
-
-                    break;
-                }
-
-                const TP* const pTP = pNext->Find(m_pTrack);
-                assert(pTP);  //TODO
-
-                const BE* const pBE = pCues->GetBlock(pNext, pTP);
-                assert(pBE);  //TODO
-                assert(!pBE->EOS());
-
-                const B* const pB = pBE->GetBlock();
-                assert(pB);
-
-                const LONGLONG time_ns = pB->GetTime(pBE->GetCluster());
-
-                if (time_ns >= next_ns)
-                {
-                    next.pCP = pNext;
-                    next.pTP = pTP;
-                    next.pBE = pBE;
-
-                    m_thin_ns = next_ns;
-
-                    for (;;)
-                    {
-                        next_ns = m_thin_ns + delta_ns;
-
-                        if (next_ns > time_ns)
-                            break;
-
-                        m_thin_ns = next_ns;
-                    }
-
-                    break;
-                }
-
-                pCurr = pNext;
-            }
-        }
+        m_thin_ns = pCurrBlock->GetTime(pCurrCluster);
+        assert(m_thin_ns >= 0);  //non-thinning mode
     }
 
     IMFSamplePtr pSample;
@@ -592,6 +575,10 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
         //since all it means is that immediately following
         //a seek the user sees a different keyframe.
 
+        //TODO: alternatively, we could tell the downstream component
+        //what the requested time directly, and then let it make the
+        //test above.
+
         hr = pSample->SetUINT32(WebmTypes::WebMSample_Preroll, TRUE);
         assert(SUCCEEDED(hr));
     }
@@ -600,7 +587,8 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     //http://msdn.microsoft.com/en-us/library/dd317906%28v=VS.85%29.aspx
     //http://msdn.microsoft.com/en-us/library/aa376629%28v=VS.85%29.aspx
 
-    const mkvparser::BlockEntry* const pNextEntry = m_pNextBlock;  //TODO
+    const mkvparser::BlockEntry* const pNextEntry = m_pNextBlock;
+    assert(pNextEntry);
 
     const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
     const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
@@ -653,22 +641,165 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
         assert(SUCCEEDED(hr));
     }
 
-    m_curr = next;
-
     MkvReader& f = m_pSource->m_file;
 
     f.UnlockPage(m_pLocked);
     m_pLocked = 0;
 
-    const int status = f.LockPage(next.pBE);
-    assert(status == 0);
+    if (m_thin_ns < 0)  //non-thinning mode
+    {
+        m_curr.Init(m_pNextBlock);
 
-    if (status == 0)
-        m_pLocked = next.pBE;
+        const int status = f.LockPage(m_pNextBlock);
+        assert(status == 0);
+
+        if (status == 0)
+            m_pLocked = m_pNextBlock;
+
+        m_pNextBlock = 0;
+
+        return ProcessSample(pSample);
+    }
+
+    //thinning mode
 
     m_pNextBlock = 0;
 
-    return ProcessSample(pSample);
+    const mkvparser::Cues* const pCues = pSegment->GetCues();
+    assert(pCues);
+
+    const mkvparser::CuePoint* pCP;
+    const mkvparser::CuePoint::TrackPosition* pTP;
+
+    if (m_curr.pCP == 0)
+    {
+        //TODO: do this at the time of the request, in order to
+        //establish the invariant earlier.  If we are unable to
+        //establish the invariant, then fail the SetRate call.
+
+        if (!pCues->Find(m_thin_ns, m_pTrack, pCP, pTP))
+        {
+            m_curr.Init(m_pTrack->GetEOS());
+            return ProcessSample(pSample);
+        }
+
+        assert(pCP);
+        assert(pTP);
+
+        for (;;)
+        {
+            m_time_ns = pCP->GetTime(pSegment);
+            assert(m_time_ns >= 0);
+
+            if (m_time_ns > m_thin_ns)
+                break;
+
+            pCP = pCues->GetNext(pCP);
+
+            if (pCP == 0)  //no more queue points
+                break;
+        }
+
+        if (pCP)
+            pTP = pCP->Find(m_pTrack);
+        else
+            pTP = 0;
+
+        if ((pCP == 0) || (pTP == 0))
+        {
+            m_curr.Init(m_pTrack->GetEOS());
+            return ProcessSample(pSample);
+        }
+
+        m_cluster_pos = pTP->m_pos;
+
+        m_curr.pBE = 0;
+        m_curr.pCP = pCP;
+        m_curr.pTP = pTP;
+
+        m_thin_ns = m_time_ns;
+
+        return ProcessSample(pSample);
+    }
+
+    if (m_rate <= 1)
+    {
+        assert(m_rate >= 0);
+
+        pCP = pCues->GetNext(m_curr.pCP);
+
+        if (pCP)
+            pTP = pCP->Find(m_pTrack);
+        else
+            pTP = 0;
+
+        if ((pCP == 0) || (pTP == 0))
+        {
+            m_curr.Init(m_pTrack->GetEOS());
+            return ProcessSample(pSample);
+        }
+
+        m_curr.pBE = 0;
+        m_curr.pCP = pCP;
+        m_curr.pTP = pTP;
+
+        const LONGLONG next_ns = pCP->GetTime(pSegment);
+        assert(next_ns > m_time_ns);
+
+        m_time_ns = next_ns;
+        m_cluster_pos = pTP->m_pos;
+
+        m_thin_ns = m_time_ns;  //doesn't really do much when rate <= 1
+
+        return ProcessSample(pSample);
+    }
+
+    const double delta_ns_ = double(m_rate) * 1000000000.0;
+    const LONGLONG delta_ns = static_cast<LONGLONG>(delta_ns_);
+    LONGLONG next_ns = m_thin_ns + delta_ns;  //target
+
+    for (;;)
+    {
+        pCP = pCues->GetNext(m_curr.pCP);
+
+        if (pCP)
+            pTP = pCP->Find(m_pTrack);
+        else
+            pTP = 0;
+
+        if ((pCP == 0) || (pTP == 0))
+        {
+            m_curr.Init(m_pTrack->GetEOS());
+            return ProcessSample(pSample);
+        }
+
+        m_time_ns = pCP->GetTime(pSegment);
+        m_cluster_pos = pTP->m_pos;
+
+        if (m_time_ns < next_ns)
+        {
+            m_curr.pCP = pCP;
+            continue;
+        }
+
+        m_thin_ns = next_ns;
+
+        for (;;)
+        {
+            next_ns = m_thin_ns + delta_ns;
+
+            if (next_ns > m_time_ns)
+                break;
+
+            m_thin_ns = next_ns;
+        }
+
+        m_curr.pBE = 0;
+        m_curr.pCP = pCP;
+        m_curr.pTP = pTP;
+
+        return ProcessSample(pSample);
+    }
 }
 
 
@@ -968,16 +1099,58 @@ HRESULT WebmMfStreamVideo::PopulateSample(IMFSample* pSample)
 #endif
 
 
+#if 0
 void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
 {
-    assert(rate >= 0);  //TODO
+    assert(rate >= 0);  //TODO: implement reverse playback
     m_rate = rate;
 
-    if (!bThin)
+    //m_thin_ns <= -3
+    //  in not thinning mode
+    //
+    //m_thin_ns == -2
+    //  we were in thinning mode
+    //  not thinning already requested, but
+    //  MEStreamThinMode has not been sent yet
+    //
+    //m_thin_ns == -1
+    //  we were in not thinning mode
+    //  thinning mode requested, but event
+    //  hasn't been sent yet
+    //
+    //m_thin_ns >= 0
+    //  in thinning mode
+    //  thinning mode had been requested, and event
+    //  has been sent
+
+    if (bThin)
     {
-        m_thin_ns = -2;
-        return;
+        if (m_thin_ns <= -3)  //not thinning
+        {
+            m_thin_ns = -1;   //send notice of transition
+            return;
+        }
+
+        if (m_thin_ns == -2)  //not thinning already requested
+        {
+            m_thin_ns = -1;   //go ahead and send notice of transition
+            return;
+        }
+
+        //no change req'd here
     }
+    else if (m_thin_ns <= -3)  //already not thinning
+        return;
+
+    else if (m_thin_ns == -2)  //not thinning already requested
+        return;
+
+    else if (m_thin_ns == -1)  //thinning requested
+        m_thin_ns = -2;        //not thinning requested
+
+    else
+        m_thin_ns = -2;  //not thinning requested
+
 
 #if 0 //TODO: restore this
     if (m_pSource->m_state == WebmMfSource::kStateStopped)
@@ -1027,10 +1200,9 @@ void WebmMfStreamVideo::SetRate(BOOL bThin, float rate)
 
     m_thin_ns = pBlock->GetTime(pCluster);
     assert(m_thin_ns >= 0);
-#else
-    m_thin_ns = -2;  //TODO: this is temporary
 #endif
 }
+#endif
 
 
 }  //end namespace WebmMfSourceLib
