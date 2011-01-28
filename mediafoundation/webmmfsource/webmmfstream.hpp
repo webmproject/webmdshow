@@ -56,7 +56,7 @@ public:
 
     //Local methods and properties
 
-    HRESULT GetCurrMediaTime(LONGLONG&) const;
+    HRESULT GetCurrTime(LONGLONG& time_ns) const;
 
     MediaEventType Select();
     HRESULT Deselect();

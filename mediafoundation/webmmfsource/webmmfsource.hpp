@@ -284,7 +284,7 @@ private:
     typedef std::map<ULONG, WebmMfStream*> streams_t;
     streams_t m_streams;
 
-    LONGLONG GetActualStartTime(IMFPresentationDescriptor*) const;
+    LONGLONG GetCurrTime(IMFPresentationDescriptor*) const;
 
     HRESULT Error(const wchar_t*, HRESULT) const;
 

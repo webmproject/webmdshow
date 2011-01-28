@@ -2310,8 +2310,7 @@ void WebmMfSource::GetTime(
     t = min_time;
 }
 #else
-LONGLONG WebmMfSource::GetActualStartTime(
-    IMFPresentationDescriptor* pDesc) const
+LONGLONG WebmMfSource::GetCurrTime(IMFPresentationDescriptor* pDesc) const
 {
     streams_t already_selected;
 
@@ -2380,46 +2379,13 @@ LONGLONG WebmMfSource::GetActualStartTime(
         }
     }
 
-    if (!newly_selected.empty())
-    {
-        //We're supposed to use the minimum timestamp
+    if (newly_selected.empty())
+        already_selected.swap(newly_selected);
 
-        iter_t iter = newly_selected.begin();
-        const iter_t iter_end = newly_selected.end();
+    iter_t iter = newly_selected.begin();
+    const iter_t iter_end = newly_selected.end();
 
-        LONGLONG min_time = -1;
-
-        while (iter != iter_end)
-        {
-            const streams_t::value_type& value = *iter++;
-
-            WebmMfStream* const pStream = value.second;
-            assert(pStream);
-
-            LONGLONG curr_time;
-
-            hr = pStream->GetCurrMediaTime(curr_time);
-
-            if (FAILED(hr))
-                continue;
-
-            if ((min_time < 0) || (curr_time < min_time))
-                min_time = curr_time;
-        }
-
-        return min_time;
-    }
-
-    //Weird: none of the streams that were selected in this start request
-    //had been selected in the previous start request.  It's hard to know
-    //what "re-start from current position" even means in this case, but
-    //whatever.  Let's just use the smallest time from what was selected
-    //previously.
-
-    iter_t iter = already_selected.begin();
-    const iter_t iter_end = already_selected.end();
-
-    LONGLONG min_time = -1;
+    LONGLONG min_time_ns = -1;
 
     while (iter != iter_end)
     {
@@ -2428,18 +2394,18 @@ LONGLONG WebmMfSource::GetActualStartTime(
         WebmMfStream* const pStream = value.second;
         assert(pStream);
 
-        LONGLONG curr_time;  //TODO: see my comments above
+        LONGLONG time_ns;
 
-        hr = pStream->GetCurrMediaTime(curr_time);
+        hr = pStream->GetCurrTime(time_ns);
 
         if (FAILED(hr))
             continue;
 
-        if ((min_time < 0) || (curr_time < min_time))
-            min_time = curr_time;
+        if ((min_time_ns < 0) || (time_ns < min_time_ns))
+            min_time_ns = time_ns;
     }
 
-    return min_time;
+    return min_time_ns;
 }
 #endif  //TODO
 
@@ -4397,14 +4363,14 @@ void WebmMfSource::Command::OnRestart() const //unpause
     //  if they're still selected, then synthesize the re-start time
     //  from one of them
 
-    const LONGLONG reftime = m_pSource->GetActualStartTime(m_pDesc);
+    const LONGLONG curr_time_ns = m_pSource->GetCurrTime(m_pDesc);
 
 #ifdef _DEBUG
     odbgstream os;
-    os << "WebmMfSource::Command::OnRestart: reftime="
-       << reftime
+    os << "WebmMfSource::Command::OnRestart: curr_time_ns="
+       << curr_time_ns
        << " sec="
-       << (double(reftime) / 10000000)
+       << (double(curr_time_ns) / 1000000000)
        << endl;
 #endif
 
@@ -4417,6 +4383,13 @@ void WebmMfSource::Command::OnRestart() const //unpause
 
     streams_t& streams = m_pSource->m_streams;
     const iter_t iter_end = streams.end();
+
+#if 0  //TODO: see comments below
+    LONGLONG base_pos = -1;
+
+    if (curr_time_ns >= 0)
+        base_pos = GetClusterPos(curr_time_ns);
+#endif
 
     for (DWORD index = 0; index < count; ++index)
     {
@@ -4462,33 +4435,32 @@ void WebmMfSource::Command::OnRestart() const //unpause
 
         const MediaEventType met = pStream->Select();
 
-        if (met == MENewStream)
-        {
-            //TODO: this all needs to be updated
-
-            assert(reftime >= 0);
-            const LONGLONG time_ns = reftime * 100LL;  //reftime to ns
-
-            using mkvparser::Cluster;
-            using mkvparser::BlockEntry;
-
-            const Cluster* const pCurr = pSegment->FindCluster(time_ns);
-            assert(pCurr);
-            assert(!pCurr->EOS());
-            assert(pCurr->m_pos > 0);
-            assert(pCurr->m_size > 0);
-            assert(pCurr->GetTime() <= time_ns);
-
-            const BlockEntry* const pBlock = pCurr->GetEntry(pTrack, time_ns);
-            assert(pBlock);           //TODO:
-            assert(!pBlock->EOS());   //TODO
-            assert((pTrack->GetType() == 2) || pBlock->GetBlock()->IsKey());
-
-            pStream->SetCurrBlock(pBlock);
-        }
-
         hr = m_pSource->QueueStreamEvent(met, pStream);
         assert(SUCCEEDED(hr));
+
+        if (met == MENewStream)
+        {
+#if 0
+            if (base_pos < 0)
+                pStream->SetCurrBlock(pStream->GetFirstBlock());
+            else
+                pStream->SetCurrBlockInit(curr_time_ns, base_pos);
+#else
+            //TODO:
+            //The proper way to handle this is to seek this track
+            //to the curr time.  But to do that means you either need
+            //to look up the cue point for that time if this is video,
+            //or look up the cluster if this is audio.  But this is
+            //a lot of work to do just in case one of the tracks
+            //might be newly-selected.
+            //
+            //For now, just start at beginning.  This is not correct,
+            //if we've been playing for a while and we're not near t=0.
+            //To make this correct there really needs to be a seek.
+
+            pStream->SetCurrBlock(pStream->GetFirstBlock());
+#endif
+        }
     }
 
     IMFMediaEventPtr pEvent;
@@ -4508,8 +4480,9 @@ void WebmMfSource::Command::OnRestart() const //unpause
     assert(SUCCEEDED(hr));
     assert(pEvent);
 
-    if (reftime >= 0)
+    if (curr_time_ns >= 0)
     {
+        const LONGLONG reftime = curr_time_ns / 100;
         hr = pEvent->SetUINT64(MF_EVENT_SOURCE_ACTUAL_START, reftime);
         assert(SUCCEEDED(hr));
     }

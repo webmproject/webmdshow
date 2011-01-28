@@ -788,7 +788,7 @@ const mkvparser::BlockEntry* WebmMfStream::GetCurrBlock() const
 }
 
 
-HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
+HRESULT WebmMfStream::GetCurrTime(LONGLONG& time_ns) const
 {
     //source object already locked by caller
 
@@ -796,22 +796,14 @@ HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
 
     if (pCurr == 0)  //waiting to load curr block, following a start request
     {
-        if (m_time_ns < 0)
-            return E_FAIL;
-
-        reftime = m_time_ns / 100;
-        return S_OK;
+        time_ns = m_time_ns;
+        return (time_ns < 0) ? E_FAIL : S_OK;
     }
 
     if (pCurr->EOS())  //already reached end of stream
     {
-        const LONGLONG time_ns = m_pSource->m_pSegment->GetDuration();
-
-        if (time_ns < 0)  //no duration
-            return E_FAIL;
-
-        reftime = time_ns / 100;
-        return S_OK;
+        time_ns = m_pSource->m_pSegment->GetDuration();
+        return (time_ns < 0) ? E_FAIL : S_OK;
     }
 
     const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
@@ -821,10 +813,7 @@ HRESULT WebmMfStream::GetCurrMediaTime(LONGLONG& reftime) const
     const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
     assert(pCurrBlock);
 
-    const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
-    assert(curr_ns >= 0);
-
-    reftime = curr_ns / 100;
+    time_ns = pCurrBlock->GetTime(pCurrCluster);
     return S_OK;
 }
 
