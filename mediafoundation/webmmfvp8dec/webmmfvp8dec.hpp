@@ -5,6 +5,8 @@ namespace WebmMfVp8DecLib
 
 class WebmMfVp8Dec : public IMFTransform,
                      //TODO: public IVP8PostProcessing,
+                     //public IMFQualityAdvise,
+                     public IMFQualityAdvise2,
                      public IMFRateControl,
                      public IMFRateSupport,
                      public IMFGetService,
@@ -126,6 +128,22 @@ public:
         DWORD cOutputBufferCount,
         MFT_OUTPUT_DATA_BUFFER* pOutputSamples,
         DWORD* pdwStatus);
+
+    //IMFQualityAdvise
+
+    HRESULT STDMETHODCALLTYPE SetDropMode(MF_QUALITY_DROP_MODE);
+
+    HRESULT STDMETHODCALLTYPE SetQualityLevel(MF_QUALITY_LEVEL);
+
+    HRESULT STDMETHODCALLTYPE GetDropMode(MF_QUALITY_DROP_MODE*);
+
+    HRESULT STDMETHODCALLTYPE GetQualityLevel(MF_QUALITY_LEVEL*);
+
+    HRESULT STDMETHODCALLTYPE DropTime(LONGLONG);
+
+    //IMFQualityAdvise2
+
+    HRESULT STDMETHODCALLTYPE NotifyQualityEvent(IMFMediaEvent*, DWORD*);
 
     //IMFRateControl
 

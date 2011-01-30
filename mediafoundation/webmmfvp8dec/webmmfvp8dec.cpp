@@ -11,12 +11,12 @@
 #include <comdef.h>
 #include <cassert>
 #include <new>
-//#ifdef _DEBUG
-//#include "odbgstream.hpp"
-//#include "iidstr.hpp"
-//using std::endl;
-//using std::boolalpha;
-//#endif
+#ifdef _DEBUG
+#include "odbgstream.hpp"
+#include "iidstr.hpp"
+using std::endl;
+using std::boolalpha;
+#endif
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 _COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
@@ -120,6 +120,16 @@ HRESULT WebmMfVp8Dec::QueryInterface(
     {
         pUnk = static_cast<IMFTransform*>(this);
     }
+#if 0
+    else if (iid == __uuidof(IMFQualityAdvise))
+    {
+        pUnk = static_cast<IMFQualityAdvise*>(this);
+    }
+    else if (iid == __uuidof(IMFQualityAdvise2))
+    {
+        pUnk = static_cast<IMFQualityAdvise2*>(this);
+    }
+#endif
     else if (iid == __uuidof(IMFRateControl))
     {
         pUnk = static_cast<IMFRateControl*>(this);
@@ -1890,6 +1900,76 @@ HRESULT WebmMfVp8Dec::SampleInfo::DecodeOne(
 
     ++dwBuffer;  //consume this buffer
     return (dwBuffer >= count) ? S_FALSE : S_OK;
+}
+
+
+HRESULT WebmMfVp8Dec::SetDropMode(MF_QUALITY_DROP_MODE)
+{
+    return E_NOTIMPL;
+}
+
+
+HRESULT WebmMfVp8Dec::SetQualityLevel(MF_QUALITY_LEVEL)
+{
+    return E_NOTIMPL;
+}
+
+
+HRESULT WebmMfVp8Dec::GetDropMode(MF_QUALITY_DROP_MODE*)
+{
+    return E_NOTIMPL;
+}
+
+
+HRESULT WebmMfVp8Dec::GetQualityLevel(MF_QUALITY_LEVEL*)
+{
+    return E_NOTIMPL;
+}
+
+
+HRESULT WebmMfVp8Dec::DropTime(LONGLONG)
+{
+    return E_NOTIMPL;
+}
+
+
+HRESULT WebmMfVp8Dec::NotifyQualityEvent(IMFMediaEvent*, DWORD*)
+{
+#if 0
+    assert(e);
+    assert(pdw);
+
+    DWORD& dw = *pdw;
+
+    MediaEventType t;
+
+    HRESULT hr = e->GetType(&t);
+    assert(SUCCEEDED(hr));
+
+    PROPVARIANT v;
+
+    hr = e->GetValue(&v);
+    assert(SUCCEEDED(hr));
+
+    odbgstream os;
+
+    //311=MEQualityNotify
+    os << "vp8dec::NotifyQualityEvent: type=" << t;
+
+    if (v.vt == VT_I8)
+        os << " val.I8=" << v.hVal.QuadPart;
+    else
+        os << " val.vt=" << v.vt;
+
+    os << " dw=" << dw << endl;
+
+    //negative is good - frames are early
+    //positive is bad - frames are late
+    //value is a lateness - time in 100ns units
+    //we're seeing extreme lateness ~2 or 3s
+#endif
+
+    return E_NOTIMPL;
 }
 
 
