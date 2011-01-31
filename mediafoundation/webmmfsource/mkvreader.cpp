@@ -304,10 +304,10 @@ void MkvReader::CreateRegion()
     const DWORD region_size = m_info.dwAllocationGranularity;
     const DWORD page_size = m_info.dwPageSize;
 
-    const DWORD type = MEM_COMMIT | MEM_RESERVE;
-    const DWORD protect = PAGE_READWRITE;
-
-    void* const ptr = VirtualAlloc(0, region_size, type, protect);
+    //const DWORD type = MEM_COMMIT | MEM_RESERVE;
+    //const DWORD protect = PAGE_READWRITE;
+    //void* const ptr = VirtualAlloc(0, region_size, type, protect);
+    void* const ptr = HeapAlloc(GetProcessHeap(), 0, region_size);
     assert(ptr);  //TODO
 
     m_regions.push_back(Region());
@@ -730,7 +730,8 @@ void MkvReader::DestroyRegions()
     {
         Region& r = m_regions.front();
 
-        const BOOL b = VirtualFree(r.ptr, 0, MEM_RELEASE);
+        //const BOOL b = VirtualFree(r.ptr, 0, MEM_RELEASE);
+        const BOOL b = HeapFree(GetProcessHeap(), 0, r.ptr);
         assert(b);
 
         m_regions.pop_front();
