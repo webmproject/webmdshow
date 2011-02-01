@@ -121,10 +121,17 @@ HRESULT WebmMfStreamVideo::GetFrameRate(
     UINT32& numer,
     UINT32& denom)
 {
-    mkvparser::Segment* const pSegment = pTrack->m_pSegment;
+    //mkvparser::Segment* const pSegment = pTrack->m_pSegment;
 
     double frame_rate = pTrack->GetFrameRate();
 
+    if (frame_rate <= 0)
+        return E_FAIL;  //TODO
+
+    if (frame_rate > std::numeric_limits<UINT32>::max())
+        return E_FAIL;  //TODO
+
+#if 0  //TODO: restore this
     if ((frame_rate <= 0) || (frame_rate > std::numeric_limits<UINT32>::max()))
     {
         using namespace mkvparser;
@@ -176,6 +183,7 @@ HRESULT WebmMfStreamVideo::GetFrameRate(
 
         frame_rate = (double(count) * 1000000000) / double(ns);
     }
+#endif
 
     denom = 1;
 
@@ -441,13 +449,27 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     assert(pCurrCluster);
     assert(!pCurrCluster->EOS());
 
+    const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
+
+    //odbgstream os;
+    //os << "WebmMfStreamVideo::GetSample: curr.time[ns]="
+    //   //<< (double(curr_ns) / 1000000000)
+    //   << curr_ns
+    //   << endl;
+
     if (m_pNextBlock == 0)
     {
         const HRESULT hr = GetNextBlock();
 
+        //os << "WebmMfStreamVideo::GetSample: GetNextBlock.hr="
+        //   << hr
+        //   << endl;
+
         if (FAILED(hr))  //no next entry found on current cluster
             return hr;
     }
+
+    //os << "WebmMfStreamVideo::GetSample: HAVE NEXT BLOCK" << endl;
 
     //MEStreamThinMode
     //http://msdn.microsoft.com/en-us/library/aa370815(v=VS.85).aspx
@@ -558,7 +580,6 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
     const bool bInvisible = pCurrBlock->IsInvisible();
 
-    const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
     const LONGLONG sample_time = curr_ns / 100;  //reftime units
 
     hr = pSample->SetSampleTime(sample_time);

@@ -5,7 +5,7 @@
 #include <algorithm>
 //#include <utility>  //std::make_pair
 #include <comdef.h>
-#ifdef _DEBUG
+#if 0 //def _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
 #endif
@@ -38,10 +38,15 @@ MkvReader::MkvReader(IMFByteStream* pStream) :
 
     //TODO: this crashed when I used the URL from MS:
     //MF_E_BYTESTREAM_UNKNOWN_LENGTH
-    hr = m_pStream->GetLength(&m_length);
-    assert(SUCCEEDED(hr));
 
-    m_avail = 0;  //does get adjusted during async read
+    QWORD length;
+
+    hr = m_pStream->GetLength(&length);
+
+    m_length = SUCCEEDED(hr) ? length : -1;
+    //m_length = -1;  //for debugging
+
+    m_avail = 0;
 }
 
 
@@ -124,13 +129,13 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
     if (pos < 0)
         return -1;
 
-    if (QWORD(pos) > m_length)
+    if ((m_length >= 0) && (pos > m_length))
         return -1;
 
     if (len <= 0)
         return 0;
 
-    if (QWORD(pos + len) > m_length)
+    if ((m_length >= 0) && ((pos + len) > m_length))
         return -1;
 
     if (buf == 0)
@@ -139,7 +144,7 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
     typedef cache_t::iterator iter_t;
     iter_t next;
 
-    const DWORD page_size = m_info.dwPageSize;
+    //const DWORD page_size = m_info.dwPageSize;
 
     if (m_cache.empty() || ((*m_cache.front()).pos > pos))
         next = m_cache.begin();
@@ -153,6 +158,11 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
 
         const cache_t::value_type page_iter = *--iter_t(next);
         const Page& page = *page_iter;
+        assert(page.pos >= 0);
+
+        const ULONG page_size = page.len;
+        assert(page_size > 0);
+
         const LONGLONG page_end = page.pos + page_size;
 
         if (pos < page_end)  //cache hit
@@ -184,7 +194,8 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
             const cache_t::value_type page_iter = *next++;
             const Page& page = *page_iter;
             assert(page.pos <= pos);
-            assert(pos < (page.pos + page_size));
+            assert(page.len > 0);
+            assert(pos < (page.pos + page.len));
 
             Read(page_iter, pos, len, &buf);
         }
@@ -203,6 +214,7 @@ int MkvReader::InsertPage(
 
     const DWORD page_size = m_info.dwPageSize;
 
+#if 0
     if (m_regions.size() < 4)  //arbitrary upper bound
         CreateRegion();        //make some free pages
 
@@ -264,6 +276,7 @@ int MkvReader::InsertPage(
 
     if (m_free_pages.empty())
         CreateRegion();
+#endif
 
     const LONGLONG key = page_size * LONGLONG(pos / page_size);
     assert((next == m_cache.end()) || ((*next)->pos > key));
@@ -279,6 +292,7 @@ int MkvReader::InsertPage(
     Page& page = *page_iter;
     assert(page.cRef == 0);
     assert(page.pos == key);
+    assert(page.len > 0);
 
     curr = m_cache.insert(next, page_iter);
     return 0;  //success
@@ -312,7 +326,7 @@ void MkvReader::CreateRegion()
 
         page.region = &r;
         page.pos = -1;  //means "don't have data on this page"
-        //page.index = i;
+        page.len = 0;   //means "no data on this page"
         page.cRef = 0;
 
         const pages_vector_t::iterator iter = r.pages.begin() + i;
@@ -341,24 +355,26 @@ void MkvReader::Read(
     unsigned char** pdst) const
 {
     assert(pos >= 0);
-    assert(QWORD(pos) < m_length);
-    assert(requested_len > 0);
-    assert(QWORD(pos + requested_len) <= m_length);
+    assert((m_length < 0) || (pos < m_length));
+    //assert(requested_len > 0);
+    assert((m_length < 0) || ((pos + requested_len) <= m_length));
 
     const Page& page = *page_iter;
+    assert(page.pos >= 0);
+    assert(page.len > 0);
     assert(pos >= page.pos);
     assert(page.cRef >= 0);
-
-    const LONG page_size = m_info.dwPageSize;
 
     const LONGLONG off_ = pos - page.pos;
     assert(off_ >= 0);
     assert(off_ <= LONG_MAX);
 
-    const LONG page_off = static_cast<LONG>(off_);  //within page
-    assert(page_off < page_size);
+    const ULONG page_off = static_cast<ULONG>(off_);  //within page
+    assert(page_off < page.len);
 
-    const LONG page_len = page_size - page_off;  //what remains on page
+    const LONG page_len = page.len - page_off;  //what remains on page
+    assert(page_len > 0);
+
     const long len = (requested_len <= page_len) ? requested_len : page_len;
 
     if (pdst)
@@ -367,15 +383,42 @@ void MkvReader::Read(
         const Region& r = *page.region;
         const pages_vector_t::size_type offset = page_iter - r.pages.begin();
 
+        const ULONG page_size = m_info.dwPageSize;
+
+        //again this assumes that page_size is same as dwPageSize
+        //does giving the page a len possibly less than dwPageSize
+        //break our algorithm?  The problem is that the page that is
+        //mapped to the end of the file, then we'll have a hole in
+        //the middle of the region.
+
         const BYTE* const page_base = r.ptr + offset * size_t(page_size);
+
         const BYTE* const src = page_base + page_off;
 
         memcpy(dst, src, len);
         dst += len;
     }
 
+    //either we read from the middle of page, because this is
+    //the first page of a multi-page read; or, we read from
+    //the start of a page, because this is the first or later
+    //page of a multi-page read
+
+    //this can leave pos in the middle of a page, because we requested
+    //fewer bytes than remain on this page, or put us just beyond this
+    //page, because we requested all the bytes that remain on this page
+
     pos += len;
+    assert((m_length < 0) || (pos <= m_length));
+
+    //end represents the end of this page, irrespective of how many
+    //bytes were requested by the caller
+
+    const LONGLONG end = page.pos + page.len;
+    assert((m_length < 0) || (end <= m_length));
+
     requested_len -= len;
+    assert(requested_len >= 0);
 }
 
 
@@ -669,6 +712,17 @@ void MkvReader::Purge()
 
 void MkvReader::DestroyRegions()
 {
+#if 0 //def _DEBUG
+    odbgstream os;
+    os << "MkvReader::DestroyRegions: cache.size="
+       << m_cache.size()
+       << " free_pages.size="
+       << m_free_pages.size()
+       << " regions.size="
+       << m_regions.size()
+       << endl;
+#endif
+
     m_cache.clear();
     m_free_pages.clear();
 
@@ -681,14 +735,10 @@ void MkvReader::DestroyRegions()
 
         m_regions.pop_front();
     }
-
-#ifdef _DEBUG
-    odbgstream os;
-    os << "MkvReader::Clear" << endl;
-#endif
 }
 
 
+#if 0
 void MkvReader::PurgeOne()
 {
     assert(m_async_len <= 0);  //no async read in progress
@@ -757,11 +807,12 @@ void MkvReader::PurgeOne()
         return;
     }
 }
+#endif
 
 
 void MkvReader::Purge(ULONGLONG pos)
 {
-    const DWORD page_size = m_info.dwPageSize;
+    //const DWORD page_size = m_info.dwPageSize;
 
 #if 0 //def _DEBUG
     const free_pages_t::size_type old_size = m_free_pages.size();
@@ -782,10 +833,12 @@ void MkvReader::Purge(ULONGLONG pos)
             break;
 
         assert(page.pos >= 0);
+        assert(page.len > 0);
 
+        const ULONG page_size = page.len; //m_info.dwPageSize;
         const ULONGLONG page_end = page.pos + page_size;
 
-        if (page_end > pos)
+        if (pos < page_end)  //assume we might from this page soon
             break;
 
         m_cache.pop_front();
@@ -806,8 +859,43 @@ void MkvReader::Purge(ULONGLONG pos)
         os << "mkvreader::purge: n=" << n
            << " cache.size=" << m_cache.size()
            << " free.size=" << new_size
+           << " regions.size=" << m_regions.size()
            << endl;
     }
+#endif
+}
+
+
+void MkvReader::Clear()
+{
+    while (!m_cache.empty())
+    {
+        const cache_t::value_type page_iter = m_cache.front();
+
+        const Page& page = *page_iter;
+
+        if (page.cRef < 0)  //async read in progress
+            break;
+
+        if (page.cRef > 0)  //locked
+            break;
+
+        assert(page.pos >= 0);
+        assert(page.len > 0);
+
+        m_cache.pop_front();
+
+        const free_pages_t::value_type value(page.pos, page_iter);
+        m_free_pages.insert(value);
+    }
+
+#if 0 //def _DEBUG
+    odbgstream os;
+    os << "mkvreader::clear:"
+       << " cache.size=" << m_cache.size()
+       << " free.size=" << m_free_pages.size()
+       << " regions.size=" << m_regions.size()
+       << endl;
 #endif
 }
 
@@ -824,21 +912,31 @@ HRESULT MkvReader::AsyncReadInit(
     IMFAsyncCallback* pCB)
 {
     assert(pos >= 0);
-    assert(QWORD(pos) < m_length);
+    assert((m_length < 0) || (pos <= m_length));
     assert(len > 0);
     assert(pCB);
     assert(m_async_pos < 0);
     assert(m_async_len <= 0);
 
-    const QWORD end = pos + len;
+    if (m_length >= 0)
+    {
+        assert(pos <= m_length);
 
-    if (end > m_length)
-        len -= static_cast<LONG>(end - m_length);
+        if (pos >= m_length)  //EOF
+            return S_OK;      //TODO: explicit return val to indicate EOF
+
+        const LONGLONG end = pos + len;
+
+        if (end > m_length)
+            len -= static_cast<LONG>(end - m_length);
+
+        assert((pos + len) <= m_length);
+    }
 
     typedef cache_t::iterator iter_t;
     iter_t next;
 
-    const DWORD page_size = m_info.dwPageSize;
+    //const DWORD page_size = m_info.dwPageSize;
 
     if (m_cache.empty() || (pos < (*m_cache.front()).pos))
         next = m_cache.begin();
@@ -852,6 +950,11 @@ HRESULT MkvReader::AsyncReadInit(
 
         const cache_t::value_type page_iter = *--iter_t(next);
         Page& page = *page_iter;
+        assert(page.pos >= 0);
+
+        const ULONG page_size = page.len;
+        assert(page_size > 0);
+
         const LONGLONG page_end = page.pos + page_size;
 
         if (pos < page_end)  //cache hit
@@ -898,7 +1001,8 @@ HRESULT MkvReader::AsyncReadInit(
             const cache_t::value_type page_iter = *next++;
             Page& page = *page_iter;
             assert(page.pos <= pos);
-            assert(pos < (page.pos + page_size));
+            assert(page.len > 0);
+            assert(pos < (page.pos + page.len));
 
             Read(page_iter, pos, len, 0);
             m_avail = pos;
@@ -920,13 +1024,13 @@ HRESULT MkvReader::AsyncReadContinue(
 
     LONGLONG& pos = m_async_pos;
     assert(pos > (*m_cache.front()).pos);
-    assert(QWORD(pos) < m_length);
-    assert(QWORD(pos + len) <= m_length);
+    assert((m_length < 0) || (pos < m_length));
+    assert((m_length < 0) || ((pos + len) <= m_length));
 
     typedef cache_t::iterator iter_t;
     iter_t next;
 
-    const DWORD page_size = m_info.dwPageSize;
+    //const DWORD page_size = m_info.dwPageSize;
 
 #if 0  //this is wrong
     {
@@ -959,8 +1063,9 @@ HRESULT MkvReader::AsyncReadContinue(
         Page& page = *page_iter;
         assert(page.cRef >= 0);
         assert(page.pos <= pos);
+        assert(page.len > 0);
 
-        const LONGLONG page_end = page.pos + page_size;
+        const LONGLONG page_end = page.pos + page.len;
 
         if (pos < page_end)  //cache hit
         {
@@ -1005,7 +1110,8 @@ HRESULT MkvReader::AsyncReadContinue(
             Page& page = *page_iter;
             assert(page.cRef >= 0);
             assert(page.pos <= pos);
-            assert(pos < (page.pos + page_size));
+            assert(page.len > 0);
+            assert(pos < (page.pos + page.len));
 
             Read(page_iter, pos, len, 0);
             m_avail = pos;
@@ -1030,9 +1136,9 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
 {
     assert(pResult);
     assert(m_async_pos >= 0);
-    assert(QWORD(m_async_pos) < m_length);
+    assert((m_length < 0) || (m_async_pos < m_length));
     assert(m_async_len > 0);
-    assert(QWORD(m_async_pos + m_async_len) <= m_length);
+    assert((m_length < 0) || ((m_async_pos + m_async_len) <= m_length));
     assert(!m_cache.empty());
 
     typedef cache_t::iterator iter_t;
@@ -1047,20 +1153,44 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
     const cache_t::value_type page_iter = *curr;
 
     Page& page = *page_iter;
+    assert(page.pos >= 0);
     assert(page.pos <= m_async_pos);
-    assert(page.cRef < 0);
+    assert(page.cRef < 0);  //async read in progress
 
     page.cRef = 0;  //unmark this page, now that I/O is complete
 
     ULONG cbRead;
 
     const HRESULT hr = m_pStream->EndRead(pResult, &cbRead);
+    assert(FAILED(hr) || (cbRead <= m_info.dwPageSize));
 
-    if (FAILED(hr))
+    if (SUCCEEDED(hr))
+    {
+        page.len = cbRead;
+        assert(page.len <= m_info.dwPageSize);
+
+        if (page.len < m_info.dwPageSize)
+        {
+            const LONGLONG length = page.pos + page.len;
+            assert((m_length < 0) || (length == m_length));
+
+            if (m_length < 0)
+            {
+                m_length = length;
+                assert(m_async_pos <= m_length);
+
+                if ((m_async_pos + m_async_len) > m_length)
+                    m_async_len = static_cast<LONG>(m_length - m_async_pos);
+            }
+        }
+    }
+
+    if (FAILED(hr) || (cbRead == 0))
     {
         m_cache.erase(curr);
 
         page.pos = -1;  //means "we don't have any data on this page"
+        page.pos = 0;
 
         const free_pages_t::value_type value(page.pos, page_iter);
         m_free_pages.insert(value);
@@ -1071,10 +1201,12 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
         return hr;
     }
 
-    assert((cbRead == m_info.dwPageSize) ||
-           (QWORD(page.pos + cbRead) == m_length));
-
     Read(page_iter, m_async_pos, m_async_len, 0);
+    assert(m_async_pos >= 0);
+    assert(m_async_len >= 0);
+    assert((m_length < 0) || (m_async_pos <= m_length));
+    assert((m_length < 0) || ((m_async_pos + m_async_len) <= m_length));
+
     m_avail = m_async_pos;
 
     if (m_async_len > 0)
@@ -1092,7 +1224,7 @@ HRESULT MkvReader::AsyncReadPage(
     cache_t::iterator& curr)
 {
     assert(pos >= 0);
-    assert(QWORD(pos) < m_length);
+    assert((m_length < 0) || (pos < m_length));
 
     const DWORD page_size = m_info.dwPageSize;
 
@@ -1103,7 +1235,7 @@ HRESULT MkvReader::AsyncReadPage(
 
     const LONGLONG key = page_size * LONGLONG(pos / page_size);
     assert((next == m_cache.end()) || ((*next)->pos > key));
-    assert(QWORD(key) < m_length);
+    assert((m_length < 0) || (key < m_length));
 
     free_pages_t::iterator free_page = m_free_pages.find(key);
 
@@ -1117,6 +1249,8 @@ HRESULT MkvReader::AsyncReadPage(
 
     if (page.pos == key)  //re-use the free page as is
     {
+        assert(page.len > 0);
+
         m_free_pages.erase(free_page);  //page is no longer free
         curr = m_cache.insert(next, page_iter);
 
@@ -1136,14 +1270,19 @@ HRESULT MkvReader::AsyncReadPage(
 
     const Region& r = *page.region;
     const pages_vector_t::size_type offset = page_iter - r.pages.begin();
+
+    //this might require some tweaking, since we now allow page size
+    //to vary across pages.
     BYTE* const ptr = page.region->ptr + offset * size_t(page_size);
 
+    //we always request the max number of bytes for a page
     hr = m_pStream->BeginRead(ptr, page_size, pCB, 0);
 
     if (FAILED(hr))
         return hr;
 
     page.pos = key;
+    page.len = 0;    //we don't know actual len until async read completes
     page.cRef = -1;  //means "async read in progress"
 
     m_free_pages.erase(free_page);  //page is no longer free

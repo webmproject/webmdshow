@@ -501,6 +501,9 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseEbmlHeader()
 
     assert(m_pSegment == 0);  //TODO
 
+    //assume here that we have 1024 bytes available, even if we don't
+    //know the exact total yet.
+
     const LONGLONG result = Segment::CreateInstance(&m_file, pos, m_pSegment);
 
     if (result != 0)  //TODO: liberalize
@@ -629,7 +632,12 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     if (bParseCues)
         m_async_state = &WebmMfSource::StateAsyncParseCues;
     else
+    {
+        m_file.Clear();
+        m_file.ResetAvailable();
+
         m_async_state = &WebmMfSource::StateAsyncInitStreams;
+    }
 
     m_async_read.m_hrStatus = S_OK;
 
@@ -690,6 +698,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
             {
                 assert(m_pSegment->GetCues() == 0);
 
+                m_file.Clear();
                 m_file.ResetAvailable();
 
                 m_async_state = &WebmMfSource::StateAsyncInitStreams;
@@ -721,9 +730,11 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
         }  //parsing cues element
     }
 
-    if (!pCues->LoadCuePoint())
+    if (!pCues->LoadCuePoint())  //no more cue points
     {
+        m_file.Clear();
         m_file.ResetAvailable();
+
         m_async_state = &WebmMfSource::StateAsyncInitStreams;
     }
 
@@ -767,6 +778,11 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
 
             if (FAILED(hr))
             {
+                //TODO: it's pointless to queue this event on the source's
+                //event queue,
+                //since no one else even has a ptr to the media source
+                //object yet.
+
                 Error(L"InitStreams AsyncReadInit failed (#1).", hr);
                 //return &WebmMfSource::StateQuit;
                 return LoadComplete(E_FAIL);
@@ -3062,9 +3078,14 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     if (rr.empty())
     {
+        if (IsStopped())
+            m_file.Clear();
+        else
+            PurgeCache();
+
         //TODO: set signal to return here,
-        //if more purging work to do
-        PurgeCache();
+        //if more purging work to do, so we
+        //can clear/purge incrementally.
 
         return 0;
     }

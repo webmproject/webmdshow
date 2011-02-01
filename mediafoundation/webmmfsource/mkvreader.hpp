@@ -38,6 +38,7 @@ public:
     HRESULT AsyncReadCancel();
 
     void Purge(ULONGLONG);
+    void Clear();  //purge all
 
 private:
 
@@ -52,6 +53,7 @@ private:
     {
         int cRef;
         LONGLONG pos;
+        ULONG len;  //how much data on this page
         Region* region;
     };
 
@@ -89,7 +91,7 @@ private:
     };
 
     SYSTEM_INFO m_info;
-    QWORD m_length;
+    LONGLONG m_length;
     LONGLONG m_avail;
 
     void Read(
@@ -118,7 +120,7 @@ private:
 
     //int PurgeFront();
     //int PurgeBack();
-    void PurgeOne();
+    //void PurgeOne();
 
 };
 

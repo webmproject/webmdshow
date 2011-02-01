@@ -327,6 +327,22 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     assert(m_pLocked);
     assert(m_pLocked == pCurr);
 
+    const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
+    assert(pCurrBlock);
+    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
+
+    const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
+    assert(pCurrCluster);
+
+    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(curr_ns >= 0);
+
+    //odbgstream os;
+    //os << "WebmMfStreamAudio::GetSample: curr.time[ns]="
+    //   //<< (double(curr_ns) / 1000000000)
+    //   << curr_ns
+    //   << endl;
+
     if (m_pNextBlock == 0)
     {
         const HRESULT hr = GetNextBlock();
@@ -346,16 +362,6 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         hr = pSample->SetUnknown(MFSampleExtension_Token, pToken);
         assert(SUCCEEDED(hr));
     }
-
-    const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
-    assert(pCurrBlock);
-    assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
-
-    const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
-    assert(pCurrCluster);
-
-    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
-    assert(curr_ns >= 0);
 
     const int frame_count = pCurrBlock->GetFrameCount();
     assert(frame_count > 0);  //TODO

@@ -229,11 +229,16 @@ HRESULT WebmMfByteStreamHandler::BeginCreateObject(
 
     hr = pByteStream->GetLength(&length);
 
-    if (FAILED(hr))  //MF_E_BYTESTREAM_UNKNOWN_LENGTH
-        return hr;
+    //if (FAILED(hr))  //MF_E_BYTESTREAM_UNKNOWN_LENGTH
+    //    return hr;
 
-    if (length == 0)
-        return MF_E_INVALID_FILE_FORMAT;  //TODO: use this elsewhere
+    if (SUCCEEDED(hr))
+    {
+        if (length == 0)
+            return MF_E_INVALID_FILE_FORMAT;  //TODO: use this elsewhere
+    }
+    else if (hr != MF_E_BYTESTREAM_UNKNOWN_LENGTH)
+        return hr;
 
     WebmMfSource* pSource;
 
