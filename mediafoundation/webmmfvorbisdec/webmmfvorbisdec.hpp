@@ -165,6 +165,13 @@ private:
     REFERENCE_TIME m_decode_start_time;
     REFERENCE_TIME m_start_time;
 
+    // minimum buffered uncompressed audio time that must be accumulated 
+    // before |ProcessOutput| will return samples to the caller
+    const REFERENCE_TIME m_min_output_threshold;
+    // when |m_drain| is true |m_min_output_threshold| is ignored, and we pass
+    // all available samples downstream
+    bool m_drain;
+
     // DEBUG
     REFERENCE_TIME m_mediatime_decoded;
     REFERENCE_TIME m_mediatime_recvd;

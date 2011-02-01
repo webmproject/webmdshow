@@ -66,7 +66,9 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_total_samples_decoded(0),
     m_audio_format_tag(WAVE_FORMAT_IEEE_FLOAT),
     m_mediatime_decoded(-1),
-    m_mediatime_recvd(-1)
+    m_mediatime_recvd(-1),
+    m_min_output_threshold(1000000LL), // .1 second
+    m_drain(false)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -654,6 +656,7 @@ HRESULT WebmMfVorbisDec::ProcessMessage(MFT_MESSAGE_TYPE message, ULONG_PTR)
         // Drain: Tells the MFT not to accept any more input until
         // all of the pending output has been processed.
         //DBGLOG("MFT_MESSAGE_COMMAND_DRAIN");
+        m_drain = true;
         break;
 
     case MFT_MESSAGE_SET_D3D_MANAGER:
@@ -713,6 +716,9 @@ HRESULT WebmMfVorbisDec::ProcessInput(DWORD dwInputStreamID,
     // addref on/store sample for use in ProcessOutput
     pSample->AddRef();
     m_mf_input_samples.push_back(pSample);
+
+    // clear the drain flag
+    m_drain = false;
 
     return S_OK;
 }
@@ -921,7 +927,13 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     UINT32 samples_available;
     status = m_vorbis_decoder.GetOutputSamplesAvailable(&samples_available);
 
-    if (samples_available < 1)
+    bool need_more_input =
+        SamplesToMediaTime(samples_available) < m_min_output_threshold;
+
+    if (m_drain)
+        need_more_input = false;
+
+    if (samples_available < 1 || need_more_input)
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
 
     status = ProcessLibVorbisOutput(p_mf_output_sample, samples_available);
