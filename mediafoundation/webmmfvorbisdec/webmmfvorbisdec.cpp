@@ -64,7 +64,6 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_cRef(1),
     m_decode_start_time(-1),
     m_total_samples_decoded(0),
-    m_audio_format_tag(WAVE_FORMAT_IEEE_FLOAT),
     m_mediatime_decoded(-1),
     m_mediatime_recvd(-1),
     m_min_output_threshold(1000000LL), // .1 second
@@ -76,7 +75,7 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     hr = CLockable::Init();
     assert(SUCCEEDED(hr));
 
-    ::memset(&m_wave_format, 0, sizeof WAVEFORMATEX);
+    ::memset(&m_wave_format_extensible, 0, sizeof WAVEFORMATEX);
 }
 
 WebmMfVorbisDec::~WebmMfVorbisDec()
@@ -226,7 +225,8 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
                    //MFT_OUTPUT_STREAM_PROVIDES_SAMPLES   //TODO
                    //MFT_OUTPUT_STREAM_OPTIONAL
 
-    const DWORD bytes_per_sec = m_wave_format.nAvgBytesPerSec;
+    const DWORD bytes_per_sec =
+        m_wave_format_extensible.Format.nAvgBytesPerSec;
     assert(bytes_per_sec > 0);  //TODO: must have input media type
 
     //TODO: we could eliminate this by specifying PROVIDES_SAMPLES
@@ -356,8 +356,10 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(DWORD dwOutputStreamID,
     else
     {
         SetOutputWaveFormat(MFAudioFormat_Float);
-        hr = MFInitMediaTypeFromWaveFormatEx(pmt, &m_wave_format,
-                                             sizeof WAVEFORMATEX);
+        WAVEFORMATEX* pWave =
+            reinterpret_cast<WAVEFORMATEX*>(&m_wave_format_extensible);
+        hr = MFInitMediaTypeFromWaveFormatEx(pmt, pWave,
+                                             sizeof WAVEFORMATEXTENSIBLE);
         assert(SUCCEEDED(hr));
     }
 
@@ -438,12 +440,14 @@ HRESULT WebmMfVorbisDec::SetInputType(DWORD dwInputStreamID,
     if (FAILED(hr))
         return hr;
 
-    hr = MFInitMediaTypeFromWaveFormatEx(m_output_mediatype, &m_wave_format,
-                                         sizeof WAVEFORMATEX);
+    WAVEFORMATEX* pWave =
+        reinterpret_cast<WAVEFORMATEX*>(&m_wave_format_extensible);
+    hr = MFInitMediaTypeFromWaveFormatEx(m_output_mediatype, pWave,
+                                         sizeof WAVEFORMATEXTENSIBLE);
     if (FAILED(hr))
         return hr;
 
-    if (m_wave_format.nChannels < 9)
+    if (m_wave_format_extensible.Format.nChannels < 9)
     {
         const UINT32 mask = m_vorbis_decoder.GetChannelMask();
         hr = m_output_mediatype->SetUINT32(MF_MT_AUDIO_CHANNEL_MASK, mask);
@@ -779,7 +783,7 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_sample,
     if (FAILED(status))
         return status;
 
-    const UINT32 block_align = m_wave_format.nBlockAlign;
+    const UINT32 block_align = m_wave_format_extensible.Format.nBlockAlign;
     assert(block_align > 0);
 
     // adjust number of bytes to consume based on number of samples caller
@@ -818,14 +822,14 @@ REFERENCE_TIME WebmMfVorbisDec::SamplesToMediaTime(UINT64 sample_count) const
 {
     const double kHz = 10000000.0;
     return REFERENCE_TIME((double(sample_count) /
-                          double(m_wave_format.nSamplesPerSec)) * kHz);
+        double(m_wave_format_extensible.Format.nSamplesPerSec)) * kHz);
 }
 
 UINT64 WebmMfVorbisDec::MediaTimeToSamples(REFERENCE_TIME media_time) const
 {
     const double kHz = 10000000.0;
-    return static_cast<UINT64>(
-        (double(media_time) * m_wave_format.nSamplesPerSec) / kHz);
+    return static_cast<UINT64>((double(media_time) *
+        m_wave_format_extensible.Format.nSamplesPerSec) / kHz);
 }
 
 HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
@@ -1108,15 +1112,25 @@ HRESULT WebmMfVorbisDec::ValidateOutputFormat(IMFMediaType *pmt)
 void WebmMfVorbisDec::SetOutputWaveFormat(GUID subtype)
 {
     assert(subtype == MFAudioFormat_Float);
-    m_wave_format.nChannels =
+    m_wave_format_extensible.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+    m_wave_format_extensible.Format.nChannels =
         static_cast<WORD>(m_vorbis_decoder.GetVorbisChannels());
-    m_wave_format.nSamplesPerSec =
+    m_wave_format_extensible.Format.nSamplesPerSec =
         static_cast<DWORD>(m_vorbis_decoder.GetVorbisRate());
-    m_wave_format.wBitsPerSample = sizeof(float) * 8;
-    m_wave_format.nBlockAlign = m_wave_format.nChannels * sizeof(float);
-    m_audio_format_tag = m_wave_format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-    m_wave_format.nAvgBytesPerSec = m_wave_format.nBlockAlign *
-                                    m_wave_format.nSamplesPerSec;
+    m_wave_format_extensible.Format.wBitsPerSample = sizeof(float) * 8;
+    m_wave_format_extensible.Format.nBlockAlign =
+        m_wave_format_extensible.Format.nChannels * sizeof(float);
+    m_wave_format_extensible.Format.nAvgBytesPerSec =
+        m_wave_format_extensible.Format.nBlockAlign *
+        m_wave_format_extensible.Format.nSamplesPerSec;
+
+    m_wave_format_extensible.Format.cbSize =
+        sizeof WAVEFORMATEXTENSIBLE - sizeof WAVEFORMATEX;
+
+    m_wave_format_extensible.Samples.wValidBitsPerSample =
+        m_wave_format_extensible.Format.wBitsPerSample;
+    m_wave_format_extensible.dwChannelMask = m_vorbis_decoder.GetChannelMask();
+    m_wave_format_extensible.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
 }
 
 bool WebmMfVorbisDec::FormatSupported(bool is_input, IMFMediaType* p_mediatype)

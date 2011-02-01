@@ -160,12 +160,12 @@ private:
     typedef std::list<IMFSample*> mf_input_samples_t;
     mf_input_samples_t m_mf_input_samples;
 
-    WAVEFORMATEX m_wave_format;
+  WAVEFORMATEXTENSIBLE m_wave_format_extensible;
     UINT64 m_total_samples_decoded;
     REFERENCE_TIME m_decode_start_time;
     REFERENCE_TIME m_start_time;
 
-    // minimum buffered uncompressed audio time that must be accumulated 
+    // minimum buffered uncompressed audio time that must be accumulated
     // before |ProcessOutput| will return samples to the caller
     const REFERENCE_TIME m_min_output_threshold;
     // when |m_drain| is true |m_min_output_threshold| is ignored, and we pass
@@ -175,8 +175,6 @@ private:
     // DEBUG
     REFERENCE_TIME m_mediatime_decoded;
     REFERENCE_TIME m_mediatime_recvd;
-
-    int m_audio_format_tag;
 
     VorbisDecoder m_vorbis_decoder;
 
