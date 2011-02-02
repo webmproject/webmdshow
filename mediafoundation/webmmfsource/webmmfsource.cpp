@@ -1669,6 +1669,8 @@ HRESULT WebmMfSource::Shutdown()
 
     m_pEvents = 0;
 
+    hr = m_file.Close();
+
 #if 0
     //TODO: do this in dtor only?
     //The problem is that we haven't addressed the

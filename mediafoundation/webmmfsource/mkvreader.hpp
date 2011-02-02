@@ -19,6 +19,7 @@ public:
     virtual ~MkvReader();
 
     HRESULT EnableBuffering(LONGLONG duration_reftime) const;
+    HRESULT Close();
 
     int Read(long long position, long length, unsigned char* buffer);
     int Length(long long* total, long long* available);

@@ -59,6 +59,12 @@ MkvReader::~MkvReader()
 }
 
 
+HRESULT MkvReader::Close()
+{
+    return m_pStream->Close();
+}
+
+
 HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
 {
     typedef IMFByteStreamBuffering Buffering;
