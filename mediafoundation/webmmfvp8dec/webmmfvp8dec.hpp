@@ -4,7 +4,7 @@ namespace WebmMfVp8DecLib
 {
 
 class WebmMfVp8Dec : public IMFTransform,
-                     //TODO: public IVP8PostProcessing,
+                     //public IVP8PostProcessing,  //TODO
                      //public IMFQualityAdvise,
                      public IMFQualityAdvise2,
                      public IMFRateControl,
@@ -193,6 +193,10 @@ private:
 
     float m_rate;
     BOOL m_bThin;
+
+    MF_QUALITY_DROP_MODE m_drop_mode;
+    int m_drop_budget;
+    void ReplenishDropBudget();
 
     DWORD GetOutputBufferSize(FrameSize&) const;
     HRESULT Decode(IMFSample*);

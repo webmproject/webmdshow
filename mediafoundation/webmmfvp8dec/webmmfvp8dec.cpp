@@ -62,7 +62,9 @@ WebmMfVp8Dec::WebmMfVp8Dec(IClassFactory* pClassFactory) :
     m_pInputMediaType(0),
     m_pOutputMediaType(0),
     m_rate(1),
-    m_bThin(FALSE)
+    m_bThin(FALSE),
+    m_drop_mode(MF_DROP_MODE_NONE),
+    m_drop_budget(0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -121,15 +123,15 @@ HRESULT WebmMfVp8Dec::QueryInterface(
         pUnk = static_cast<IMFTransform*>(this);
     }
 #if 0
-    else if (iid == __uuidof(IMFQualityAdvise))
-    {
-        pUnk = static_cast<IMFQualityAdvise*>(this);
-    }
     else if (iid == __uuidof(IMFQualityAdvise2))
     {
         pUnk = static_cast<IMFQualityAdvise2*>(this);
     }
 #endif
+    else if (iid == __uuidof(IMFQualityAdvise))
+    {
+        pUnk = static_cast<IMFQualityAdvise*>(this);
+    }
     else if (iid == __uuidof(IMFRateControl))
     {
         pUnk = static_cast<IMFRateControl*>(this);
@@ -1307,11 +1309,39 @@ HRESULT WebmMfVp8Dec::Decode(IMFSample* pSample_out)
         SampleInfo& i = m_samples.front();
         assert(i.pSample);
 
+        UINT32 iKey;
+
+        hr = i.pSample->GetUINT32(MFSampleExtension_CleanPoint, &iKey);
+
+        const bool bKey = SUCCEEDED(hr) && (iKey != FALSE);
+
+        //TODO: this is an optimization oppurtunity, since it would
+        //optimize-away the expense of decoding too (not the expense
+        //of mere rendering, which is what other modes optimize away).
+        //It's tricky to implement since if we
+        //transition OUT of DROP_5 mode, then it's possible that we
+        //we're in the middle of a GOP and so we cannot decode
+        //again until we see the next keyframe.  In other modes, we
+        //decode every frame (we are suppressing the rendering, not
+        //decode), so a state transition between modes is not an issue.
+        //For now, just decompress every frame.
+        //
+        //if (!bKey && (m_drop_mode == MF_DROP_MODE_5))
+        //{
+        //    i.pSample->Release();
+        //    i.pSample = 0;
+        //
+        //    m_samples.pop_front();
+        //
+        //    return S_FALSE;
+        //}
+        //END TODO.
+
         UINT32 bPreroll;
 
         hr = i.pSample->GetUINT32(WebmTypes::WebMSample_Preroll, &bPreroll);
 
-        if (SUCCEEDED(hr) && (bPreroll != FALSE))
+        if (SUCCEEDED(hr) && (bPreroll != FALSE))  //preroll frame
         {
             hr = i.DecodeAll(m_ctx);
 
@@ -1320,10 +1350,11 @@ HRESULT WebmMfVp8Dec::Decode(IMFSample* pSample_out)
 
             m_samples.pop_front();
 
-            if (FAILED(hr))
+            if (FAILED(hr))  //bad decode
                 return hr;
 
-            return MF_E_TRANSFORM_NEED_MORE_INPUT;
+            ReplenishDropBudget();
+            return S_FALSE;  //throw away this sample
         }
 
         hr = i.DecodeOne(m_ctx, time, duration);
@@ -1335,8 +1366,25 @@ HRESULT WebmMfVp8Dec::Decode(IMFSample* pSample_out)
 
             m_samples.pop_front();
 
-            if (FAILED(hr))
+            if (FAILED(hr))  //bad decode
                 return hr;
+        }
+
+        if (m_drop_mode == MF_DROP_MODE_NONE)
+            __noop;  //we're not throwing away frames
+
+        else if (m_drop_mode >= MF_DROP_MODE_5)
+        {
+            if (!bKey)
+                return S_FALSE;  //throw away this sample
+        }
+        else if (bKey || (m_drop_budget > 1))
+            --m_drop_budget;  //spend out budget to render this frame
+
+        else
+        {
+            ReplenishDropBudget();
+            return S_FALSE;  //throw away this sample
         }
     }
 
@@ -1903,33 +1951,134 @@ HRESULT WebmMfVp8Dec::SampleInfo::DecodeOne(
 }
 
 
-HRESULT WebmMfVp8Dec::SetDropMode(MF_QUALITY_DROP_MODE)
+HRESULT WebmMfVp8Dec::SetDropMode(MF_QUALITY_DROP_MODE d)
 {
-    return E_NOTIMPL;
+    if (d > MF_DROP_MODE_5)
+        return MF_E_NO_MORE_DROP_MODES;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_drop_mode = d;
+    ReplenishDropBudget();
+
+    return S_OK;
+
+    //we always keep keyframes ("cleanpoint")
+    //1: drop 1 out of every 2 frames
+    //2: drop 2 out of every 3 frames
+    //3: drop 3 out of every 4 frames
+    //4: drop 4 out of every 5 frames
+    //5: drop all delta frames
+    //
+    //alternatively:
+    //1: drop 1 out of every 16 = 2^4 = 2^(5-1)
+    //2: drop 1 out of every 8  = 2^3 = 2^(5-2) = 2 out of every 16
+    //3: drop 1 out of every 4  = 2^2 = 2^(5-3) = 4 out of every 16
+    //4: drop 1 out of every 2  = 2^1 = 2^(5-4) = 8 out of every 16
+    //5: drop all delta frames
+
+    //when we detect a keyframe, this resets the counter
+    //
+    //level 1:
+    //0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+    //                              x
+    //
+    //level 2:
+    //0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+    //              x               x
+    //
+    //level 3:
+    //0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+    //      x       x       x       x       x
+    //
+    //level 4:
+    //0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+    //  x   x   x   x   x   x   x   x   x   x
+    //
+    //we could also tie this to framerate, e.g.
+    //1: drop 1 frame per second
+    //2: drop 1 frame per 1/2 sec
+    //3: drop 1 frame per 1/4 sec
+    //4: drop 1 frame per 1/8 sec
+    //5: drop all delta frames
+    //
+    //Give outselves a budget: the smaller the drop mode,
+    //the larger the budget.  Drop the first eligrable
+    //frame when our budget drops to 0.
 }
 
 
-HRESULT WebmMfVp8Dec::SetQualityLevel(MF_QUALITY_LEVEL)
+void WebmMfVp8Dec::ReplenishDropBudget()
 {
-    return E_NOTIMPL;
+    if (m_drop_mode == MF_DROP_MODE_NONE)
+    {
+        m_drop_budget = 0;  //doesn't really matter
+        return;
+    }
+
+    if (m_drop_mode >= MF_DROP_MODE_5)
+    {
+        m_drop_budget = 0;  //doesn't really matter
+        return;
+    }
+
+    const int d = m_drop_mode;
+    assert(d >= 1);
+    assert(d <= 4);
+
+    m_drop_budget = (1 << (5 - d));
 }
 
 
-HRESULT WebmMfVp8Dec::GetDropMode(MF_QUALITY_DROP_MODE*)
+HRESULT WebmMfVp8Dec::SetQualityLevel(MF_QUALITY_LEVEL q)
 {
-    return E_NOTIMPL;
+    if (q == MF_QUALITY_NORMAL)
+        return S_OK;
+
+    return MF_E_NO_MORE_QUALITY_LEVELS;
 }
 
 
-HRESULT WebmMfVp8Dec::GetQualityLevel(MF_QUALITY_LEVEL*)
+HRESULT WebmMfVp8Dec::GetDropMode(MF_QUALITY_DROP_MODE* p)
 {
-    return E_NOTIMPL;
+    if (p == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    MF_QUALITY_DROP_MODE& d = *p;
+    d = m_drop_mode;
+
+    return S_OK;
 }
 
 
-HRESULT WebmMfVp8Dec::DropTime(LONGLONG)
+HRESULT WebmMfVp8Dec::GetQualityLevel(MF_QUALITY_LEVEL* p)
 {
-    return E_NOTIMPL;
+    if (p == 0)
+        return E_POINTER;
+
+    MF_QUALITY_LEVEL& q = *p;
+    q = MF_QUALITY_NORMAL;  //no post-processing for us to shut off
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfVp8Dec::DropTime(LONGLONG t)
+{
+    t;
+    return MF_E_DROPTIME_NOT_SUPPORTED;
 }
 
 
