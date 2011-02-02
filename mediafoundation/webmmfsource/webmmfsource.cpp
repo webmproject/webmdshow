@@ -3230,6 +3230,11 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         assert(pStream->IsCurrBlockLocked());
     }
 
+    //TODO: a media sample can contain multiple buffers.
+    //But our audio decoder and video decoder can handle
+    //this case, so we might as well pack as many frames
+    //as we can in a single sample.  This is especially
+    //true for audio.
     hr = pStream->GetSample(r.pToken);
 
     if (SUCCEEDED(hr))

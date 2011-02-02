@@ -321,6 +321,19 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     if (!IsSelected())
         return S_FALSE;
 
+    //TODO:
+    //Here (and for the video stream too?) we should implement
+    //this as a loop, and pack as many audio frames as we can
+    //onto the media sample (as media sample "buffers").
+    //We know we have the current cluster and the next cluster
+    //in the cache, so at a minimum we could peek ahead in the curr
+    //cluster to find the a block having a different type, and
+    //then load the curr block and all blocks having the same
+    //type up to the first block belonging to the other stream.
+    //(Or something like that).  We could also do it by time:
+    //populate this cluster until you have at least 100ms of
+    //audio.
+
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
