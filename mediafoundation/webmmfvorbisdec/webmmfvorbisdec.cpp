@@ -229,7 +229,7 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
     UINT32 bytes_per_sec;
     assert(m_output_mediatype);
     hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
-        &bytes_per_sec);
+                                       &bytes_per_sec);
     assert(SUCCEEDED(hr));
     if (FAILED(hr))
         return hr;
@@ -771,35 +771,68 @@ HRESULT WebmMfVorbisDec::DecodeVorbisFormat2Sample(IMFSample* p_sample)
     return S_OK;
 }
 
+DWORD get_mf_buffer_capacity(IMFSample* ptr_sample, DWORD buf_index)
+{
+    if (!ptr_sample)
+    {
+        DBGLOG("ERROR NULL ptr_sample.");
+        return 0;
+    }
+    IMFMediaBufferPtr ptr_buffer;
+    HRESULT hr;
+    CHK(hr, ptr_sample->GetBufferByIndex(buf_index, &ptr_buffer));
+    if (FAILED(hr))
+    {
+        return 0;
+    }
+    DWORD buffer_capacity = 0;
+    CHK(hr, ptr_buffer->GetMaxLength(&buffer_capacity));
+    return buffer_capacity;
+}
+
+UINT32 get_block_align_from_mediatype(IMFMediaType* ptr_type)
+{
+    if (!ptr_type)
+    {
+        DBGLOG("ERROR NULL ptr_type.");
+        return 0;
+    }
+    UINT32 block_align = 0;
+    HRESULT hr;
+    CHK(hr, ptr_type->GetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT, &block_align));
+    return block_align;
+}
+
 HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_sample,
                                                 UINT32 samples_to_process)
 {
     // try to get a buffer from the output sample...
     IMFMediaBufferPtr mf_output_buffer;
     HRESULT status = p_sample->GetBufferByIndex(0, &mf_output_buffer);
-
     // and complain bitterly if unable
     if (FAILED(status) || !bool(mf_output_buffer))
+    {
         return E_INVALIDARG;
-
-    DWORD mf_storage_limit;
-    status = mf_output_buffer->GetMaxLength(&mf_storage_limit);
-    if (FAILED(status))
-        return status;
-
+    }
+    DWORD mf_storage_limit = get_mf_buffer_capacity(p_sample, 0);
+    if (0 == mf_storage_limit)
+    {
+        DBGLOG("ERROR unable to obtain output buffer capacity.");
+        return E_UNEXPECTED;
+    }
     UINT32 block_align;
     assert(m_output_mediatype);
     status = m_output_mediatype->GetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT,
                                            &block_align);
     assert(SUCCEEDED(status));
     if (FAILED(status))
+    {
         return status;
-
+    }
     // adjust number of bytes to consume based on number of samples caller
     // requested: shoving it all in just because it fits isn't what we want...
     const DWORD max_bytes_to_consume = samples_to_process * block_align;
     assert(max_bytes_to_consume <= mf_storage_limit);
-
     if (!m_post_process_samples)
     {
         BYTE* p_mf_buffer_data = NULL;
@@ -1175,6 +1208,24 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
     if (samples_available < 1 || need_more_input)
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
+
+    // get output buffer size, and adjust |samples_available| to ensure we
+    // never try to process more samples than will fit in the output buffer
+    const DWORD buffer_capacity =
+        get_mf_buffer_capacity(p_mf_output_sample, 0);
+    // grab |block_align| to calculate space (in bytes) required for current
+    // |samples_available| value
+    const UINT32 block_align =
+        get_block_align_from_mediatype(m_output_mediatype);
+    if (samples_available * block_align > buffer_capacity)
+    {
+        DBGLOG("adjusting samples_available, curr=" << samples_available);
+        // adjust |samples_available| to avoid attempting to consume too many
+        // samples in |ProcessLibVorbisOutput|
+        samples_available =
+            (buffer_capacity + (block_align - 1)) / block_align;
+        DBGLOG("adjusted samples_available, new=" << samples_available);
+    }
 
     status = ProcessLibVorbisOutput(p_mf_output_sample, samples_available);
     if (FAILED(status))

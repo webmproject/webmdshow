@@ -161,6 +161,7 @@ private:
     REFERENCE_TIME SamplesToMediaTime(UINT64 num_samples) const;
     UINT64 MediaTimeToSamples(REFERENCE_TIME media_time) const;
 
+    // TODO(tomfinegan): sort this mess; the random member order is *UGLY*
     IClassFactory* const m_pClassFactory;
     LONG m_cRef;
 
