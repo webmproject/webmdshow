@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "memutilfwd.hpp"
+
 namespace WebmMfVorbisDecLib
 {
 
@@ -141,12 +143,21 @@ private:
     HRESULT DecodeVorbisFormat2Sample(IMFSample* p_mf_input_sample);
     HRESULT ProcessLibVorbisOutput(IMFSample* p_mf_output_sample,
                                    UINT32 samples_to_process);
+
+    HRESULT GetOutputMediaType(DWORD dwTypeIndex, IMFMediaType** pp) const;
+    HRESULT GenerateMediaType(IMFMediaType** pp,
+                              int channels,
+                              UINT32 mask,
+                              UINT32 samples_per_sec,
+                              GUID type) const;
+    UINT32 GetChannelMask(int channels) const;
     bool FormatSupported(bool is_input, IMFMediaType* p_mediatype);
 
     HRESULT ResetMediaType(bool reset_input);
 
-    void SetOutputWaveFormat(GUID subtype);
-
+    bool PostProcessSamples(float* const p_vorbis_float_buffer,
+                            UINT32 samples_to_process,
+                            BYTE* p_mf_buffer_data);
     REFERENCE_TIME SamplesToMediaTime(UINT64 num_samples) const;
     UINT64 MediaTimeToSamples(REFERENCE_TIME media_time) const;
 
@@ -160,7 +171,6 @@ private:
     typedef std::list<IMFSample*> mf_input_samples_t;
     mf_input_samples_t m_mf_input_samples;
 
-  WAVEFORMATEXTENSIBLE m_wave_format_extensible;
     UINT64 m_total_samples_decoded;
     REFERENCE_TIME m_decode_start_time;
     REFERENCE_TIME m_start_time;
@@ -171,6 +181,15 @@ private:
     // when |m_drain| is true |m_min_output_threshold| is ignored, and we pass
     // all available samples downstream
     bool m_drain;
+
+    // When |m_post_process_samples| is true the filter will need to process
+    // the output from the decoder because the input format does not match
+    // the output format.
+    bool m_post_process_samples;
+
+    // Scratch buffer used by the filter to convert samples from one format to
+    // another.
+    WebmUtil::auto_array<unsigned char> m_scratch;
 
     // DEBUG
     REFERENCE_TIME m_mediatime_decoded;

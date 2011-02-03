@@ -19,6 +19,7 @@
 
 #include "clockable.hpp"
 #include "debugutil.hpp"
+#include "memutil.hpp"
 #include "vorbisdecoder.hpp"
 #include "vorbistypes.hpp"
 #include "webmtypes.hpp"
@@ -67,15 +68,15 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_mediatime_decoded(-1),
     m_mediatime_recvd(-1),
     m_min_output_threshold(1000000LL), // .1 second
-    m_drain(false)
+    m_drain(false),
+    m_post_process_samples(false),
+    m_scratch(NULL, 0)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
 
     hr = CLockable::Init();
     assert(SUCCEEDED(hr));
-
-    ::memset(&m_wave_format_extensible, 0, sizeof WAVEFORMATEX);
 }
 
 WebmMfVorbisDec::~WebmMfVorbisDec()
@@ -212,7 +213,7 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
 
     Lock lock;
 
-    const HRESULT hr = lock.Seize(this);
+    HRESULT hr = lock.Seize(this);
 
     if (FAILED(hr))
         return hr;
@@ -225,11 +226,18 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
                    //MFT_OUTPUT_STREAM_PROVIDES_SAMPLES   //TODO
                    //MFT_OUTPUT_STREAM_OPTIONAL
 
-    const DWORD bytes_per_sec =
-        m_wave_format_extensible.Format.nAvgBytesPerSec;
+    UINT32 bytes_per_sec;
+    assert(m_output_mediatype);
+    hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
+        &bytes_per_sec);
+    assert(SUCCEEDED(hr));
+    if (FAILED(hr))
+        return hr;
+
     assert(bytes_per_sec > 0);  //TODO: must have input media type
 
     //TODO: we could eliminate this by specifying PROVIDES_SAMPLES
+    // cbSize wants 250 milliseconds in bytes of the output stream.
     info.cbSize = (bytes_per_sec + 3) / 4;
     info.cbAlignment = 0;
 
@@ -317,9 +325,6 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(DWORD dwOutputStreamID,
     if (dwOutputStreamID != 0)
         return MF_E_INVALIDSTREAMNUMBER;
 
-    if (dwTypeIndex > 0)
-        return MF_E_NO_MORE_TYPES;
-
     if (pp == 0)
         return E_POINTER;
 
@@ -355,15 +360,11 @@ HRESULT WebmMfVorbisDec::GetOutputAvailableType(DWORD dwOutputStreamID,
     }
     else
     {
-        SetOutputWaveFormat(MFAudioFormat_Float);
-        WAVEFORMATEX* pWave =
-            reinterpret_cast<WAVEFORMATEX*>(&m_wave_format_extensible);
-        hr = MFInitMediaTypeFromWaveFormatEx(pmt, pWave,
-                                             sizeof WAVEFORMATEXTENSIBLE);
-        assert(SUCCEEDED(hr));
+        hr = GetOutputMediaType(dwTypeIndex, pp);
+        assert(SUCCEEDED(hr) || hr == MF_E_NO_MORE_TYPES);
     }
 
-    return S_OK;
+    return hr;
 }
 
 HRESULT WebmMfVorbisDec::SetInputType(DWORD dwInputStreamID,
@@ -430,30 +431,6 @@ HRESULT WebmMfVorbisDec::SetInputType(DWORD dwInputStreamID,
     if (hr != S_OK)
       return E_FAIL;
 
-    SetOutputWaveFormat(MFAudioFormat_Float);
-
-    if (m_output_mediatype)
-        m_output_mediatype = 0;
-
-    hr = MFCreateMediaType(&m_output_mediatype);
-    assert(SUCCEEDED(hr));
-    if (FAILED(hr))
-        return hr;
-
-    WAVEFORMATEX* pWave =
-        reinterpret_cast<WAVEFORMATEX*>(&m_wave_format_extensible);
-    hr = MFInitMediaTypeFromWaveFormatEx(m_output_mediatype, pWave,
-                                         sizeof WAVEFORMATEXTENSIBLE);
-    if (FAILED(hr))
-        return hr;
-
-    if (m_wave_format_extensible.Format.nChannels < 9)
-    {
-        const UINT32 mask = m_vorbis_decoder.GetChannelMask();
-        hr = m_output_mediatype->SetUINT32(MF_MT_AUDIO_CHANNEL_MASK, mask);
-        assert(SUCCEEDED(hr));
-    }
-
     return S_OK;
 }
 
@@ -495,8 +472,6 @@ HRESULT WebmMfVorbisDec::SetOutputType(DWORD dwOutputStreamID,
     if (FAILED(hr))
         return hr;
 
-    SetOutputWaveFormat(subtype);
-
     // update our copy of the output type: |m_output_mediatype|
     if (m_output_mediatype)
     {
@@ -515,6 +490,35 @@ HRESULT WebmMfVorbisDec::SetOutputType(DWORD dwOutputStreamID,
 
     if (FAILED(hr))
         return hr;
+
+    // Check to see if input matches output
+    UINT32 channels_in;
+    hr = m_input_mediatype->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &channels_in);
+    if (FAILED(hr))
+        return hr;
+
+    UINT32 channels_out;
+    hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS,
+      &channels_out);
+    if (FAILED(hr))
+        return hr;
+
+    if (channels_in == channels_out)
+    {
+        GUID subtype_out;
+        hr = m_output_mediatype->GetGUID(MF_MT_SUBTYPE, &subtype_out);
+        if (FAILED(hr))
+            return hr;
+
+        if (subtype_out != MFAudioFormat_Float)
+        {
+            m_post_process_samples = true;
+        }
+    }
+    else
+    {
+        m_post_process_samples = true;
+    }
 
     return S_OK;
 }
@@ -783,32 +787,88 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_sample,
     if (FAILED(status))
         return status;
 
-    const UINT32 block_align = m_wave_format_extensible.Format.nBlockAlign;
-    assert(block_align > 0);
+    UINT32 block_align;
+    assert(m_output_mediatype);
+    status = m_output_mediatype->GetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT,
+                                           &block_align);
+    assert(SUCCEEDED(status));
+    if (FAILED(status))
+        return status;
 
     // adjust number of bytes to consume based on number of samples caller
     // requested: shoving it all in just because it fits isn't what we want...
     const DWORD max_bytes_to_consume = samples_to_process * block_align;
     assert(max_bytes_to_consume <= mf_storage_limit);
 
-    BYTE* p_mf_buffer_data = NULL;
-    DWORD mf_data_len = 0;
-    status = mf_output_buffer->Lock(&p_mf_buffer_data, &mf_storage_limit,
-                                    &mf_data_len);
-    if (FAILED(status))
-        return status;
+    if (!m_post_process_samples)
+    {
+        BYTE* p_mf_buffer_data = NULL;
+        DWORD mf_data_len = 0;
+        status = mf_output_buffer->Lock(&p_mf_buffer_data, &mf_storage_limit,
+                                        &mf_data_len);
+        if (FAILED(status))
+            return status;
 
-    float* const ptr_mf_buffer = reinterpret_cast<float*>(p_mf_buffer_data);
+        float* const ptr_mf_buffer =
+            reinterpret_cast<float*>(p_mf_buffer_data);
 
-    status = m_vorbis_decoder.ConsumeOutputSamples(ptr_mf_buffer,
-                                                   samples_to_process);
+        status = m_vorbis_decoder.ConsumeOutputSamples(ptr_mf_buffer,
+                                                       samples_to_process);
 
-    assert(SUCCEEDED(status));
+        assert(SUCCEEDED(status));
 
-    const HRESULT unlock_status = mf_output_buffer->Unlock();
-    assert(SUCCEEDED(unlock_status));
-    if (FAILED(unlock_status))
-        return unlock_status;
+        const HRESULT unlock_status = mf_output_buffer->Unlock();
+        assert(SUCCEEDED(unlock_status));
+        if (FAILED(unlock_status))
+        {
+            return unlock_status;
+        }
+    }
+    else
+    {
+        const DWORD vorbis_bytes_to_consume = samples_to_process *
+            m_vorbis_decoder.GetVorbisChannels() * sizeof(float);
+
+        if (m_scratch.size() < vorbis_bytes_to_consume)
+        {
+            m_scratch.reset(
+                new (std::nothrow) unsigned char[vorbis_bytes_to_consume],
+                vorbis_bytes_to_consume);
+            if (m_scratch.get() == NULL)
+            {
+                return E_OUTOFMEMORY;
+            }
+        }
+
+        float* const p_vorbis_float_buffer =
+            reinterpret_cast<float*>(m_scratch.get());
+
+        status = m_vorbis_decoder.ConsumeOutputSamples(p_vorbis_float_buffer,
+                                                       samples_to_process);
+
+        assert(SUCCEEDED(status));
+
+        BYTE* p_mf_buffer_data = NULL;
+        DWORD mf_data_len = 0;
+        status = mf_output_buffer->Lock(&p_mf_buffer_data, &mf_storage_limit,
+                                        &mf_data_len);
+        if (FAILED(status))
+            return status;
+
+        if (!PostProcessSamples(p_vorbis_float_buffer,
+                                samples_to_process,
+                                p_mf_buffer_data))
+        {
+            return E_INVALIDARG;
+        }
+
+        const HRESULT unlock_status = mf_output_buffer->Unlock();
+        assert(SUCCEEDED(unlock_status));
+        if (FAILED(unlock_status))
+        {
+            return unlock_status;
+        }
+    }
 
     const UINT32 bytes_written = max_bytes_to_consume;
 
@@ -818,18 +878,194 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_sample,
     return status;
 }
 
+bool WebmMfVorbisDec::PostProcessSamples(float* const p_vorbis_float_buffer,
+                                         UINT32 samples_to_process,
+                                         BYTE* p_mf_buffer_data)
+{
+    UINT32 channels_to_convert = m_vorbis_decoder.GetVorbisChannels();
+
+    UINT32 channels_out;
+    HRESULT hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS,
+                                               &channels_out);
+    if (FAILED(hr))
+        return false;
+    assert(channels_out <= channels_to_convert);
+
+    GUID subtype_out;
+    hr = m_output_mediatype->GetGUID(MF_MT_SUBTYPE, &subtype_out);
+    if (FAILED(hr))
+        return false;
+
+    if (channels_out < channels_to_convert)
+    {
+        const bool convert_to_short =
+            (subtype_out != MFAudioFormat_Float) ? true : false;
+
+        float* src = static_cast<float*>(p_vorbis_float_buffer);
+        float* dstfl = reinterpret_cast<float*>(p_mf_buffer_data);
+        short* dst16 = reinterpret_cast<short*>(p_mf_buffer_data);
+
+        // TODO(tomfinegan or fgalligan): setup a postprocessing function ptr
+        //                                and always call through the ptr to
+        //                                avoid most of the format checks
+        //                                during playback.
+        for (UINT32 i=0; i<samples_to_process; ++i)
+        {
+            float left = 0.0f;
+            float right = 0.0f;
+
+            if (channels_out == 2)
+            {
+                // Downmix to stereo
+                switch (channels_to_convert)
+                {
+                case 8:
+                    left = src[0] + src[3] + src[2] * 0.7f
+                        + src[4] * 0.7f + src[6] * 0.7f;
+                    right = src[1] + src[3] + src[2] * 0.7f
+                        + src[5] * 0.7f + src[7] * 0.7f;
+                    src += 8;
+                    break;
+                case 7:
+                    left = src[0] + src[3] + src[2] * 0.7f
+                        + src[4] * 0.7f + src[6] * 0.7f;
+                    right = src[1] + src[3] + src[2] * 0.7f
+                        + src[5] * 0.7f + src[6] * 0.7f;
+                    src += 7;
+                    break;
+                case 6:
+                    left = src[0] + src[3] + src[2] * 0.7f + src[4] * 0.7f;
+                    right = src[1] + src[3] + src[2] * 0.7f + src[5] * 0.7f;
+                    src += 6;
+                    break;
+                case 5:
+                    left = src[0] + src[2] * 0.7f + src[3] * 0.7f;
+                    right = src[1] + src[2] * 0.7f + src[4] * 0.7f;
+                    src += 5;
+                    break;
+                case 4:
+                    left = src[0] + src[2] * 0.7f + src[3] * 0.7f;
+                    right = src[1] + src[2] * 0.7f + src[3] * 0.7f;
+                    src += 4;
+                    break;
+                case 3:
+                    left = src[0] + src[2] * 0.7f;
+                    right = src[1] + src[2] * 0.7f;
+                    src += 3;
+                    break;
+                }
+
+                if (convert_to_short)
+                {
+                    int val = static_cast<int>(floor(left * 32767.f + .5f));
+                    if (val > 32767)
+                    {
+                        val = 32767;
+                    }
+                    else if (val < -32768)
+                    {
+                        val = -32768;
+                    }
+                    *dst16++ = static_cast<short>(val);
+
+                    val = static_cast<int>(floor(right * 32767.f + .5f));
+                    if(val > 32767)
+                    {
+                        val = 32767;
+                    }
+                    else if(val < -32768)
+                    {
+                        val = -32768;
+                    }
+                    *dst16++ = static_cast<short>(val);
+                }
+                else
+                {
+                    *dstfl++ = left;
+                    *dstfl++ = right;
+                }
+            }
+            else if (channels_out == 6)
+            {
+                // fold to 5.1
+                if (convert_to_short)
+                {
+                    for (int j=0; j<6; ++j)
+                    {
+                        int val = static_cast<int>(floor(src[j] *
+                                                   32767.f + .5f));
+                        if (val > 32767)
+                        {
+                            val = 32767;
+                        }
+                        else if (val < -32768)
+                        {
+                            val = -32768;
+                        }
+                        *dst16++ = static_cast<short>(val);
+                    }
+                }
+                else
+                {
+                    memcpy(dstfl, src, 6 * sizeof(float));
+                    dstfl += 6;
+                }
+
+                src += channels_to_convert;
+            }
+        }
+    }
+    else if (subtype_out != MFAudioFormat_Float)
+    {
+        const int samples_to_convert =
+            samples_to_process * channels_to_convert;
+
+        float* src = static_cast<float*>(p_vorbis_float_buffer);
+        short* dst16 = reinterpret_cast<short*>(p_mf_buffer_data);
+
+        for (int i=0; i<samples_to_convert; i++)
+        {
+            int val = static_cast<int>(floor(src[i] * 32767.f + .5f));
+            if (val > 32767)
+            {
+                val = 32767;
+            }
+            else if (val < -32768)
+            {
+                val = -32768;
+            }
+            *dst16++ = static_cast<short>(val);
+        }
+    }
+
+    return true;
+}
+
 REFERENCE_TIME WebmMfVorbisDec::SamplesToMediaTime(UINT64 sample_count) const
 {
     const double kHz = 10000000.0;
+
+    UINT32 samples_per_sec;
+    assert(m_output_mediatype);
+    HRESULT hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND,
+                                               &samples_per_sec);
+    assert(SUCCEEDED(hr));
+
     return REFERENCE_TIME((double(sample_count) /
-        double(m_wave_format_extensible.Format.nSamplesPerSec)) * kHz);
+                          double(samples_per_sec)) * kHz);
 }
 
 UINT64 WebmMfVorbisDec::MediaTimeToSamples(REFERENCE_TIME media_time) const
 {
     const double kHz = 10000000.0;
-    return static_cast<UINT64>((double(media_time) *
-        m_wave_format_extensible.Format.nSamplesPerSec) / kHz);
+
+    UINT32 samples_per_sec;
+    assert(m_output_mediatype);
+    HRESULT hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND,
+                                               &samples_per_sec);
+    assert(SUCCEEDED(hr));
+
+    return static_cast<UINT64>((double(media_time) * samples_per_sec) / kHz);
 }
 
 HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
@@ -1046,19 +1282,21 @@ HRESULT WebmMfVorbisDec::ValidateOutputFormat(IMFMediaType *pmt)
 
     GUID subtype;
     status = pmt->GetGUID(MF_MT_SUBTYPE, &subtype);
-    assert(SUCCEEDED(status) && MFAudioFormat_Float == subtype);
-    if (FAILED(status) || MFAudioFormat_Float != subtype)
+    assert(SUCCEEDED(status) &&
+        (MFAudioFormat_Float == subtype || MFAudioFormat_PCM == subtype));
+    if (FAILED(status) ||
+        (MFAudioFormat_Float != subtype && MFAudioFormat_PCM != subtype) )
         return MF_E_INVALIDMEDIATYPE;
 
     UINT32 output_channels = 0;
     status = pmt->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &output_channels);
     assert(SUCCEEDED(status));
 
-    UINT32 vorbis_channels = m_vorbis_decoder.GetVorbisChannels();
-    assert(output_channels == vorbis_channels);
-
-    if (output_channels != vorbis_channels)
+    assert((output_channels >= 1) && (output_channels <= 8));
+    if ((output_channels < 1) || (output_channels > 8))
+    {
         return MF_E_INVALIDMEDIATYPE;
+    }
 
     UINT32 output_rate = 0;
     status = pmt->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &output_rate);
@@ -1079,6 +1317,13 @@ HRESULT WebmMfVorbisDec::ValidateOutputFormat(IMFMediaType *pmt)
         if (wBitsPerSample != (sizeof(float) * 8))
             return MF_E_INVALIDMEDIATYPE;
     }
+    else if (subtype == MFAudioFormat_PCM)
+    {
+        status = pmt->GetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, &wBitsPerSample);
+        assert(wBitsPerSample == 16);
+        if (wBitsPerSample != 16)
+            return MF_E_INVALIDMEDIATYPE;
+    }
     else
         return MF_E_INVALIDMEDIATYPE;
 
@@ -1087,13 +1332,9 @@ HRESULT WebmMfVorbisDec::ValidateOutputFormat(IMFMediaType *pmt)
     if (FAILED(status))
         return MF_E_INVALIDMEDIATYPE;
 
-    // Make sure block alignment was calculated correctly.
-    assert(block_align == vorbis_channels * (wBitsPerSample / 8));
-    if (block_align != vorbis_channels * (wBitsPerSample / 8))
-        return MF_E_INVALIDMEDIATYPE;
-
     // Check possible overflow...
     // Is (sample_rate * nBlockAlign > MAXDWORD) ?
+    assert(output_rate <= (MAXDWORD / block_align));
     if (output_rate > (MAXDWORD / block_align))
         return MF_E_INVALIDMEDIATYPE;
 
@@ -1109,28 +1350,263 @@ HRESULT WebmMfVorbisDec::ValidateOutputFormat(IMFMediaType *pmt)
     return S_OK;
 }
 
-void WebmMfVorbisDec::SetOutputWaveFormat(GUID subtype)
+HRESULT WebmMfVorbisDec::GetOutputMediaType(DWORD dwTypeIndex,
+                                            IMFMediaType** pp) const
 {
-    assert(subtype == MFAudioFormat_Float);
-    m_wave_format_extensible.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-    m_wave_format_extensible.Format.nChannels =
-        static_cast<WORD>(m_vorbis_decoder.GetVorbisChannels());
-    m_wave_format_extensible.Format.nSamplesPerSec =
-        static_cast<DWORD>(m_vorbis_decoder.GetVorbisRate());
-    m_wave_format_extensible.Format.wBitsPerSample = sizeof(float) * 8;
-    m_wave_format_extensible.Format.nBlockAlign =
-        m_wave_format_extensible.Format.nChannels * sizeof(float);
-    m_wave_format_extensible.Format.nAvgBytesPerSec =
-        m_wave_format_extensible.Format.nBlockAlign *
-        m_wave_format_extensible.Format.nSamplesPerSec;
+    if (m_input_mediatype == 0)
+        return MF_E_TRANSFORM_TYPE_NOT_SET;
 
-    m_wave_format_extensible.Format.cbSize =
+    UINT32 channels = 0;
+    HRESULT hr = m_input_mediatype->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS,
+                                              &channels);
+    if (FAILED(hr) || channels == 0)
+        return MF_E_INVALIDMEDIATYPE;
+
+    UINT32 sample_rate;
+    hr = m_input_mediatype->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND,
+                                      &sample_rate);
+
+    if (FAILED(hr) || sample_rate < 1)
+        return MF_E_INVALIDMEDIATYPE;
+
+    UINT32 six_channel_mask = GetChannelMask(6);
+    UINT32 two_channel_mask = GetChannelMask(2);
+
+    switch (channels)
+    {
+    case 8:
+    case 7:
+        switch (dwTypeIndex)
+        {
+        case 0:
+            // 7.1 or 6.1 audio float
+            hr = GenerateMediaType(pp,
+                                   channels,
+                                   GetChannelMask(channels),
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+            break;
+
+        case 1:
+            // 7.1 or 6.1 audio integer
+            hr = GenerateMediaType(pp,
+                                   channels,
+                                   GetChannelMask(channels),
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_PCM);
+            break;
+
+        case 2:
+            // 5.1 audio float folding
+            hr = GenerateMediaType(pp,
+                                   6,
+                                   six_channel_mask,
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+            break;
+
+        case 3:
+            // 5.1 audio integer folding
+            hr = GenerateMediaType(pp,
+                                   6,
+                                   six_channel_mask,
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_PCM);
+            break;
+
+        case 4:
+            // stereo audio float downmix
+            hr = GenerateMediaType(pp,
+                                   2,
+                                   two_channel_mask,
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+            break;
+
+        case 5:
+            // stereo audio integer downmix
+            hr = GenerateMediaType(pp,
+                                   2,
+                                   two_channel_mask,
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_PCM);
+            break;
+        default:
+            return MF_E_NO_MORE_TYPES;
+        }
+        break;
+
+    case 6:
+    case 5:
+    case 4:
+    case 3:
+        switch (dwTypeIndex)
+        {
+        case 0:
+            // 5.1, 5, 4, 3 audio float
+            hr = GenerateMediaType(pp,
+                                   channels,
+                                   GetChannelMask(channels),
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+            break;
+
+        case 1:
+            // 5.1, 5, 4, 3 audio integer
+            hr = GenerateMediaType(pp,
+                                   channels,
+                                   GetChannelMask(channels),
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_PCM);
+            break;
+
+        case 2:
+            // stereo audio float downmix
+            hr = GenerateMediaType(pp,
+                                   2,
+                                   two_channel_mask,
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+            break;
+
+        case 3:
+            // stereo audio integer downmix
+            hr = GenerateMediaType(pp,
+                                   2,
+                                   two_channel_mask,
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_PCM);
+            break;
+        default:
+            return MF_E_NO_MORE_TYPES;
+        }
+        break;
+
+    case 2:
+    case 1:
+        switch (dwTypeIndex)
+        {
+        case 0:
+            // stereo or mono audio float
+            hr = GenerateMediaType(pp,
+                                   channels,
+                                   GetChannelMask(channels),
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+            break;
+
+        case 1:
+            // stereo or mono audio integer
+            hr = GenerateMediaType(pp,
+                                   channels,
+                                   GetChannelMask(channels),
+                                   sample_rate,
+                                   KSDATAFORMAT_SUBTYPE_PCM);
+            break;
+        default:
+            return MF_E_NO_MORE_TYPES;
+        }
+        break;
+
+    default:
+        return MF_E_INVALIDMEDIATYPE;
+    }
+
+    return hr;
+}
+
+HRESULT WebmMfVorbisDec::GenerateMediaType(IMFMediaType** pp,
+                                           int channels,
+                                           UINT32 mask,
+                                           UINT32 sample_rate,
+                                           GUID type) const
+{
+    WAVEFORMATEXTENSIBLE wave;
+
+    wave.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+    wave.Format.nChannels = static_cast<WORD>(channels);
+    wave.Format.nSamplesPerSec = static_cast<DWORD>(sample_rate);
+
+    if (type == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)
+    {
+        wave.Format.wBitsPerSample = sizeof(float) * 8;
+    }
+    else
+    {
+        wave.Format.wBitsPerSample = 16;
+    }
+
+    wave.Format.nBlockAlign =
+        wave.Format.nChannels * (wave.Format.wBitsPerSample / 8);
+    wave.Format.nAvgBytesPerSec =
+        wave.Format.nBlockAlign * wave.Format.nSamplesPerSec;
+    wave.Format.cbSize =
         sizeof WAVEFORMATEXTENSIBLE - sizeof WAVEFORMATEX;
 
-    m_wave_format_extensible.Samples.wValidBitsPerSample =
-        m_wave_format_extensible.Format.wBitsPerSample;
-    m_wave_format_extensible.dwChannelMask = m_vorbis_decoder.GetChannelMask();
-    m_wave_format_extensible.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+    wave.Samples.wValidBitsPerSample = wave.Format.wBitsPerSample;
+    wave.dwChannelMask = mask;
+    wave.SubFormat = type;
+
+    IMFMediaType*& pmt = *pp;
+
+    HRESULT hr = MFCreateMediaType(&pmt);
+    assert(SUCCEEDED(hr));
+    assert(pmt);
+
+    if (FAILED(hr) || NULL == pmt)
+        return E_OUTOFMEMORY;
+
+    WAVEFORMATEX* pWave = reinterpret_cast<WAVEFORMATEX*>(&wave);
+    hr = MFInitMediaTypeFromWaveFormatEx(pmt, pWave,
+                                         sizeof WAVEFORMATEXTENSIBLE);
+    assert(SUCCEEDED(hr));
+
+    if (FAILED(hr))
+        return MF_E_INVALIDMEDIATYPE;
+
+    return hr;
+}
+
+
+UINT32 WebmMfVorbisDec::GetChannelMask(int channels) const
+{
+    UINT32 mask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+    switch (channels)
+    {
+        case 2:
+            break;
+        case 1:
+            mask = SPEAKER_FRONT_CENTER;
+            break;
+        case 3:
+            mask |= SPEAKER_FRONT_CENTER;
+            break;
+        case 4:
+            mask |= SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+            break;
+        case 5:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT |
+                    SPEAKER_BACK_RIGHT;
+            break;
+        case 6:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+            break;
+        case 7:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_CENTER | SPEAKER_SIDE_LEFT |
+                    SPEAKER_SIDE_RIGHT;
+            break;
+        case 8:
+            mask |= SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY |
+                    SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT |
+                    SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT;
+            break;
+        default:
+            mask = 0;
+    }
+
+    return mask;
 }
 
 bool WebmMfVorbisDec::FormatSupported(bool is_input, IMFMediaType* p_mediatype)
@@ -1167,7 +1643,7 @@ bool WebmMfVorbisDec::FormatSupported(bool is_input, IMFMediaType* p_mediatype)
     {
         hr = p_mediatype->GetGUID(MF_MT_SUBTYPE, &g);
 
-        if (FAILED(hr) || MFAudioFormat_Float != g)
+        if (FAILED(hr) || (MFAudioFormat_Float != g && MFAudioFormat_PCM != g))
             return false;
 
         if (ValidateOutputFormat(p_mediatype) != S_OK)
