@@ -41,6 +41,8 @@ public:
     void Purge(ULONGLONG);
     void Clear();  //purge all
 
+    HRESULT GetCapabilities(DWORD&) const;
+
 private:
 
     IMFByteStream* const m_pStream;

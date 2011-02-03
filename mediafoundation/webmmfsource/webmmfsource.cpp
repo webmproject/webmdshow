@@ -1058,10 +1058,6 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
     //on how smart we are about parsing, on whether we have parsed
     //the entire file yet.
 
-#if 0  //TDOO: RESTORE THIS
-    dw = MFMEDIASOURCE_CAN_PAUSE |
-         MFMEDIASOURCE_CAN_SEEK;
-#else
     dw = MFMEDIASOURCE_CAN_PAUSE;
 
     typedef streams_t::const_iterator iter_t;
@@ -1091,8 +1087,10 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
     if (!have_video)
         return S_OK;  //TODO: for now, assume no seeking possible
 
+    bool can_seek = false;
+
     if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
-        dw |= MFMEDIASOURCE_CAN_SEEK;
+        can_seek = true;
 
     else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
     {
@@ -1105,12 +1103,23 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
 
             if (p->id == 0x0C53BB6B)  //Cues ID
             {
-                dw |= MFMEDIASOURCE_CAN_SEEK;
+                can_seek = true;  //TODO: defend against empty Cues
                 break;
             }
         }
     }
-#endif
+
+    if (can_seek)
+    {
+        dw |= MFMEDIASOURCE_CAN_SEEK;
+
+        DWORD stream_caps;
+
+        hr = m_file.GetCapabilities(stream_caps);
+
+        if (SUCCEEDED(hr) && (stream_caps & MFBYTESTREAM_HAS_SLOW_SEEK))
+            dw |= MFMEDIASOURCE_HAS_SLOW_SEEK;
+    }
 
     return S_OK;
 }

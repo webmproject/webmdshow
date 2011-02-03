@@ -65,6 +65,12 @@ HRESULT MkvReader::Close()
 }
 
 
+HRESULT MkvReader::GetCapabilities(DWORD& dw) const
+{
+    return m_pStream->GetCapabilities(&dw);
+}
+
+
 HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
 {
     typedef IMFByteStreamBuffering Buffering;
