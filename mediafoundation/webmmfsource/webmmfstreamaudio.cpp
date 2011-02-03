@@ -8,6 +8,7 @@
 #include <cmath>
 #include <comdef.h>
 //#include <vfwmsgs.h>
+#include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -318,8 +319,28 @@ void WebmMfStreamAudio::SetCurrBlockCompletion(
 
 HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 {
-    if (!IsSelected())
+    MkvReader& file = m_pSource->m_file;
+
+    if (IsShutdown() || !IsSelected() || m_pSource->IsStopped())
+    {
+        file.UnlockPage(m_pLocked);
+        m_pLocked = 0;
+
         return S_FALSE;
+    }
+
+    //TODO:
+    //Here (and for the video stream too?) we should implement
+    //this as a loop, and pack as many audio frames as we can
+    //onto the media sample (as media sample "buffers").
+    //We know we have the current cluster and the next cluster
+    //in the cache, so at a minimum we could peek ahead in the curr
+    //cluster to find the a block having a different type, and
+    //then load the curr block and all blocks having the same
+    //type up to the first block belonging to the other stream.
+    //(Or something like that).  We could also do it by time:
+    //populate this cluster until you have at least 100ms of
+    //audio.
 
     //TODO:
     //Here (and for the video stream too?) we should implement
@@ -347,9 +368,6 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
 
-    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
-    assert(curr_ns >= 0);
-
     //odbgstream os;
     //os << "WebmMfStreamAudio::GetSample: curr.time[ns]="
     //   //<< (double(curr_ns) / 1000000000)
@@ -364,13 +382,105 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
             return hr;
     }
 
+    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(curr_ns >= 0);
+
+    const LONGLONG sample_time = curr_ns / 100;
+
+    //MEStreamThinMode
+    //http://msdn.microsoft.com/en-us/library/aa370815(v=VS.85).aspx
+
+    if (m_thin_ns == -1)  //thining mode requested
+    {
+#if 0 //def _DEBUG
+        odbgstream os;
+        os << "webmmfsource::streamaudio: thinning requested" << endl;
+#endif
+
+        PROPVARIANT v;
+
+        HRESULT hr = InitPropVariantFromBoolean(TRUE, &v);
+        assert(SUCCEEDED(hr));
+
+        hr = QueueEvent(MEStreamThinMode, GUID_NULL, S_OK, &v);
+        assert(SUCCEEDED(hr));
+
+        hr = PropVariantClear(&v);
+        assert(SUCCEEDED(hr));
+
+        m_thin_ns = curr_ns;
+        assert(m_thin_ns >= 0);  //means we're in thinning mode
+    }
+
+    if (m_thin_ns >= 0)  //thinning mode
+    {
+#if 0 //def _DEBUG
+        odbgstream os;
+        os << "webmmfsource::streamaudio: thinning; curr_ns="
+           << curr_ns
+           << " curr_time[sec]="
+           << (double(curr_ns) / 1000000000)
+           << endl;
+#endif
+
+        //MEStreamTick Event
+        //http://msdn.microsoft.com/en-us/library/ms694874(v=vs.85).aspx
+
+        file.UnlockPage(m_pLocked);
+        m_pLocked = 0;
+
+        m_curr.pBE = m_pNextBlock;
+
+        const int status = file.LockPage(m_curr.pBE);
+        assert(status == 0);
+
+        if (status == 0)
+            m_pLocked = m_curr.pBE;
+
+        m_pNextBlock = 0;
+
+        if (m_pSource->IsPaused())
+            return S_OK;
+
+        PROPVARIANT v;
+
+        HRESULT hr = InitPropVariantFromInt64(sample_time, &v);
+        assert(SUCCEEDED(hr));
+
+        hr = QueueEvent(MEStreamTick, GUID_NULL, S_OK, &v);
+        assert(SUCCEEDED(hr));  //TODO
+
+        return S_OK;
+    }
+
+    if (m_thin_ns == -2)  //non-thinning mode requested
+    {
+#if 0 //def _DEBUG
+        odbgstream os;
+        os << "webmmfsource::streamaudio: non-thinning requested" << endl;
+#endif
+
+        PROPVARIANT v;
+
+        HRESULT hr = InitPropVariantFromBoolean(FALSE, &v);
+        assert(SUCCEEDED(hr));
+
+        hr = QueueEvent(MEStreamThinMode, GUID_NULL, S_OK, &v);
+        assert(SUCCEEDED(hr));
+
+        hr = PropVariantClear(&v);
+        assert(SUCCEEDED(hr));
+
+        m_thin_ns = -3;  //non-thinning mode
+    }
+
     IMFSamplePtr pSample;
 
     HRESULT hr = MFCreateSample(&pSample);
     assert(SUCCEEDED(hr));  //TODO
     assert(pSample);
 
-    if (pToken)
+    if (pToken)  //TODO: is this set for MEStreamTick too?
     {
         hr = pSample->SetUnknown(MFSampleExtension_Token, pToken);
         assert(SUCCEEDED(hr));
@@ -428,8 +538,6 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
         m_bDiscontinuity = false;  //TODO: must set back to true during a seek
     }
-
-    const LONGLONG sample_time = curr_ns / 100;
 
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
@@ -496,14 +604,12 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         assert(SUCCEEDED(hr));
     }
 
-    MkvReader& f = m_pSource->m_file;
-
-    f.UnlockPage(m_pLocked);
+    file.UnlockPage(m_pLocked);
     m_pLocked = 0;
 
     m_curr.pBE = m_pNextBlock;
 
-    const int status = f.LockPage(m_curr.pBE);
+    const int status = file.LockPage(m_curr.pBE);
     assert(status == 0);
 
     if (status == 0)

@@ -435,6 +435,16 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     if (!IsSelected())
         return S_FALSE;
 
+    if (IsShutdown())  //weird
+    {
+        MkvReader& f = m_pSource->m_file;
+
+        f.UnlockPage(m_pLocked);
+        m_pLocked = 0;
+
+        return S_FALSE;
+    }
+
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
@@ -503,7 +513,7 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
         assert(SUCCEEDED(hr));
 
         m_thin_ns = pCurrBlock->GetTime(pCurrCluster);
-        assert(m_thin_ns >= 0);  //non-thinning mode
+        assert(m_thin_ns >= 0);  //means we're in thinning mode
     }
 
     IMFSamplePtr pSample;

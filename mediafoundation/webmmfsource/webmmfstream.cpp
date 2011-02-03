@@ -578,6 +578,12 @@ bool WebmMfStream::IsSelected() const
 }
 
 
+bool WebmMfStream::IsShutdown() const
+{
+    return (m_pEvents == 0);
+}
+
+
 HRESULT WebmMfStream::OnStart(const PROPVARIANT& var)
 {
     //assert(pCurr);

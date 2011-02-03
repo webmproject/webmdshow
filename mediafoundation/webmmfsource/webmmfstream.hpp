@@ -61,6 +61,7 @@ public:
     MediaEventType Select();
     HRESULT Deselect();
     bool IsSelected() const;
+    bool IsShutdown() const;
 
     //HRESULT Update();
     HRESULT Restart();
