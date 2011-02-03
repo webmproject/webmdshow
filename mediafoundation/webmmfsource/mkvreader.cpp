@@ -185,6 +185,9 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
     {
         if ((next == m_cache.end()) || ((*next)->pos > pos))
         {
+#if 1
+            return mkvparser::E_BUFFER_NOT_FULL;
+#else
             iter_t curr_iter;
 
             const int status = InsertPage(next, pos, curr_iter);
@@ -200,6 +203,7 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
             assert((next == m_cache.end()) || ((*next)->pos > curr_page.pos));
 
             Read(page_iter, pos, len, &buf);
+#endif
         }
         else
         {
@@ -217,6 +221,7 @@ int MkvReader::Read(long long pos, long len, unsigned char* buf)
 }
 
 
+#if 0
 int MkvReader::InsertPage(
     cache_t::iterator next,
     LONGLONG pos,
@@ -309,6 +314,7 @@ int MkvReader::InsertPage(
     curr = m_cache.insert(next, page_iter);
     return 0;  //success
 }
+#endif
 
 
 void MkvReader::CreateRegion()
@@ -497,6 +503,9 @@ int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
     {
         if ((next == m_cache.end()) || ((*next)->pos > pos))
         {
+#if 1
+            return mkvparser::E_BUFFER_NOT_FULL;
+#else
             iter_t curr;
 
             const int status = InsertPage(next, pos, curr);
@@ -513,6 +522,7 @@ int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
 
             Read(page_iter, pos, len, 0);
             pages.push_back(page_iter);  //++page.cRef;
+#endif
         }
         else
         {

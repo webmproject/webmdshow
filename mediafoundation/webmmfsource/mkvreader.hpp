@@ -103,10 +103,10 @@ private:
         long&,
         unsigned char**) const;
 
-    int InsertPage(
-        cache_t::iterator next,
-        LONGLONG pos,
-        cache_t::iterator& curr);
+    //int InsertPage(
+    //    cache_t::iterator next,
+    //    LONGLONG pos,
+    //    cache_t::iterator& curr);
 
     HRESULT AsyncReadPage(
         cache_t::iterator next,
