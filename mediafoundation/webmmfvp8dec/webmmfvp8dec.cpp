@@ -3,7 +3,6 @@
 #include <mfidl.h>
 #include "vpx/vpx_decoder.h"
 #include "vpx/vp8dx.h"
-#include <list>
 #include "webmmfvp8dec.hpp"
 #include "webmtypes.hpp"
 #include <mfapi.h>
@@ -64,13 +63,19 @@ WebmMfVp8Dec::WebmMfVp8Dec(IClassFactory* pClassFactory) :
     m_rate(1),
     m_bThin(FALSE),
     m_drop_mode(MF_DROP_MODE_NONE),
-    m_drop_budget(0)
+    m_drop_budget(0),
+    m_lag_sum(0),
+    m_lag_count(0),
+    m_lag_frames(0),
+    m_frame_rate(-1)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
 
     hr = CLockable::Init();
     assert(SUCCEEDED(hr));
+
+    //m_frame_rate.Init();
 }
 
 
@@ -122,12 +127,10 @@ HRESULT WebmMfVp8Dec::QueryInterface(
     {
         pUnk = static_cast<IMFTransform*>(this);
     }
-#if 0
     else if (iid == __uuidof(IMFQualityAdvise2))
     {
         pUnk = static_cast<IMFQualityAdvise2*>(this);
     }
-#endif
     else if (iid == __uuidof(IMFQualityAdvise))
     {
         pUnk = static_cast<IMFQualityAdvise*>(this);
@@ -517,23 +520,23 @@ HRESULT WebmMfVp8Dec::GetOutputAvailableType(
 
     FrameRate r;
 
-    hr = MFGetAttributeRatio(
-            m_pInputMediaType,
-            MF_MT_FRAME_RATE,
-            &r.numerator,
-            &r.denominator);
+    hr = r.AssignFrom(m_pInputMediaType);
 
-    if (SUCCEEDED(hr))
+    if (hr == S_OK)  //means attribute was set, and its value is valid
     {
-        assert(r.denominator);
-        assert(r.numerator);
+        //odbgstream os;
+        //os << "\nvp8dec: num=" << r.m_numerator
+        //   << " den=" << r.m_denominator;
+        //
+        //const float rate = float(r.m_numerator) / float(r.m_denominator);
+        //os << rate << '\n' << endl;
 
-        hr = MFSetAttributeRatio(
-                pmt,
-                MF_MT_FRAME_RATE,
-                r.numerator,
-                r.denominator);
+        //TODO: a simpler way to handle this is to copy
+        //an item directly from media type to media type (assuming
+        //the MF API provides such a function), instead of going
+        //through this intermediate FrameRate value.
 
+        hr = r.CopyTo(pmt);
         assert(SUCCEEDED(hr));
     }
 
@@ -632,22 +635,15 @@ HRESULT WebmMfVp8Dec::SetInputType(
 
     FrameRate r;
 
-    hr = MFGetAttributeRatio(
-            pmt,
-            MF_MT_FRAME_RATE,
-            &r.numerator,
-            &r.denominator);
+    hr = r.AssignFrom(pmt);
 
-    if (FAILED(hr))
-        r.numerator = 0;  //means "not set"
-    else
-    {
-        if (r.denominator == 0)
-            return MF_E_INVALIDMEDIATYPE;
+    if (FAILED(hr))  //input mt has framerate, but it's bad
+        return hr;
 
-        if (r.numerator == 0)
-            return MF_E_INVALIDMEDIATYPE;
-    }
+    r.CopyTo(m_frame_rate);
+
+    //odbgstream os;
+    //os << "\nvp8dec: framerate=" << m_frame_rate << '\n' << endl;
 
     FrameSize s;
 
@@ -695,6 +691,8 @@ HRESULT WebmMfVp8Dec::SetInputType(
 
     if (FAILED(hr))
         return hr;
+
+    //m_frame_rate = r;
 
     //TODO: should this really be done here?
 
@@ -837,42 +835,19 @@ HRESULT WebmMfVp8Dec::SetOutputType(
 
     FrameRate r_out;
 
-    hr = MFGetAttributeRatio(
-            pmt,
-            MF_MT_FRAME_RATE,
-            &r_out.numerator,
-            &r_out.denominator);
+    hr = r_out.AssignFrom(pmt);
 
-    if (SUCCEEDED(hr))
+    if (FAILED(hr))  //output type has value, but it's not valid
+        return hr;
+
+    if (hr == S_OK)  //output type has value, and it's valid
     {
         FrameRate r_in;
 
-        hr = MFGetAttributeRatio(
-                m_pInputMediaType,
-                MF_MT_FRAME_RATE,
-                &r_in.numerator,
-                &r_in.denominator);
+        hr = r_in.AssignFrom(m_pInputMediaType);
 
-        if (SUCCEEDED(hr))
-        {
-            if (r_out.denominator == 0)
-                return MF_E_INVALIDMEDIATYPE;
-
-            if (r_out.numerator == 0)
-                return MF_E_INVALIDMEDIATYPE;
-
-            const UINT64 n_in = r_in.numerator;
-            const UINT64 d_in = r_in.denominator;
-
-            const UINT64 n_out = r_out.numerator;
-            const UINT64 d_out = r_out.denominator;
-
-            // n_in / d_in = n_out / d_out
-            // n_in * d_out = n_out * d_in
-
-            if ((n_in * d_out) != (n_out * d_in))
-                return MF_E_INVALIDMEDIATYPE;
-        }
+        if ((hr == S_OK) && !r_in.Match(r_out))
+            return MF_E_INVALIDMEDIATYPE;
     }
 
     FrameSize s_out;
@@ -1673,6 +1648,15 @@ HRESULT WebmMfVp8Dec::SetRate(BOOL bThin, float rate)
     m_rate = rate;
     m_bThin = bThin;
 
+    //reset drop mode when rate change
+
+    m_lag_sum = 0;
+    m_lag_count = 0;
+    m_lag_frames = 0;
+
+    hr = WebmMfVp8Dec::SetDropMode(MF_DROP_MODE_NONE);
+    assert(SUCCEEDED(hr));
+
     return S_OK;
 }
 
@@ -1964,7 +1948,10 @@ HRESULT WebmMfVp8Dec::SetDropMode(MF_QUALITY_DROP_MODE d)
         return hr;
 
     m_drop_mode = d;
-    ReplenishDropBudget();
+    m_drop_budget = 0;
+
+    //odbgstream os;
+    //os << "SetDropMode=" << m_drop_mode << endl;
 
     return S_OK;
 
@@ -2059,6 +2046,9 @@ HRESULT WebmMfVp8Dec::GetDropMode(MF_QUALITY_DROP_MODE* p)
     MF_QUALITY_DROP_MODE& d = *p;
     d = m_drop_mode;
 
+    //odbgstream os;
+    //os << "GetDropMode=" << m_drop_mode << endl;
+
     return S_OK;
 }
 
@@ -2082,43 +2072,325 @@ HRESULT WebmMfVp8Dec::DropTime(LONGLONG t)
 }
 
 
-HRESULT WebmMfVp8Dec::NotifyQualityEvent(IMFMediaEvent*, DWORD*)
+HRESULT WebmMfVp8Dec::NotifyQualityEvent(IMFMediaEvent* pe, DWORD* pdw)
 {
-#if 0
-    assert(e);
-    assert(pdw);
+    if (pe == 0)
+        return E_INVALIDARG;
+
+    if (pdw == 0)
+        return E_POINTER;
 
     DWORD& dw = *pdw;
+    dw = 0;  //TODO: possibly set this to MF_QUALITY_CANNOT_KEEP_UP
 
-    MediaEventType t;
+    MediaEventType type;
 
-    HRESULT hr = e->GetType(&t);
-    assert(SUCCEEDED(hr));
+    HRESULT hr = pe->GetType(&type);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (type != MEQualityNotify)
+        return E_INVALIDARG;
+
+    GUID ext;
+
+    hr = pe->GetExtendedType(&ext);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (ext != MF_QUALITY_NOTIFY_SAMPLE_LAG)
+        return S_OK;
 
     PROPVARIANT v;
 
-    hr = e->GetValue(&v);
-    assert(SUCCEEDED(hr));
+    hr = pe->GetValue(&v);
 
-    odbgstream os;
+    if (FAILED(hr))
+        return E_INVALIDARG;
 
-    //311=MEQualityNotify
-    os << "vp8dec::NotifyQualityEvent: type=" << t;
+    if (v.vt != VT_I8)
+        return E_INVALIDARG;
 
-    if (v.vt == VT_I8)
-        os << " val.I8=" << v.hVal.QuadPart;
-    else
-        os << " val.vt=" << v.vt;
+    const LONGLONG reftime = v.hVal.QuadPart;
 
-    os << " dw=" << dw << endl;
+    //MEQualityNotify Event
+    //http://msdn.microsoft.com/en-us/library/ms694893(VS.85).aspx
 
     //negative is good - frames are early
     //positive is bad - frames are late
     //value is a lateness - time in 100ns units
-    //we're seeing extreme lateness ~2 or 3s
+    //we're seeing extreme lateness: 2 or 3s
+
+    //if (ext == MF_QUALITY_NOTIFY_PROCESSING_LATENCY)
+    //    return S_OK;
+
+    Lock lock;
+
+    hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_frame_rate <= 0)   //no framerate available
+        return S_OK;         //TODO: for now, don't bother trying to drop
+
+    if (m_bThin || (m_rate != 1))  //bThin = true implies drop level 5 already
+        return S_OK;
+
+    if (reftime <= 0)  //assume we're all caught up, even if value is spurious
+    {
+        m_lag_sum = 0;
+        m_lag_count = 0;
+        m_lag_frames = 0;
+
+        hr = WebmMfVp8Dec::SetDropMode(MF_DROP_MODE_NONE);
+        assert(SUCCEEDED(hr));
+
+        return S_OK;
+    }
+
+    m_lag_sum += reftime;
+    ++m_lag_count;
+
+    if (m_lag_count < 16)
+        return S_OK;
+
+    const float lag_reftime = float(m_lag_sum) / float(m_lag_count);
+
+    const float frames_ = lag_reftime * m_frame_rate / 10000000.0F;
+    const int frames = static_cast<int>(frames_);
+
+    if (frames <= 1)  //treat small values as noise
+    {
+        m_lag_sum = 0;
+        m_lag_count = 0;
+        m_lag_frames = 0;
+
+        hr = WebmMfVp8Dec::SetDropMode(MF_DROP_MODE_NONE);
+        assert(SUCCEEDED(hr));
+    }
+
+    MF_QUALITY_DROP_MODE m;
+
+    hr = WebmMfVp8Dec::GetDropMode(&m);
+    assert(SUCCEEDED(hr));
+
+    if ((m_lag_frames > 0) &&          //have previous value
+        (frames >= m_lag_frames) &&    //we're not getting better
+        (m < MF_DROP_MODE_5))          //TODO: use MF_QUALITY_CANNOT_KEEP_UP?
+    {
+#ifdef _DEBUG
+        odbgstream os;
+        os << "WebmMfVp8Dec::NotifyQualityEvent: old drop mode=" << m;
 #endif
 
-    return E_NOTIMPL;
+        m = static_cast<MF_QUALITY_DROP_MODE>(int(m) + 1);
+
+#ifdef _DEBUG
+        os << " new drop mode=" << m << endl;
+#endif
+
+        hr = WebmMfVp8Dec::SetDropMode(m);
+        assert(SUCCEEDED(hr));
+    }
+
+    m_lag_sum = 0;
+    m_lag_count = 0;
+    m_lag_frames = frames;
+
+    return S_OK;
+
+    //Here's a case when there's been a long sequence of frames
+    //having positive lag.  That means we're slightly behind, so
+    //we should compare how much we're behind now to how much
+    //we were behind in the recent past.  The reason we do that
+    //is to discover whether we have a trend.
+    //
+    //How many data points to we use to compute the trend?  We used
+    //the most recent 16 points to compute our latest lag value, so
+    //we must compare the most recent lag value to previous lag values.
+    //
+    //If we have a previous lag value, then we can compute a trend, even
+    //if we only have two points.
+    //
+    //If the avg lag computed here is same or (slightly?) larger, then it
+    //means we really are behind.  We would choose a drop level.  Our
+    //current algorithm even for dropping doesn't work that fast: at
+    //drop level 1, we drop only 1 frame for every 16 frames, so once
+    //we set a non-zero drop level we do have to wait at least 16 frames
+    //before reacting (which is what we do here).
+    //
+    //We don't necessarily have to compare lag times: we convert this to
+    //a frame, so we could compare frames instead.
+    //
+    //The issue remain: how often do we adjust the drop level?
+    //
+    //I suppose that when the reported lag time is less than 0, then this
+    //will reset everything anyway, so we can set the drop level back to
+    //0 when that happens.
+    //
+    //We probalby only have to increase the drop level, until we're caught
+    //up, and it gets reset back to 0.  The question is how often we adjust
+    //the drop level up.
+    //
+    //1st time: 1 out of 16
+    //2nd time: 2 out of 16
+    //3rd time: 4 out of 16
+    //4th time: 8 out of 16
+    //5th time: keyframes only
+    //
+    //if lag has increased since last time, go ahead and increase the drop
+    //level.
+    //
+    //if lag has decreased since last time, the we can probably either decrease
+    //the drop level, or leave it as is.
+
+    //These dampened out by themselves, so there's nothing special we needed
+    //to do.  We don't want to react right away.  The problem we need to
+    //handle
+    //is when the lag is positive and large, and stays constant or is
+    //increasing.
+    //It the number is trending down then the problem solves itself.  The hard
+    //cases are when the lag is growing, or staying constant and large.
+    //
+    //How to define "growing"?  If the slope is positive, that's growing.  If
+    //we remain at any positive slope, the lag will definitely grow.
+    //
+    //We could use a one-shot flag: if the flag is true, throw away the next
+    //non-key frame, then clear the flag.
+    //
+    //Our goal is to pull the slope down to 0 (or negative).  This should drive
+    //the lag down, which should drive the slope towards 0.
+    //
+    //A running average isn't necessarily what we want, although this
+    //will give us an estimate of the avg lag.  If the avg is large and
+    //constant then we must correct.
+
+    //How to compute avg lag:
+    //  (sum of lag times) / (number of lag times)
+    //or could weigh curr avg and curr lag
+    //e.g.  new avg lag = (15/16) * (old avg lag) + (1/16) * (new lag)
+    //if lag <= 0 then reset avg lag
+
+    //10000000 = 1 sec
+    // 5000000 = 1/2 sec
+    // 2500000 = 1/4 sec
+    // 1250000 = 1/8 sec
+    //  625000 = 1/16 sec
+    //  312500 = 1/32 sec
+    //  156250 = 1/64 sec
+    //   78125 = 1/128 sec
+
+    // 1 sec late
+    //  if we see 2 frames the set drop mode #5 (keyframe only)
+    //
+    // 1/2 sec late
+    //  if we see 4 frames then set drop mode #4
+    //
+    // 1/4 sec late
+    //  if we see
+
+    //drop mode 1 = 1/16 frames are dropped
+    //          2 = 1/8 frames
+    //          3 = 1/4 frames
+    //          4 = 1/2 frames
+    //
+    //If we do set the drop mode, then the decoder doesn't
+    //react that fast.
+    //
+    //for drop mode 1, we gain 1/16th sec every 16 frames
+    //if we were behind by 1/16th sec, then we'd catch up after 1 cycle
+    //if we were behind by 1/8th sec, we'd catch up after 2 cycles, etc
+    //
+    //for drop mode 2, we gain 1/8th sec every 8 frames
+    //if we were behind by 1/8th sec, we'd catch up after 1 cycle
+    //if we were behind by 1/4 sec, then we'd catch up after 2 cycles, etc
+    //
+    //for drop mode 3, we gain 1/4 sec every 4 frames
+    //if we were behind by 1/4 sec, we'd catch up after 1 cycle
+    //if we were behind by 1/2 sec, then we'd catch up after 2 cycles, etc
+    //
+    //for drop mode 4, we gain 1/2 sec every 2 frames
+    //
+    //THAT'S ALL WRONG
+    //the drop modes work in terms of frames, not times
+    //IQualityAdvise2 works in terms of time, not frames
+    //
+    //To convert between the two advise interfaces we need the frame rate
+}
+
+
+void WebmMfVp8Dec::FrameRate::Init()
+{
+    m_numerator = 0;
+    m_denominator = 0;
+}
+
+
+HRESULT WebmMfVp8Dec::FrameRate::AssignFrom(IMFMediaType* pmt)
+{
+    UINT32& num = m_numerator;
+    UINT32& den = m_denominator;
+
+    const HRESULT hr = MFGetAttributeRatio(pmt, MF_MT_FRAME_RATE, &num, &den);
+
+    //TODO: check explicitly for the result that means "attribute not set".
+    //MF_E_ATTRIBUTENOTFOUND
+    //MF_E_INVALIDTYPE
+
+    if (FAILED(hr))  //we assume here this means value wasn't found
+    {
+        Init();
+        return S_FALSE;
+    }
+
+    if (den == 0)
+        return MF_E_INVALIDMEDIATYPE;
+
+    if (num == 0)
+        return MF_E_INVALIDMEDIATYPE;
+
+    return S_OK;
+}
+
+
+HRESULT WebmMfVp8Dec::FrameRate::CopyTo(IMFMediaType* pmt) const
+{
+    const UINT32 num = m_numerator;
+    const UINT32 den = m_denominator;
+
+    return MFSetAttributeRatio(pmt, MF_MT_FRAME_RATE, num, den);
+}
+
+
+HRESULT WebmMfVp8Dec::FrameRate::CopyTo(float& value) const
+{
+    const UINT32 num = m_numerator;
+    const UINT32 den = m_denominator;
+
+    if (den == 0)
+        value = -1;  //serves as our "undefined framerate" nonce value
+    else
+        value = float(num) / float(den);
+
+    return S_OK;
+}
+
+
+bool WebmMfVp8Dec::FrameRate::Match(const FrameRate& rhs) const
+{
+    const UINT64 n_in = m_numerator;
+    const UINT64 d_in = m_denominator;
+
+    const UINT64 n_out = rhs.m_numerator;
+    const UINT64 d_out = rhs.m_denominator;
+
+    // n_in / d_in = n_out / d_out
+    // n_in * d_out = n_out * d_in
+
+    return ((n_in * d_out) == (n_out * d_in));
 }
 
 

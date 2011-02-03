@@ -1,4 +1,5 @@
 #pragma once
+#include <list>
 
 namespace WebmMfVp8DecLib
 {
@@ -172,8 +173,22 @@ private:
     LONG m_cRef;
 
     struct FrameSize { UINT32 width; UINT32 height; };
-    struct FrameRate { UINT32 numerator; UINT32 denominator; };
 
+    struct FrameRate
+    {
+        UINT32 m_numerator;
+        UINT32 m_denominator;
+
+        void Init();
+        bool Match(const FrameRate& rhs) const;
+
+        HRESULT AssignFrom(IMFMediaType*);
+        HRESULT CopyTo(IMFMediaType*) const;
+        HRESULT CopyTo(float&) const;
+    };
+
+    //FrameRate m_frame_rate;
+    float m_frame_rate;
     IMFMediaType* m_pInputMediaType;
     IMFMediaType* m_pOutputMediaType;
 
@@ -191,12 +206,27 @@ private:
 
     vpx_codec_ctx_t m_ctx;
 
-    float m_rate;
+    float m_rate;  //trick-play mode
     BOOL m_bThin;
 
     MF_QUALITY_DROP_MODE m_drop_mode;
     int m_drop_budget;
+    int m_drop_late;
     void ReplenishDropBudget();
+
+    //struct LagInfo
+    //{
+    //    LONGLONG lag;
+    //};
+
+    LONGLONG m_lag_sum;  //sum of lag values in list
+    int m_lag_count;
+
+    //typedef std::list<LagInfo> lag_info_list_t;
+    //lag_info_list_t m_lag_info_list;
+
+    //float m_lag_reftime;
+    int m_lag_frames;
 
     DWORD GetOutputBufferSize(FrameSize&) const;
     HRESULT Decode(IMFSample*);
