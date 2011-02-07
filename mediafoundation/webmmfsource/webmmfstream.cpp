@@ -281,11 +281,11 @@ HRESULT WebmMfStream::RequestSample(IUnknown* pToken)
 
 HRESULT WebmMfStream::ProcessSample(IMFSample* pSample)
 {
-    if (m_pEvents == 0)  //shutdown has been requested
+    if (m_pEvents == 0)  //weird
         return S_FALSE;
 
-    if (m_pSource->IsStopped())
-        return S_FALSE;  //throw this sample away
+    if (m_pSource->IsStopped())  //weird
+        return S_FALSE;
 
     if (m_pSource->IsPaused())
     {
@@ -523,6 +523,11 @@ HRESULT WebmMfStream::Shutdown()
         return S_FALSE;
 
     PurgeSamples();
+
+    m_pSource->m_file.UnlockPage(m_pLocked);
+    m_pLocked = 0;
+
+    m_curr.Init();
 
     const HRESULT hr = m_pEvents->Shutdown();
     assert(SUCCEEDED(hr));

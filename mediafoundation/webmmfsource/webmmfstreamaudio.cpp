@@ -321,14 +321,6 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 {
     MkvReader& file = m_pSource->m_file;
 
-    if (IsShutdown() || !IsSelected() || m_pSource->IsStopped())
-    {
-        file.UnlockPage(m_pLocked);
-        m_pLocked = 0;
-
-        return S_FALSE;
-    }
-
     //TODO:
     //Here (and for the video stream too?) we should implement
     //this as a loop, and pack as many audio frames as we can
@@ -380,7 +372,15 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
         if (FAILED(hr))  //no next entry found on current cluster
             return hr;
+
+        assert(m_pNextBlock);
     }
+
+    file.UnlockPage(m_pLocked);
+    m_pLocked = 0;
+
+    const mkvparser::Cluster* const pNextCluster = m_pNextBlock->GetCluster();
+    //pNextCluster can be NULL
 
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(curr_ns >= 0);
@@ -425,9 +425,6 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
         //MEStreamTick Event
         //http://msdn.microsoft.com/en-us/library/ms694874(v=vs.85).aspx
-
-        file.UnlockPage(m_pLocked);
-        m_pLocked = 0;
 
         m_curr.pBE = m_pNextBlock;
 
@@ -480,48 +477,9 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     assert(SUCCEEDED(hr));  //TODO
     assert(pSample);
 
-    if (pToken)  //TODO: is this set for MEStreamTick too?
+    if (pToken)
     {
         hr = pSample->SetUnknown(MFSampleExtension_Token, pToken);
-        assert(SUCCEEDED(hr));
-    }
-
-    const int frame_count = pCurrBlock->GetFrameCount();
-    assert(frame_count > 0);  //TODO
-
-    mkvparser::IMkvReader* const pReader = pCurrCluster->m_pSegment->m_pReader;
-
-    for (int i = 0; i < frame_count; ++i)
-    {
-        const mkvparser::Block::Frame& f = pCurrBlock->GetFrame(i);
-
-        const long cbBuffer = f.len;
-        assert(cbBuffer > 0);
-
-        IMFMediaBufferPtr pBuffer;
-
-        hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
-        assert(SUCCEEDED(hr));
-        assert(pBuffer);
-
-        BYTE* ptr;
-        DWORD cbMaxLength;
-
-        hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
-        assert(SUCCEEDED(hr));
-        assert(ptr);
-        assert(cbMaxLength >= DWORD(cbBuffer));
-
-        const long status = f.Read(pReader, ptr);
-        assert(status == 0);
-
-        hr = pBuffer->SetCurrentLength(cbBuffer);
-        assert(SUCCEEDED(hr));
-
-        hr = pBuffer->Unlock();
-        assert(SUCCEEDED(hr));
-
-        hr = pSample->AddBuffer(pBuffer);
         assert(SUCCEEDED(hr));
     }
 
@@ -542,22 +500,81 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
 
-    //TODO: this might not be accurate, if there are gaps in the
-    //audio blocks.  (How do we detect gaps?)
+    const LONGLONG tn = m_pTrack->GetNumber();
+    bool bDone = false;
+
+    for (;;)
+    {
+        hr = ReadBlock(pSample, m_curr.pBE);
+        assert(SUCCEEDED(hr));  //TODO
+
+        if (bDone)
+            break;
+
+        if (m_pNextBlock == 0)  //weird
+            break;
+
+        if (m_pNextBlock->EOS())
+            break;
+
+        //We have a non-NULL next block, so it is a candidate
+        //for use as the curr block.
+
+        if (pNextCluster == 0)  //weird
+            break;
+
+        if (pNextCluster->EOS())  //weird
+            break;
+
+        using mkvparser::BlockEntry;
+        const BlockEntry* pNext = pNextCluster->GetNext(m_pNextBlock);
+
+        while (pNext)
+        {
+            const mkvparser::Block* const pBlock = pNext->GetBlock();
+            assert(pBlock);
+
+            if (pBlock->GetTrackNumber() == tn)
+                break;
+
+            pNext = pNextCluster->GetNext(pNext);
+        }
+
+        if (pNext == 0)  //no more blocks for this track on next cluster
+            break;
+
+        if (pNext->EOS())  //weird
+            break;
+
+        //We have a candidate next block on the next cluster.
+
+        const mkvparser::Block* const pBlock = pNext->GetBlock();
+
+        const LONGLONG next_ns = pBlock->GetTime(pNextCluster);
+        assert(next_ns >= 0);
+
+        const LONGLONG delta_ns = next_ns - curr_ns;
+
+        if (delta_ns > 100000000)  // 100ms
+            bDone = true;
+
+        m_curr.pBE = m_pNextBlock;
+        m_pNextBlock = pNext;
+    }
 
     const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
     const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
 
     LONGLONG duration_ns = -1;  //duration of sample
 
-    const mkvparser::BlockEntry* const pNextEntry = m_pNextBlock;  //TODO
+    //TODO: make an effort to allow the EOSBlock to be queried for its time
 
-    if ((pNextEntry != 0) && !pNextEntry->EOS())
+    if ((m_pNextBlock != 0) && !m_pNextBlock->EOS())
     {
-        const mkvparser::Block* const b = pNextEntry->GetBlock();
+        const mkvparser::Block* const b = m_pNextBlock->GetBlock();
         assert(b);
 
-        const mkvparser::Cluster* const c = pNextEntry->GetCluster();
+        const mkvparser::Cluster* const c = m_pNextBlock->GetCluster();
         assert(c);
 
         const __int64 next_ns = b->GetTime(c);
@@ -589,10 +606,15 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
             duration_ns = next_ns - curr_ns;
     }
 
-    if (duration_ns < 0)
+    if (duration_ns < 0)  //TODO: can we get rid of this?
     {
+        DWORD dwBufferCount;
+
+        hr = pSample->GetBufferCount(&dwBufferCount);
+        assert(SUCCEEDED(hr));
+
         const LONGLONG ns_per_frame = 10000000;  //10ms
-        duration_ns = LONGLONG(frame_count) * ns_per_frame;
+        duration_ns = LONGLONG(dwBufferCount) * ns_per_frame;
     }
 
     if (duration_ns >= 0)
@@ -603,9 +625,6 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         hr = pSample->SetSampleDuration(sample_duration);
         assert(SUCCEEDED(hr));
     }
-
-    file.UnlockPage(m_pLocked);
-    m_pLocked = 0;
 
     m_curr.pBE = m_pNextBlock;
 
@@ -618,6 +637,68 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     m_pNextBlock = 0;
 
     return ProcessSample(pSample);
+}
+
+
+HRESULT WebmMfStreamAudio::ReadBlock(
+    IMFSample* pSample,
+    const mkvparser::BlockEntry* pEntry) const
+{
+    assert(pSample);
+    assert(pEntry);
+    assert(!pEntry->EOS());
+
+    const mkvparser::Block* const pBlock = pEntry->GetBlock();
+    assert(pBlock);
+    assert(pBlock->GetTrackNumber() == m_pTrack->GetNumber());
+
+    const mkvparser::Cluster* const pCluster = pEntry->GetCluster();
+    assert(pCluster);
+
+    const int frame_count = pBlock->GetFrameCount();
+
+    mkvparser::Segment* const pSegment = pCluster->m_pSegment;
+    mkvparser::IMkvReader* const pReader = pSegment->m_pReader;
+
+    for (int i = 0; i < frame_count; ++i)
+    {
+        const mkvparser::Block::Frame& f = pBlock->GetFrame(i);
+
+        const long cbBuffer = f.len;
+
+        if (cbBuffer <= 0)
+            continue;
+
+        IMFMediaBufferPtr pBuffer;
+
+        HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
+        assert(SUCCEEDED(hr));  //TODO
+        assert(pBuffer);
+
+        BYTE* ptr;
+        DWORD cbMaxLength;
+
+        hr = pBuffer->Lock(&ptr, &cbMaxLength, 0);
+        assert(SUCCEEDED(hr));  //TODO
+        assert(ptr);
+        assert(cbMaxLength >= DWORD(cbBuffer));
+
+        const long status = f.Read(pReader, ptr);
+
+        if (status < 0)  //error (weird)
+            return E_FAIL;
+
+        hr = pBuffer->SetCurrentLength(cbBuffer);
+        assert(SUCCEEDED(hr));
+
+        hr = pBuffer->Unlock();
+        assert(SUCCEEDED(hr));
+
+        hr = pSample->AddBuffer(pBuffer);
+        assert(SUCCEEDED(hr));
+    }
+
+    return S_OK;
 }
 
 
