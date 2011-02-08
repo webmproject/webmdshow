@@ -19,7 +19,7 @@
 build_config_array=(debug\|win32 debug\|x64 release\|win32 release\|x64)
 libvorbis_url=\
 "http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.2.tar.gz"
-libogg_url="http://downloads.xiph.org/releases/ogg/libogg-1.2.1.tar.gz"
+libogg_url="http://downloads.xiph.org/releases/ogg/libogg-1.2.2.tar.gz"
 patches_dir="patches"
 # note: the order of the following two arrays must match
 devenv_outdir_array=(win32/debug x64/debug win32/release x64/release)
@@ -31,10 +31,15 @@ libvpx_remote="git://review.webmproject.org/libvpx"
 libvpx_tag="755e2a2"  # TODO(tomfinegan): rename var; works only w/git hashes
 libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
 
+# TODO(tomfinegan): add proper command line parsing
 if [[ "$1" == "--novpx" ]]; then
   disable_libvpx_build="disable"
 elif [[ "$1" == "--noxiph" ]]; then
   disable_xiph_builds="disable"
+fi
+
+if [[ "$1" == "--novorbis" ]] || [[ "$2" == "--novorbis" ]]; then
+  disable_vorbis_build="disable"
 fi
 
 function die() {
@@ -104,8 +109,9 @@ function fix_xiph_project() {
 ${projdir}/${project}.vcproj
   # TODO(tomfinegan): extract libogg version from libogg URL
   if [[ "${project}" == "libvorbis_static" ]]; then
+    # TODO(tomfinegan): fix the hard coded ogg version
     sed -i -e \
-"s/libogg\\\\inc/libogg-1\.2\.1\\\\inc/g" \
+"s/libogg\\\\inc/libogg-1\.2\.2\\\\inc/g" \
 ${projdir}/${project}.vcproj
   fi
 }
@@ -263,15 +269,19 @@ if [[ -z "${disable_xiph_builds}" ]]; then
   #echo "libvorbis_dir=$libvorbis_dir"
   # Patch up the xiph projects w/a couple of fixes
   # 1. use static run times
-  # 2. update ogg include path in vorbis proj
+  # 2. update ogg include path in vorbis proj (only if enabled)
   fix_xiph_project "${libogg_dir}win32/VS2008" libogg_static
-  fix_xiph_project "${libvorbis_dir}win32/VS2008/libvorbis" libvorbis_static
   # build debug and release libs for win32 and x64 targets
   build_xiph_lib "${libogg_dir}" libogg_static libogg_static
-  build_xiph_lib "${libvorbis_dir}" vorbis_static libvorbis_static
   # install libs and includes for webmdshow/webmmediafoundation
   install_xiph_files libogg_static "${libogg_dir}" libogg ogg
-  install_xiph_files libvorbis_static "${libvorbis_dir}" libvorbis vorbis
+  if [[ -z "${disable_vorbis_build}" ]]; then
+    # patch/build libvorbis only if enabled
+    fix_xiph_project "${libvorbis_dir}win32/VS2008/libvorbis" libvorbis_static
+    build_xiph_lib "${libvorbis_dir}" vorbis_static libvorbis_static
+    install_xiph_files libvorbis_static "${libvorbis_dir}" libvorbis vorbis
+  fi
+  # TODO(tomfinegan): add libtremor?
   # clean up and remove a couple of unnecessary files
   rm -rf "${libogg_dir}" "${libvorbis_dir}" *.tar.gz libvorbis/vorbis/vorbis*.h
 fi
