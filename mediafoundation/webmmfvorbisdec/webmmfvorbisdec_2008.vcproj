@@ -366,6 +366,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\common\memutil.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\memutilfwd.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\common\vorbisdecoder.cpp"
 				>
 			</File>

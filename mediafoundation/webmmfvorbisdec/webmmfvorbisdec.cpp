@@ -867,7 +867,7 @@ HRESULT WebmMfVorbisDec::ProcessLibVorbisOutput(IMFSample* p_sample,
             m_scratch.reset(
                 new (std::nothrow) unsigned char[vorbis_bytes_to_consume],
                 vorbis_bytes_to_consume);
-            if (m_scratch.get() == NULL)
+            if (!m_scratch)
             {
                 return E_OUTOFMEMORY;
             }
