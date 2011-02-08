@@ -44,6 +44,14 @@ public:
     {
         return *get();
     };
+    operator bool() const
+    {
+        return buffer_ != NULL;
+    };
+    operator BufferType*() const
+    {
+        return get();
+    };
     size_t size() const
     {
         return num_elements_;
