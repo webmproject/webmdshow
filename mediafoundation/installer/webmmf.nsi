@@ -15,6 +15,7 @@
 
   !include "MUI2.nsh"
   !include "x64.nsh"
+  !include "webmmf_util.nsh"
   !define MUI_COMPONENTSPAGE_NODESC
   !define MUI_ICON "..\..\webm.ico"
   !define MUI_UNICON "..\..\webm.ico"
@@ -169,26 +170,9 @@ Section "Install" SecInstall
     SetOutPath "$COMMONFILES64\WebM Project\webmmf"
 
     ClearErrors
-    ;RegDLL "$OUTDIR\webmmfsource64.dll"
-    ExecWait '"$SYSDIR\regsvr32.exe" /s "$OUTDIR\webmmfsource64.dll"'
-
-    IfErrors 0 +2
-       MessageBox MB_OK "webmmfsource64.dll failed to register."
-
-    ClearErrors
-    ;RegDLL "$OUTDIR\webmmfvorbisdec64.dll"
-    ExecWait '"$SYSDIR\regsvr32.exe" /s "$OUTDIR\webmmfvorbisdec64.dll"'
-
-    IfErrors 0 +2
-       MessageBox MB_OK "webmmfvorbisdec64.dll failed to register."
-
-    ClearErrors
-    ;RegDLL "$OUTDIR\webmmfvp8dec64.dll"
-    ExecWait '"$SYSDIR\regsvr32.exe" /s "$OUTDIR\webmmfvp8dec64.dll"'
-
-    IfErrors 0 +2
-       MessageBox MB_OK "webmmfvp8dec64.dll failed to register."
-
+    !insertmacro RegDLL64 "$OUTDIR\webmmfsource64.dll"
+    !insertmacro RegDLL64 "$OUTDIR\webmmfvorbisdec64.dll"
+    !insertmacro RegDLL64 "$OUTDIR\webmmfvp8dec64.dll"
   ${EndIf}
 
 SectionEnd
@@ -227,36 +211,16 @@ Section "Uninstall" SecUninstall
   Delete /REBOOTOK "$OUTDIR\webmmfvp8dec32.dll"
 
   ${If} ${RunningX64}
-
     SetOutPath "$COMMONFILES64\WebM Project\webmmf"
 
     ClearErrors
-    ;UnRegDLL "$OUTDIR\webmmfsource64.dll"
-    ExecWait '"$SYSDIR\regsvr32.exe" /s /u "$OUTDIR\webmmfsource64.dll"'
-
-    IfErrors 0 +2
-      MessageBox MB_OK "webmmfsource64.dll failed to unregister."
+    !insertmacro UnRegDLL64 "$OUTDIR\webmmfsource64.dll"
+    !insertmacro UnRegDLL64 "$OUTDIR\webmmfvorbisdec64.dll"
+    !insertmacro UnRegDLL64 "$OUTDIR\webmmfvp8dec64.dll"
 
     Delete /REBOOTOK "$OUTDIR\webmmfsource64.dll"
-
-    ClearErrors
-    ;UnRegDLL "$OUTDIR\webmmfvorbisdec64.dll"
-    ExecWait '"$SYSDIR\regsvr32.exe" /s /u "$OUTDIR\webmmfvorbisdec64.dll"'
-
-    IfErrors 0 +2
-      MessageBox MB_OK "webmmfvorbisdec64.dll failed to unregister."
-
     Delete /REBOOTOK "$OUTDIR\webmmfvorbisdec64.dll"
-
-    ClearErrors
-    ;UnRegDLL "$OUTDIR\webmmfvp8dec64.dll"
-    ExecWait '"$SYSDIR\regsvr32.exe" /s /u "$OUTDIR\webmmfvp8dec64.dll"'
-
-    IfErrors 0 +2
-      MessageBox MB_OK "webmmfvp8dec64.dll failed to unregister."
-
     Delete /REBOOTOK "$OUTDIR\webmmfvp8dec64.dll"
-
   ${EndIf}
 
   ;TODO: use $INSTDIR and installDir for to handle this
