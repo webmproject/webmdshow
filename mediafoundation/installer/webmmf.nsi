@@ -123,7 +123,7 @@ Section "Install" SecInstall
   WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "DisplayName" \
 "WebM Media Foundation Components"
   WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "UninstallString" \
-"$OUTDIR\uninstall_webmmf.exe"
+"${WMMF_INSTALL_PATH32}\uninstall_webmmf.exe"
   WriteRegDWORD HKLM "${WMMF_UNINSTALL_KEY}" "NoModify" 0x00000001
   WriteRegDWORD HKLM "${WMMF_UNINSTALL_KEY}" "NoRepair" 0x00000001
   WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "Publisher" "WebM Project"
@@ -131,7 +131,8 @@ Section "Install" SecInstall
 "http://www.webmproject.org"
   WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "Comments" \
 "WebM Media Foundation COM-server DLLs"
-  WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "InstallLocation" "$OUTDIR"
+  WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "InstallLocation" \
+"${WMMF_INSTALL_PATH32}"
   WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "InstallSource" \
 "http://code.google.com/p/webm/downloads/list"
 
@@ -141,7 +142,7 @@ Section "Install" SecInstall
   ;
   ; Set install directory/write uninstaller
   SetOutPath "${WMMF_INSTALL_PATH32}"
-  WriteUninstaller "$OUTDIR\uninstall_webmmf.exe"
+  WriteUninstaller "${WMMF_INSTALL_PATH32}\uninstall_webmmf.exe"
 
   ; define LIBRARY_COM per NSIS docs when using InstallLib
   ; to register COM DLLs (see Appendix B)
