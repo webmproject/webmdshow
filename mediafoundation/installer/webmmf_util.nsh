@@ -23,5 +23,11 @@
   ClearErrors
 !macroend
 
+!macro CheckError msg
+  IfErrors 0 +2
+    DetailPrint "${msg}"
+  ClearErrors
+!macroend
+
 !endif ; __MEDIAFOUNDATION_INSTALLER_WEBMMF_UTIL_NSH__
 
