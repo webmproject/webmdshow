@@ -193,6 +193,7 @@ private:
     REFERENCE_TIME m_mediatime_decoded;
     REFERENCE_TIME m_mediatime_recvd;
 
+    UINT32 m_block_align;
     UINT64 m_total_samples_decoded;
 
     VorbisDecoder m_vorbis_decoder;

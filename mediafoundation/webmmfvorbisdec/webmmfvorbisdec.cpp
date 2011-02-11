@@ -63,6 +63,7 @@ HRESULT CreateDecoder(
 WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),
+    m_block_align(0),
     m_decode_start_time(-1),
     m_total_samples_decoded(0),
     m_mediatime_decoded(-1),
@@ -520,6 +521,8 @@ HRESULT WebmMfVorbisDec::SetOutputType(DWORD dwOutputStreamID,
         m_post_process_samples = true;
     }
 
+    CHK(hr, m_output_mediatype->GetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT,
+                                          &m_block_align));
     return S_OK;
 }
 
@@ -1113,22 +1116,33 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
     Lock lock;
 
-    HRESULT status = lock.Seize(this);
-    if (FAILED(status))
-        return status;
+    HRESULT hr;
+    CHK(hr, lock.Seize(this));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     if (m_input_mediatype == 0)
+    {
         return MF_E_TRANSFORM_TYPE_NOT_SET;
+    }
 
     if (cOutputBufferCount == 0)
+    {
         return E_INVALIDARG;
+    }
 
     if (pOutputSamples == 0)
+    {
         return E_INVALIDARG;
+    }
 
     // make sure we have an input sample to work on
     if (m_mf_input_samples.empty())
+    {
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
+    }
 
     //TODO: check if cOutputSamples > 1 ?
 
@@ -1139,31 +1153,39 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
     IMFSample* const p_mf_output_sample = data.pSample;
 
-    if (p_mf_output_sample == 0)
+    if (!p_mf_output_sample)
+    {
         return E_INVALIDARG;
+    }
 
     DWORD count;
 
-    status = p_mf_output_sample->GetBufferCount(&count);
+    CHK(hr, p_mf_output_sample->GetBufferCount(&count));
 
-    if (SUCCEEDED(status) && (count != 1))  //TODO: handle this?
+    if (SUCCEEDED(hr) && (count != 1))  //TODO: handle this?
+    {
         return E_INVALIDARG;
+    }
 
     IMFSample* const p_mf_input_sample = m_mf_input_samples.front();
     assert(p_mf_input_sample);
 
-    status = DecodeVorbisFormat2Sample(p_mf_input_sample);
+    CHK(hr, DecodeVorbisFormat2Sample(p_mf_input_sample));
 
-    if (FAILED(status))
-        return status;
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     // store input start time for logging/debugging
     LONGLONG input_start_time = 0;
-    status = p_mf_input_sample->GetSampleTime(&input_start_time);
-    assert(SUCCEEDED(status));
+    CHK(hr, p_mf_input_sample->GetSampleTime(&input_start_time));
+    assert(SUCCEEDED(hr));
     assert(input_start_time >= 0);
-    if (FAILED(status))
-      return status;
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     if (m_decode_start_time < 0)
     {
@@ -1181,11 +1203,11 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     }
 
     LONGLONG input_duration = 0;
-    status = p_mf_input_sample->GetSampleDuration(&input_duration);
-    if (FAILED(status) && MF_E_NO_SAMPLE_DURATION != status)
+    CHK(hr, p_mf_input_sample->GetSampleDuration(&input_duration));
+    if (FAILED(hr) && MF_E_NO_SAMPLE_DURATION != hr)
     {
         //DBGLOG("no duration on input sample!");
-        assert(SUCCEEDED(status));
+        assert(SUCCEEDED(hr));
     }
 
     m_mediatime_recvd += input_duration;
@@ -1197,43 +1219,47 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     //DBGLOG("IN start_time=" << REFTIMETOSECONDS(input_start_time) <<
     //       " duration=" << REFTIMETOSECONDS(input_duration));
 
+    // get output buffer size, and adjust |samples_available| to ensure we
+    // never try to process more samples than will fit in the output buffer
+    const DWORD buffer_capacity_bytes =
+        get_mf_buffer_capacity(p_mf_output_sample, 0);
+    const DWORD buffer_capacity_samples =
+        buffer_capacity_bytes + (m_block_align - 1) / m_block_align;
+
     UINT32 samples_available;
-    status = m_vorbis_decoder.GetOutputSamplesAvailable(&samples_available);
+    CHK(hr, m_vorbis_decoder.GetOutputSamplesAvailable(&samples_available));
 
     bool need_more_input =
         SamplesToMediaTime(samples_available) < m_min_output_threshold;
 
     if (m_drain)
-        need_more_input = false;
-
-    if (samples_available < 1 || need_more_input)
-        return MF_E_TRANSFORM_NEED_MORE_INPUT;
-
-    // get output buffer size, and adjust |samples_available| to ensure we
-    // never try to process more samples than will fit in the output buffer
-    const DWORD buffer_capacity =
-        get_mf_buffer_capacity(p_mf_output_sample, 0);
-    // grab |block_align| to calculate space (in bytes) required for current
-    // |samples_available| value
-    const UINT32 block_align =
-        get_block_align_from_mediatype(m_output_mediatype);
-    if (samples_available * block_align > buffer_capacity)
     {
-        DBGLOG("adjusting samples_available, curr=" << samples_available);
-        // adjust |samples_available| to avoid attempting to consume too many
-        // samples in |ProcessLibVorbisOutput|
-        samples_available =
-            (buffer_capacity + (block_align - 1)) / block_align;
-        DBGLOG("adjusted samples_available, new=" << samples_available);
+        need_more_input = false;
     }
 
-    status = ProcessLibVorbisOutput(p_mf_output_sample, samples_available);
-    if (FAILED(status))
-        return status;
+    if (samples_available < 1 || need_more_input)
+    {
+        return MF_E_TRANSFORM_NEED_MORE_INPUT;
+    }
+
+    // Ensure we never try to process more samples than will fit in our output
+    // buffer -- abuse |buffer_capacity_samples| to cap |samples_to_process| if
+    // needed.
+    const DWORD samples_to_process =
+        buffer_capacity_samples > samples_available ?
+            samples_available : buffer_capacity_samples;
+
+    assert(samples_to_process * m_block_align <= buffer_capacity_bytes);
+
+    CHK(hr, ProcessLibVorbisOutput(p_mf_output_sample, samples_to_process));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     // |m_start_time| is total samples decoded converted to media time
-    status = p_mf_output_sample->SetSampleTime(m_start_time);
-    assert(SUCCEEDED(status));
+    CHK(hr, p_mf_output_sample->SetSampleTime(m_start_time));
+    assert(SUCCEEDED(hr));
 
     // update running sample and time totals
     m_total_samples_decoded += samples_available;
@@ -1261,8 +1287,8 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
     const LONGLONG duration = start_time - m_start_time;
 
-    status = p_mf_output_sample->SetSampleDuration(duration);
-    assert(SUCCEEDED(status));
+    CHK(hr, p_mf_output_sample->SetSampleDuration(duration));
+    assert(SUCCEEDED(hr));
 
     m_start_time = start_time;
 
