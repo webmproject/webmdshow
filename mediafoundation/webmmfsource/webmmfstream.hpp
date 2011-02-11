@@ -103,16 +103,21 @@ public:
     void SetCurrBlock(const mkvparser::BlockEntry*);  //TODO: pass cue point
 
     void SetCurrBlockInit(LONGLONG time_ns, LONGLONG cluster_pos);
-    //void SetCurrBlockCompletion(const mkvparser::Cluster*);
-    virtual void SetCurrBlockCompletion(const mkvparser::Cluster*) = 0;
+    bool HaveCurrBlockObject(LONGLONG& cluster_pos) const;
+    virtual void SetCurrBlockObject(const mkvparser::Cluster*) = 0;
 
     const mkvparser::BlockEntry* GetCurrBlock() const;
 
-    bool IsCurrBlockLoaded(LONGLONG& cluster_pos) const;
-    bool IsCurrBlockLocked() const;
+    //bool IsCurrBlockLocked() const;
+    bool IsCurrBlockLocked(LONGLONG& pos, LONG& len) const;
+
+    virtual bool GetSampleExtent(LONGLONG& pos, LONG& len) = 0;
+    virtual void GetSampleExtentCompletion() = 0;
+
+    virtual bool GetNextBlock(const mkvparser::Cluster*&) = 0;
+    virtual bool NotifyNextCluster(const mkvparser::Cluster*) = 0;
 
     int LockCurrBlock();
-    virtual HRESULT NotifyNextCluster(const mkvparser::Cluster*) = 0;
 
     ULONG m_cRef;
     WebmMfSource* const m_pSource;

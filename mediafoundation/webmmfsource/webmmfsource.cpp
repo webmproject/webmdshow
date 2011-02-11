@@ -634,7 +634,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     else
     {
         m_file.Clear();
-        m_async_state = &WebmMfSource::StateAsyncInitStreams;
+        m_async_state = &WebmMfSource::StateAsyncLoadCluster;
     }
 
     m_async_read.m_hrStatus = S_OK;
@@ -698,7 +698,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 
                 m_file.Clear();
 
-                m_async_state = &WebmMfSource::StateAsyncInitStreams;
+                m_async_state = &WebmMfSource::StateAsyncLoadCluster;
                 m_async_read.m_hrStatus = S_OK;
 
                 const BOOL b = SetEvent(m_hAsyncRead);
@@ -730,7 +730,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
     if (!pCues->LoadCuePoint())  //no more cue points
     {
         m_file.Clear();
-        m_async_state = &WebmMfSource::StateAsyncInitStreams;
+        m_async_state = &WebmMfSource::StateAsyncLoadCluster;
     }
 
     m_async_read.m_hrStatus = S_OK;
@@ -743,56 +743,85 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 }
 
 
-WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
+WebmMfSource::thread_state_t WebmMfSource::StateAsyncLoadCluster()
 {
-    //TODO: I think we can get rid of this, since the async start
-    //handler already does something very similar.  We only needed
-    //this as a temporary hack when start was still synchronoous.
-
-    if (m_pSegment->GetCount() == 0)
+    for (;;)
     {
-        for (;;)
-        {
-            LONGLONG pos;
-            LONG len;
+        LONGLONG pos;
+        LONG len;
 
-            const long status = m_pSegment->LoadCluster(pos, len);
+        const long status = m_pSegment->LoadCluster(pos, len);
 
-            if (status == 0)  //have new cluster
-                break;
+        if (status == 0)  //have new cluster
+            break;
 
-            if (status > 0)  //EOF  //TODO: liberalize this
-                //return &WebmMfSource::StateQuit;
-                return LoadComplete(E_FAIL);
+        if (status > 0)  //EOF
+            return LoadComplete(E_FAIL);
 
-            if (status != mkvparser::E_BUFFER_NOT_FULL)
-                //return &WebmMfSource::StateQuit;
-                return LoadComplete(E_FAIL);
+        if (status != mkvparser::E_BUFFER_NOT_FULL)
+            return LoadComplete(E_FAIL);
 
-            const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+        const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
-            if (FAILED(hr))
-            {
-                //TODO: it's pointless to queue this event on the source's
-                //event queue,
-                //since no one else even has a ptr to the media source
-                //object yet.
+        if (FAILED(hr))
+            return LoadComplete(hr);
 
-                Error(L"InitStreams AsyncReadInit failed (#1).", hr);
-                //return &WebmMfSource::StateQuit;
-                return LoadComplete(E_FAIL);
-            }
-
-            if (hr == S_FALSE)  //async read in progress
-                return 0;
-        }
-
-        assert(m_pSegment->GetCount() == 1);
+        if (hr == S_FALSE)  //async read in progress
+            return 0;
     }
 
     const mkvparser::Cluster* const pCluster = m_pSegment->GetLast();
     assert(pCluster);
     assert(!pCluster->EOS());
+
+    if (pCluster->GetEntryCount() < 0)
+    {
+        LONGLONG pos = pCluster->m_pos;
+        assert(pos > 0);
+
+        pos += m_pSegment->m_start;  //absolute pos
+
+        const LONGLONG size = pCluster->m_size;
+        assert(size > 0);
+
+        const LONGLONG len_ = 8 + 8 + size;
+        assert(len_ > 0);
+        assert(len_ <= LONG_MAX);
+
+        const LONG len = static_cast<LONG>(len_);
+
+        const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+
+        if (FAILED(hr))
+            return LoadComplete(hr);
+
+        if (hr == S_FALSE)
+        {
+            m_async_state = &WebmMfSource::StateAsyncInitStreams;
+            return 0;
+        }
+    }
+
+    m_async_state = &WebmMfSource::StateAsyncInitStreams;
+    m_async_read.m_hrStatus = S_OK;
+
+    const BOOL b = SetEvent(m_hAsyncRead);
+    assert(b);
+
+    return 0;
+}
+
+
+WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
+{
+    assert(m_pSegment->GetCount() > 0);
+
+    const mkvparser::Cluster* pCluster = m_pSegment->GetLast();
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    pCluster->LoadBlockEntries();
+    assert(pCluster->GetEntryCount() >= 0);
 
     const mkvparser::Tracks* const pTracks = m_pSegment->GetTracks();
     assert(pTracks);
@@ -800,46 +829,6 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
     const ULONG nTracks = pTracks->GetTracksCount();
     assert(nTracks > 0);
 
-#if 0
-    ULONG& idx = m_track_init;
-
-    while (idx < nTracks)
-    {
-        const mkvparser::Track* const pTrack = pTracks->GetTrackByIndex(idx);
-
-        if (pTrack == 0)  //weird
-        {
-            ++idx;
-            continue;  //stay on same cluster, but move to next track
-        }
-
-        const LONGLONG tn = pTrack->GetNumber();
-
-        const mkvparser::BlockEntry* pCurr = pCluster->GetFirst();
-
-        while (pCurr)
-        {
-            const mkvparser::Block* const pBlock = pCurr->GetBlock();
-            assert(pBlock);
-
-            if (pBlock->GetTrackNumber() == tn)
-                break;
-
-            pCurr = pCluster->GetNext(pCurr);
-        }
-
-        if (pCurr == 0)  //no matching track found in this cluster
-            break;
-
-        ++idx;  //this track has now been initialized
-    }
-
-    if (idx >= nTracks)  //stream init done
-    {
-        m_file.EnableBuffering(GetDuration());  //do this here, or sooner?
-        return &WebmMfSource::StateRequestSample;
-    }
-#else
     bool bDone = true;
 
     typedef streams_t::const_iterator iter_t;
@@ -859,7 +848,6 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         if (FAILED(hr))  //no acceptable block on this cluster
             bDone = false;
     }
-#endif
 
     if (bDone || (m_pSegment->GetCount() >= 10))
     {
@@ -867,45 +855,13 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
         return LoadComplete(S_OK);
     }
 
-    //must load another cluster to init stream(s)
+    m_async_state = &WebmMfSource::StateAsyncLoadCluster;
+    m_async_read.m_hrStatus = S_OK;
 
-    for (;;)
-    {
-        LONGLONG pos;
-        LONG len;
+    const BOOL b = SetEvent(m_hAsyncRead);
+    assert(b);
 
-        const long status = m_pSegment->LoadCluster(pos, len);
-
-        if (status == 0)  //have new cluster
-        {
-            m_async_read.m_hrStatus = S_OK;
-
-            const BOOL b = SetEvent(m_hAsyncRead);
-            assert(b);
-
-            return 0;
-        }
-
-        if (status > 0)  //EOF (weird)
-            //return &WebmMfSource::StateQuit;
-            return LoadComplete(E_FAIL);
-
-        if (status != mkvparser::E_BUFFER_NOT_FULL)  //parse error
-            //return &WebmMfSource::StateQuit;
-            return LoadComplete(E_FAIL);
-
-        const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-
-        if (FAILED(hr))
-        {
-            Error(L"InitStreams AsyncReadInit failed (#2).", hr);
-            //return &WebmMfSource::StateQuit;
-            return LoadComplete(E_FAIL);
-        }
-
-        if (hr == S_FALSE)  //async read in progress
-            return 0;
-    }
+    return 0;
 }
 
 
@@ -3081,6 +3037,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
             return 0;
         }
 
+#if 0
         bool bDone;
 
         if (thread_state_t s = PreloadCache(bDone))
@@ -3091,6 +3048,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
             const BOOL b = SetEvent(m_hRequestSample);
             assert(b);
         }
+#endif
 
         return 0;
     }
@@ -3140,9 +3098,15 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     LONGLONG cluster_pos;
 
-    if (!pStream->IsCurrBlockLoaded(cluster_pos))
+    if (!pStream->HaveCurrBlockObject(cluster_pos))
     {
         assert(cluster_pos >= 0);
+
+        //odbgstream os;
+        //os << "OnRequestSample: stream.type=" << pStream->m_pTrack->GetType()
+        //   << "; curr block not loaded: cluster_pos="
+        //   << cluster_pos
+        //   << endl;
 
         m_pCurr = m_pSegment->FindOrPreloadCluster(cluster_pos);
         assert(m_pCurr);
@@ -3183,9 +3147,16 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         if (m_pCurr->GetEntryCount() < 0)  //only preloaded, not fully loaded
         {
+            //os << "OnRequestSample: stream.type="
+            //   << pStream->m_pTrack->GetType()
+            //   << "; curr block not loaded(con'td): cluster_pos="
+            //   << cluster_pos
+            //   << "; NO ENTRIES YET"
+            //   << endl;
+
             m_file.ResetAvailable(0);  //TODO
 
-            m_async_state = &WebmMfSource::StateAsyncLoadCurr;
+            m_async_state = &WebmMfSource::StateAsyncLoadCurrInit;
             m_async_read.m_hrStatus = S_OK;
 
             const BOOL b = SetEvent(m_hAsyncRead);
@@ -3205,9 +3176,10 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         //at the head of the request queue.
         //END TODO.
 
-        pStream->SetCurrBlockCompletion(m_pCurr);
+        pStream->SetCurrBlockObject(m_pCurr);
     }
 
+#if 0
     if (!pStream->IsCurrBlockLocked())
     {
         using mkvparser::BlockEntry;
@@ -3231,6 +3203,17 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         const LONG len = static_cast<LONG>(size_);
 
+        //TODO: this is the problem.  Even though we lock the first
+        //block of the quota (that's what CurrBlock is), we don't
+        //lock any of the others.  In GetSample, we navigate across
+        //potentially many blocks (and potentially many clusters),
+        //and we don't have any guarantee that they're in the cache.
+        //But we don't detect that condition until we actually attempt
+        //to read (in GetSample), not here.
+        //
+        //We would have to generalize "curr block locked" to mean
+        //something like "curr quota locked".
+
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
         if (FAILED(hr))
@@ -3250,6 +3233,89 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         assert(status == 0);
         assert(pStream->IsCurrBlockLocked());
     }
+#else
+    if (!pStream->GetNextBlock(m_pCurr))
+    {
+        m_async_state = &WebmMfSource::StateAsyncParseNext;
+        m_async_read.m_hrStatus = S_OK;
+
+        const BOOL b = SetEvent(m_hAsyncRead);
+        assert(b);
+
+        return &WebmMfSource::StateAsyncRead;
+    }
+
+    LONGLONG pos;
+    LONG len;
+
+    if (!pStream->IsCurrBlockLocked(pos, len))
+    {
+        const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+
+        if (FAILED(hr))
+        {
+            Error(L"OnRequestSample AsyncReadInit failed.", hr);
+            return &WebmMfSource::StateQuit;
+        }
+
+        if (hr == S_FALSE)  //async read in progress
+        {
+            m_async_state = &WebmMfSource::StateAsyncLockCurr;
+            return &WebmMfSource::StateAsyncRead;
+        }
+
+        const int status = pStream->LockCurrBlock();
+        status;
+        assert(status == 0);
+        //assert(pStream->IsCurrBlockLocked());
+    }
+
+    if (!pStream->GetSampleExtent(pos, len))
+    {
+        const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+
+        if (FAILED(hr))
+        {
+            Error(L"OnRequestSample AsyncReadInit failed.", hr);
+            return &WebmMfSource::StateQuit;
+        }
+
+        if (hr == S_FALSE)  //async read in progress
+        {
+            m_async_state = &WebmMfSource::StateAsyncGetSampleExtent;
+            return &WebmMfSource::StateAsyncRead;
+        }
+
+        pStream->GetSampleExtentCompletion();
+    }
+
+    //if we are NOT thinning
+    //  for video:
+    //    we only need a next block to compute the duration of
+    //    the current block; we only need the curr block to
+    //    be in the cache.  So the "sample extent" comprises
+    //    only the current block.
+    //
+    //  for audio:
+    //    we have a set of frames we put on the sample; we need
+    //    to have all of the frames in the cache, to the limit
+    //    of the last frame of the quota.  We don't need the
+    //    actual quota frame, even to compute duration, so it
+    //    doesn't need to be locked.  So the "sample extent"
+    //    comprises the current block, and up to the limit
+    //    of the last block in the quota.
+    //
+    //if we are thinning
+    //  for video:
+    //    we need to lock the curr frame (of course).  We still need
+    //    the next block, but only to compute the duration, so it
+    //    doesn't need to be in the cache.
+    //
+    //  for audio:
+    //    we don't need to have anything in the cache, as we don't
+    //    send samples at all (just notifications).
+
+#endif
 
     //here's the place where we should ensure (by creating, if req'd)
     //the existence of the next cluster.  It doesn't have to populated
@@ -3337,80 +3403,59 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     hr = pStream->GetSample(r.pToken);
 
-    if (SUCCEEDED(hr))
+    //TODO:
+    //Frame::Read is failing for the audio stream.
+    //We only partially load the next cluster now,
+    //but the problem is that we can only guarantee
+    //that the first frame of the quota is locked (and
+    //hence is in the cache).  But a quota spans multiple
+    //frames and potentially multiple clusters.  GetSample
+    //returns UNDERFLOW when it needs the next cluster object,
+    //but if we only preload the next (or curr) cluster, then
+    //we don't have any guarantee that any of the frames beyond
+    //the first of the quota are in the cache (because we only
+    //lock the first).  We have been using UNDERFLOW to find
+    //the next block object, but this doesn't help us if we
+    //also need a guarantee that all of the blocks in the quota
+    //are are also locked in the cache.  This wasn't a problem
+    //when our quota stopped at the curr cluster, but we changed
+    //the algorithm such that we touch blocks on the following
+    //clusters too.
+    //END TODO.
+
+    if (FAILED(hr))
     {
-        if (r.pToken)
-            r.pToken->Release();
-
-        rr.pop_front();
-
-        PurgeCache();
-
-        bool bDone;
-
-        if (thread_state_t s = PreloadCache(bDone))
-            return s;
-
-        if (!bDone || !rr.empty())
-        {
-            const BOOL b = SetEvent(m_hRequestSample);
-            assert(b);
-        }
-
-        return 0;
+        Error(L"OnRequestSample: GetSample failed.", hr);
+        return &WebmMfSource::StateQuit;
     }
 
-    //TODO:
-    //if (hr != VFW_E_BUFFER_UNDERFLOW)
-    //  signal error
-    //for now:
-    assert(hr == VFW_E_BUFFER_UNDERFLOW);
+    if (r.pToken)
+        r.pToken->Release();
 
-#if 0 //def _DEBUG
-    odbgstream os;
-    os << "OnRequestSample: underflow: parsing next cluster" << endl;
+    rr.pop_front();
+
+    PurgeCache();
+
+#if 0
+    bool bDone;
+
+    if (thread_state_t s = PreloadCache(bDone))
+        return s;
+
+    if (!bDone || !rr.empty())
+    {
+        const BOOL b = SetEvent(m_hRequestSample);
+        assert(b);
+    }
+#else
+    if (!rr.empty())
+    {
+        const BOOL b = SetEvent(m_hRequestSample);
+        assert(b);
+    }
 #endif
 
-    const mkvparser::BlockEntry* const pBlock = pStream->GetCurrBlock();
-    assert(pBlock);
-    assert(!pBlock->EOS());
-
-    m_pCurr = pBlock->GetCluster();
-    assert(m_pCurr);
-    assert(!m_pCurr->EOS());
-    assert(m_pCurr->GetEntryCount() >= 0);
-
-    const LONGLONG pos = m_pCurr->m_pos;
-    assert(pos >= 0);
-
-    const LONGLONG size = m_pCurr->m_size;
-    assert(size >= 0);
-
-    const LONGLONG avail = pos + size;
-    m_file.ResetAvailable(avail);
-
-    //TODO: test whether next cluster can be parsed synchronously, and
-    //if so, whether it's already loaded in the cache.  What happens
-    //now is that this underflow gets reported twice, as each stream
-    //navigates onto the next cluster.  But there's no real need
-    //to do any of the ParseNext work asynchronously, since the it
-    //would have been handled by the first reported underflow.
-    //(And if PreloadCache is working, then we should be able
-    //to optimize away the async handling of the first underflow
-    //return.)
-    //
-    //Really the problem is that AsyncReadInit can post an async
-    //read event, but we should be able to merely test whether
-    //we can parse and then load the next cluster, without
-    //incurring any side effect.
-
-    m_async_state = &WebmMfSource::StateAsyncParseNext;
-    m_async_read.m_hrStatus = S_OK;
-
-    const BOOL b = SetEvent(m_hAsyncRead);
-    assert(b);
-
-    return &WebmMfSource::StateAsyncRead;
+    return 0;
 }
 
 
@@ -3465,7 +3510,7 @@ bool WebmMfSource::PurgeCache()
 
     return m_file.Purge(pos);
 }
-#else
+#elif 0
 void WebmMfSource::PurgeCache()
 {
     typedef streams_t::const_iterator iter_t;
@@ -3512,6 +3557,57 @@ void WebmMfSource::PurgeCache()
     }
 
     m_file.Purge(pos);
+}
+#else
+void WebmMfSource::PurgeCache()
+{
+    typedef streams_t::const_iterator iter_t;
+
+    iter_t i = m_streams.begin();
+    const iter_t j = m_streams.end();
+
+    using namespace mkvparser;
+
+    LONGLONG pos = -1;
+
+    while (i != j)
+    {
+        const streams_t::value_type& v = *i++;
+
+        const WebmMfStream* const pStream = v.second;
+        assert(pStream);
+
+        if (!pStream->IsSelected())
+            continue;
+
+        if (pStream->IsCurrBlockEOS())
+            continue;
+
+        LONGLONG cluster_pos;
+
+        if (!pStream->HaveCurrBlockObject(cluster_pos))
+            return;
+
+        const BlockEntry* const pCurr = pStream->GetCurrBlock();
+
+        if (pCurr == 0)  //weird
+            continue;
+
+        if (pCurr->EOS())  //weird
+            continue;
+
+        const Block* const pBlock = pCurr->GetBlock();
+        assert(pBlock);
+
+        const LONGLONG start = pBlock->m_start;
+        assert(start > 0);
+
+        if ((pos < 0) || (start < pos))
+            pos = start;
+    }
+
+    if (pos >= 0)
+        m_file.Purge(pos);
 }
 #endif
 
@@ -3649,7 +3745,7 @@ WebmMfSource::thread_state_t WebmMfSource::PreloadCache()
         //return 0;
     }
 }
-#else
+#elif 0
 WebmMfSource::thread_state_t WebmMfSource::PreloadCache(bool& bDone)
 {
     bDone = true;
@@ -3794,7 +3890,7 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncPreloadNext()
         //return 0;
     }
 }
-#else
+#elif 0
 WebmMfSource::thread_state_t WebmMfSource::StateAsyncPreloadNext()
 {
     //odbgstream os;
@@ -5107,17 +5203,35 @@ WebmMfSource::StateAsyncLockCurr()
 
     const requests_t& rr = m_requests;
 
-    if (rr.empty())  //should never happen
-        return &WebmMfSource::StateQuit;
+    if (!rr.empty())
+    {
+        const Request& r = rr.front();
+        assert(r.pStream);
 
-    const Request& r = rr.front();
-    assert(r.pStream);
+        const int status = r.pStream->LockCurrBlock();
+        status;
+        assert(status == 0);
+    }
 
-    const int status = r.pStream->LockCurrBlock();
-    status;
-    assert(status == 0);
+    const BOOL b = SetEvent(m_hRequestSample);
+    assert(b);
 
-    //m_async_read.m_hrStatus = S_OK;
+    return &WebmMfSource::StateRequestSample;
+}
+
+
+WebmMfSource::thread_state_t
+WebmMfSource::StateAsyncGetSampleExtent()
+{
+    const requests_t& rr = m_requests;
+
+    if (!rr.empty())
+    {
+        const Request& r = rr.front();
+        assert(r.pStream);
+
+        r.pStream->GetSampleExtentCompletion();
+    }
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
@@ -5129,15 +5243,33 @@ WebmMfSource::StateAsyncLockCurr()
 WebmMfSource::thread_state_t
 WebmMfSource::StateAsyncParseNext()
 {
+    //odbgstream os;
+    //os << "StateAsyncParseNext(begin): curr.pos="
+    //   << m_pCurr->m_pos
+    //   << " curr.size="
+    //   << m_pCurr->m_size
+    //   << endl;
+
     for (;;)
     {
         LONGLONG pos;
         LONG len;
 
+        //os << "StateAsyncParseNext(cont'd): parsing next" << endl;
+
         const long status = m_pSegment->ParseNext(m_pCurr, m_pNext, pos, len);
 
         if (status >= 0)  //have next cluster, or EOF
-            return StateAsyncLoadNext();
+            break;
+
+        //const DWORD page_size = m_file.GetPageSize();
+        //const DWORD page_count = (len + page_size - 1) / page_size;
+
+        //os << "StateAsyncParseNext(cont'd): ParseNext failed:"
+        //   << " pos=" << pos
+        //   << " len=" << len
+        //   << " page_count=" << page_count
+        //   << endl;
 
         assert(status == mkvparser::E_BUFFER_NOT_FULL);  //TODO
 
@@ -5151,20 +5283,40 @@ WebmMfSource::StateAsyncParseNext()
 
         if (hr == S_FALSE)
         {
-            m_async_state = &WebmMfSource::StateAsyncParseNext;
+#if 0 //def _DEBUG
+            os << "StateAsyncParseNext: AsyncReadInit returned S_FALSE"
+               << endl;
+#endif
+
+            //m_async_state = &WebmMfSource::StateAsyncParseNext;
             return 0;
         }
+
+//#ifdef _DEBUG
+//        os << "StateAsyncParseNext: AsyncReadInit returned S_OK" << endl;
+//#endif
     }
+
+    m_async_state = &WebmMfSource::StateAsyncLoadNext;
+    m_async_read.m_hrStatus = S_OK;
+
+    const BOOL b = SetEvent(m_hAsyncRead);
+    assert(b);
+
+    return 0;
 }
 
 
 WebmMfSource::thread_state_t
 WebmMfSource::StateAsyncLoadNext()
 {
+    //odbgstream os;
+    //os << "StateAsyncLoadNext(begin)" << endl;
+
     //We have the next cluster, or we've reached EOF.
     //Next we must populate the cache with the cluster's payload.
 
-    if (m_pNext)
+    if (m_pNext && (m_pNext->GetEntryCount() < 0))
     {
         //we have next cluster, now load it into cache
 
@@ -5183,6 +5335,18 @@ WebmMfSource::StateAsyncLoadNext()
 
         pos += m_pSegment->m_start;  //absolute pos
 
+#if 0 //def _DEBUG
+        const DWORD page_size = m_file.GetPageSize();
+        const DWORD page_count = (len + page_size - 1) / page_size;
+
+        odbgstream os;
+        os << "StateAsyncLoadNext: pos=" << pos
+           << " len=" << len
+           << " page_count=" << page_count
+           << endl;
+#endif
+
+        //TODO: too expensive for large clusters
         const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
         if (FAILED(hr))
@@ -5193,34 +5357,60 @@ WebmMfSource::StateAsyncLoadNext()
 
         if (hr == S_FALSE)  //event will be set in Invoke
         {
-            m_async_state = &WebmMfSource::StateAsyncLoadNext;
+#if 0 //def _DEBUG
+            os << "StateAsyncLoadNext: AsyncReadInit returned S_FALSE" << endl;
+#endif
+
+            m_async_state = &WebmMfSource::StateAsyncNotifyNext;
             return 0;
         }
 
         //hr = S_OK means cluster was already in the cache
     }
 
+    m_async_state = &WebmMfSource::StateAsyncNotifyNext;
+    m_async_read.m_hrStatus = S_OK;
+
+    const BOOL b = SetEvent(m_hAsyncRead);
+    assert(b);
+
+    return 0;
+}
+
+
+WebmMfSource::thread_state_t WebmMfSource::StateAsyncNotifyNext()
+{
+    //odbgstream os;
+    //os << "StateAsyncNotifyNext(begin)" << endl;
+
+    if (m_pNext)
+    {
+        m_pNext->LoadBlockEntries();  //TODO: too expensive for large clusters
+        assert(m_pNext->GetEntryCount() >= 0);
+    }
+
     const requests_t& rr = m_requests;
 
-    if (rr.empty())  //should never happen
-        return &WebmMfSource::StateQuit;
-
-    const Request& r = rr.front();
-    assert(r.pStream);
-
-    HRESULT hr = r.pStream->NotifyNextCluster(m_pNext);
-
-    if (SUCCEEDED(hr))
+    if (rr.empty())  //weird
     {
-        m_pNext = &m_pSegment->m_eos;
-
         const BOOL b = SetEvent(m_hRequestSample);
         assert(b);
 
         return &WebmMfSource::StateRequestSample;
     }
 
-    assert(hr == VFW_E_BUFFER_UNDERFLOW);  //TODO
+    const Request& r = rr.front();
+    assert(r.pStream);
+
+    const bool bDone = r.pStream->NotifyNextCluster(m_pNext);
+
+    if (bDone)
+    {
+        const BOOL b = SetEvent(m_hRequestSample);
+        assert(b);
+
+        return &WebmMfSource::StateRequestSample;
+    }
 
     m_pCurr = m_pNext;
     assert(m_pCurr);
@@ -5237,7 +5427,7 @@ WebmMfSource::StateAsyncLoadNext()
 
 
 WebmMfSource::thread_state_t
-WebmMfSource::StateAsyncLoadCurr()
+WebmMfSource::StateAsyncLoadCurrInit()
 {
     assert(m_pCurr);
     assert(!m_pCurr->EOS());
@@ -5268,7 +5458,7 @@ WebmMfSource::StateAsyncLoadCurr()
         //LoadBlockEntries won't do anything, and the async read below
         //really will populate the cache.
 
-        const long status = m_pCurr->LoadBlockEntries(pos, len);
+        const long status = m_pCurr->Load(pos, len);
 
         if (status >= 0)
             break;
@@ -5302,7 +5492,10 @@ WebmMfSource::StateAsyncLoadCurr()
 
     pos += m_pSegment->m_start;  //absolute pos
 
-    const LONGLONG len_ = 8 + 8 + m_pCurr->m_size;
+    const LONGLONG size = m_pCurr->m_size;
+    assert(size > 0);
+
+    const LONGLONG len_ = 8 + 8 + size;
     assert(len_ > 0);
     assert(len_ <= LONG_MAX);
 
@@ -5333,7 +5526,46 @@ WebmMfSource::StateAsyncLoadCurr()
     //END TODO.
 
     if (hr == S_FALSE)  //event will be set in Invoke
+    {
+        m_async_state = &WebmMfSource::StateAsyncLoadCurrFinal;
         return 0;
+    }
+
+    return StateAsyncLoadCurrFinal();
+}
+
+
+WebmMfSource::thread_state_t
+WebmMfSource::StateAsyncLoadCurrFinal()
+{
+    assert(m_pCurr);
+    assert(!m_pCurr->EOS());
+
+    m_pCurr->LoadBlockEntries();
+    assert(m_pCurr->GetEntryCount() >= 0);
+
+    const requests_t& rr = m_requests;
+
+    if (!rr.empty())  //should always be true
+    {
+        const Request& r = rr.front();
+
+        WebmMfStream* const s = r.pStream;
+        assert(s);
+
+        LONGLONG cluster_pos;
+
+        if (!s->IsSelected())  //weird
+            __noop;
+        else if (s->IsCurrBlockEOS()) //weird
+            __noop;
+        else if (s->HaveCurrBlockObject(cluster_pos))  //weird
+            __noop;
+        else if (cluster_pos != m_pCurr->m_pos)  //weird
+            __noop;
+        else
+            s->SetCurrBlockObject(m_pCurr);
+    }
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);

@@ -872,7 +872,7 @@ void MkvReader::Purge(LONGLONG pos)
     const free_pages_t::size_type new_size = m_free_pages.size();
     const free_pages_t::size_type n = new_size - old_size;
 
-    if (n)
+    if (0)
     {
         odbgstream os;
         os << "mkvreader::purge: n=" << n
@@ -1266,7 +1266,7 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
         m_cache.erase(curr);
 
         page.pos = -1;  //means "we don't have any data on this page"
-        page.pos = 0;
+        page.len = 0;
 
         const free_pages_t::value_type value(page.pos, page_iter);
         m_free_pages.insert(value);

@@ -8,7 +8,7 @@
 #include <limits>
 #include <cmath>
 #include <comdef.h>
-#include <vfwmsgs.h>
+//#include <vfwmsgs.h>
 #include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
@@ -380,7 +380,7 @@ void WebmMfStreamVideo::OnSetCurrBlock()
 }
 
 
-void WebmMfStreamVideo::SetCurrBlockCompletion(
+void WebmMfStreamVideo::SetCurrBlockObject(
     const mkvparser::Cluster* pCluster)
 {
     assert(m_curr.pBE == 0);
@@ -440,13 +440,13 @@ void WebmMfStreamVideo::SetCurrBlockCompletion(
 }
 
 
-HRESULT WebmMfStreamVideo::NotifyNextCluster(
+bool WebmMfStreamVideo::NotifyNextCluster(
     const mkvparser::Cluster* pNextCluster)
 {
     if ((pNextCluster == 0) || pNextCluster->EOS())
     {
         m_pNextBlock = m_pTrack->GetEOS();
-        return S_OK;
+        return true;  //done
     }
 
     const LONGLONG tn = m_pTrack->GetNumber();
@@ -459,24 +459,27 @@ HRESULT WebmMfStreamVideo::NotifyNextCluster(
         assert(pBlock);
 
         if (pBlock->GetTrackNumber() == tn)
-            return S_OK;  //success
+            return true;  //done
 
         m_pNextBlock = pNextCluster->GetNext(m_pNextBlock);
     }
 
-    return VFW_E_BUFFER_UNDERFLOW;
+    return false;  //not done yet
 }
 
 
-HRESULT WebmMfStreamVideo::GetNextBlock()
+bool WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
 {
+    if (m_pNextBlock)
+        return true;  //we have next block
+
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
 
     const LONGLONG tn = m_pTrack->GetNumber();
 
-    const mkvparser::Cluster* const pCluster = pCurr->GetCluster();
+    pCluster = pCurr->GetCluster();
     assert(pCluster);
     assert(!pCluster->EOS());
 
@@ -488,30 +491,17 @@ HRESULT WebmMfStreamVideo::GetNextBlock()
         assert(pBlock);
 
         if (pBlock->GetTrackNumber() == tn)
-            return S_OK;  //success
+            return true;
 
         m_pNextBlock = pCluster->GetNext(m_pNextBlock);
     }
 
-    return VFW_E_BUFFER_UNDERFLOW;  //did not find next entry for this track
+    return false;  //no, we do not have next block
 }
 
 
 HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 {
-    if (!IsSelected())
-        return S_FALSE;
-
-    if (IsShutdown())  //weird
-    {
-        MkvReader& f = m_pSource->m_file;
-
-        f.UnlockPage(m_pLocked);
-        m_pLocked = 0;
-
-        return S_FALSE;
-    }
-
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
@@ -528,23 +518,7 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
     const LONGLONG curr_ns = pCurrBlock->GetTime(pCurrCluster);
 
-    //odbgstream os;
-    //os << "WebmMfStreamVideo::GetSample: curr.time[ns]="
-    //   //<< (double(curr_ns) / 1000000000)
-    //   << curr_ns
-    //   << endl;
-
-    if (m_pNextBlock == 0)
-    {
-        const HRESULT hr = GetNextBlock();
-
-        //os << "WebmMfStreamVideo::GetSample: GetNextBlock.hr="
-        //   << hr
-        //   << endl;
-
-        if (FAILED(hr))  //no next entry found on current cluster
-            return hr;
-    }
+    assert(m_pNextBlock);
 
     //os << "WebmMfStreamVideo::GetSample: HAVE NEXT BLOCK" << endl;
 
@@ -622,13 +596,18 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
         assert(cbMaxLength >= DWORD(cbBuffer));
 
         const long status = f.Read(pReader, ptr);
-        assert(status == 0);
 
-        hr = pBuffer->SetCurrentLength(cbBuffer);
-        assert(SUCCEEDED(hr));
+        if (status >= 0)  //success
+        {
+            hr = pBuffer->SetCurrentLength(cbBuffer);
+            assert(SUCCEEDED(hr));
+        }
 
         hr = pBuffer->Unlock();
         assert(SUCCEEDED(hr));
+
+        if (status < 0)  //error (weird)
+            return E_FAIL;
 
         hr = pSample->AddBuffer(pBuffer);
         assert(SUCCEEDED(hr));
@@ -748,11 +727,15 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     {
         m_curr.Init(m_pNextBlock);
 
+#if 0
+        //TODO: we need to handle this somehow
+
         const int status = f.LockPage(m_pNextBlock);
         assert(status == 0);
 
         if (status == 0)
             m_pLocked = m_pNextBlock;
+#endif
 
         m_pNextBlock = 0;
 
@@ -898,6 +881,17 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
         return ProcessSample(pSample);
     }
+}
+
+
+bool WebmMfStreamVideo::GetSampleExtent(LONGLONG&, LONG&)
+{
+    return true;
+}
+
+
+void WebmMfStreamVideo::GetSampleExtentCompletion()
+{
 }
 
 

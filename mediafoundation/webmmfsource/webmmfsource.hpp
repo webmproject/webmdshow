@@ -205,22 +205,25 @@ private:
     //for async load:
     thread_state_t StateAsyncParseEbmlHeader();
     thread_state_t StateAsyncParseSegmentHeaders();
+    thread_state_t StateAsyncLoadCluster();
     thread_state_t StateAsyncInitStreams();
     thread_state_t StateAsyncParseCues();
 
-    //for async locking:
+    //for async locking and loading:
     thread_state_t StateAsyncLockCurr();
+    thread_state_t StateAsyncGetSampleExtent();
 
     //for async cluster parsing of curr cluster:
-    thread_state_t StateAsyncParseCurr();
-    thread_state_t StateAsyncLoadCurr();
+    thread_state_t StateAsyncLoadCurrInit();
+    thread_state_t StateAsyncLoadCurrFinal();
 
     //for async cluster parsing of next cluster:
     thread_state_t StateAsyncParseNext();
     thread_state_t StateAsyncLoadNext();
+    thread_state_t StateAsyncNotifyNext();
 
     //for async pre-fetching of next cluster
-    thread_state_t StateAsyncPreloadNext();
+    //thread_state_t StateAsyncPreloadNext();
 
     typedef thread_state_t (WebmMfSource::*async_state_t)();
     async_state_t m_async_state;
@@ -228,7 +231,7 @@ private:
     HRESULT ParseEbmlHeader(LONGLONG&);
 
     void PurgeCache();
-    thread_state_t PreloadCache(bool& bDone);
+    //thread_state_t PreloadCache(bool& bDone);
 
     thread_state_t LoadComplete(HRESULT);
 

@@ -40,8 +40,13 @@ public:
 
     HRESULT Start(const PROPVARIANT&);
 
-    void SetCurrBlockCompletion(const mkvparser::Cluster*);
-    HRESULT NotifyNextCluster(const mkvparser::Cluster*);
+    bool GetSampleExtent(LONGLONG& pos, LONG& len);
+    void GetSampleExtentCompletion();
+
+    void SetCurrBlockObject(const mkvparser::Cluster*);
+
+    bool GetNextBlock(const mkvparser::Cluster*&);
+    bool NotifyNextCluster(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
 
@@ -54,12 +59,14 @@ private:
 
     const mkvparser::BlockEntry* m_pNextBlock;
 
-    HRESULT GetNextBlock();
+    //HRESULT GetNextBlock();
 
     static HRESULT GetFrameRate(
         const mkvparser::VideoTrack*,
         UINT32&,
         UINT32&);
+
+    bool m_bExtent;
 
 };
 

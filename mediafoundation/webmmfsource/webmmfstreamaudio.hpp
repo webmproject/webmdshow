@@ -1,4 +1,5 @@
 #pragma once
+#include <list>
 
 namespace WebmMfSourceLib
 {
@@ -36,8 +37,13 @@ public:
 
     HRESULT Start(const PROPVARIANT&);
 
-    void SetCurrBlockCompletion(const mkvparser::Cluster*);
-    HRESULT NotifyNextCluster(const mkvparser::Cluster*);
+    void SetCurrBlockObject(const mkvparser::Cluster*);
+
+    bool GetSampleExtent(LONGLONG& pos, LONG& len);
+    void GetSampleExtentCompletion();
+
+    bool GetNextBlock(const mkvparser::Cluster*&);
+    bool NotifyNextCluster(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
     HRESULT ReadBlock(IMFSample*, const mkvparser::BlockEntry*) const;
@@ -50,8 +56,13 @@ protected:
 private:
 
     const mkvparser::BlockEntry* m_pQuota;
-    HRESULT GetQuota();
-    const mkvparser::BlockEntry* GetNextBlock() const;
+
+    //const mkvparser::BlockEntry* GetNextBlock() const;
+
+    typedef std::list<const mkvparser::BlockEntry*> blocks_t;
+    blocks_t m_blocks;
+
+    LONG m_sample_extent;
 
 };
 

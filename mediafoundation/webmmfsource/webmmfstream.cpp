@@ -883,9 +883,22 @@ HRESULT WebmMfStream::NotifyCurrCluster(const mkvparser::Cluster* pCluster)
 #endif
 
 
-bool WebmMfStream::IsCurrBlockLocked() const
+bool WebmMfStream::IsCurrBlockLocked(LONGLONG& pos, LONG& len) const
 {
-    return (m_pLocked != 0);
+    if (m_pLocked)
+        return true;
+
+    const mkvparser::BlockEntry* const pEntry = m_curr.pBE;
+    assert(pEntry);
+    assert(!pEntry->EOS());
+
+    const mkvparser::Block* pBlock = pEntry->GetBlock();
+    assert(pBlock);
+
+    pos = pBlock->m_start;
+    len = static_cast<LONG>(pBlock->m_size);
+
+    return false;
 }
 
 
@@ -915,7 +928,7 @@ void WebmMfStream::SeekInfo::Init(const mkvparser::BlockEntry* pBE_)
 }
 
 
-bool WebmMfStream::IsCurrBlockLoaded(LONGLONG& pos) const
+bool WebmMfStream::HaveCurrBlockObject(LONGLONG& pos) const
 {
     if (m_curr.pBE)
         return true;
