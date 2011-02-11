@@ -31,7 +31,7 @@ WebmMfStream::WebmMfStream(
     m_bSelected(-1),
     m_bEOS(true),
     m_pFirstBlock(0),
-    m_pNextBlock(0),
+    //m_pNextBlock(0),
     m_pLocked(0),
     m_time_ns(-1),
     m_cluster_pos(-1),
@@ -571,7 +571,9 @@ HRESULT WebmMfStream::Deselect()
     m_pLocked = 0;
 
     m_curr.Init();
-    m_pNextBlock = 0;
+    //m_pNextBlock = 0;
+
+    OnDeselect();
 
     return S_OK;
 }
@@ -733,7 +735,7 @@ void WebmMfStream::SetCurrBlock(const mkvparser::BlockEntry* pBE)
     m_pLocked = 0;
 
     m_curr.Init(pBE);
-    m_pNextBlock = 0;
+    //m_pNextBlock = 0;
 
     m_bDiscontinuity = true;
     m_bEOS = false;
@@ -743,6 +745,8 @@ void WebmMfStream::SetCurrBlock(const mkvparser::BlockEntry* pBE)
 
     if (m_thin_ns >= 0)
         m_thin_ns = -1;  //TODO: for now, send new notification
+
+    OnSetCurrBlock();
 }
 
 
@@ -757,7 +761,7 @@ void WebmMfStream::SetCurrBlockInit(
     m_pLocked = 0;
 
     m_curr.Init();
-    m_pNextBlock = 0;
+    //m_pNextBlock = 0;
 
     m_bDiscontinuity = true;
     m_bEOS = false;
@@ -767,6 +771,8 @@ void WebmMfStream::SetCurrBlockInit(
 
     if (m_thin_ns >= 0)
         m_thin_ns = -1;  //TODO: for now, send new notification
+
+    OnSetCurrBlock();
 }
 
 
@@ -875,62 +881,6 @@ HRESULT WebmMfStream::NotifyCurrCluster(const mkvparser::Cluster* pCluster)
     return VFW_E_BUFFER_UNDERFLOW;
 }
 #endif
-
-
-HRESULT WebmMfStream::GetNextBlock()
-{
-    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
-    assert(pCurr);
-    assert(!pCurr->EOS());
-
-    const LONGLONG tn = m_pTrack->GetNumber();
-
-    const mkvparser::Cluster* const pCluster = pCurr->GetCluster();
-    assert(pCluster);
-    assert(!pCluster->EOS());
-
-    m_pNextBlock = pCluster->GetNext(pCurr);
-
-    while (m_pNextBlock)
-    {
-        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
-        assert(pBlock);
-
-        if (pBlock->GetTrackNumber() == tn)
-            return S_OK;  //success
-
-        m_pNextBlock = pCluster->GetNext(m_pNextBlock);
-    }
-
-    return VFW_E_BUFFER_UNDERFLOW;  //did not find next entry for this track
-}
-
-
-HRESULT WebmMfStream::NotifyNextCluster(const mkvparser::Cluster* pNextCluster)
-{
-    if ((pNextCluster == 0) || pNextCluster->EOS())
-    {
-        m_pNextBlock = m_pTrack->GetEOS();
-        return S_OK;
-    }
-
-    const LONGLONG tn = m_pTrack->GetNumber();
-
-    m_pNextBlock = pNextCluster->GetFirst();
-
-    while (m_pNextBlock)
-    {
-        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
-        assert(pBlock);
-
-        if (pBlock->GetTrackNumber() == tn)
-            return S_OK;  //success
-
-        m_pNextBlock = pNextCluster->GetNext(m_pNextBlock);
-    }
-
-    return VFW_E_BUFFER_UNDERFLOW;
-}
 
 
 bool WebmMfStream::IsCurrBlockLocked() const

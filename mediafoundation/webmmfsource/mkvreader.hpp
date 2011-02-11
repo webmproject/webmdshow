@@ -27,19 +27,25 @@ public:
     int LockPage(const mkvparser::BlockEntry*);
     void UnlockPage(const mkvparser::BlockEntry*);
 
-    void ResetAvailable();
+    void ResetAvailable(LONGLONG);
+    LONGLONG GetAvailable() const;
 
     HRESULT AsyncReadInit(
         LONGLONG pos,
         LONG len,
-        IMFAsyncCallback* pCB);
+        IMFAsyncCallback* pCB,
+        bool preload = false);
 
     HRESULT AsyncReadCompletion(IMFAsyncResult*);
     HRESULT AsyncReadContinue(IMFAsyncCallback*);
     HRESULT AsyncReadCancel();
 
-    void Purge(ULONGLONG);
+    void Purge(LONGLONG);
     void Clear();  //purge all
+
+    DWORD GetPageSize() const;
+    bool IsFreeEmpty() const;
+    void AllocateFree(ULONG);
 
     HRESULT GetCapabilities(DWORD&) const;
 

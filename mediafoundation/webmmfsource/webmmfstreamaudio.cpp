@@ -7,7 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <comdef.h>
-//#include <vfwmsgs.h>
+#include <vfwmsgs.h>
 #include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
@@ -23,6 +23,8 @@ _COM_SMARTPTR_TYPEDEF(IMFSample, __uuidof(IMFSample));
 
 namespace WebmMfSourceLib
 {
+
+enum { kQuotaTimeNanoseconds = 250000000 };
 
 
 HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
@@ -233,7 +235,8 @@ WebmMfStreamAudio::WebmMfStreamAudio(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     const mkvparser::AudioTrack* pTrack) :
-    WebmMfStream(pSource, pDesc, pTrack)
+    WebmMfStream(pSource, pDesc, pTrack),
+    m_pQuota(0)
 {
 }
 
@@ -277,6 +280,18 @@ HRESULT WebmMfStreamAudio::Start(const PROPVARIANT& var)
 #endif
 
 
+void WebmMfStreamAudio::OnDeselect()
+{
+    m_pQuota = 0;
+}
+
+
+void WebmMfStreamAudio::OnSetCurrBlock()
+{
+    m_pQuota = 0;
+}
+
+
 void WebmMfStreamAudio::SetCurrBlockCompletion(
     const mkvparser::Cluster* pCluster)
 {
@@ -317,6 +332,171 @@ void WebmMfStreamAudio::SetCurrBlockCompletion(
 }
 
 
+HRESULT WebmMfStreamAudio::GetQuota()
+{
+    if (m_pQuota)
+        return S_OK;
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+    assert(pCurr);
+    assert(!pCurr->EOS());
+    assert(m_pLocked);
+    assert(m_pLocked == pCurr);
+
+    const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
+    assert(pCurrBlock);
+    assert(pCurrBlock->GetTrackNumber() == tn);
+
+    const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
+    assert(pCurrCluster);
+    assert(!pCurrCluster->EOS());
+
+    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(curr_ns >= 0);
+
+    const mkvparser::BlockEntry* pNextEntry = pCurrCluster->GetNext(pCurr);
+
+    while (pNextEntry)
+    {
+        const mkvparser::Block* const pNextBlock = pNextEntry->GetBlock();
+        assert(pNextBlock);
+
+        if (pNextBlock->GetTrackNumber() == tn)
+        {
+            const LONGLONG next_ns = pNextBlock->GetTime(pCurrCluster);
+            assert(next_ns >= 0);
+
+            const LONGLONG delta_ns = next_ns - curr_ns;
+
+            if (delta_ns > kQuotaTimeNanoseconds)
+            {
+                m_pQuota = pNextEntry;
+                return S_OK;
+            }
+        }
+
+        pNextEntry = pCurrCluster->GetNext(pNextEntry);
+    }
+
+    return VFW_E_BUFFER_UNDERFLOW;
+}
+
+
+HRESULT WebmMfStreamAudio::NotifyNextCluster(
+    const mkvparser::Cluster* pNextCluster)
+{
+    assert(m_pQuota == 0);
+
+    if ((pNextCluster == 0) || pNextCluster->EOS())
+    {
+        m_pQuota = m_pTrack->GetEOS();
+        return S_OK;
+    }
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+    assert(pCurr);
+    assert(!pCurr->EOS());
+    assert(m_pLocked);
+    assert(m_pLocked == pCurr);
+
+    const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
+    assert(pCurrBlock);
+    assert(pCurrBlock->GetTrackNumber() == tn);
+
+    const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
+    assert(pCurrCluster);
+
+    const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
+    assert(curr_ns >= 0);
+
+    const mkvparser::BlockEntry* pNextEntry = pNextCluster->GetFirst();
+
+    while (pNextEntry)
+    {
+        const mkvparser::Block* const pBlock = pNextEntry->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+        {
+            const LONGLONG next_ns = pBlock->GetTime(pNextCluster);
+            assert(next_ns >= 0);
+
+            const LONGLONG delta_ns = next_ns - curr_ns;
+
+            if (delta_ns > kQuotaTimeNanoseconds)
+            {
+                m_pQuota = pNextEntry;
+                return S_OK;
+            }
+        }
+
+        pNextEntry = pNextCluster->GetNext(pNextEntry);
+    }
+
+    return VFW_E_BUFFER_UNDERFLOW;
+}
+
+
+const mkvparser::BlockEntry* WebmMfStreamAudio::GetNextBlock() const
+{
+    const LONGLONG tn = m_pTrack->GetNumber();
+    mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
+
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+    assert(pCurr);
+    assert(!pCurr->EOS());
+
+    const mkvparser::Cluster* pCluster = pCurr->GetCluster();
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    const mkvparser::BlockEntry* pResult = pCluster->GetNext(pCurr);
+
+    for (;;)
+    {
+        while (pResult)
+        {
+            const mkvparser::Block* const pBlock = pResult->GetBlock();
+            assert(pBlock);
+
+            if (pBlock->GetTrackNumber() == tn)
+                return pResult;
+
+            pResult = pCluster->GetNext(pResult);
+        }
+
+        //pCluster = m_pSegment->GetNext(pCluster);
+
+        LONGLONG pos;
+        LONG len;
+
+        const mkvparser::Cluster* pNext;
+
+        const long status = pSegment->ParseNext(pCluster, pNext, pos, len);
+
+        if (status > 0)  //EOF
+            return m_pTrack->GetEOS();
+
+        assert(status == 0);
+
+        if (status < 0)  //should never happen
+            return m_pTrack->GetEOS();
+
+        pCluster = pNext;
+        assert(pCluster);
+        assert(!pCluster->EOS());
+
+        pResult = pCluster->GetFirst();
+        assert(pResult);
+        assert(!pResult->EOS());
+    }
+}
+
+
 HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 {
     MkvReader& file = m_pSource->m_file;
@@ -347,7 +527,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     //populate this cluster until you have at least 100ms of
     //audio.
 
-    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+    const mkvparser::BlockEntry*& pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
     assert(m_pLocked);
@@ -366,6 +546,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     //   << curr_ns
     //   << endl;
 
+#if 0
     if (m_pNextBlock == 0)
     {
         const HRESULT hr = GetNextBlock();
@@ -375,12 +556,17 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
         assert(m_pNextBlock);
     }
+#else
+    HRESULT hr = GetQuota();
+
+    if (FAILED(hr))
+        return hr;
+
+    assert(m_pQuota);
+#endif
 
     file.UnlockPage(m_pLocked);
     m_pLocked = 0;
-
-    const mkvparser::Cluster* const pNextCluster = m_pNextBlock->GetCluster();
-    //pNextCluster can be NULL
 
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(curr_ns >= 0);
@@ -399,7 +585,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
         PROPVARIANT v;
 
-        HRESULT hr = InitPropVariantFromBoolean(TRUE, &v);
+        hr = InitPropVariantFromBoolean(TRUE, &v);
         assert(SUCCEEDED(hr));
 
         hr = QueueEvent(MEStreamThinMode, GUID_NULL, S_OK, &v);
@@ -426,7 +612,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         //MEStreamTick Event
         //http://msdn.microsoft.com/en-us/library/ms694874(v=vs.85).aspx
 
-        m_curr.pBE = m_pNextBlock;
+        m_curr.pBE = m_pQuota;  //use next block instead?
 
         const int status = file.LockPage(m_curr.pBE);
         assert(status == 0);
@@ -434,14 +620,14 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         if (status == 0)
             m_pLocked = m_curr.pBE;
 
-        m_pNextBlock = 0;
+        m_pQuota = 0;
 
         if (m_pSource->IsPaused())
             return S_OK;
 
         PROPVARIANT v;
 
-        HRESULT hr = InitPropVariantFromInt64(sample_time, &v);
+        hr = InitPropVariantFromInt64(sample_time, &v);
         assert(SUCCEEDED(hr));
 
         hr = QueueEvent(MEStreamTick, GUID_NULL, S_OK, &v);
@@ -459,7 +645,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
         PROPVARIANT v;
 
-        HRESULT hr = InitPropVariantFromBoolean(FALSE, &v);
+        hr = InitPropVariantFromBoolean(FALSE, &v);
         assert(SUCCEEDED(hr));
 
         hr = QueueEvent(MEStreamThinMode, GUID_NULL, S_OK, &v);
@@ -473,7 +659,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
     IMFSamplePtr pSample;
 
-    HRESULT hr = MFCreateSample(&pSample);
+    hr = MFCreateSample(&pSample);
     assert(SUCCEEDED(hr));  //TODO
     assert(pSample);
 
@@ -500,68 +686,18 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
 
-    const LONGLONG tn = m_pTrack->GetNumber();
-    bool bDone = false;
+    //const LONGLONG tn = m_pTrack->GetNumber();
+    //bool bDone = false;
 
-    for (;;)
+    while (pCurr != m_pQuota)
     {
-        hr = ReadBlock(pSample, m_curr.pBE);
+        hr = ReadBlock(pSample, pCurr);
         assert(SUCCEEDED(hr));  //TODO
 
-        if (bDone)
-            break;
-
-        if (m_pNextBlock == 0)  //weird
-            break;
-
-        if (m_pNextBlock->EOS())
-            break;
-
-        //We have a non-NULL next block, so it is a candidate
-        //for use as the curr block.
-
-        if (pNextCluster == 0)  //weird
-            break;
-
-        if (pNextCluster->EOS())  //weird
-            break;
-
-        using mkvparser::BlockEntry;
-        const BlockEntry* pNext = pNextCluster->GetNext(m_pNextBlock);
-
-        while (pNext)
-        {
-            const mkvparser::Block* const pBlock = pNext->GetBlock();
-            assert(pBlock);
-
-            if (pBlock->GetTrackNumber() == tn)
-                break;
-
-            pNext = pNextCluster->GetNext(pNext);
-        }
-
-        if (pNext == 0)  //no more blocks for this track on next cluster
-            break;
-
-        if (pNext->EOS())  //weird
-            break;
-
-        //We have a candidate next block on the next cluster.
-
-        const mkvparser::Block* const pBlock = pNext->GetBlock();
-
-        const LONGLONG next_ns = pBlock->GetTime(pNextCluster);
-        assert(next_ns >= 0);
-
-        const LONGLONG delta_ns = next_ns - curr_ns;
-
-        if (delta_ns > 100000000)  // 100ms
-            bDone = true;
-
-        m_curr.pBE = m_pNextBlock;
-        m_pNextBlock = pNext;
+        pCurr = GetNextBlock();
     }
 
+#if 0
     const mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
     const mkvparser::SegmentInfo* const pInfo = pSegment->GetInfo();
 
@@ -596,6 +732,20 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
                << " duration[sec]=" << (double(duration_ns) / 1000000000)
                << endl;
         }
+#if 0
+        else if (duration_ns < 100000000)  //100ms
+        {
+            odbgstream os;
+            os << "WebmMfStreamAudio::GetSample: less than 100ms of audio:"
+               << " curr_ns=" << curr_ns
+               << " curr[sec]=" << (double(curr_ns) / 1000000000)
+               << " next_ns=" << next_ns
+               << " next[sec]=" << (double(next_ns) / 1000000000)
+               << " duration_ns=" << duration_ns
+               << " duration[sec]=" << (double(duration_ns) / 1000000000)
+               << endl;
+        }
+#endif
 #endif
     }
     else if (pInfo)
@@ -625,16 +775,16 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         hr = pSample->SetSampleDuration(sample_duration);
         assert(SUCCEEDED(hr));
     }
+#endif
 
-    m_curr.pBE = m_pNextBlock;
+    assert(pCurr);
+    m_pQuota = 0;
 
-    const int status = file.LockPage(m_curr.pBE);
+    const int status = file.LockPage(pCurr);
     assert(status == 0);
 
     if (status == 0)
-        m_pLocked = m_curr.pBE;
-
-    m_pNextBlock = 0;
+        m_pLocked = pCurr;
 
     return ProcessSample(pSample);
 }

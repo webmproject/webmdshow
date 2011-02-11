@@ -219,11 +219,16 @@ private:
     thread_state_t StateAsyncParseNext();
     thread_state_t StateAsyncLoadNext();
 
+    //for async pre-fetching of next cluster
+    thread_state_t StateAsyncPreloadNext();
+
     typedef thread_state_t (WebmMfSource::*async_state_t)();
     async_state_t m_async_state;
 
     HRESULT ParseEbmlHeader(LONGLONG&);
+
     void PurgeCache();
+    thread_state_t PreloadCache(bool& bDone);
 
     thread_state_t LoadComplete(HRESULT);
 

@@ -8,7 +8,7 @@
 #include <limits>
 #include <cmath>
 #include <comdef.h>
-//#include <vfwmsgs.h>
+#include <vfwmsgs.h>
 #include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
@@ -239,9 +239,8 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     WebmMfSource* pSource,
     IMFStreamDescriptor* pDesc,
     const mkvparser::VideoTrack* pTrack) :
-    WebmMfStream(pSource, pDesc, pTrack)
-    //m_rate(1),
-    //m_thin_ns(-2)
+    WebmMfStream(pSource, pDesc, pTrack),
+    m_pNextBlock(0)
 {
 }
 
@@ -369,6 +368,17 @@ void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
 #endif
 
 
+void WebmMfStreamVideo::OnDeselect()
+{
+    m_pNextBlock =  0;
+}
+
+
+void WebmMfStreamVideo::OnSetCurrBlock()
+{
+    m_pNextBlock = 0;
+}
+
 
 void WebmMfStreamVideo::SetCurrBlockCompletion(
     const mkvparser::Cluster* pCluster)
@@ -427,6 +437,63 @@ void WebmMfStreamVideo::SetCurrBlockCompletion(
 
     //m_cluster_pos = -1;
     //m_time_ns = -1;
+}
+
+
+HRESULT WebmMfStreamVideo::NotifyNextCluster(
+    const mkvparser::Cluster* pNextCluster)
+{
+    if ((pNextCluster == 0) || pNextCluster->EOS())
+    {
+        m_pNextBlock = m_pTrack->GetEOS();
+        return S_OK;
+    }
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    m_pNextBlock = pNextCluster->GetFirst();
+
+    while (m_pNextBlock)
+    {
+        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+            return S_OK;  //success
+
+        m_pNextBlock = pNextCluster->GetNext(m_pNextBlock);
+    }
+
+    return VFW_E_BUFFER_UNDERFLOW;
+}
+
+
+HRESULT WebmMfStreamVideo::GetNextBlock()
+{
+    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+    assert(pCurr);
+    assert(!pCurr->EOS());
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    const mkvparser::Cluster* const pCluster = pCurr->GetCluster();
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    m_pNextBlock = pCluster->GetNext(pCurr);
+
+    while (m_pNextBlock)
+    {
+        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+            return S_OK;  //success
+
+        m_pNextBlock = pCluster->GetNext(m_pNextBlock);
+    }
+
+    return VFW_E_BUFFER_UNDERFLOW;  //did not find next entry for this track
 }
 
 

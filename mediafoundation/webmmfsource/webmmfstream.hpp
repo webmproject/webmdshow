@@ -112,7 +112,7 @@ public:
     bool IsCurrBlockLocked() const;
 
     int LockCurrBlock();
-    HRESULT NotifyNextCluster(const mkvparser::Cluster*);
+    virtual HRESULT NotifyNextCluster(const mkvparser::Cluster*) = 0;
 
     ULONG m_cRef;
     WebmMfSource* const m_pSource;
@@ -124,12 +124,14 @@ protected:
     HRESULT OnStart(const PROPVARIANT& time);
     HRESULT OnSeek(const PROPVARIANT& time);
 
-    HRESULT GetNextBlock();
     HRESULT ProcessSample(IMFSample*);
+
+    virtual void OnDeselect() = 0;
+    virtual void OnSetCurrBlock() = 0;
 
     SeekInfo m_curr;
     const mkvparser::BlockEntry* m_pFirstBlock;
-    const mkvparser::BlockEntry* m_pNextBlock;
+    //const mkvparser::BlockEntry* m_pNextBlock;
     const mkvparser::BlockEntry* m_pLocked;
     bool m_bDiscontinuity;
 

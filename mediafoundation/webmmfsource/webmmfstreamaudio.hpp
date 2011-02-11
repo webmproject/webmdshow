@@ -37,9 +37,21 @@ public:
     HRESULT Start(const PROPVARIANT&);
 
     void SetCurrBlockCompletion(const mkvparser::Cluster*);
+    HRESULT NotifyNextCluster(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
     HRESULT ReadBlock(IMFSample*, const mkvparser::BlockEntry*) const;
+
+protected:
+
+    void OnDeselect();
+    void OnSetCurrBlock();
+
+private:
+
+    const mkvparser::BlockEntry* m_pQuota;
+    HRESULT GetQuota();
+    const mkvparser::BlockEntry* GetNextBlock() const;
 
 };
 
