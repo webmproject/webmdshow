@@ -227,20 +227,17 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
                    //MFT_OUTPUT_STREAM_PROVIDES_SAMPLES   //TODO
                    //MFT_OUTPUT_STREAM_OPTIONAL
 
-    UINT32 bytes_per_sec;
+
     assert(m_output_mediatype);
-    hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
-                                       &bytes_per_sec);
-    assert(SUCCEEDED(hr));
-    if (FAILED(hr))
-        return hr;
 
-    assert(bytes_per_sec > 0);  //TODO: must have input media type
-
-    //TODO: we could eliminate this by specifying PROVIDES_SAMPLES
-    // cbSize wants 250 milliseconds in bytes of the output stream.
-    info.cbSize = (bytes_per_sec + 3) / 4;
+    UINT32 samples_per_sec;
+    hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND,
+                                       &samples_per_sec);
+    // 1/4 second of samples * block align
+    info.cbSize = m_block_align * ((samples_per_sec + 3) / 4);
     info.cbAlignment = 0;
+
+    assert((info.cbSize % m_block_align) == 0);
 
     return S_OK;
 }
@@ -1219,12 +1216,14 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     //DBGLOG("IN start_time=" << REFTIMETOSECONDS(input_start_time) <<
     //       " duration=" << REFTIMETOSECONDS(input_duration));
 
-    // get output buffer size, and adjust |samples_available| to ensure we
-    // never try to process more samples than will fit in the output buffer
+    // get output buffer size, and use it to calculate |samples_to_process| to
+    // ensure we never try to process more samples than will fit in the output
+    // buffer
+
     const DWORD buffer_capacity_bytes =
         get_mf_buffer_capacity(p_mf_output_sample, 0);
     const DWORD buffer_capacity_samples =
-        buffer_capacity_bytes + (m_block_align - 1) / m_block_align;
+        (buffer_capacity_bytes + (m_block_align - 1)) / m_block_align;
 
     UINT32 samples_available;
     CHK(hr, m_vorbis_decoder.GetOutputSamplesAvailable(&samples_available));
