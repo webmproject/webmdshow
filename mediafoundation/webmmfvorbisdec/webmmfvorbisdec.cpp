@@ -1200,7 +1200,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     }
 
     LONGLONG input_duration = 0;
-    CHK(hr, p_mf_input_sample->GetSampleDuration(&input_duration));
+    hr = p_mf_input_sample->GetSampleDuration(&input_duration);
     if (FAILED(hr) && MF_E_NO_SAMPLE_DURATION != hr)
     {
         //DBGLOG("no duration on input sample!");
