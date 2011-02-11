@@ -161,40 +161,39 @@ private:
     REFERENCE_TIME SamplesToMediaTime(UINT64 num_samples) const;
     UINT64 MediaTimeToSamples(REFERENCE_TIME media_time) const;
 
-    // TODO(tomfinegan): sort this mess; the random member order is *UGLY*
-    IClassFactory* const m_pClassFactory;
-    LONG m_cRef;
+    // Scratch buffer used by the filter to convert samples from one format to
+    // another.
+    WebmUtil::auto_array<unsigned char> m_scratch;
 
-    _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
-    IMFMediaTypePtr m_input_mediatype;
-    IMFMediaTypePtr m_output_mediatype;
-
-    typedef std::list<IMFSample*> mf_input_samples_t;
-    mf_input_samples_t m_mf_input_samples;
-
-    UINT64 m_total_samples_decoded;
-    REFERENCE_TIME m_decode_start_time;
-    REFERENCE_TIME m_start_time;
-
-    // minimum buffered uncompressed audio time that must be accumulated
-    // before |ProcessOutput| will return samples to the caller
-    const REFERENCE_TIME m_min_output_threshold;
     // when |m_drain| is true |m_min_output_threshold| is ignored, and we pass
     // all available samples downstream
     bool m_drain;
-
     // When |m_post_process_samples| is true the filter will need to process
     // the output from the decoder because the input format does not match
     // the output format.
     bool m_post_process_samples;
 
-    // Scratch buffer used by the filter to convert samples from one format to
-    // another.
-    WebmUtil::auto_array<unsigned char> m_scratch;
+    IClassFactory* const m_pClassFactory;
 
+    _COM_SMARTPTR_TYPEDEF(IMFMediaType, __uuidof(IMFMediaType));
+    IMFMediaTypePtr m_input_mediatype;
+    IMFMediaTypePtr m_output_mediatype;
+
+    LONG m_cRef;
+
+    typedef std::list<IMFSample*> mf_input_samples_t;
+    mf_input_samples_t m_mf_input_samples;
+
+    // minimum buffered uncompressed audio time that must be accumulated
+    // before |ProcessOutput| will return samples to the caller
+    const REFERENCE_TIME m_min_output_threshold;
+    REFERENCE_TIME m_decode_start_time;
+    REFERENCE_TIME m_start_time;
     // DEBUG
     REFERENCE_TIME m_mediatime_decoded;
     REFERENCE_TIME m_mediatime_recvd;
+
+    UINT64 m_total_samples_decoded;
 
     VorbisDecoder m_vorbis_decoder;
 
