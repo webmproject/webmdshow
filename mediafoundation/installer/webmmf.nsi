@@ -66,7 +66,13 @@
   ; Error message suffixes used with CheckError macro
   !define WMMF_INSTALL_ERROR "installation failed."
   !define WMMF_UNINSTALL_ERROR "uninstallation failed."
-
+  ; Omaha (Google Update) defines
+  !define WMMF_OMAHA_CLIENT_SUBKEY "Software\Google\Update\Clients"
+  !define WMMF_OMAHA_RESULT_SUBKEY "Software\Google\Update\ClientState"
+  !define WMMF_OMAHA_GUID "{ED3112D0-5211-11DF-94AF-0026B977EEAA}"
+  !define WMMF_OMAHA_APPNAME "WebM Media Foundation Components"
+  !define WMMF_OMAHA_REBOOT_REQUIRED 3010
+  !define WMMF_OMAHA_SUCCESS 0
 ;--------------------------------
 ;Interface Settings
 
@@ -136,6 +142,14 @@ Section "Install" SecInstall
   WriteRegStr HKLM "${WMMF_UNINSTALL_KEY}" "InstallSource" \
 "http://code.google.com/p/webm/downloads/list"
 
+
+  WriteRegStr HKLM "${WMMF_OMAHA_CLIENT_SUBKEY}\${WMMF_OMAHA_GUID}" \
+"pv" $VERSION_STR
+  WriteRegStr HKLM "${WMMF_OMAHA_CLIENT_SUBKEY}\${WMMF_OMAHA_GUID}" \
+"name" "${WMMF_OMAHA_APPNAME}"
+  WriteRegStr HKLM "${WMMF_OMAHA_CLIENT_SUBKEY}\${WMMF_OMAHA_GUID}" \
+"lang" "en"
+
   ClearErrors
 
   ; 32-bit component install (always installed)
@@ -200,6 +214,17 @@ Section "Install" SecInstall
 
   ${EndIf}
 
+  # Tell Omaha we need a reboot to complete update/install
+  IfRebootFlag 0 +3
+    WriteRegDWORD HKLM "${WMMF_OMAHA_RESULT_SUBKEY}\${WMMF_OMAHA_GUID}" \
+"InstallerResult" ${WMMF_OMAHA_REBOOT_REQUIRED}
+    goto done
+  ; TODO(tomfinegan): update |CheckError| to set an error flag that we
+  ;                   can check here instead of blindly reporting success
+  WriteRegDWORD HKLM "${WMMF_OMAHA_RESULT_SUBKEY}\${WMMF_OMAHA_GUID}" \
+"InstallerResult" ${WMMF_OMAHA_SUCCESS}
+done:
+
 SectionEnd
 
 ;--------------------------------
@@ -261,6 +286,7 @@ Section "Uninstall" SecUninstall
   ${EndIf}
 
   DeleteRegKey HKLM "${WMMF_UNINSTALL_KEY}"
-
+  DeleteRegKey HKLM "${WMMF_OMAHA_CLIENT_SUBKEY}\${WMMF_OMAHA_GUID}"
+  DeleteRegKey HKLM "${WMMF_OMAHA_RESULT_SUBKEY}\${WMMF_OMAHA_GUID}"
 SectionEnd
 
