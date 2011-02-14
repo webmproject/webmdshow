@@ -1237,7 +1237,7 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
 
     ULONG cbRead;
 
-    const HRESULT hr = m_pStream->EndRead(pResult, &cbRead);
+    HRESULT hr = m_pStream->EndRead(pResult, &cbRead);
     assert(FAILED(hr) || (cbRead <= m_info.dwPageSize));
 
     if (SUCCEEDED(hr))
@@ -1247,10 +1247,18 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
 
         if (page.len < m_info.dwPageSize)
         {
-            const LONGLONG length = page.pos + page.len;
-            assert((m_length < 0) || (length == m_length));
+            //We read fewer bytes than requested.  This is a normal event,
+            //such as when we read the very last page of the file.
 
-            if (m_length < 0)
+            const LONGLONG length = page.pos + page.len;
+            assert((m_length < 0) || (length <= m_length));
+
+            if (m_length >= 0)  //length is defined
+            {
+                if (length < m_length)  //weird: fewer bytes than total length
+                    hr = E_FAIL;        //treat this as an I/O error
+            }
+            else //network source with unknown length
             {
                 m_length = length;
                 assert(m_async_pos <= m_length);
