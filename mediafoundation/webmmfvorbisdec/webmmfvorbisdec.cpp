@@ -1261,8 +1261,8 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     assert(SUCCEEDED(hr));
 
     // update running sample and time totals
-    m_total_samples_decoded += samples_available;
-    LONGLONG mediatime_decoded = SamplesToMediaTime(samples_available);
+    m_total_samples_decoded += samples_to_process;
+    LONGLONG mediatime_decoded = SamplesToMediaTime(samples_to_process);
     m_mediatime_decoded += mediatime_decoded;
 
     //DBGLOG("OUT start_time=" << REFTIMETOSECONDS(m_start_time) <<
