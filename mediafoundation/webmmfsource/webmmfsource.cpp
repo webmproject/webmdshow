@@ -2709,8 +2709,22 @@ void WebmMfSource::NotifyEOS()
             continue;
 
         if (!pStream->GetEOS())
+        {
+#ifdef _DEBUG
+            odbgstream os;
+            os << "WebmMfSource::NotifyEOS: !EOS on stream type="
+               << pStream->m_pTrack->GetType()
+               << endl;
+#endif
+
             return;
+        }
     }
+
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfSource::NotifyEOS: reporting EOF" << endl;
+#endif
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEEndOfPresentation,
@@ -3085,6 +3099,13 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         const HRESULT hr = pStream->SetEOS();
         assert(SUCCEEDED(hr));  //TODO
+
+#ifdef _DEBUG
+        odbgstream os;
+        os << "WebmMfSource::OnRequestSample: EOS detected for stream type="
+           << pStream->m_pTrack->GetType()
+           << endl;
+#endif
 
         rr.pop_front();
 
