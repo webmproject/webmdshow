@@ -24,29 +24,20 @@ public:
                     IMFStreamDescriptor*,
                     WebmMfSource*,
                     const mkvparser::Track*,
-                    //ULONG context_key,
-                    //ULONG stream_key,
                     WebmMfStream*&);
 
     virtual ~WebmMfStreamVideo();
-
-    //HRESULT GetCurrMediaTime(LONGLONG&) const;
-    //void GetSeekInfo(LONGLONG, SeekInfo&) const;
-
-    //HRESULT Seek(
-    //    const PROPVARIANT& time,
-    //    const SeekInfo&,
-    //    bool bStart);
 
     HRESULT Start(const PROPVARIANT&);
 
     bool GetSampleExtent(LONGLONG& pos, LONG& len);
     void GetSampleExtentCompletion();
 
-    void SetCurrBlockObject(const mkvparser::Cluster*);
+    //void SetCurrBlockObject(const mkvparser::Cluster*);
+    bool SetCurrBlockObject();
 
-    bool GetNextBlock(const mkvparser::Cluster*&);
-    bool NotifyNextCluster(const mkvparser::Cluster*);
+    long GetNextBlock(const mkvparser::Cluster*&);
+    long NotifyNextCluster(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
 
@@ -55,18 +46,17 @@ protected:
     void OnDeselect();
     void OnSetCurrBlock();
 
+    void SetCurrBlockIndex();
+
 private:
 
     const mkvparser::BlockEntry* m_pNextBlock;
-
-    //HRESULT GetNextBlock();
+    long m_next_index;
 
     static HRESULT GetFrameRate(
         const mkvparser::VideoTrack*,
         UINT32&,
         UINT32&);
-
-    bool m_bExtent;
 
 };
 

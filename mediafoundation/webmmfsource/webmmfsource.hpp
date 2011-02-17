@@ -201,6 +201,8 @@ private:
 
     const mkvparser::Cluster* m_pCurr;
     const mkvparser::Cluster* m_pNext;
+    const mkvparser::Cluster* m_pPreload;
+    long m_preload_index;
 
     //for async load:
     thread_state_t StateAsyncParseEbmlHeader();
@@ -214,16 +216,28 @@ private:
     thread_state_t StateAsyncGetSampleExtent();
 
     //for async cluster parsing of curr cluster:
-    thread_state_t StateAsyncLoadCurrInit();
-    thread_state_t StateAsyncLoadCurrFinal();
+    //thread_state_t StateAsyncLoadCurrInit();
+    //thread_state_t StateAsyncLoadCurrFinal();
+    thread_state_t StateAsyncGetCurrBlockObjectInit();
+    thread_state_t StateAsyncGetCurrBlockObjectFinal();
+    thread_state_t StateAsyncGetNextBlockCurrInit();
+    //thread_state_t StateAsyncGetNextBlockCurrFinal();
+    thread_state_t StateAsyncGetNextBlockNextInit();
+    thread_state_t StateAsyncGetNextBlockNextNotify();
+    thread_state_t StateAsyncGetNextBlockNextParse();
 
     //for async cluster parsing of next cluster:
-    thread_state_t StateAsyncParseNext();
-    thread_state_t StateAsyncLoadNext();
-    thread_state_t StateAsyncNotifyNext();
+    //thread_state_t StateAsyncParseNextInit();
+    //thread_state_t StateAsyncParseNextFinal();
+    //thread_state_t StateAsyncLoadNext();
+    //thread_state_t StateAsyncNotifyNext();
 
     //for async pre-fetching of next cluster
     //thread_state_t StateAsyncPreloadNext();
+    thread_state_t StateAsyncParseCurr();
+    thread_state_t StateAsyncParseNextInit();
+    thread_state_t StateAsyncParseNextFinal();
+    thread_state_t StateAsyncPreloadSample();
 
     typedef thread_state_t (WebmMfSource::*async_state_t)();
     async_state_t m_async_state;
@@ -231,7 +245,10 @@ private:
     HRESULT ParseEbmlHeader(LONGLONG&);
 
     void PurgeCache();
-    //thread_state_t PreloadCache(bool& bDone);
+    thread_state_t PreloadCache(bool& bDone);
+    thread_state_t PreloadCache(bool& bDone, const mkvparser::BlockEntry*);
+    thread_state_t Parse(bool& bDone);
+    thread_state_t PreloadSample(WebmMfStream*);
 
     thread_state_t LoadComplete(HRESULT);
 

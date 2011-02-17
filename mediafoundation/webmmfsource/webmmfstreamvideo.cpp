@@ -240,7 +240,8 @@ WebmMfStreamVideo::WebmMfStreamVideo(
     IMFStreamDescriptor* pDesc,
     const mkvparser::VideoTrack* pTrack) :
     WebmMfStream(pSource, pDesc, pTrack),
-    m_pNextBlock(0)
+    m_pNextBlock(0),
+    m_next_index(-1)
 {
 }
 
@@ -370,16 +371,19 @@ void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
 
 void WebmMfStreamVideo::OnDeselect()
 {
-    m_pNextBlock =  0;
+    m_pNextBlock = 0;
+    m_next_index = -1;
 }
 
 
 void WebmMfStreamVideo::OnSetCurrBlock()
 {
     m_pNextBlock = 0;
+    m_next_index = -1;
 }
 
 
+#if 0
 void WebmMfStreamVideo::SetCurrBlockObject(
     const mkvparser::Cluster* pCluster)
 {
@@ -388,15 +392,120 @@ void WebmMfStreamVideo::SetCurrBlockObject(
     assert(m_cluster_pos >= 0);
     //assert(m_time_ns >= 0);
 
+    //All this does is give us a cluster object.  We cannot make any
+    //assumptions about whether or how many block entries have been
+    //parsed yet.
+
     if ((pCluster == 0) ||
         pCluster->EOS() ||
-        (pCluster->GetEntryCount() <= 0))
+        (pCluster->GetEntryCount() <= 0))  //THIS WILL HAVE TO BE FIXED TOO
     {
         m_curr.Init(m_pTrack->GetEOS());  //weird
         return;
     }
 
-    assert(pCluster->m_pos >= 0);
+    const LONGLONG cluster_pos = pCluster->GetPosition();
+    assert(cluster_pos >= 0);
+
+    mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
+
+    const mkvparser::Cues* const pCues = pSegment->GetCues();
+    assert(pCues);
+
+    using mkvparser::BlockEntry;
+    using mkvparser::CuePoint;
+
+    const CuePoint* pCP;
+    const CuePoint::TrackPosition* pTP;
+
+    //The problem here is that we don't want to repeat this work.
+    //Our current state transitions look like this:
+    //
+    //(1) the worker asks whether we have a curr block object yet
+    //    we answer when this is a seek
+    //(2) the worker thread calls FindOrPreload to get us a cluster
+    //    object.
+    //    Up to now it also parsed all of the cluster entries, but
+    //    now we aren't going to do that anymore.
+    //(3) After the cluster entries have been parsed, it would call
+    //    back here, so that we could then get a curr block object,
+    //    given a cluster object.
+    //
+    //Maybe we must change this to ask whether we have a curr block
+    //index.  If not, the worker thread gets the cluster object,
+    //then calls us back to ask us to convert that to a curr block
+    //index, then there's another state transition where we attempt
+    //to turn a curr block index into a curr block object.
+    //
+    //we have at least three different values:
+    //(1) curr is EOS; CuePoint value doesn't matter
+    //
+    //(2) curr is not EOS; yes we have a cue point
+    //(3) curr is not EOS; no we do not have a cue point.
+    //
+    //It's a bit strange that this is a seek, but we don't have
+    //a cue point, since seeking is closely tied to having cue points.
+    //One possibility is to simply report an error if the cue point
+    //is bad.
+    //
+
+    if (pCues->Find(m_time_ns, m_pTrack, pCP, pTP))
+    {
+        assert(pCP);
+        assert(pTP);
+        assert(pTP->m_track == m_pTrack->GetNumber());
+
+        if (pTP->m_pos == cluster_pos)  //what we expect to be true
+        {
+            //This gives us a block index directly, so all we need to do is
+            //remember this index.  This gets slightly tricky if the
+            //index we have is wrong (because sometime the CuePoints aren't
+            //written correctly).
+
+            m_curr.pBE = pCluster->GetEntry(*pCP, *pTP);
+
+            if (m_curr.pBE)  //can be false if bad cue point
+            {
+                m_curr.pCP = pCP;
+                m_curr.pTP = pTP;
+
+                return;
+            }
+        }
+    }
+
+    //We have decided below to simply find the first matching track
+    //on this cluster.  That means we can just set the index to 0.
+
+
+    //if (const BlockEntry* pBE = pCluster->GetEntry(m_pTrack, m_time_ns))
+    if (const BlockEntry* pBE = pCluster->GetEntry(m_pTrack))
+        m_curr.Init(pBE);
+    else
+        m_curr.Init(m_pTrack->GetEOS());
+
+    //m_cluster_pos = -1;
+    //m_time_ns = -1;
+}
+#endif
+
+
+void WebmMfStreamVideo::SetCurrBlockIndex()
+{
+    assert(m_curr.pBE == 0);
+    assert(m_time_ns >= 0);
+    //assert(m_cluster_pos >= 0);
+
+    const mkvparser::Cluster* const pCluster = m_curr.pCluster;
+
+    if ((pCluster == 0) || pCluster->EOS())  //weird
+    {
+        m_curr.Init(m_pTrack->GetEOS());
+        return;
+    }
+
+    const LONGLONG cluster_pos = pCluster->GetPosition();
+    assert(cluster_pos >= 0);
 
     mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
 
@@ -415,67 +524,188 @@ void WebmMfStreamVideo::SetCurrBlockObject(
         assert(pTP);
         assert(pTP->m_track == m_pTrack->GetNumber());
 
-        if (pTP->m_pos == pCluster->m_pos)  //what we expect to be true
+        if ((pTP->m_pos == cluster_pos) && (pTP->m_block > 0))
         {
-            m_curr.pBE = pCluster->GetEntry(*pCP, *pTP);
-
-            if (m_curr.pBE)  //can be false if bad cue point
-            {
-                m_curr.pCP = pCP;
-                m_curr.pTP = pTP;
-
-                return;
-            }
+            m_curr.index = -1;  //means use pTP
+            //m_curr.pCluster = pCluster;
+            m_curr.pBE = 0;  //means we lazy-init
+            m_curr.pCP = pCP;
+            m_curr.pTP = pTP;
         }
     }
 
-    //if (const BlockEntry* pBE = pCluster->GetEntry(m_pTrack, m_time_ns))
-    if (const BlockEntry* pBE = pCluster->GetEntry(m_pTrack))
-        m_curr.Init(pBE);
-    else
-        m_curr.Init(m_pTrack->GetEOS());
-
-    //m_cluster_pos = -1;
-    //m_time_ns = -1;
+    m_curr.index = 0;  //start search at beginning of cluster
+    //m_curr.pCluster = pCluster;
+    m_curr.pBE = 0;  //must lazy-init
+    m_curr.pCP = 0;
+    m_curr.pTP = 0;
 }
 
 
-bool WebmMfStreamVideo::NotifyNextCluster(
-    const mkvparser::Cluster* pNextCluster)
+bool WebmMfStreamVideo::SetCurrBlockObject()  //return long value instead?
 {
-    if ((pNextCluster == 0) || pNextCluster->EOS())
-    {
-        m_pNextBlock = m_pTrack->GetEOS();
-        return true;  //done
-    }
+    //We have an index, and a cluster, which we must convert
+    //to a block object.
+
+    if (m_curr.pBE)  //weird
+        return true;   //done
+
+    const mkvparser::Cluster* const pCluster = m_curr.pCluster;
+    assert(pCluster);
+    assert(!pCluster->EOS());
 
     const LONGLONG tn = m_pTrack->GetNumber();
 
-    m_pNextBlock = pNextCluster->GetFirst();
-
-    while (m_pNextBlock)
+    if (m_curr.index < 0)  //synthesize value from cue point
     {
-        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
+        assert(m_curr.pCP);
+        assert(m_curr.pTP);
+        assert(m_curr.pTP->m_track == tn);
+        assert(m_curr.pTP->m_block > 0);
+
+        const LONGLONG block_ = m_curr.pTP->m_block;
+        assert(block_ > 0);
+        assert(block_ <= LONG_MAX);
+
+        const LONG block = static_cast<LONG>(block_);
+        const LONG index = block - 1;
+
+        //We want to test the cue point now, to determine
+        //whether it's pointing to a block for this track,
+        //and that the block is also a keyframe.  If neither
+        //of these conditions are true then we set the index
+        //to 0 and start a linear search.
+
+        const mkvparser::BlockEntry* pCurr;
+
+        const long status = pCluster->GetEntry(index, pCurr);
+
+        //Underflow is interpreted here to mean that we did not
+        //find a block because more was left to parse.
+
+        if (status < 0)
+        {
+            assert(status == mkvparser::E_BUFFER_NOT_FULL);
+            return false;  //not done: need to do more parsing
+        }
+
+        //This is interpreted to mean that we did not find
+        //a block because the entire cluster has been parsed,
+        //but there were no more blocks on this cluster.
+
+        if (status == 0)  //weird
+        {
+            m_curr.pBE = m_pTrack->GetEOS();
+            return true;  //done
+        }
+
+        //We have an entry.
+
+        assert(pCurr);
+        assert(!pCurr->EOS());
+
+        const mkvparser::Block* const pBlock = pCurr->GetBlock();
         assert(pBlock);
 
-        if (pBlock->GetTrackNumber() == tn)
-            return true;  //done
+        const long long tc = m_curr.pCP->GetTimeCode();
+        assert(tc >= 0);
 
-        m_pNextBlock = pNextCluster->GetNext(m_pNextBlock);
+        if ((pBlock->GetTrackNumber() == tn) &&
+            (pBlock->GetTimeCode(pCluster) == tc) &&
+            pBlock->IsKey())
+        {
+            m_curr.pBE = pCurr;
+            return true;  //done
+        }
+
+        m_curr.index = 0;  //must do linear search
     }
 
-    return false;  //not done yet
+    long& index = m_curr.index;
+    assert(index >= 0);
+
+    const LONGLONG tc = m_curr.pCP ? m_curr.pCP->GetTimeCode() : -1;
+
+    for (;;)
+    {
+        const mkvparser::BlockEntry* pCurr;
+
+        const long status = m_curr.pCluster->GetEntry(index, pCurr);
+
+        //Underflow is interpreted here to mean that we did not
+        //find a block because more was left to parse.
+
+        if (status < 0)
+        {
+            assert(status == mkvparser::E_BUFFER_NOT_FULL);
+            return false;  //not done: need to do more parsing
+        }
+
+        //This is interpreted to mean that we did not find
+        //a block because the entire cluster has been parsed,
+        //but there were no more blocks on this cluster.
+
+        if (status == 0)  //weird
+        {
+            m_curr.pBE = m_pTrack->GetEOS();
+            return true;  //done
+        }
+
+        //We have an entry.
+
+        assert(pCurr);
+        assert(!pCurr->EOS());
+
+        const mkvparser::Block* const pBlock = pCurr->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() != tn)
+        {
+            ++index;
+            continue;
+        }
+
+        if (tc < 0)  //this is not a cue point (pathological)
+        {
+            if (pBlock->IsKey())
+            {
+                m_curr.pBE = pCurr;
+                return true;
+            }
+
+            ++index;
+            continue;
+        }
+
+        const long long tc_ = pBlock->GetTimeCode(pCluster);
+
+        if (tc_ < tc)
+        {
+            ++index;
+            continue;
+        }
+
+        if ((tc_ > tc) || !pBlock->IsKey())
+        {
+            m_curr.pBE = m_pTrack->GetEOS();
+            return true;
+        }
+
+        m_curr.pBE = pCurr;
+        return true;
+    }
 }
 
 
-bool WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
+long WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
 {
     if (m_pNextBlock)
-        return true;  //we have next block
+        return 1;  //we have a next block
 
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
+    assert((m_pLocked == 0) || (m_pLocked == pCurr));
 
     const LONGLONG tn = m_pTrack->GetNumber();
 
@@ -483,6 +713,7 @@ bool WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
     assert(pCluster);
     assert(!pCluster->EOS());
 
+#if 0
     m_pNextBlock = pCluster->GetNext(pCurr);
 
     while (m_pNextBlock)
@@ -497,6 +728,120 @@ bool WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
     }
 
     return false;  //no, we do not have next block
+#else
+    if (m_next_index < 0)
+        m_next_index = pCurr->GetIndex() + 1;
+
+    for (;;)
+    {
+        const mkvparser::BlockEntry* pNext;
+
+        const long status = pCluster->GetEntry(m_next_index, pNext);
+
+        //Underflow is interpreted here to mean that we did not
+        //find a block because more was left to parse.
+
+        if (status < 0)
+            return status;  //error or underflow
+
+        //This is interpreted to mean that we did not find
+        //a block because the entire cluster has been parsed,
+        //but there were no more blocks on this cluster.
+
+        if (status == 0)
+        {
+            m_next_index = 0;
+            return 0;  //tell caller we need another cluster
+        }
+
+        //We have an entry.
+
+        assert(pNext);
+        assert(!pNext->EOS());
+
+        const mkvparser::Block* const pBlock = pNext->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+        {
+            m_pNextBlock = pNext;
+            return 1;  //we have a next block
+        }
+
+        ++m_next_index;
+    }
+#endif
+}
+
+
+long WebmMfStreamVideo::NotifyNextCluster(
+    const mkvparser::Cluster* pCluster)
+{
+    if ((pCluster == 0) || pCluster->EOS())
+    {
+        m_pNextBlock = m_pTrack->GetEOS();
+        return 1;  //done
+    }
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+#if 0
+    m_pNextBlock = pNextCluster->GetFirst();
+
+    while (m_pNextBlock)
+    {
+        const mkvparser::Block* const pBlock = m_pNextBlock->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+            return true;  //done
+
+        m_pNextBlock = pNextCluster->GetNext(m_pNextBlock);
+    }
+
+    return false;  //not done yet
+#else
+    assert(m_next_index >= 0);  //set in GetNextBlock
+
+    for (;;)
+    {
+        const mkvparser::BlockEntry* pNext;
+
+        const long status = pCluster->GetEntry(m_next_index, pNext);
+
+        //Underflow is interpreted here to mean that we did not
+        //find a block because more was left to parse.
+
+        if (status < 0)
+            return status;  //error or underflow
+
+        //This is interpreted to mean that we did not find
+        //a block because the entire cluster has been parsed,
+        //but there were no more blocks on this cluster.
+
+        if (status == 0)
+        {
+            m_next_index = 0;
+            return 0;  //tell caller we need another cluster
+        }
+
+        //We have an entry.
+
+        assert(pNext);
+        assert(!pNext->EOS());
+
+        const mkvparser::Block* const pBlock = pNext->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+        {
+            m_pNextBlock = pNext;
+            return 1;  //we have a next block
+        }
+
+        ++m_next_index;
+    }
+#endif
 }
 
 
@@ -738,6 +1083,7 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 #endif
 
         m_pNextBlock = 0;
+        m_next_index = -1;
 
         return ProcessSample(pSample);
     }
@@ -745,6 +1091,7 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     //thinning mode
 
     m_pNextBlock = 0;
+    m_next_index = -1;
 
     const mkvparser::Cues* const pCues = pSegment->GetCues();
     assert(pCues);
@@ -794,6 +1141,8 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
         m_cluster_pos = pTP->m_pos;
 
+        m_curr.index = -1;
+        m_curr.pCluster = 0;
         m_curr.pBE = 0;
         m_curr.pCP = pCP;
         m_curr.pTP = pTP;
@@ -820,6 +1169,8 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
             return ProcessSample(pSample);
         }
 
+        m_curr.index = -1;
+        m_curr.pCluster = 0;
         m_curr.pBE = 0;
         m_curr.pCP = pCP;
         m_curr.pTP = pTP;
@@ -875,6 +1226,8 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
             m_thin_ns = next_ns;
         }
 
+        m_curr.index = -1;
+        m_curr.pCluster = 0;
         m_curr.pBE = 0;
         m_curr.pCP = pCP;
         m_curr.pTP = pTP;

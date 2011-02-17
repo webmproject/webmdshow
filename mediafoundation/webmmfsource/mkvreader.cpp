@@ -1,9 +1,10 @@
 #include "mkvreader.hpp"
 #include <cassert>
 #include <algorithm>
-//#include <utility>  //std::make_pair
 #include <comdef.h>
-#if 0 //def _DEBUG
+#undef DEBUG_PURGE
+//#define DEBUG_PURGE
+#ifdef DEBUG_PURGE
 #include "odbgstream.hpp"
 using std::endl;
 #endif
@@ -833,13 +834,14 @@ void MkvReader::PurgeOne()
 
 void MkvReader::Purge(LONGLONG pos)
 {
-#if 0 //def _DEBUG
+#ifdef DEBUG_PURGE
     const free_pages_t::size_type old_size = m_free_pages.size();
 #endif
 
     int i = 0;
+    enum { max_count = 16 };
 
-    while (!m_cache.empty() && (i < 16))
+    while (!m_cache.empty() && (i < max_count))
     {
         const cache_t::value_type page_iter = m_cache.front();
 
@@ -868,11 +870,11 @@ void MkvReader::Purge(LONGLONG pos)
         ++i;
     }
 
-#if 0 //def _DEBUG
+#ifdef DEBUG_PURGE
     const free_pages_t::size_type new_size = m_free_pages.size();
     const free_pages_t::size_type n = new_size - old_size;
 
-    if (0)
+    if (n)
     {
         odbgstream os;
         os << "mkvreader::purge: n=" << n

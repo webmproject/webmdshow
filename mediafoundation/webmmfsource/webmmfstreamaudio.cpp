@@ -24,7 +24,8 @@ _COM_SMARTPTR_TYPEDEF(IMFSample, __uuidof(IMFSample));
 namespace WebmMfSourceLib
 {
 
-enum { kQuotaTimeNanoseconds = 250000000 };
+//enum { kQuotaTimeNanoseconds = 100000000 };  //100ms
+enum { kQuotaTimeNanoseconds = 250000000 };  //250ms
 
 
 HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
@@ -236,7 +237,8 @@ WebmMfStreamAudio::WebmMfStreamAudio(
     IMFStreamDescriptor* pDesc,
     const mkvparser::AudioTrack* pTrack) :
     WebmMfStream(pSource, pDesc, pTrack),
-    m_pQuota(0)
+    m_pQuota(0),
+    m_next_index(-1)
 {
 }
 
@@ -284,6 +286,8 @@ void WebmMfStreamAudio::OnDeselect()
 {
     m_pQuota = 0;
     m_blocks.clear();
+    m_sample_extent.clear();
+    m_next_index = -1;
 }
 
 
@@ -291,10 +295,12 @@ void WebmMfStreamAudio::OnSetCurrBlock()
 {
     m_pQuota = 0;
     m_blocks.clear();
+    m_sample_extent.clear();
+    m_next_index = -1;
 }
 
 
-
+#if 0
 void WebmMfStreamAudio::SetCurrBlockObject(
     const mkvparser::Cluster* pCluster)
 {
@@ -333,12 +339,101 @@ void WebmMfStreamAudio::SetCurrBlockObject(
     //m_cluster_pos = -1;
     //m_time_ns = -1;
 }
+#endif
 
 
-bool WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
+void WebmMfStreamAudio::SetCurrBlockIndex()
+{
+    assert(m_curr.pBE == 0);
+    assert(m_time_ns >= 0);
+
+    const mkvparser::Cluster* const pCluster = m_curr.pCluster;
+
+    if ((pCluster == 0) || pCluster->EOS())  //weird
+    {
+        m_curr.Init(m_pTrack->GetEOS());
+        return;
+    }
+
+    //TODO: given time, do binary search of cluster entries
+    //For now, we search from beginning of cluster.
+
+    m_curr.index = 0;  //start search at beginning; //TODO: use time?
+    //m_curr.pCluster = pCluster;
+    m_curr.pBE = 0;  //lazy-init
+    m_curr.pCP = 0;
+    m_curr.pTP = 0;
+}
+
+
+bool WebmMfStreamAudio::SetCurrBlockObject()  //return long value instead?
+{
+    //We have an index, and a cluster, which we must convert
+    //to a block object.
+
+    if (m_curr.pBE)  //weird
+        return true;   //done
+
+    const mkvparser::Cluster* const pCluster = m_curr.pCluster;
+    assert(pCluster);
+    assert(!pCluster->EOS());
+
+    const LONGLONG tn = m_pTrack->GetNumber();
+
+    long& index = m_curr.index;
+    assert(index >= 0);
+
+    //TODO: either use m_time_ns, or m_curr.pCP->GetTimeCode,
+    //instead of searching from beginning of cluster.
+
+    for (;;)
+    {
+        const mkvparser::BlockEntry* pCurr;
+
+        const long status = m_curr.pCluster->GetEntry(index, pCurr);
+
+        //Underflow is interpreted here to mean that we did not
+        //find a block because more was left to parse.
+
+        if (status < 0)
+        {
+            assert(status == mkvparser::E_BUFFER_NOT_FULL);
+            return false;  //not done: need to do more parsing
+        }
+
+        //This is interpreted to mean that we did not find
+        //a block because the entire cluster has been parsed,
+        //but there were no more blocks on this cluster.
+
+        if (status == 0)  //weird
+        {
+            m_curr.pBE = m_pTrack->GetEOS();
+            return true;  //done
+        }
+
+        //We have an entry.
+
+        assert(pCurr);
+        assert(!pCurr->EOS());
+
+        const mkvparser::Block* const pBlock = pCurr->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+        {
+            m_curr.pBE = pCurr;
+            return true;
+        }
+
+        ++index;
+    }
+}
+
+
+long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
 {
     if (m_pQuota)
-        return true;  //yes, we have next block
+        return 1;  //yes, we have next block
 
     const LONGLONG tn = m_pTrack->GetNumber();
 
@@ -360,10 +455,10 @@ bool WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(curr_ns >= 0);
 
+#if 0
     m_blocks.clear();
     m_blocks.push_back(pCurr);
 
-    //const mkvparser::BlockEntry* pLastEntry = pCurr;
     const mkvparser::BlockEntry* pNextEntry = pCurrCluster->GetNext(pCurr);
 
     while (pNextEntry)
@@ -391,34 +486,111 @@ bool WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
         pNextEntry = pCurrCluster->GetNext(pNextEntry);
     }
 
-#if 0
-    const LONGLONG curr_pos = pCurrBlock->m_start;
-
-    const mkvparser::Block* const pLastBlock = pLastEntry->GetBlock();
-    assert(pLastBlock);
-
-    const LONGLONG last_pos = pLastBlock->m_start;
-    const LONGLONG last_end = last_pos + pLastBlock->m_size;
-
-    const LONGLONG sample_extent = last_end - curr_pos;
-    m_sample_extent = static_cast<LONG>(sample_extent);
-#else
     m_sample_extent = 0;  //means it needs to be calculated
-#endif
 
     return m_pQuota ? true : false;
+#else
+    if (m_next_index < 0)
+    {
+        m_next_index = pCurr->GetIndex() + 1;
+
+        //m_sample_extent = 0;  //means it needs to be calculated
+        m_sample_extent.clear();
+
+        m_blocks.clear();
+        m_blocks.push_back(pCurr);
+    }
+
+    for (;;)
+    {
+        const mkvparser::BlockEntry* pNext;
+
+        const long status = pCurrCluster->GetEntry(m_next_index, pNext);
+
+        //status < 0
+        //Underflow is interpreted here to mean that we did not
+        //find a block because more was left to parse.
+
+        if (status < 0)
+        {
+            if (m_blocks.size() <= 1)
+                return status;  //no choice but to parse
+
+            m_pQuota = m_blocks.back();
+            assert(m_pQuota);
+
+            m_blocks.pop_back();
+            m_sample_extent = m_blocks;
+
+            return 1;  //done
+        }
+
+        //status = 0
+        //This is interpreted to mean that we did not find
+        //a block because the entire cluster has been parsed,
+        //but there were no more blocks on this cluster.
+
+        if (status == 0)
+        {
+            if (m_blocks.size() <= 1)
+            {
+                m_next_index = 0;
+                return 0;
+            }
+
+            m_pQuota = m_blocks.back();
+            assert(m_pQuota);
+
+            m_blocks.pop_back();
+            m_sample_extent = m_blocks;
+
+            return 1;  //done
+        }
+
+        //We have an entry.
+
+        assert(pNext);
+        assert(!pNext->EOS());
+
+        const mkvparser::Block* const pBlock = pNext->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+        {
+            const LONGLONG next_ns = pBlock->GetTime(pCurrCluster);
+            assert(next_ns >= 0);
+
+            const LONGLONG delta_ns = next_ns - curr_ns;
+
+            if ((delta_ns > kQuotaTimeNanoseconds) || (m_blocks.size() >= 16))
+            {
+                m_pQuota = pNext;
+                m_sample_extent = m_blocks;
+
+                return 1;  //have next block
+            }
+
+            m_blocks.push_back(pNext);
+        }
+
+        ++m_next_index;
+    }
+#endif
 }
 
 
-bool WebmMfStreamAudio::NotifyNextCluster(
+long WebmMfStreamAudio::NotifyNextCluster(
     const mkvparser::Cluster* pNextCluster)
 {
     assert(m_pQuota == 0);
+    assert(m_next_index >= 0);
 
     if ((pNextCluster == 0) || pNextCluster->EOS())
     {
         m_pQuota = m_pTrack->GetEOS();
-        return true;  //done
+        m_sample_extent = m_blocks;
+
+        return 1;  //done
     }
 
     const LONGLONG tn = m_pTrack->GetNumber();
@@ -440,7 +612,7 @@ bool WebmMfStreamAudio::NotifyNextCluster(
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(curr_ns >= 0);
 
-    //const mkvparser::BlockEntry* pLastEntry = 0;
+#if 0
     const mkvparser::BlockEntry* pNextEntry = pNextCluster->GetFirst();
 
     while (pNextEntry)
@@ -468,23 +640,96 @@ bool WebmMfStreamAudio::NotifyNextCluster(
         pNextEntry = pNextCluster->GetNext(pNextEntry);
     }
 
-#if 0
-    if (pLastEntry)
+    return m_pQuota ? true : false;
+#else
+    for (;;)
     {
-        const LONGLONG curr_pos = pCurrBlock->m_start;
+        const mkvparser::BlockEntry* pNext;
 
-        const mkvparser::Block* const pLastBlock = pLastEntry->GetBlock();
-        assert(pLastBlock);
+        const long status = pNextCluster->GetEntry(m_next_index, pNext);
 
-        const LONGLONG last_pos = pLastBlock->m_start;
-        const LONGLONG last_end = last_pos + pLastBlock->m_size;
+        //In general we want to avoid letting the audio stream
+        //do a lot of work (e.g. having to parse a lengthy video
+        //frame), because even a slight delay is noticable when
+        //rendering.
 
-        const LONGLONG sample_extent = last_end - curr_pos;
-        m_sample_extent = static_cast<LONG>(sample_extent);
+        //status < 0
+        //Underflow is interpreted here to mean that we did not
+        //find a block because more was left to parse.
+
+        if (status < 0)
+        {
+            if (m_blocks.size() <= 1)
+                return status;  //no choice but to parse
+
+            m_pQuota = m_blocks.back();
+            assert(m_pQuota);
+
+            m_blocks.pop_back();
+            m_sample_extent = m_blocks;
+
+            return 1;  //done
+        }
+
+        //status = 0
+        //This is interpreted to mean that we did not find
+        //a block because the entire cluster has been parsed,
+        //but there were no more blocks on this cluster.
+
+        if (status == 0)
+        {
+            if (m_blocks.size() <= 1)
+            {
+                m_next_index = 0;
+                return 0;
+            }
+
+            m_pQuota = m_blocks.back();
+            assert(m_pQuota);
+
+            m_blocks.pop_back();
+            m_sample_extent = m_blocks;
+
+            return 1;  //done
+        }
+
+        //status > 0
+        //We have an entry.
+
+        assert(pNext);
+        assert(!pNext->EOS());
+
+        const mkvparser::Block* const pBlock = pNext->GetBlock();
+        assert(pBlock);
+
+        if (pBlock->GetTrackNumber() == tn)
+        {
+#if 1
+            const LONGLONG next_ns = pBlock->GetTime(pNextCluster);
+            assert(next_ns >= 0);
+
+            const LONGLONG delta_ns = next_ns - curr_ns;
+
+            if ((delta_ns > kQuotaTimeNanoseconds) || (m_blocks.size() >= 16))
+            {
+                m_pQuota = pNext;
+                m_sample_extent = m_blocks;
+
+                return 1;  //done
+            }
+
+            m_blocks.push_back(pNext);
+#else
+            m_pQuota = pNext;
+            m_sample_extent = m_blocks;
+
+            return 1;  //done
+#endif
+        }
+
+        ++m_next_index;
     }
 #endif
-
-    return m_pQuota ? true : false;
 }
 
 
@@ -551,6 +796,7 @@ bool WebmMfStreamAudio::GetSampleExtent(LONGLONG& pos, LONG& len)
     if (m_thin_ns >= -1)  //thinning mode
         return true;
 
+#if 0
     if (m_sample_extent < 0)  //means GetSampleExtent already completed
         return true;
 
@@ -580,6 +826,20 @@ bool WebmMfStreamAudio::GetSampleExtent(LONGLONG& pos, LONG& len)
 
     const LONGLONG sample_extent = last_end - first_pos;
     len = static_cast<LONG>(sample_extent);
+#else
+    if (m_sample_extent.empty())
+        return true;  //done
+
+    const mkvparser::BlockEntry* const pEntry = m_sample_extent.front();
+    assert(pEntry);
+    assert(!pEntry->EOS());
+
+    const mkvparser::Block* const pBlock = pEntry->GetBlock();
+    assert(pBlock);
+
+    pos = pBlock->m_start;
+    len = static_cast<LONG>(pBlock->m_size);
+#endif
 
     return false;
 }
@@ -587,7 +847,9 @@ bool WebmMfStreamAudio::GetSampleExtent(LONGLONG& pos, LONG& len)
 
 void WebmMfStreamAudio::GetSampleExtentCompletion()
 {
-    m_sample_extent = -1;
+    //m_sample_extent = -1;
+    assert(!m_sample_extent.empty());
+    m_sample_extent.pop_front();
 }
 
 
@@ -708,6 +970,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 #endif
 
         m_pQuota = 0;
+        m_next_index = -1;
 
         if (m_pSource->IsPaused())
             return S_OK;
@@ -803,6 +1066,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
         {
             pCurr = m_pTrack->GetEOS();
             m_pQuota = 0;
+            m_next_index = -1;
 
             return hr;
         }
@@ -812,6 +1076,7 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
     pCurr = m_pQuota;
     m_pQuota = 0;
+    m_next_index = -1;
 #endif
 
 #if 0

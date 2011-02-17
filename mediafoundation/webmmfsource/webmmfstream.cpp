@@ -690,11 +690,11 @@ bool WebmMfStream::GetEOS() const
 }
 
 
-bool WebmMfStream::IsCurrBlockEOS() const
-{
-    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
-    return ((pCurr != 0) && pCurr->EOS());
-}
+//bool WebmMfStream::IsCurrBlockEOS() const
+//{
+//    const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
+//    return ((pCurr != 0) && pCurr->EOS());
+//}
 
 
 HRESULT WebmMfStream::SetFirstBlock(const mkvparser::Cluster* pCluster)
@@ -883,10 +883,14 @@ HRESULT WebmMfStream::NotifyCurrCluster(const mkvparser::Cluster* pCluster)
 #endif
 
 
+#if 0
 bool WebmMfStream::IsCurrBlockLocked(LONGLONG& pos, LONG& len) const
 {
     if (m_pLocked)
+    {
+        assert(m_curr.pBE == m_pLocked);
         return true;
+    }
 
     const mkvparser::BlockEntry* const pEntry = m_curr.pBE;
     assert(pEntry);
@@ -900,6 +904,18 @@ bool WebmMfStream::IsCurrBlockLocked(LONGLONG& pos, LONG& len) const
 
     return false;
 }
+#else
+bool WebmMfStream::IsCurrBlockLocked() const
+{
+    if (m_pLocked)
+    {
+        assert(m_curr.pBE == m_pLocked);
+        return true;
+    }
+
+    return false;
+}
+#endif
 
 
 int WebmMfStream::LockCurrBlock()
@@ -925,18 +941,35 @@ void WebmMfStream::SeekInfo::Init(const mkvparser::BlockEntry* pBE_)
     pBE = pBE_;
     pCP = 0;
     pTP = 0;
+    index = -1;  //TODO
+    pCluster = 0;
 }
 
 
-bool WebmMfStream::HaveCurrBlockObject(LONGLONG& pos) const
+//bool WebmMfStream::HaveCurrBlockObject() const
+//{
+//    return m_curr.pBE ? true : false;
+//}
+
+
+const mkvparser::Cluster* WebmMfStream::GetCurrBlockCluster()
 {
-    if (m_curr.pBE)
-        return true;
+    const mkvparser::Cluster*& pCurrCluster = m_curr.pCluster;
 
-    pos = m_cluster_pos;
-    assert(pos >= 0);
+    if (pCurrCluster == 0)
+    {
+        assert(m_cluster_pos >= 0);
 
-    return false;
+        mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
+
+        pCurrCluster = pSegment->FindOrPreloadCluster(m_cluster_pos);
+        assert(pCurrCluster);
+        assert(!pCurrCluster->EOS());
+
+        SetCurrBlockIndex();
+    }
+
+    return pCurrCluster;
 }
 
 

@@ -37,13 +37,14 @@ public:
 
     HRESULT Start(const PROPVARIANT&);
 
-    void SetCurrBlockObject(const mkvparser::Cluster*);
+    //void SetCurrBlockObject(const mkvparser::Cluster*);
+    bool SetCurrBlockObject();
 
     bool GetSampleExtent(LONGLONG& pos, LONG& len);
     void GetSampleExtentCompletion();
 
-    bool GetNextBlock(const mkvparser::Cluster*&);
-    bool NotifyNextCluster(const mkvparser::Cluster*);
+    long GetNextBlock(const mkvparser::Cluster*&);
+    long NotifyNextCluster(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
     HRESULT ReadBlock(IMFSample*, const mkvparser::BlockEntry*) const;
@@ -53,16 +54,17 @@ protected:
     void OnDeselect();
     void OnSetCurrBlock();
 
+    void SetCurrBlockIndex();
+
 private:
 
     const mkvparser::BlockEntry* m_pQuota;
-
-    //const mkvparser::BlockEntry* GetNextBlock() const;
+    long m_next_index;
 
     typedef std::list<const mkvparser::BlockEntry*> blocks_t;
     blocks_t m_blocks;
-
-    LONG m_sample_extent;
+    blocks_t m_sample_extent;
+    //LONG m_sample_extent;
 
 };
 

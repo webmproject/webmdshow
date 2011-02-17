@@ -72,6 +72,8 @@ public:
 
     struct SeekInfo
     {
+        long index;
+        const mkvparser::Cluster* pCluster;
         const mkvparser::BlockEntry* pBE;
         const mkvparser::CuePoint* pCP;
         const mkvparser::CuePoint::TrackPosition* pTP;
@@ -91,7 +93,7 @@ public:
     //virtual void SetRate(BOOL, float) = 0;
     void SetRate(BOOL, float);
 
-    bool IsCurrBlockEOS() const;
+    //bool IsCurrBlockEOS() const;
     bool GetEOS() const;
     HRESULT SetEOS();
 
@@ -100,22 +102,26 @@ public:
     HRESULT SetFirstBlock(const mkvparser::Cluster*);
     const mkvparser::BlockEntry* GetFirstBlock() const;
 
-    void SetCurrBlock(const mkvparser::BlockEntry*);  //TODO: pass cue point
+    void SetCurrBlock(const mkvparser::BlockEntry*);
 
     void SetCurrBlockInit(LONGLONG time_ns, LONGLONG cluster_pos);
-    bool HaveCurrBlockObject(LONGLONG& cluster_pos) const;
-    virtual void SetCurrBlockObject(const mkvparser::Cluster*) = 0;
+    //bool HaveCurrBlockObject(LONGLONG& cluster_pos) const;
+    //bool HaveCurrBlockObject() const;
+    const mkvparser::Cluster* GetCurrBlockCluster();
+
+    //virtual void SetCurrBlockObject(const mkvparser::Cluster*) = 0;
+    virtual bool SetCurrBlockObject() = 0;
 
     const mkvparser::BlockEntry* GetCurrBlock() const;
 
-    //bool IsCurrBlockLocked() const;
-    bool IsCurrBlockLocked(LONGLONG& pos, LONG& len) const;
+    //bool IsCurrBlockLocked(LONGLONG& pos, LONG& len) const;
+    bool IsCurrBlockLocked() const;
 
     virtual bool GetSampleExtent(LONGLONG& pos, LONG& len) = 0;
     virtual void GetSampleExtentCompletion() = 0;
 
-    virtual bool GetNextBlock(const mkvparser::Cluster*&) = 0;
-    virtual bool NotifyNextCluster(const mkvparser::Cluster*) = 0;
+    virtual long GetNextBlock(const mkvparser::Cluster*&) = 0;
+    virtual long NotifyNextCluster(const mkvparser::Cluster*) = 0;
 
     int LockCurrBlock();
 
@@ -128,6 +134,9 @@ protected:
 
     HRESULT OnStart(const PROPVARIANT& time);
     HRESULT OnSeek(const PROPVARIANT& time);
+
+    //bool HaveCurrBlockIndex(LONGLONG& cluster_pos) const;
+    virtual void SetCurrBlockIndex() = 0;
 
     HRESULT ProcessSample(IMFSample*);
 
