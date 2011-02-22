@@ -3057,13 +3057,8 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         bool bDone;
 
-#if 0
-        if (thread_state_t s = PreloadCache(bDone))
-            return s;
-#else
         if (thread_state_t s = Parse(bDone))
             return s;
-#endif
 
         if (!bDone)
         {
@@ -3075,13 +3070,6 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
     }
 
     Request& r = rr.front();
-
-#if 0 //def _DEBUG
-    odbgstream os;
-    os << "WebmMfSource::OnRequestSample: rr.size="
-       << rr.size()
-       << endl;
-#endif
 
     WebmMfStream* const pStream = r.pStream;
     assert(pStream);
@@ -3098,98 +3086,6 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         return 0;
     }
-
-    //LONGLONG cluster_pos;
-
-#if 0
-    if (!pStream->HaveCurrBlockObject(cluster_pos))
-    {
-        assert(cluster_pos >= 0);
-
-        //odbgstream os;
-        //os << "OnRequestSample: stream.type=" << pStream->m_pTrack->GetType()
-        //   << "; curr block not loaded: cluster_pos="
-        //   << cluster_pos
-        //   << endl;
-
-        m_pCurr = m_pSegment->FindOrPreloadCluster(cluster_pos);
-        assert(m_pCurr);
-        assert(!m_pCurr->EOS());
-
-        //TODO:
-        //if this cluster was just preloaded, then we need to load it
-        //(asynchronously)
-        //if this cluster was not just preloaded, we need to know whether is
-        //has been
-        //fully loaded (meaning it has actual entries, that have been parsed).
-        //We need entries becsause we need to initialize pCurr of the stream.
-        //We need to know whether the (full) loading of the cluster is
-        //finished,
-        //so that we can come back here and extract the pCurr we need.
-        //
-        //As of now, we parse clusters using ParseNext and LoadCluster.
-        //Both of
-        //those call Cluster::Load, so we only have a guarantee that
-        //non-preloaded
-        //clusters are only partially loaded.  We do not have a guarantee that
-        //the cluster is fully loaded (its entries parsed).
-        //
-        //The probably happended before as a side effect of calling
-        //Cluster::GetEntry.
-        //
-        //I think we need a selector function that says.
-        //
-        //I'm not sure it makes sense to have any partially-loaded clusters.
-        //We
-        //only needed partial loading to satisfy the need to do time-based
-        //searches
-        //when we didn't have a Cues element.  Having a cluster, but not
-        //having
-        //a parsed entries, is beginning to be a pain, since we always need
-        //the
-        //actual entries.
-
-        //This will probably go away, since there will be no need to
-        //do a big-bang loading of all cluster entries anymore.  (In
-        //fact this is the very thing we need to remove.)
-
-        if (m_pCurr->GetEntryCount() < 0)  //only preloaded, not fully loaded
-        {
-            //os << "OnRequestSample: stream.type="
-            //   << pStream->m_pTrack->GetType()
-            //   << "; curr block not loaded(con'td): cluster_pos="
-            //   << cluster_pos
-            //   << "; NO ENTRIES YET"
-            //   << endl;
-
-            m_file.ResetAvailable(0);  //TODO
-
-            m_async_state = &WebmMfSource::StateAsyncLoadCurrInit;
-            m_async_read.m_hrStatus = S_OK;
-
-            const BOOL b = SetEvent(m_hAsyncRead);
-            assert(b);
-
-            return &WebmMfSource::StateAsyncRead;
-        }
-
-        //This will have to be changed.  We are confident that we
-        //have the correct cluster, but we can no longer simply
-        //search for the block entry, because we won't have
-        //the block entries yet.
-
-        pStream->SetCurrBlockObject(m_pCurr);
-    }
-#endif
-
-    //if (!pStream->HaveCurrBlockIndex(cluster_pos))
-    //{
-    //    assert(cluster_pos >= 0);
-    //    m_pCurr = m_pSegment->FindOrPreloadCluster(cluster_pos);
-    //    assert(m_pCurr);
-    //    assert(!m_pCurr->EOS());
-    //    pStream->SetCurrBlockIndex(m_pCurr);
-    //}
 
     const mkvparser::BlockEntry* const pCurr = pStream->GetCurrBlock();
 
@@ -3367,32 +3263,14 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     PurgeCache();
 
-#if 0
-    bool bDone;
-
-    if (thread_state_t s = PreloadCache(bDone))
-        return s;
-
-    if (!bDone || !rr.empty())
-    {
-        const BOOL b = SetEvent(m_hRequestSample);
-        assert(b);
-    }
-#elif 0
-    //odbgstream os;
-    //os << "OnRequestSample: requests.size=" << rr.size();
-
-    if (!rr.empty())
-    {
-        //const Request& R = rr.front();
-        //os << " type=" << R.pStream->m_pTrack->GetType();
-
-        const BOOL b = SetEvent(m_hRequestSample);
-        assert(b);
-    }
-
-    //os << endl;
-#else
+    //This has the benefit that it guarantees that the next
+    //block has been loaded in cache.  PreloadCache uses spare
+    //cycles to do it in background, so it doesn't make any
+    //guarantee that the block will have loaded in the cache
+    //The problem with pre-fetching the next block here is
+    //that it duplicates the work that PreloadCache does, so
+    //we end up doing all the work twice.
+    //
     //if (rr.empty())
     //{
     //    if (thread_state_t s = PreloadSample(pStream))
@@ -3401,7 +3279,6 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
-#endif
 
     return 0;
 }
