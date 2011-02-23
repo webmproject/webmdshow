@@ -849,6 +849,15 @@ void MkvReader::Purge(LONGLONG pos)
 {
 #ifdef DEBUG_PURGE
     const free_pages_t::size_type old_size = m_free_pages.size();
+
+    LONGLONG old_first_pos = -1;
+
+    if (!m_cache.empty())
+    {
+        const cache_t::value_type page_iter = m_cache.front();
+        const Page& page = *page_iter;
+        old_first_pos = page.pos;
+    }
 #endif
 
     int i = 0;
@@ -889,11 +898,22 @@ void MkvReader::Purge(LONGLONG pos)
 
     if (n)
     {
+        LONGLONG new_first_pos = -1;
+
+        if (!m_cache.empty())
+        {
+            const cache_t::value_type page_iter = m_cache.front();
+            const Page& page = *page_iter;
+            new_first_pos = page.pos;
+        }
+
         odbgstream os;
         os << "mkvreader::purge: n=" << n
            << " cache.size=" << m_cache.size()
            << " free.size=" << new_size
            << " regions.size=" << m_regions.size()
+           << " old_first_pos=" << old_first_pos
+           << " new_first_pos=" << new_first_pos
            << endl;
     }
 #endif
