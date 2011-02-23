@@ -27,6 +27,7 @@ _COM_SMARTPTR_TYPEDEF(IMFSample, __uuidof(IMFSample));
 namespace WebmMfSourceLib
 {
 
+//enum { kQuotaTimeNanoseconds =  50000000 };  //50ms
 //enum { kQuotaTimeNanoseconds = 100000000 };  //100ms
 enum { kQuotaTimeNanoseconds = 250000000 };  //250ms
 
@@ -524,6 +525,7 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
 
         if (status < 0)
         {
+#if 0
             if (m_blocks.size() <= 1)
                 return status;  //no choice but to parse
 
@@ -534,6 +536,9 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
             m_sample_extent = m_blocks;
 
             return 1;  //done
+#else
+            return status;
+#endif
         }
 
         //status = 0
@@ -543,6 +548,7 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
 
         if (status == 0)
         {
+#if 0
             if (m_blocks.size() <= 1)
             {
                 m_next_index = 0;
@@ -556,6 +562,10 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
             m_sample_extent = m_blocks;
 
             return 1;  //done
+#else
+            m_next_index = 0;
+            return 0;
+#endif
         }
 
         //We have an entry.
@@ -573,7 +583,7 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
 
             const LONGLONG delta_ns = next_ns - curr_ns;
 
-            if ((delta_ns > kQuotaTimeNanoseconds) || (m_blocks.size() >= 16))
+            if (delta_ns > kQuotaTimeNanoseconds)
             {
                 m_pQuota = pNext;
                 m_sample_extent = m_blocks;
@@ -686,6 +696,7 @@ long WebmMfStreamAudio::NotifyNextCluster(
 
         if (status < 0)
         {
+#if 0
             if (m_blocks.size() <= 1)
                 return status;  //no choice but to parse
 
@@ -696,6 +707,9 @@ long WebmMfStreamAudio::NotifyNextCluster(
             m_sample_extent = m_blocks;
 
             return 1;  //done
+#else
+            return status;
+#endif
         }
 
         //status = 0
@@ -705,6 +719,7 @@ long WebmMfStreamAudio::NotifyNextCluster(
 
         if (status == 0)
         {
+#if 0
             if (m_blocks.size() <= 1)
             {
                 m_next_index = 0;
@@ -718,6 +733,10 @@ long WebmMfStreamAudio::NotifyNextCluster(
             m_sample_extent = m_blocks;
 
             return 1;  //done
+#else
+            m_next_index = 0;
+            return 0;
+#endif
         }
 
         //status > 0
@@ -737,7 +756,7 @@ long WebmMfStreamAudio::NotifyNextCluster(
 
             const LONGLONG delta_ns = next_ns - curr_ns;
 
-            if ((delta_ns > kQuotaTimeNanoseconds) || (m_blocks.size() >= 16))
+            if (delta_ns > kQuotaTimeNanoseconds)
             {
                 m_pQuota = pNext;
                 m_sample_extent = m_blocks;
