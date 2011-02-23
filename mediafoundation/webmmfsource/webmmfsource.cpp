@@ -3430,7 +3430,7 @@ WebmMfSource::PreloadSample(WebmMfStream* pStream)
 
 
 WebmMfSource::thread_state_t
-WebmMfSource::StateAsyncPreloadSample()
+WebmMfSource::StateAsyncRequestSample()
 {
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
@@ -4243,7 +4243,7 @@ WebmMfSource::thread_state_t WebmMfSource::PreloadCache(
 
     if (hr == S_FALSE)  //async read in progress
     {
-        m_async_state = &WebmMfSource::StateAsyncPreloadSample;  //OK
+        m_async_state = &WebmMfSource::StateAsyncRequestSample;
         return &WebmMfSource::StateAsyncRead;
     }
 

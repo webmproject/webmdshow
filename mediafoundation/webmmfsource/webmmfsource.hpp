@@ -238,7 +238,8 @@ private:
     thread_state_t StateAsyncParseCurr();
     thread_state_t StateAsyncParseNextInit();
     thread_state_t StateAsyncParseNextFinal();
-    thread_state_t StateAsyncPreloadSample();
+    //thread_state_t StateAsyncPreloadSample();
+    thread_state_t StateAsyncRequestSample();
 
     typedef thread_state_t (WebmMfSource::*async_state_t)();
     async_state_t m_async_state;
