@@ -124,13 +124,15 @@ HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
         const double bitrate = double(bits) / secs;
 
         b.dwBitrate = static_cast<DWORD>(bitrate);
-        b.msBufferWindow = 5000;  //?
+        //b.dwBitrate *= 10;  //TODO: must handle datarate spikes somehow
+
+        b.msBufferWindow = 2 * 5000;  //assume 5s clusters
 
         p.prgBuckets = bb;
         p.cBuckets = 1;
     }
 
-    p.qwNetBufferingTime = 0;
+    p.qwNetBufferingTime = 0;  //TODO: how should we synthesize this value?
     p.qwExtraBufferingTimeDuringSeek = 0;
     p.dRate = 1;
 
