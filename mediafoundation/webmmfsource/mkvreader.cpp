@@ -70,6 +70,19 @@ HRESULT MkvReader::GetCapabilities(DWORD& dw) const
 }
 
 
+bool MkvReader::IsNetworkSource() const
+{
+    DWORD dw;
+
+    const HRESULT hr = m_pStream->GetCapabilities(&dw);
+
+    if (FAILED(hr))
+        return true;  //the more conservative choice, if we don't know
+
+    return (dw & MFBYTESTREAM_IS_PARTIALLY_DOWNLOADED) ? true : false;
+}
+
+
 HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
 {
     typedef IMFByteStreamBuffering Buffering;

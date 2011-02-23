@@ -48,6 +48,7 @@ public:
     void AllocateFree(ULONG);
 
     HRESULT GetCapabilities(DWORD&) const;
+    bool IsNetworkSource() const;
 
 private:
 
