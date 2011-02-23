@@ -11,7 +11,10 @@
 #include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
+#include <iomanip>
 using std::endl;
+using std::fixed;
+using std::setprecision;
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
@@ -455,6 +458,14 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(curr_ns >= 0);
 
+    //odbgstream os;
+    //os << "Audio::GetNextBlock:"
+    //   << " time[sec]="
+    //   << fixed
+    //   << setprecision(3)
+    //   << (float(curr_ns) / 1000000000.0F)
+    //   << endl;
+
 #if 0
     m_blocks.clear();
     m_blocks.push_back(pCurr);
@@ -567,6 +578,14 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
                 m_pQuota = pNext;
                 m_sample_extent = m_blocks;
 
+                //os << "Audio::GetNextBlock:"
+                //   << " delta[sec]="
+                //   << fixed
+                //   << setprecision(3)
+                //   << (float(delta_ns) / 1000000000.0F)
+                //   << " sample_extent=" << m_sample_extent.size()
+                //   << endl;
+
                 return 1;  //have next block
             }
 
@@ -611,6 +630,14 @@ long WebmMfStreamAudio::NotifyNextCluster(
 
     const __int64 curr_ns = pCurrBlock->GetTime(pCurrCluster);
     assert(curr_ns >= 0);
+
+    //odbgstream os;
+    //os << "Audio::NotifyNextCluster:"
+    //   << " time[sec]="
+    //   << fixed
+    //   << setprecision(3)
+    //   << (float(curr_ns) / 1000000000.0F)
+    //   << endl;
 
 #if 0
     const mkvparser::BlockEntry* pNextEntry = pNextCluster->GetFirst();
@@ -714,6 +741,14 @@ long WebmMfStreamAudio::NotifyNextCluster(
             {
                 m_pQuota = pNext;
                 m_sample_extent = m_blocks;
+
+                //os << "Audio::NotifyNextCluster:"
+                //   << " delta[sec]="
+                //   << fixed
+                //   << setprecision(3)
+                //   << (float(delta_ns) / 1000000000.0F)
+                //   << " sample_extent=" << m_sample_extent.size()
+                //   << endl;
 
                 return 1;  //done
             }
@@ -1035,6 +1070,14 @@ HRESULT WebmMfStreamAudio::GetSample(IUnknown* pToken)
 
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
+
+    //odbgstream os;
+    //os << "Audio::GetSample: time[reftime]=" << sample_time
+    //   << " time[sec]="
+    //   << fixed
+    //   << setprecision(3)
+    //   << (float(sample_time) / 10000000.0F)
+    //   << endl;
 
     //const LONGLONG tn = m_pTrack->GetNumber();
     //bool bDone = false;

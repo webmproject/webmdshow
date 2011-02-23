@@ -12,7 +12,10 @@
 #include <propvarutil.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
+#include <iomanip>
 using std::endl;
+using std::fixed;
+using std::setprecision;
 #endif
 
 _COM_SMARTPTR_TYPEDEF(IMFStreamDescriptor, __uuidof(IMFStreamDescriptor));
@@ -985,6 +988,14 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
     hr = pSample->SetSampleTime(sample_time);
     assert(SUCCEEDED(hr));
+
+    //odbgstream os;
+    //os << "Video::GetSample: time[reftime]=" << sample_time
+    //   << " time[sec]="
+    //   << fixed
+    //   << setprecision(3)
+    //   << (float(sample_time) / 10000000.0F)
+    //   << endl;
 
     const LONGLONG preroll_ns = m_pSource->m_preroll_ns;
 
