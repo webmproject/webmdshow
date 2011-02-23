@@ -2,12 +2,12 @@
 #include <cassert>
 #include <algorithm>
 #include <comdef.h>
-#undef DEBUG_PURGE
-//#define DEBUG_PURGE
-#ifdef DEBUG_PURGE
+#ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
 #endif
+#undef DEBUG_PURGE
+//#define DEBUG_PURGE
 
 MkvReader::MkvReader(IMFByteStream* pStream) :
     m_pStream(pStream),
@@ -1291,7 +1291,16 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
             if (m_length >= 0)  //length is defined
             {
                 if (length < m_length)  //weird: fewer bytes than total length
+                {
                     hr = E_FAIL;        //treat this as an I/O error
+
+#ifdef _DEBUG
+                    odbgstream os;
+                    os << "\nmkvreader::AsyncReadCompletion: "
+                       << "ERROR - incomplete async read\n"
+                       << endl;
+#endif
+                }
             }
             else //network source with unknown length
             {
