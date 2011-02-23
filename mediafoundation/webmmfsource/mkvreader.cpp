@@ -95,8 +95,6 @@ HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
 
     MFBYTESTREAM_BUFFERING_PARAMS p;
 
-    //const LONGLONG duration = pSource->GetDuration();  //reftime units
-
     if (duration_reftime >= 0)
         p.qwPlayDuration = duration_reftime;
     else
@@ -105,13 +103,13 @@ HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
     HRESULT hr = m_pStream->GetLength(&p.cbTotalFileSize);
 
     if (FAILED(hr))
-        p.cbTotalFileSize = 0;
+        p.cbTotalFileSize = static_cast<QWORD>(-1);
 
     p.cbPlayableDataSize = p.cbTotalFileSize;
 
     MF_LEAKY_BUCKET_PAIR bb[1];
 
-    if ((p.cbTotalFileSize == 0) || (duration_reftime <= 0))
+    if ((p.cbTotalFileSize <= 0) || (duration_reftime <= 0))
     {
         p.prgBuckets = 0;
         p.cBuckets = 0;
