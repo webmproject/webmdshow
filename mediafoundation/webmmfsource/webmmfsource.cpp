@@ -2741,7 +2741,9 @@ void WebmMfSource::NotifyEOS()
 #endif  //TODO: restore this
 
 
-WebmMfSource::CAsyncRead::CAsyncRead(WebmMfSource* p) : m_pSource(p)
+WebmMfSource::CAsyncRead::CAsyncRead(WebmMfSource* p) :
+    m_pSource(p),
+    m_bCanInterrupt(false)
 {
 }
 
@@ -2862,8 +2864,14 @@ unsigned WebmMfSource::Main()
 
 bool WebmMfSource::StateAsyncRead()
 {
-    enum { nh = 3 };
-    const HANDLE ah[nh] = { m_hQuit, m_hCommand, m_hAsyncRead };
+    enum { nh = 4 };
+    const HANDLE ah[nh] =
+    {
+        m_hQuit,
+        m_hCommand,
+        m_hRequestSample,
+        m_hAsyncRead,
+    };
 
     for (;;)
     {
@@ -2896,7 +2904,45 @@ bool WebmMfSource::StateAsyncRead()
             return false;
         }
 
-        assert(dw == (WAIT_OBJECT_0 + 2));  //hAsyncRead
+        if (dw == (WAIT_OBJECT_0 + 2)) //hRequestSample
+        {
+            const requests_t& rr = m_requests;
+
+            if (rr.empty())
+                continue;  //spurious event
+
+            if (!m_async_read.m_bCanInterrupt)
+                continue;  //must allow async read to complete
+
+            bool have_audio = false;
+
+            typedef requests_t::const_iterator iter_t;
+
+            iter_t i = rr.begin();
+            const iter_t j = rr.end();
+
+            while (i != j)
+            {
+                const requests_t::value_type& v = *i++;
+
+                if (v.pStream == 0)  //weird
+                    continue;
+
+                if (v.pStream->m_pTrack->GetType() == 2)  //audio
+                {
+                    have_audio = true;
+                    break;
+                }
+            }
+
+            if (!have_audio)
+                continue;  //allow async read to complete
+
+            m_thread_state = &WebmMfSource::StateAsyncCancel;
+            return false;
+        }
+
+        assert(dw == (WAIT_OBJECT_0 + 3));  //hAsyncRead
 
         if (thread_state_t s = OnAsyncRead())
         {
@@ -2947,6 +2993,10 @@ bool WebmMfSource::StateAsyncCancel()
                << endl;
 #endif
             m_file.AsyncReadCancel();
+
+            const BOOL b = SetEvent(m_hRequestSample);
+            assert(b);
+
             m_thread_state = &WebmMfSource::StateRequestSample;
 
             return false;
@@ -3055,6 +3105,8 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
             return 0;
         }
 
+        m_async_read.m_bCanInterrupt = true;
+
         bool bDone;
 
         if (thread_state_t s = Parse(bDone))
@@ -3068,6 +3120,8 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         return 0;
     }
+
+    m_async_read.m_bCanInterrupt = false;
 
     Request& r = rr.front();
 
@@ -5582,7 +5636,12 @@ WebmMfSource::thread_state_t WebmMfSource::OnAsyncRead()
         return &WebmMfSource::StateQuit;
 
     if (m_pEvents == 0)  //shutdown
+    {
+        const BOOL b = SetEvent(m_hRequestSample);
+        assert(b);
+
         return &WebmMfSource::StateRequestSample;  //clean up and exit
+    }
 
     //this is the value of calling AsyncReadCompletion
     hr = m_async_read.m_hrStatus;  //assigned a value in Invoke

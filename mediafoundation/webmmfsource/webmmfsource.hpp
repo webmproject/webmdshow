@@ -164,6 +164,7 @@ private:
 
         WebmMfSource* const m_pSource;
         HRESULT m_hrStatus;  //of calling MkvReader::AsyncReadContinue
+        bool m_bCanInterrupt;
 
         HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
         ULONG STDMETHODCALLTYPE AddRef();
