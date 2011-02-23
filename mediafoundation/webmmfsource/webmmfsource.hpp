@@ -248,7 +248,7 @@ private:
 
     void PurgeCache();
     thread_state_t PreloadCache(bool& bDone);
-    thread_state_t PreloadCache(bool& bDone, const mkvparser::BlockEntry*);
+    thread_state_t PreloadCache(const mkvparser::BlockEntry*);
     thread_state_t Parse(bool& bDone);
     thread_state_t PreloadSample(WebmMfStream*);
 
