@@ -221,7 +221,7 @@ private:
     //thread_state_t StateAsyncLoadCurrFinal();
     thread_state_t StateAsyncGetCurrBlockObjectInit();
     thread_state_t StateAsyncGetCurrBlockObjectFinal();
-    thread_state_t StateAsyncGetNextBlockCurrInit();
+    //thread_state_t StateAsyncGetNextBlockCurrInit();
     //thread_state_t StateAsyncGetNextBlockCurrFinal();
     thread_state_t StateAsyncGetNextBlockNextInit();
     thread_state_t StateAsyncGetNextBlockNextNotify();

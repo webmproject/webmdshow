@@ -3307,8 +3307,8 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
                 //   << m_pCurr->m_element_start
                 //   << endl;
 
-                m_async_state = &WebmMfSource::StateAsyncGetNextBlockCurrInit;
-                //m_async_state = &WebmMfSource::StateAsyncRequestSample;
+              //m_async_state = &WebmMfSource::StateAsyncGetNextBlockCurrInit;
+                m_async_state = &WebmMfSource::StateAsyncRequestSample;
                 return &WebmMfSource::StateAsyncRead;
             }
         }  //end for parse curr cluster
@@ -6286,6 +6286,7 @@ WebmMfSource::StateAsyncGetCurrBlockObjectFinal()
 }
 
 
+#if 0
 WebmMfSource::thread_state_t
 WebmMfSource::StateAsyncGetNextBlockCurrInit()
 {
@@ -6400,6 +6401,7 @@ WebmMfSource::StateAsyncGetNextBlockCurrInit()
 #endif
     //}
 }
+#endif
 
 
 #if 0
