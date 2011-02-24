@@ -48,7 +48,8 @@ public:
     void AllocateFree(ULONG);
 
     HRESULT GetCapabilities(DWORD&) const;
-    bool IsNetworkSource() const;
+    bool HasSlowSeek() const;
+    bool IsPartiallyDownloaded() const;
 
 private:
 

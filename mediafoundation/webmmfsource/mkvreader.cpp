@@ -70,7 +70,20 @@ HRESULT MkvReader::GetCapabilities(DWORD& dw) const
 }
 
 
-bool MkvReader::IsNetworkSource() const
+bool MkvReader::HasSlowSeek() const
+{
+    DWORD dw;
+
+    const HRESULT hr = m_pStream->GetCapabilities(&dw);
+
+    if (FAILED(hr))
+        return true;  //the more conservative choice, if we don't know
+
+    return (dw & MFBYTESTREAM_HAS_SLOW_SEEK) ? true : false;
+}
+
+
+bool MkvReader::IsPartiallyDownloaded() const
 {
     DWORD dw;
 

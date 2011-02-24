@@ -3730,6 +3730,9 @@ WebmMfSource::Parse(bool& bDone)
 
     bDone = true;
 
+    if (m_file.HasSlowSeek())
+        return 0;
+
     if (m_bThin || (m_rate != 1))
         return 0;
 
@@ -3827,8 +3830,8 @@ WebmMfSource::Parse(bool& bDone)
 
     assert(bDone);
 
-    if (m_file.IsNetworkSource())  //don't want to read too far ahead
-        return 0;
+    //if (m_file.IsNetworkSource())  //don't want to read too far ahead
+    //    return 0;
 
     //Create next cluster object (if it doesn't already exist).
 
