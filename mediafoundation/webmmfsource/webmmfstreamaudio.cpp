@@ -346,12 +346,12 @@ void WebmMfStreamAudio::SetCurrBlockObject(
 #endif
 
 
-void WebmMfStreamAudio::SetCurrBlockIndex()
+void WebmMfStreamAudio::SetCurrBlockIndex(const mkvparser::Cluster* pCluster)
 {
     assert(m_curr.pBE == 0);
+    assert(m_curr.pCluster == 0);
+    assert(m_cluster_pos >= 0);
     assert(m_time_ns >= 0);
-
-    const mkvparser::Cluster* const pCluster = m_curr.pCluster;
 
     if ((pCluster == 0) || pCluster->EOS())  //weird
     {
@@ -361,9 +361,10 @@ void WebmMfStreamAudio::SetCurrBlockIndex()
 
     //TODO: given time, do binary search of cluster entries
     //For now, we search from beginning of cluster.
+    assert(pCluster->GetPosition() == m_cluster_pos);
 
     m_curr.index = 0;  //start search at beginning; //TODO: use time?
-    //m_curr.pCluster = pCluster;
+    m_curr.pCluster = pCluster;
     m_curr.pBE = 0;  //lazy-init
     m_curr.pCP = 0;
     m_curr.pTP = 0;
@@ -434,7 +435,7 @@ bool WebmMfStreamAudio::SetCurrBlockObject()  //return long value instead?
 }
 
 
-long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
+long WebmMfStreamAudio::GetNextBlock()
 {
     if (m_pQuota)
         return 1;  //yes, we have next block
@@ -452,7 +453,7 @@ long WebmMfStreamAudio::GetNextBlock(const mkvparser::Cluster*& pCurrCluster)
     assert(pCurrBlock);
     assert(pCurrBlock->GetTrackNumber() == tn);
 
-    pCurrCluster = pCurr->GetCluster();
+    const mkvparser::Cluster* const pCurrCluster = pCurr->GetCluster();
     assert(pCurrCluster);
     assert(!pCurrCluster->EOS());
 

@@ -12,7 +12,7 @@ using std::endl;
 MkvReader::MkvReader(IMFByteStream* pStream) :
     m_pStream(pStream),
     m_async_pos(-1),  //means "no async read in progress"
-    m_async_len(0)    //means nothing remains to be read
+    m_async_len(-1)   //as above
 {
     const ULONG n = m_pStream->AddRef();
     n;
@@ -72,6 +72,9 @@ HRESULT MkvReader::GetCapabilities(DWORD& dw) const
 
 bool MkvReader::HasSlowSeek() const
 {
+#if 0
+    return true;   //for debugging
+#else
     DWORD dw;
 
     const HRESULT hr = m_pStream->GetCapabilities(&dw);
@@ -80,6 +83,7 @@ bool MkvReader::HasSlowSeek() const
         return true;  //the more conservative choice, if we don't know
 
     return (dw & MFBYTESTREAM_HAS_SLOW_SEEK) ? true : false;
+#endif
 }
 
 
@@ -161,7 +165,8 @@ HRESULT MkvReader::EnableBuffering(LONGLONG duration_reftime) const
 
 int MkvReader::Read(long long pos, long len, unsigned char* buf)
 {
-    assert(m_async_len <= 0);
+    assert(m_async_pos < 0);
+    assert(m_async_len < 0);
 
     if (pos < 0)
         return -1;
@@ -399,7 +404,7 @@ void MkvReader::Read(
 {
     assert(pos >= 0);
     assert((m_length < 0) || (pos < m_length));
-    //assert(requested_len > 0);
+    assert(requested_len >= 0);
     assert((m_length < 0) || ((pos + requested_len) <= m_length));
 
     const Page& page = *page_iter;
@@ -482,7 +487,8 @@ int MkvReader::Length(long long* total, long long* avail)
 
 int MkvReader::LockPage(const mkvparser::BlockEntry* pBE)
 {
-    assert(m_async_len <= 0);
+    assert(m_async_pos < 0);
+    assert(m_async_len < 0);
 
     if (pBE == 0)
         return 0;
@@ -969,6 +975,31 @@ void MkvReader::Clear()
 }
 
 
+HRESULT MkvReader::ResetCurrentPosition(LONGLONG pos_)
+{
+    assert(pos_ >= 0);
+    assert((m_length < 0) || (pos_ <= m_length));
+
+    const DWORD page_size = m_info.dwPageSize;
+    const QWORD pos = page_size * QWORD(pos_ / page_size);
+
+    return m_pStream->SetCurrentPosition(pos);
+}
+
+
+LONGLONG MkvReader::GetCurrentPosition() const
+{
+    QWORD pos;
+
+    const HRESULT hr = m_pStream->GetCurrentPosition(&pos);
+
+    if (FAILED(hr))
+        return -1;
+
+    return pos;
+}
+
+
 void MkvReader::ResetAvailable(LONGLONG avail)
 {
     m_avail = avail;
@@ -1006,15 +1037,14 @@ void MkvReader::AllocateFree(ULONG len)
 HRESULT MkvReader::AsyncReadInit(
     LONGLONG pos,
     LONG len,
-    IMFAsyncCallback* pCB,
-    bool preload)
+    IMFAsyncCallback* pCB)
 {
     assert(pos >= 0);
     assert((m_length < 0) || (pos <= m_length));
     assert(len > 0);
     assert(pCB);
     assert(m_async_pos < 0);
-    assert(m_async_len <= 0);
+    assert(m_async_len < 0);
 
     if (m_length >= 0)
     {
@@ -1036,6 +1066,43 @@ HRESULT MkvReader::AsyncReadInit(
 
     const LONGLONG end = pos + len;
 
+    QWORD curr_pos;
+
+    HRESULT hr = m_pStream->GetCurrentPosition(&curr_pos);
+    assert(SUCCEEDED(hr));  //TODO
+    //assert((curr_pos % m_info.dwPageSize) == 0);
+
+    //QWORD next_pos = curr_pos;
+
+    if (QWORD(pos) > curr_pos)
+    {
+        const LONGLONG pad_len = pos - curr_pos;
+        assert(pad_len <= LONG_MAX);
+
+        //odbgstream os;
+        //
+        //os << "AsyncReadInit: curr_pos=" << curr_pos
+        //   << " requested pos=" << pos
+        //   << " requested-curr=" << (pos - curr_pos)
+        //   << " requested-curr(pages)="
+        //   << (((pos - curr_pos) + m_info.dwPageSize - 1) /
+        //        m_info.dwPageSize)
+        //   << " requested len=" << len
+        //   << " pad len=" << pad_len
+        //   << " adjusted len=" << (len + pad_len)
+        //   << endl;
+
+        pos = curr_pos;
+        len += static_cast<LONG>(pad_len);
+        assert((pos + len) == end);
+    }
+
+    m_async_pos = pos;
+    m_async_len = len;
+
+    return AsyncReadContinue(pCB);
+
+#if 0
     typedef cache_t::iterator iter_t;
     iter_t next;
 
@@ -1064,6 +1131,10 @@ HRESULT MkvReader::AsyncReadInit(
 
             //if (m_avail < pos)
             //    m_avail = pos;
+
+            //TODO: move this outside of this predicate block?
+            if (next_pos < QWORD(page_end))
+                next_pos = page_end;
         }
     }
 
@@ -1088,13 +1159,7 @@ HRESULT MkvReader::AsyncReadInit(
                 assert(page.cRef < 0);
 
                 m_async_pos = pos;
-
-                const DWORD page_size = m_info.dwPageSize;
-
-                if (!preload || (DWORD(len) < page_size))
-                    m_async_len = len;
-                else
-                    m_async_len = page_size;
+                m_async_len = len;
 
                 return S_FALSE;  //tell caller to wait for completion
             }
@@ -1106,6 +1171,11 @@ HRESULT MkvReader::AsyncReadInit(
 
             //if (m_avail < pos)
             //    m_avail = pos;
+
+            const LONGLONG page_end = page.pos + page.len;
+
+            if (next_pos < QWORD(page_end))
+                next_pos = page_end;
         }
         else
         {
@@ -1119,11 +1189,24 @@ HRESULT MkvReader::AsyncReadInit(
 
             //if (m_avail < pos)
             //    m_avail = pos;
+
+            const LONGLONG page_end = page.pos + page.len;
+
+            if (next_pos < QWORD(page_end))
+                next_pos = page_end;
         }
     }
 
     m_avail = end;
+
+    if (next_pos > curr_pos)
+    {
+        hr = m_pStream->SetCurrentPosition(next_pos);
+        assert(SUCCEEDED(hr));
+    }
+
     return S_OK;
+#endif
 }
 
 
@@ -1131,39 +1214,28 @@ HRESULT MkvReader::AsyncReadContinue(
     IMFAsyncCallback* pCB)
 {
     assert(pCB);
-    assert(!m_cache.empty());
+    //assert(!m_cache.empty());
 
     LONG& len = m_async_len;
-    assert(len > 0);
+    assert(len > 0);  //TODO: relax this
 
     LONGLONG& pos = m_async_pos;
-    assert(pos > (*m_cache.front()).pos);
+    //assert(pos > (*m_cache.front()).pos);
+    //assert((pos % m_info.dwPageSize) == 0);
     assert((m_length < 0) || (pos < m_length));
     assert((m_length < 0) || ((pos + len) <= m_length));
 
-    const LONGLONG end = pos + len;
+    //const LONGLONG end = pos + len;
 
     typedef cache_t::iterator iter_t;
     iter_t next;
 
-    //const DWORD page_size = m_info.dwPageSize;
+    //QWORD curr_pos;
+    //HRESULT hr = m_pStream->GetCurrentPosition(&curr_pos);
+    //assert(SUCCEEDED(hr));  //TODO
+    //QWORD next_pos = curr_pos;
+    LONGLONG last_pos = -1;
 
-#if 0  //this is wrong
-    {
-        const iter_t i = m_cache.begin();
-        const iter_t j = m_cache.end();
-
-        next = std::upper_bound(i, j, pos, PageLess());
-        assert(next != i);
-
-        const cache_t::value_type page_iter = *--iter_t(next);
-        Page& page = *page_iter;
-
-        const LONGLONG page_end = page.pos + page_size;
-        page_end;
-        assert(pos >= page_end);
-    }
-#else
     if (m_cache.empty() || (pos < (*m_cache.front()).pos))
         next = m_cache.begin();
     else
@@ -1189,9 +1261,16 @@ HRESULT MkvReader::AsyncReadContinue(
 
             //if (m_avail < pos)
             //    m_avail = pos;
+
+            //if (next_pos < QWORD(page_end))
+            //    next_pos = page_end;
         }
+
+        last_pos = page_end;
+
+        if (last_pos > m_avail)
+            m_avail = last_pos;
     }
-#endif
 
     while (len > 0)
     {
@@ -1222,6 +1301,13 @@ HRESULT MkvReader::AsyncReadContinue(
 
             //if (m_avail < pos)
             //    m_avail = pos;
+
+            const LONGLONG page_end = page.pos + page.len;
+
+            //if (next_pos < QWORD(page_end))
+            //    next_pos = page_end;
+
+            last_pos = page_end;
         }
         else
         {
@@ -1237,11 +1323,35 @@ HRESULT MkvReader::AsyncReadContinue(
 
             //if (m_avail < pos)
             //    m_avail = pos;
+
+            const LONGLONG page_end = page.pos + page.len;
+
+            //if (next_pos < QWORD(page_end))
+            //    next_pos = page_end;
+
+            last_pos = page_end;
         }
+
+        if (last_pos > m_avail)
+            m_avail = last_pos;
     }
 
+    assert(last_pos >= 0);
+    assert(m_avail >= last_pos);
+
     pos = -1;
-    m_avail = end;
+    len = -1;
+
+    QWORD curr_pos;
+
+    HRESULT hr = m_pStream->GetCurrentPosition(&curr_pos);
+    assert(SUCCEEDED(hr));  //TODO
+
+    if (QWORD(last_pos) > curr_pos)
+    {
+        hr = m_pStream->SetCurrentPosition(last_pos);
+        assert(SUCCEEDED(hr));
+    }
 
     return S_OK;
 }
@@ -1249,7 +1359,7 @@ HRESULT MkvReader::AsyncReadContinue(
 
 HRESULT MkvReader::AsyncReadCancel()
 {
-    m_async_len = 0;
+    m_async_len = -1;
     m_async_pos = -1;
 
     return S_OK;
@@ -1292,6 +1402,21 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
     {
         page.len = cbRead;
         assert(page.len <= m_info.dwPageSize);
+
+#if 1 //def _DEBUG
+        //odbgstream os;
+        //os << "AsyncReadCompletion: just called EndRead; cbRead="
+        //   << cbRead
+        //   << " GetCurrPos=";
+
+        QWORD new_pos;
+
+        hr = m_pStream->GetCurrentPosition(&new_pos);
+        assert(SUCCEEDED(hr));
+        assert(new_pos >= QWORD(page.pos + page.len));
+
+        //os << new_pos << endl;
+#endif
 
         if (page.len < m_info.dwPageSize)
         {
@@ -1336,11 +1461,16 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
         const free_pages_t::value_type value(page.pos, page_iter);
         m_free_pages.insert(value);
 
-        m_async_len = 0;
+        m_async_len = -1;
         m_async_pos = -1;
 
         return hr;
     }
+
+    const LONGLONG last_pos = page.pos + page.len;
+
+    if (last_pos > m_avail)
+        m_avail = last_pos;
 
     Read(page_iter, m_async_pos, m_async_len, 0);
     assert(m_async_pos >= 0);
@@ -1348,14 +1478,11 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
     assert((m_length < 0) || (m_async_pos <= m_length));
     assert((m_length < 0) || ((m_async_pos + m_async_len) <= m_length));
 
-    //if (m_avail < m_async_pos)
-    //    m_avail = m_async_pos;
-
     if (m_async_len > 0)
         return S_FALSE;
 
-    m_avail = m_async_pos;
     m_async_pos = -1;
+    m_async_len = -1;
 
     return S_OK;
 }
@@ -1401,22 +1528,18 @@ HRESULT MkvReader::AsyncReadPage(
         return S_OK;
     }
 
-#if 0
+#if 1 //def _DEBUG
     QWORD new_pos;
 
-    HRESULT hr = m_pStream->Seek(msoBegin, key, 0, &new_pos);
-
-    if (FAILED(hr))
-        return hr;
-
-    if (new_pos != QWORD(key))
-        return E_FAIL;
-#else
-    HRESULT hr = m_pStream->SetCurrentPosition(key);
-
-    if (FAILED(hr))
-        return hr;
+    HRESULT hr = m_pStream->GetCurrentPosition(&new_pos);
+    assert(SUCCEEDED(hr));
+    assert(QWORD(key) >= new_pos);
 #endif
+
+    hr = m_pStream->SetCurrentPosition(key);
+
+    if (FAILED(hr))
+        return hr;
 
     const Region& r = *page.region;
     const pages_vector_t::size_type offset = page_iter - r.pages.begin();
@@ -1430,6 +1553,15 @@ HRESULT MkvReader::AsyncReadPage(
 
     if (FAILED(hr))
         return hr;
+
+    //os << "AsyncReadPage: just called BeginRead; cb=" << page_size
+    //   << "; currpos+cb=" << (key + page_size)
+    //   << "; GetCurrPos=";
+
+    //hr = m_pStream->GetCurrentPosition(&new_pos);
+    //assert(SUCCEEDED(hr));
+
+    //os << new_pos << endl;
 
     page.pos = key;
     page.len = 0;    //we don't know actual len until async read completes

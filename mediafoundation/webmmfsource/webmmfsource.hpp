@@ -200,8 +200,13 @@ private:
     thread_state_t OnRequestSample();
     bool OnCommand();
 
+    //For async parsing and loading of clusters.
     const mkvparser::Cluster* m_pCurr;
     const mkvparser::Cluster* m_pNext;
+
+    //For preloading the cache, mostly intended
+    //to handle smooth playback of high datarate
+    //local files.
     const mkvparser::Cluster* m_pPreload;
     long m_preload_index;
 
@@ -235,9 +240,9 @@ private:
 
     //for async pre-fetching of next cluster
     //thread_state_t StateAsyncPreloadNext();
-    thread_state_t StateAsyncParseCurr();
-    thread_state_t StateAsyncParseNextInit();
-    thread_state_t StateAsyncParseNextFinal();
+    //thread_state_t StateAsyncParseCurr();
+    //thread_state_t StateAsyncParseNextInit();
+    //thread_state_t StateAsyncParseNextFinal();
     //thread_state_t StateAsyncPreloadSample();
     thread_state_t StateAsyncRequestSample();
 

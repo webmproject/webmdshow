@@ -107,9 +107,11 @@ public:
     void SetCurrBlockInit(LONGLONG time_ns, LONGLONG cluster_pos);
     //bool HaveCurrBlockObject(LONGLONG& cluster_pos) const;
     //bool HaveCurrBlockObject() const;
-    const mkvparser::Cluster* GetCurrBlockCluster();
+    //const mkvparser::Cluster* GetCurrBlockCluster();
+    LONGLONG GetCurrBlockClusterPosition() const;
 
     //virtual void SetCurrBlockObject(const mkvparser::Cluster*) = 0;
+    virtual void SetCurrBlockIndex(const mkvparser::Cluster*) = 0;
     virtual bool SetCurrBlockObject() = 0;
 
     const mkvparser::BlockEntry* GetCurrBlock() const;
@@ -120,7 +122,7 @@ public:
     virtual bool GetSampleExtent(LONGLONG& pos, LONG& len) = 0;
     virtual void GetSampleExtentCompletion() = 0;
 
-    virtual long GetNextBlock(const mkvparser::Cluster*&) = 0;
+    virtual long GetNextBlock() = 0;
     virtual long NotifyNextCluster(const mkvparser::Cluster*) = 0;
 
     int LockCurrBlock();
@@ -136,7 +138,6 @@ protected:
     HRESULT OnSeek(const PROPVARIANT& time);
 
     //bool HaveCurrBlockIndex(LONGLONG& cluster_pos) const;
-    virtual void SetCurrBlockIndex() = 0;
 
     HRESULT ProcessSample(IMFSample*);
 

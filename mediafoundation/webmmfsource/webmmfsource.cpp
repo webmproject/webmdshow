@@ -137,7 +137,7 @@ WebmMfSource::~WebmMfSource()
 {
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource: dtor; this=0x" << (const void*)this << endl;
+    os << L"WebmMfSource: dtor(begin); this=0x" << (const void*)this << endl;
 #endif
 
     FinalThread();
@@ -190,6 +190,12 @@ WebmMfSource::~WebmMfSource()
 
     delete m_pSegment;
     m_pSegment = 0;
+
+    m_file.Clear();
+
+#ifdef _DEBUG
+    os << L"WebmMfSource: dtor(end); this=0x" << (const void*)this << endl;
+#endif
 
     const HRESULT hr = m_pClassFactory->LockServer(FALSE);
     assert(SUCCEEDED(hr));
@@ -381,7 +387,7 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
     if (m_pLoadResult)
         return MF_E_UNEXPECTED;
 
-    IMFAsyncResultPtr pLoadResult;
+    IMFAsyncResultPtr pLoadResult;  //TODO: do we really need this?
 
     hr = MFCreateAsyncResult(0, pCB, 0, &pLoadResult);
 
@@ -391,14 +397,12 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
     assert(m_thread_state == &WebmMfSource::StateAsyncRead);
 
     m_file.ResetAvailable(0);
+    m_file.ResetCurrentPosition(0);
 
     hr = m_file.AsyncReadInit(0, 1024, &m_async_read);
 
     if (FAILED(hr))
-    {
-        Error(L"BeginLoad AsyncReadInit failed.", hr);
         return hr;
-    }
 
     m_async_state = &WebmMfSource::StateAsyncParseEbmlHeader;
 
@@ -410,7 +414,7 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
         assert(b);
     }
 
-    m_pLoadResult = pLoadResult;
+    m_pLoadResult = pLoadResult;  //TODO: do we really local pLoadResult?
     return S_OK;
 }
 
@@ -616,7 +620,13 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 
     bool bParseCues = false;
 
-    if (m_pSegment->GetCues())
+    if (m_file.HasSlowSeek())
+        __noop;
+
+    else if (m_file.IsPartiallyDownloaded())
+        __noop;
+
+    else if (m_pSegment->GetCues())
         bParseCues = true;
 
     else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
@@ -636,10 +646,26 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     }
 
     if (bParseCues)
+    {
+#ifdef _DEBUG
+        odbgstream os;
+        os << "StateAsyncParseSegmentHeaders: transitioning to "
+           << "StateAsyncParseCues"
+           << endl;
+#endif
+
         m_async_state = &WebmMfSource::StateAsyncParseCues;
+    }
     else
     {
-        m_file.Clear();
+#ifdef _DEBUG
+        odbgstream os;
+        os << "StateAsyncParseSegmentHeaders: transitioning to "
+           << "StateAsyncLoadCluster"
+           << endl;
+#endif
+
+        //m_file.Clear();
         m_async_state = &WebmMfSource::StateAsyncLoadCluster;
     }
 
@@ -655,6 +681,9 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 {
     //This is called while byte stream handler waits for load completion.
+
+    assert(!m_file.HasSlowSeek());
+    assert(!m_file.IsPartiallyDownloaded());  //?
 
     const mkvparser::Cues* pCues = m_pSegment->GetCues();
 
@@ -735,7 +764,16 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 
     if (!pCues->LoadCuePoint())  //no more cue points
     {
-        m_file.Clear();
+        m_file.Clear();  //sets avail to 0, for parsing
+        m_file.ResetCurrentPosition(0);
+
+#ifdef _DEBUG
+        odbgstream os;
+        os << "StateAsyncParseCues: transitioning to "
+           << "StateAsyncLoadCluster"
+           << endl;
+#endif
+
         m_async_state = &WebmMfSource::StateAsyncLoadCluster;
     }
 
@@ -751,6 +789,11 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 
 WebmMfSource::thread_state_t WebmMfSource::StateAsyncLoadCluster()
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "StateAsyncLoadCluster" << endl;
+#endif
+
     //Ensure that cluster is at least partially loaded,
     //so we know the total size of this element.  (This
     //is necessary because all we know about a preloaded
@@ -818,9 +861,14 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncLoadCluster()
 
 WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "StateAsyncInitStreams" << endl;
+#endif
+
     assert(m_pSegment->GetCount() > 0);
 
-    const mkvparser::Cluster* pCluster = m_pSegment->GetLast();
+    const mkvparser::Cluster* const pCluster = m_pSegment->GetLast();
     assert(pCluster);
     assert(!pCluster->EOS());
 
@@ -856,6 +904,11 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncInitStreams()
     if (bDone || (m_pSegment->GetCount() >= 10))
     {
         m_file.EnableBuffering(GetDuration());  //do this sooner?
+
+#ifdef _DEBUG
+        os << "StateAsyncInitStreams: Load complete" << endl;
+#endif
+
         return LoadComplete(S_OK);
     }
 
@@ -1013,7 +1066,7 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
     //on how smart we are about parsing, on whether we have parsed
     //the entire file yet.
 
-    dw = MFMEDIASOURCE_CAN_PAUSE;
+    dw = MFMEDIASOURCE_CAN_PAUSE;  //TODO: what about live webm?
 
     typedef streams_t::const_iterator iter_t;
 
@@ -1044,8 +1097,14 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
 
     bool can_seek = false;
 
-    if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
-        can_seek = true;
+    if (m_file.HasSlowSeek())
+        __noop;
+
+    else if (m_file.IsPartiallyDownloaded())  //?
+        __noop;
+
+    else if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
+        can_seek = (pCues->GetCount() > 0);
 
     else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
     {
@@ -1068,11 +1127,7 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
     {
         dw |= MFMEDIASOURCE_CAN_SEEK;
 
-        DWORD stream_caps;
-
-        hr = m_file.GetCapabilities(stream_caps);
-
-        if (SUCCEEDED(hr) && (stream_caps & MFBYTESTREAM_HAS_SLOW_SEEK))
+        if (m_file.HasSlowSeek())
             dw |= MFMEDIASOURCE_HAS_SLOW_SEEK;
     }
 
@@ -2913,7 +2968,7 @@ bool WebmMfSource::StateAsyncRead()
 
             if (!m_async_read.m_bCanInterrupt)
                 continue;  //must allow async read to complete
-
+#if 0
             bool have_audio = false;
 
             typedef requests_t::const_iterator iter_t;
@@ -2937,7 +2992,7 @@ bool WebmMfSource::StateAsyncRead()
 
             if (!have_audio)
                 continue;  //allow async read to complete
-
+#endif
             m_thread_state = &WebmMfSource::StateAsyncCancel;
             return false;
         }
@@ -3127,7 +3182,9 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         }
 
         //odbgstream os;
-        //os << "OnRequestSample: Parse returned DONE" << endl;
+        //os //<< "OnRequestSample: Parse returned DONE; file.GetCurrPos="
+        //   << m_file.GetCurrentPosition()
+        //   << endl;
 
         return 0;
     }
@@ -3154,11 +3211,30 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     const mkvparser::BlockEntry* const pCurr = pStream->GetCurrBlock();
 
+    //Note that pCurr will be null only when we're thinning, or we've done
+    //a seek.  Neither of these conditions apply when this a "slow seek"
+    //case.
+
     if (pCurr == 0)  //must lazy-init curr block before doing anything else
     {
+        //This was a seek (OnStartInitStreams).
+        //This is also true when the video stream is in thinning mode,
+        //since it resets its own pCurrBlock back to NULL, and re-inits
+        //its cluster_pos, to force us to follow this path here.
+#if 0
         m_pCurr = pStream->GetCurrBlockCluster();
         assert(m_pCurr);
         assert(!m_pCurr->EOS());
+#else
+        const LONGLONG cluster_pos = pStream->GetCurrBlockClusterPosition();
+        assert(cluster_pos >= 0);
+
+        m_pCurr = m_pSegment->FindOrPreloadCluster(cluster_pos);
+        assert(m_pCurr);
+        assert(!m_pCurr->EOS());
+
+        pStream->SetCurrBlockIndex(m_pCurr);
+#endif
 
         m_async_read.m_hrStatus = S_OK;
         m_async_state = &WebmMfSource::StateAsyncGetCurrBlockObjectInit;
@@ -3237,9 +3313,87 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         return &WebmMfSource::StateAsyncRead;
     }
 #else
+    //If this is "handle slow-seek" case, then we must read from
+    //the stream in a purely serial fashion.  Up until now we have
+    //assumed that we could jump among frame objects, and file in
+    //holes in the cache as we load in frames.  However, if the
+    //stream only supports slow seek, then we cannot really skip
+    //sections of the stream anymore -- we need to read serially
+    //until we have the frame we need, filling the cache as we go.
+    //
+    //Suppose we maintain a "curr cluster and curr block index"
+    //here.  We compare that to the cluster and index of this
+    //stream's pCurr block.  If the source's curr cluster/index
+    //is behind this stream's curr block, then we need to load
+    //the cache until it's equal or greater.
+    //
+    //The search for the next block always starts at the index
+    //1 greater than the curr block's index (on the curr block's
+    //cluster).  If the source is behind this stream's curr block,
+    //then it needs to fill the cache before allowing the search
+    //for the next block to proceed.
+    //
+    //All of this assumes that the search for the next block
+    //itself proceeds serially.  This search will search for
+    //the next block OBJECT, but this has nothing to do with
+    //what's in the cache.  We only go to the cache if we
+    //cannot find the next object.
+    //
+    //We could always call GetEntry on behalf of the stream,
+    //and then give it the correspond block object for it
+    //to vet for suitability as a next block.  The advantage
+    //is that we can control here how we walk the blocks
+    //in the cluster, such that we ensure that the cache
+    //it loaded serially.
+    //
+    //For Video:
+    //The next block really does refer to the next block, the one
+    //that follows the curr block.  This is true even in thinning mode.
+    //In thinning mode it's used only to compute the duration of this
+    //sample; it is not used to define the next sample (which we do
+    //by using cue points).  In non-thinning mode, it is used both
+    //to compute the duration of this sample and as the value of
+    //the next sample.
+    //
+    //For Audio:
+    //The next block determines the extent of this sample.  It is not
+    //used to compute duration, which we do not pass downstream.
+    //
+    //if this is "has slow seek" then
+    //   thinning mode doesn't apply
+    //   so we're sending all frames (even when rate != 1)
+    //   we must serially populate the cache, and then give blocks
+    //     to stream from the already-loaded cache.
+    //
+    //else if this is a (fast seek possible) normal stream then
+    //   if thinning then
+    //      we do fetch the next block for video, to compute the duration
+    //      of this sample; in the thinning mode case we might choose to
+    //      not bother, in which case (for video) there's nothing else we'd
+    //      need to do once we have the curr block.
+    //
+    //      for audio, get next block determines the extent of the audio
+    //      stream (only); we don't send any payload.
+    //
+    //   else if not thinning then
+    //      we could just do what we're doing now, although it wouldn't
+    //      hurt to use our pLoad cluster
+
+    m_pCurr = pCurr->GetCluster();
+    assert(m_pCurr);
+    assert(!m_pCurr->EOS());
+
     for (;;)  //GetNextBlock
     {
-        long status = pStream->GetNextBlock(m_pCurr);
+        //We can give the stream our current cluster and block index;
+        //it can compare its own position and decide whether our
+        //(cluster, index) needs to be updated.  If the stream is behind
+        //our curr pos, then it's safe to load it from the cache
+        //(in fact we should be able to make this guarantee).  If the
+        //stream is ahead of our position, then we need to advance our
+        //position and try again.
+
+        long status = pStream->GetNextBlock();
 
         if (status > 0)  //have next block
             break;
@@ -3349,6 +3503,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         pStream->GetSampleExtentCompletion();
     }
 
+#if 1
     if (!pStream->IsCurrBlockLocked())
     {
         //TODO:
@@ -3406,6 +3561,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
         status;
         assert(status == 0);
     }
+#endif
 
     hr = pStream->GetSample(r.pToken);
 
@@ -3766,8 +3922,6 @@ WebmMfSource::Parse(bool& bDone)
         const Cluster* const pCurrCluster = pCurrEntry->GetCluster();
         assert(pCurrCluster);
         assert(!pCurrCluster->EOS());
-        //assert(pCurrCluster->m_size > 0);
-        //assert(pCurrCluster->m_element_size > pCurrCluster->m_size);
 
         const LONGLONG start = pCurrCluster->m_element_start;
 
@@ -3778,8 +3932,10 @@ WebmMfSource::Parse(bool& bDone)
     if (m_pCurr == 0)
         return 0;
 
-    if (thread_state_t s = PreloadCache(bDone))
-        return s;
+    bDone = false;
+
+    //if (thread_state_t s = PreloadCache(bDone))
+    //    return s;
 
     if (!bDone)  //more parsing req'd
         for (;;)
@@ -3790,19 +3946,13 @@ WebmMfSource::Parse(bool& bDone)
             const long status = m_pCurr->Parse(pos, len);
 
             if (status >= 0)
-            {
-                bDone = false;
-                return 0;
-            }
+                break;
 
             if (status != mkvparser::E_BUFFER_NOT_FULL)  //bad file format
             {
                 Error(L"Parse failed.", E_FAIL);
                 return &WebmMfSource::StateQuit;
             }
-
-            //if (m_file.IsNetworkSource())
-            //    return 0;
 
             const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
@@ -3816,22 +3966,26 @@ WebmMfSource::Parse(bool& bDone)
             {
                 //const LONG page_size = m_file.GetPageSize();
                 //const LONG count = (len + page_size - 1) / page_size;
+
+                //const LONGLONG filepos = m_file.GetCurrentPosition();
+                //
                 //odbgstream os;
                 //os << "Parse: pCurr->Parse: ASYNC READ; pos=" << pos
-                //   << " len=" << len
-                //   << " page_count=" << count
-                //   << " curr cluster start=" << m_pCurr->m_element_start
+                //   //<< " len=" << len
+                //   //<< " page_count=" << count
+                //   //<< " curr cluster start=" << m_pCurr->m_element_start
+                //   << " filepos=" << filepos
+                //   << " pos-filepos=" << (pos - filepos)
                 //   << endl;
 
-                m_async_state = &WebmMfSource::StateAsyncParseCurr;
+                //m_async_state = &WebmMfSource::StateAsyncParseCurr;
+                m_async_state = &WebmMfSource::StateAsyncRequestSample;
                 return &WebmMfSource::StateAsyncRead;
             }
         }
 
+    bDone = true;
     assert(bDone);
-
-    //if (m_file.IsNetworkSource())  //don't want to read too far ahead
-    //    return 0;
 
     //Create next cluster object (if it doesn't already exist).
 
@@ -3872,7 +4026,8 @@ WebmMfSource::Parse(bool& bDone)
             //   << " page_count=" << count
             //   << endl;
 
-            m_async_state = &WebmMfSource::StateAsyncParseNextInit;
+            //m_async_state = &WebmMfSource::StateAsyncParseNextInit;
+            m_async_state = &WebmMfSource::StateAsyncRequestSample;
             return &WebmMfSource::StateAsyncRead;
         }
     }
@@ -3920,13 +4075,15 @@ WebmMfSource::Parse(bool& bDone)
             //   << " page_count=" << count
             //   << endl;
 
-            m_async_state = &WebmMfSource::StateAsyncParseNextFinal;
+            //m_async_state = &WebmMfSource::StateAsyncParseNextFinal;
+            m_async_state = &WebmMfSource::StateAsyncRequestSample;
             return &WebmMfSource::StateAsyncRead;
         }
     }
 }
 
 
+#if 0
 WebmMfSource::thread_state_t
 WebmMfSource::StateAsyncParseCurr()
 {
@@ -3979,8 +4136,10 @@ WebmMfSource::StateAsyncParseCurr()
         }
     }
 }
+#endif
 
 
+#if 0
 WebmMfSource::thread_state_t
 WebmMfSource::StateAsyncParseNextInit()
 {
@@ -4020,8 +4179,10 @@ WebmMfSource::StateAsyncParseNextInit()
             return 0;
     }
 }
+#endif
 
 
+#if 0
 WebmMfSource::thread_state_t
 WebmMfSource::StateAsyncParseNextFinal()
 {
@@ -4075,7 +4236,7 @@ WebmMfSource::StateAsyncParseNextFinal()
         }
     }
 }
-
+#endif
 
 #if 0
 WebmMfSource::thread_state_t WebmMfSource::PreloadCache()
@@ -4864,11 +5025,22 @@ bool WebmMfSource::Command::OnStart()
 
 LONGLONG WebmMfSource::Command::GetClusterPos(LONGLONG time_ns) const
 {
+    if (m_pSource->m_file.HasSlowSeek())  //check this here?
+        return -2;
+
+    if (m_pSource->m_file.IsPartiallyDownloaded())
+        return -2;
+
     mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
     const mkvparser::Cues* const pCues = pSegment->GetCues();
 
     if (pCues == 0)
         return -2;  //means cannot seek
+
+    if (pCues->GetCount() <= 0)
+        return -2;
+
+    //TODO: must check how much of Cues has been parsed
 
     LONGLONG base_pos = -1;
 
@@ -4981,6 +5153,11 @@ void WebmMfSource::Command::OnStart()
        << endl;
 #endif
 
+    //If the byte stream "has slow seek" then we cannot
+    //seek, so there's no need to call GetClusterPos.
+    //Alternatively we could choose OnStartNoSeek immediately
+    //if the requested time is EMPTY or reftime=0.
+
     const LONGLONG base_pos = GetClusterPos(time_ns);
 
     if (base_pos < 0)
@@ -5002,6 +5179,10 @@ void WebmMfSource::Command::OnStartNoSeek() const
     odbgstream os;
     os << "WebmMfSource::Command::OnStartNoSeek" << endl;
 #endif
+
+    //We want to set curr pos = pos of first cluster
+    //if this is a slow seek, then in principle actually setting
+    //the curr pos shouldn't be necessary.
 
     //we don't have anything but a time
     //without cue points we cannot jump to anywhere in the file,
@@ -5188,9 +5369,10 @@ void WebmMfSource::Command::OnStartNoSeek() const
         pStream->SetCurrBlock(pStream->GetFirstBlock());
     }
 
-    LONGLONG avail;
-
     const mkvparser::Cluster* const pCurr = pSegment->GetFirst();
+
+#if 0
+    LONGLONG avail;
 
     if ((pCurr == 0) || pCurr->EOS())  //weird
         avail = 0;
@@ -5198,25 +5380,22 @@ void WebmMfSource::Command::OnStartNoSeek() const
         avail = 0;
     else
     {
-#if 0
-        const LONGLONG pos = pCurr->m_pos;
-        assert(pos >= 0);
-
-        const LONGLONG size = pCurr->m_size;
-        assert(size >= 0);
-#else
         const LONGLONG pos = pCurr->m_element_start;
         assert(pos >= 0);
 
         const LONGLONG size = pCurr->GetElementSize();
         assert(size > 0);
-#endif
 
         avail = pos + size;
     }
 
     m_pSource->m_file.ResetAvailable(avail);
-    //m_pSource->m_pNext = &pSegment->m_eos;
+#else
+    MkvReader& f = m_pSource->m_file;
+
+    f.ResetAvailable(0);
+    f.ResetCurrentPosition(pCurr->m_element_start);
+#endif
 }
 
 
@@ -5520,8 +5699,16 @@ void WebmMfSource::Command::OnStartInitStreams(
         pStream->SetCurrBlockInit(time_ns, base_pos);
     }
 
-    m_pSource->m_file.ResetAvailable(base_pos);
-    //m_pSource->m_pNext = &pSegment->m_eos;
+    MkvReader& f = m_pSource->m_file;
+
+    f.ResetAvailable(base_pos);
+    f.ResetCurrentPosition(base_pos);
+
+    //TODO: we need to set curr pos to base_pos,
+    //serially loading the cache from that point.
+    //It's not clear whether we can even get here
+    //in the "slow seek" case, but it's still
+    //useful
 }
 #endif
 
@@ -6644,6 +6831,12 @@ void WebmMfSource::PurgeRequests()
 
 bool WebmMfSource::ThinningSupported() const
 {
+    if (m_file.HasSlowSeek())
+        return false;
+
+    if (m_file.IsPartiallyDownloaded())
+        return false;
+
     if (m_pSegment->GetCues() == 0)
         return false;
 
@@ -6676,7 +6869,11 @@ bool WebmMfSource::ThinningSupported() const
         break;
     }
 
+#if 1
+    return false;  //for debugging only
+#else
     return bThin;
+#endif
 }
 
 

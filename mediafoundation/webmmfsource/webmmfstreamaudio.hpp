@@ -38,12 +38,13 @@ public:
     HRESULT Start(const PROPVARIANT&);
 
     //void SetCurrBlockObject(const mkvparser::Cluster*);
+    void SetCurrBlockIndex(const mkvparser::Cluster*);
     bool SetCurrBlockObject();
 
     bool GetSampleExtent(LONGLONG& pos, LONG& len);
     void GetSampleExtentCompletion();
 
-    long GetNextBlock(const mkvparser::Cluster*&);
+    long GetNextBlock();
     long NotifyNextCluster(const mkvparser::Cluster*);
 
     HRESULT GetSample(IUnknown* pToken);
@@ -53,8 +54,6 @@ protected:
 
     void OnDeselect();
     void OnSetCurrBlock();
-
-    void SetCurrBlockIndex();
 
 private:
 

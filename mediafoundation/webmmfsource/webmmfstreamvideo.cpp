@@ -493,13 +493,12 @@ void WebmMfStreamVideo::SetCurrBlockObject(
 #endif
 
 
-void WebmMfStreamVideo::SetCurrBlockIndex()
+void WebmMfStreamVideo::SetCurrBlockIndex(const mkvparser::Cluster* pCluster)
 {
     assert(m_curr.pBE == 0);
+    assert(m_curr.pCluster == 0);
+    assert(m_cluster_pos >= 0);
     assert(m_time_ns >= 0);
-    //assert(m_cluster_pos >= 0);
-
-    const mkvparser::Cluster* const pCluster = m_curr.pCluster;
 
     if ((pCluster == 0) || pCluster->EOS())  //weird
     {
@@ -507,8 +506,9 @@ void WebmMfStreamVideo::SetCurrBlockIndex()
         return;
     }
 
-    const LONGLONG cluster_pos = pCluster->GetPosition();
-    assert(cluster_pos >= 0);
+    //const LONGLONG cluster_pos = pCluster->GetPosition();
+    //assert(cluster_pos >= 0);
+    assert(pCluster->GetPosition() == m_cluster_pos);
 
     mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
 
@@ -527,10 +527,10 @@ void WebmMfStreamVideo::SetCurrBlockIndex()
         assert(pTP);
         assert(pTP->m_track == m_pTrack->GetNumber());
 
-        if ((pTP->m_pos == cluster_pos) && (pTP->m_block > 0))
+        if ((pTP->m_pos == m_cluster_pos) && (pTP->m_block > 0))
         {
             m_curr.index = -1;  //means use pTP
-            //m_curr.pCluster = pCluster;
+            m_curr.pCluster = pCluster;
             m_curr.pBE = 0;  //means we lazy-init
             m_curr.pCP = pCP;
             m_curr.pTP = pTP;
@@ -538,7 +538,7 @@ void WebmMfStreamVideo::SetCurrBlockIndex()
     }
 
     m_curr.index = 0;  //start search at beginning of cluster
-    //m_curr.pCluster = pCluster;
+    m_curr.pCluster = pCluster;
     m_curr.pBE = 0;  //must lazy-init
     m_curr.pCP = 0;
     m_curr.pTP = 0;
@@ -700,7 +700,7 @@ bool WebmMfStreamVideo::SetCurrBlockObject()  //return long value instead?
 }
 
 
-long WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
+long WebmMfStreamVideo::GetNextBlock()
 {
     if (m_pNextBlock)
         return 1;  //we have a next block
@@ -712,7 +712,7 @@ long WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
 
     const LONGLONG tn = m_pTrack->GetNumber();
 
-    pCluster = pCurr->GetCluster();
+    const mkvparser::Cluster* const pCluster = pCurr->GetCluster();
     assert(pCluster);
     assert(!pCluster->EOS());
 
@@ -741,12 +741,14 @@ long WebmMfStreamVideo::GetNextBlock(const mkvparser::Cluster*& pCluster)
 
         const long status = pCluster->GetEntry(m_next_index, pNext);
 
+        //status < 0
         //Underflow is interpreted here to mean that we did not
         //find a block because more was left to parse.
 
         if (status < 0)
             return status;  //error or underflow
 
+        //status = 0
         //This is interpreted to mean that we did not find
         //a block because the entire cluster has been parsed,
         //but there were no more blocks on this cluster.
@@ -853,8 +855,9 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     const mkvparser::BlockEntry* const pCurr = m_curr.pBE;
     assert(pCurr);
     assert(!pCurr->EOS());
-    assert(m_pLocked);
-    assert(m_pLocked == pCurr);
+    //assert(m_pLocked);
+    //assert(m_pLocked == pCurr);
+    assert((m_pLocked == 0) || (m_pLocked == pCurr));
 
     const mkvparser::Block* const pCurrBlock = pCurr->GetBlock();
     assert(pCurrBlock);

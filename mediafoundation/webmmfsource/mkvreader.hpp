@@ -30,11 +30,13 @@ public:
     void ResetAvailable(LONGLONG);
     LONGLONG GetAvailable() const;
 
+    HRESULT ResetCurrentPosition(LONGLONG cluster_pos);
+    LONGLONG GetCurrentPosition() const;
+
     HRESULT AsyncReadInit(
         LONGLONG pos,
         LONG len,
-        IMFAsyncCallback* pCB,
-        bool preload = false);
+        IMFAsyncCallback* pCB);
 
     HRESULT AsyncReadCompletion(IMFAsyncResult*);
     HRESULT AsyncReadContinue(IMFAsyncCallback*);
