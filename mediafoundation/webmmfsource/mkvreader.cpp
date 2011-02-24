@@ -1401,16 +1401,22 @@ HRESULT MkvReader::AsyncReadPage(
         return S_OK;
     }
 
+#if 0
     QWORD new_pos;
 
     HRESULT hr = m_pStream->Seek(msoBegin, key, 0, &new_pos);
-    //assert(SUCCEEDED(hr) && (new_pos == QWORD(key)));
 
     if (FAILED(hr))
         return hr;
 
     if (new_pos != QWORD(key))
         return E_FAIL;
+#else
+    HRESULT hr = m_pStream->SetCurrentPosition(key);
+
+    if (FAILED(hr))
+        return hr;
+#endif
 
     const Region& r = *page.region;
     const pages_vector_t::size_type offset = page_iter - r.pages.begin();
