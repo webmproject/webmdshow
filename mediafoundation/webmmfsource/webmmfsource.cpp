@@ -3666,8 +3666,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     rr.pop_front();
 
-    if (!m_bCanSeek || m_pSegment->GetCues()->DoneParsing())
-        PurgeCache();
+    PurgeCache();
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
@@ -3881,6 +3880,9 @@ void WebmMfSource::PurgeCache()
 #else
 void WebmMfSource::PurgeCache()
 {
+    if (m_bCanSeek && !m_pSegment->GetCues()->DoneParsing())
+        return;
+
     typedef streams_t::const_iterator iter_t;
 
     iter_t i = m_streams.begin();
@@ -3888,8 +3890,7 @@ void WebmMfSource::PurgeCache()
 
     using namespace mkvparser;
 
-    //LONGLONG pos = -1;
-    const Cluster* pCluster = 0;
+    LONGLONG pos = -1;  //pos of cluster relative to segment
 
     while (i != j)
     {
@@ -3903,49 +3904,32 @@ void WebmMfSource::PurgeCache()
 
         const BlockEntry* const pCurr = pStream->GetCurrBlock();
 
-        //TODO: there is a potential problem here.
-        //In thinning mode, the video stream always sets the
-        //curr block entry to NULL, and sets the cluster_pos to
-        //a non-negative value, which triggers the logic to
-        //perform a cluster search.  This condition will defeat
-        //the handling we do here, so we need some better, less
-        //conservative mechanism for purging when thinning.
-
-        if (pCurr == 0)  //object hasn't been parsed yet
-            return;      //so don't purge
-
-        if (pCurr->EOS())
+        if ((pCurr != 0) && pCurr->EOS())
             continue;
 
-#if 0
-        const Block* const pBlock = pCurr->GetBlock();
-        assert(pBlock);
+        LONGLONG cluster_pos;
 
-        const LONGLONG start = pBlock->m_start;
-        assert(start > 0);
+        if (pCurr == 0)  //block object hasn't been parsed yet
+        {
+            cluster_pos = pStream->GetCurrBlockClusterPosition();
+            assert(cluster_pos >= 0);
+        }
+        else
+        {
+            const Cluster* const pCurrCluster = pCurr->GetCluster();
+            assert(pCurrCluster);
+            assert(!pCurrCluster->EOS());
 
-        if ((pos < 0) || (start < pos))
-            pos = start;
-#else
-        const Cluster* const pCurrCluster = pCurr->GetCluster();
-        assert(pCurrCluster);
-        assert(!pCurrCluster->EOS());
+            cluster_pos = pCurrCluster->GetPosition();
+            assert(cluster_pos >= 0);
+        }
 
-        const LONGLONG pos = pCurrCluster->GetPosition();
-        assert(pos >= 0);
-
-        if ((pCluster == 0) || (pos < pCluster->GetPosition()))
-            pCluster = pCurrCluster;
-#endif
+        if ((pos < 0) || (cluster_pos < pos))
+            pos = cluster_pos;
     }
 
-#if 0
     if (pos >= 0)
-        m_file.Purge(pos);
-#else
-    if (pCluster)
-        m_file.Purge(pCluster->m_element_start);
-#endif
+        m_file.Purge(m_pSegment->m_start + pos);
 }
 #endif
 
