@@ -3086,12 +3086,9 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     if (rr.empty())
     {
-        if (m_bCanSeek)
+        if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
         {
-            const mkvparser::Cues* const pCues = m_pSegment->GetCues();
-            assert(pCues);
-
-            if (pCues->LoadCuePoint())
+            if (pCues->LoadCuePoint())  //means more to parse
             {
                 //odbgstream os;
                 //os << "OnRequestSample: pCues->GetCount="
@@ -3523,8 +3520,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     rr.pop_front();
 
-    if (!m_bCanSeek || m_pSegment->GetCues()->DoneParsing())
-        PurgeCache();
+    PurgeCache();
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
@@ -3738,6 +3734,18 @@ void WebmMfSource::PurgeCache()
 #else
 void WebmMfSource::PurgeCache()
 {
+    if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
+    {
+        if (!pCues->DoneParsing())
+        {
+            //odbgstream os;
+            //os << "PurgeCache: delaying purge in order to parse cue points"
+            //   << endl;
+
+            return;
+        }
+    }
+
     typedef streams_t::const_iterator iter_t;
 
     iter_t i = m_streams.begin();
