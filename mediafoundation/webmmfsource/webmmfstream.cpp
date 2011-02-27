@@ -697,6 +697,7 @@ bool WebmMfStream::GetEOS() const
 //}
 
 
+#if 0
 HRESULT WebmMfStream::SetFirstBlock(const mkvparser::Cluster* pCluster)
 {
     if (m_pFirstBlock)
@@ -721,11 +722,38 @@ HRESULT WebmMfStream::SetFirstBlock(const mkvparser::Cluster* pCluster)
     m_pFirstBlock = pBlock;  //have an acceptable entry
     return S_OK;             //first block for this stream has been found
 }
+#else
+HRESULT WebmMfStream::SetFirstBlock(const mkvparser::BlockEntry* pEntry)
+{
+    if (m_pFirstBlock)
+        return S_FALSE;  //already have a value, so nothing else to do
+
+    if ((pEntry == 0) || pEntry->EOS())
+    {
+        m_pFirstBlock = m_pTrack->GetEOS();
+        return S_OK;
+    }
+
+    const mkvparser::Block* const pBlock = pEntry->GetBlock();
+
+    if (pBlock == 0)
+        return E_INVALIDARG;
+
+    if (pBlock->GetTrackNumber() != m_pTrack->GetNumber())
+        return E_INVALIDARG;
+
+    if (!m_pTrack->VetEntry(pEntry))
+        return E_FAIL;  //soft error
+
+    m_pFirstBlock = pEntry;  //have an acceptable entry
+    return S_OK;             //first block for this stream has been found
+}
+#endif
 
 
 const mkvparser::BlockEntry* WebmMfStream::GetFirstBlock() const
 {
-    return m_pFirstBlock;  //should be initialized to EOS
+    return m_pFirstBlock;
 }
 
 

@@ -214,8 +214,10 @@ private:
     thread_state_t StateAsyncParseEbmlHeader();
     thread_state_t StateAsyncParseSegmentHeaders();
     thread_state_t StateAsyncLoadCluster();
+    thread_state_t StateAsyncParseCluster();
     thread_state_t StateAsyncInitStreams();
     thread_state_t StateAsyncParseCues();
+    long m_load_index;
 
     //for async locking and loading:
     thread_state_t StateAsyncLockCurr();
@@ -327,6 +329,8 @@ private:
 
     bool m_bCanSeek;
     bool HaveVideo() const;
+
+    bool InitStreamsDone() const;
 
 };
 

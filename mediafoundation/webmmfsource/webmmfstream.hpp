@@ -99,7 +99,12 @@ public:
 
     virtual HRESULT GetSample(IUnknown*) = 0;
 
+#if 0
     HRESULT SetFirstBlock(const mkvparser::Cluster*);
+#else
+    HRESULT SetFirstBlock(const mkvparser::BlockEntry*);
+#endif
+
     const mkvparser::BlockEntry* GetFirstBlock() const;
 
     void SetCurrBlock(const mkvparser::BlockEntry*);
