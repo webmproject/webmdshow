@@ -521,6 +521,20 @@ void WebmMfStreamVideo::SetCurrBlockIndex(const mkvparser::Cluster* pCluster)
     const CuePoint* pCP;
     const CuePoint::TrackPosition* pTP;
 
+    for (;;)
+    {
+        const bool bMore = pCues->LoadCuePoint();
+
+        pCP = pCues->GetLast();
+        assert(pCP);
+
+        if (pCP->GetTime(pSegment) >= m_time_ns)
+            break;
+
+        if (!bMore)
+            break;
+    }
+
     if (pCues->Find(m_time_ns, m_pTrack, pCP, pTP))
     {
         assert(pCP);
@@ -1115,9 +1129,19 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
     if (m_curr.pCP == 0)
     {
-        //TODO: do this at the time of the request, in order to
-        //establish the invariant earlier.  If we are unable to
-        //establish the invariant, then fail the SetRate call.
+        for (;;)
+        {
+            const bool bMore = pCues->LoadCuePoint();
+
+            pCP = pCues->GetLast();
+            assert(pCP);
+
+            if (pCP->GetTime(pSegment) >= m_time_ns)
+                break;
+
+            if (!bMore)
+                break;
+        }
 
         if (!pCues->Find(m_thin_ns, m_pTrack, pCP, pTP))
         {
@@ -1136,7 +1160,17 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
             if (m_time_ns > m_thin_ns)
                 break;
 
-            pCP = pCues->GetNext(pCP);
+            const mkvparser::CuePoint* const pCurr = pCP;
+
+            for (;;)
+            {
+                pCP = pCues->GetNext(pCurr);
+
+                if ((pCP != 0) || pCues->DoneParsing())
+                    break;
+
+                pCues->LoadCuePoint();
+            }
 
             if (pCP == 0)  //no more queue points
                 break;
@@ -1170,7 +1204,15 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     {
         assert(m_rate >= 0);
 
-        pCP = pCues->GetNext(m_curr.pCP);
+        for (;;)
+        {
+            pCP = pCues->GetNext(m_curr.pCP);
+
+            if ((pCP != 0) || pCues->DoneParsing())
+                break;
+
+            pCues->LoadCuePoint();
+        }
 
         if (pCP)
             pTP = pCP->Find(m_pTrack);
@@ -1206,7 +1248,15 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
     for (;;)
     {
-        pCP = pCues->GetNext(m_curr.pCP);
+        for (;;)
+        {
+            pCP = pCues->GetNext(m_curr.pCP);
+
+            if ((pCP != 0) || pCues->DoneParsing())
+                break;
+
+            pCues->LoadCuePoint();
+        }
 
         if (pCP)
             pTP = pCP->Find(m_pTrack);

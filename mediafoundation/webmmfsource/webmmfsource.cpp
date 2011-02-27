@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <propvarutil.h>
 #ifdef _DEBUG
+#include <iomanip>
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
 using std::hex;
@@ -3236,10 +3237,18 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
             if (pCues->LoadCuePoint())
             {
+                //const mkvparser::CuePoint* const pCP = pCues->GetLast();
+                //const LONGLONG time_ns = pCP->GetTime(m_pSegment);
+                //
                 //odbgstream os;
                 //os << "OnRequestSample: pCues->GetCount="
                 //   << pCues->GetCount()
-                //   << "; loaded cue point - more to parse"
+                //   << "; loaded cue point t[ns]=" << time_ns
+                //   << " t[sec]="
+                //   << std::fixed
+                //   << std::setprecision(3)
+                //   << (double(time_ns) / 1000000000.0)
+                //   << "; MORE TO PARSE"
                 //   << endl;
 
                 const BOOL b = SetEvent(m_hRequestSample);
@@ -6889,6 +6898,7 @@ void WebmMfSource::PurgeRequests()
 
 bool WebmMfSource::ThinningSupported() const
 {
+#if 0
     if (m_file.HasSlowSeek())
         return false;
 
@@ -6927,10 +6937,38 @@ bool WebmMfSource::ThinningSupported() const
         break;
     }
 
-#if 1
-    return false;  //for debugging only
-#else
     return bThin;
+#else
+    //TODO: we probably need to manage the cache
+    //differently when we're in thinning mode.
+    //Right now, whenever we ask the cache for
+    //data at a given position, we adjust the
+    //position down (backwards, towards the front)
+    //to the value of the stream's current pos.
+    //This ensures that all data in the stream
+    //gets put in the cache, so that there are
+    //never gaps in the cache.  This is the behavior
+    //that we want when we're streaming, because
+    //we always have the data in the cache, ready
+    //to be consumed.
+    //
+    //However, in the thinning mode case, this
+    //is entirely wasteful and probably too
+    //inefficient, because we only need a small
+    //subset of the data from the stream to be
+    //in the cache.  Firstly, we only need enough
+    //stream data to determine block boundaries.
+    //Secondly, we only need the block payload for
+    //video keyframes (we don't send non-key video
+    //frames, and we don't send any blocks at
+    //all for audio, when thinning).  Thinning
+    //mode is a case when we really do want
+    //the cache to have gaps.  We need a way
+    //to tell the cache manager to not adjust
+    //the requested position.
+
+    //return m_pCanSeek;
+    return false;  //TODO: fix this
 #endif
 }
 
