@@ -975,10 +975,13 @@ void MkvReader::Clear()
 }
 
 
-HRESULT MkvReader::ResetCurrentPosition(LONGLONG pos_)
+HRESULT MkvReader::Seek(LONGLONG pos_)
 {
-    assert(pos_ >= 0);
-    assert((m_length < 0) || (pos_ <= m_length));
+    if (pos_ < 0)
+        return E_INVALIDARG;
+
+    if ((m_length >= 0) && (pos_ > m_length))
+        return E_INVALIDARG;
 
     const DWORD page_size = m_info.dwPageSize;
     const QWORD pos = page_size * QWORD(pos_ / page_size);

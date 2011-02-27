@@ -106,7 +106,8 @@ WebmMfSource::WebmMfSource(
     m_pCurr(0),
     m_pNext(0),
     m_pPreload(0),
-    m_preload_index(-1)
+    m_preload_index(-1),
+    m_bCanSeek(false)
 {
     HRESULT hr = m_pClassFactory->LockServer(TRUE);
     assert(SUCCEEDED(hr));
@@ -397,7 +398,7 @@ HRESULT WebmMfSource::BeginLoad(IMFAsyncCallback* pCB)
     assert(m_thread_state == &WebmMfSource::StateAsyncRead);
 
     m_file.ResetAvailable(0);
-    m_file.ResetCurrentPosition(0);
+    m_file.Seek(0);
 
     hr = m_file.AsyncReadInit(0, 1024, &m_async_read);
 
@@ -451,6 +452,9 @@ WebmMfSource::LoadComplete(HRESULT hrLoad)
 
     if (FAILED(hrLoad))
         return &WebmMfSource::StateQuit;
+
+    const BOOL b = SetEvent(m_hRequestSample);
+    assert(b);
 
     return &WebmMfSource::StateRequestSample;
 }
@@ -569,6 +573,10 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
         if (const char* str = pInfo->GetWritingAppAsUTF8())
             writingApp = ConvertFromUTF8(str);
 
+        wodbgstream os;
+        os << "muxingApp=\"" << muxingApp << "\"\n"
+           << "writingApp=\"" << writingApp << '\n' << endl;
+
         pInfo = 0;
     }
 #endif
@@ -618,20 +626,25 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     if (m_stream_descriptors.empty())
         return LoadComplete(E_FAIL);
 
-    bool bParseCues = false;
+    m_async_state = &WebmMfSource::StateAsyncLoadCluster;
+    m_bCanSeek = false;
 
-    if (m_file.HasSlowSeek())
+    if (!HaveVideo())
+        __noop;
+
+    else if (m_file.HasSlowSeek())
         __noop;
 
     else if (m_file.IsPartiallyDownloaded())
         __noop;
 
     else if (m_pSegment->GetCues())
-        bParseCues = true;
+        m_bCanSeek = true;
 
     else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
     {
         const int count = pSH->GetCount();
+        LONGLONG cues_off = -1;
 
         for (int idx = 0; idx < count; ++idx)
         {
@@ -639,34 +652,20 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 
             if (p->id == 0x0C53BB6B)  //Cues ID
             {
-                bParseCues = true;
+                cues_off = p->pos;  //relative to segment
+                assert(cues_off >= 0);
+
                 break;
             }
         }
-    }
 
-    if (bParseCues)
-    {
-#ifdef _DEBUG
-        odbgstream os;
-        os << "StateAsyncParseSegmentHeaders: transitioning to "
-           << "StateAsyncParseCues"
-           << endl;
-#endif
+        if (cues_off >= 0)
+        {
+            const LONGLONG pos = m_pSegment->m_start + cues_off;
+            m_file.Seek(pos);
 
-        m_async_state = &WebmMfSource::StateAsyncParseCues;
-    }
-    else
-    {
-#ifdef _DEBUG
-        odbgstream os;
-        os << "StateAsyncParseSegmentHeaders: transitioning to "
-           << "StateAsyncLoadCluster"
-           << endl;
-#endif
-
-        //m_file.Clear();
-        m_async_state = &WebmMfSource::StateAsyncLoadCluster;
+            m_async_state = &WebmMfSource::StateAsyncParseCues;
+        }
     }
 
     m_async_read.m_hrStatus = S_OK;
@@ -680,110 +679,68 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 
 WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 {
-    //This is called while byte stream handler waits for load completion.
-
     assert(!m_file.HasSlowSeek());
     assert(!m_file.IsPartiallyDownloaded());  //?
+    assert(m_pSegment->GetCues() == 0);
 
-    const mkvparser::Cues* pCues = m_pSegment->GetCues();
+    const mkvparser::SeekHead* const pSH = m_pSegment->GetSeekHead();
+    assert(pSH);
 
-    if (pCues == 0)
+    const int count = pSH->GetCount();
+    assert(count > 0);
+
+    LONGLONG cues_off = -1;  //offset relative to start of segment
+
+    for (int idx = 0; idx < count; ++idx)
     {
-        const mkvparser::SeekHead* const pSH = m_pSegment->GetSeekHead();
-        assert(pSH);
+        const mkvparser::SeekHead::Entry* const p = pSH->GetEntry(idx);
 
-        const int count = pSH->GetCount();
-        assert(count > 0);
-
-        LONGLONG cues_off = -1;  //offset relative to start of segment
-
-        for (int idx = 0; idx < count; ++idx)
+        if (p->id == 0x0C53BB6B)  //Cues ID
         {
-            const mkvparser::SeekHead::Entry* const p = pSH->GetEntry(idx);
+            cues_off = p->pos;
+            assert(cues_off >= 0);
 
-            if (p->id == 0x0C53BB6B)  //Cues ID
-            {
-                cues_off = p->pos;
-                assert(cues_off >= 0);
+            break;
+        }
+    }
 
-                break;
-            }
+    assert(cues_off >= 0);
+
+    for (;;)  //parsing cues element
+    {
+        LONGLONG pos;
+        LONG len;
+
+        const long status = m_pSegment->ParseCues(cues_off, pos, len);
+
+        if (status >= 0)
+        {
+            if (status == 0)  //success
+                m_bCanSeek = true;
+
+            m_file.Seek(0);
+            m_file.ResetAvailable(0);
+
+            m_async_state = &WebmMfSource::StateAsyncLoadCluster;
+            m_async_read.m_hrStatus = S_OK;
+
+            const BOOL b = SetEvent(m_hAsyncRead);
+            assert(b);
+
+            return 0;  //stay in async read state
         }
 
-        assert(cues_off >= 0);
+        if (status != mkvparser::E_BUFFER_NOT_FULL)
+            return LoadComplete(E_FAIL);
 
-        for (;;)  //parsing cues element
-        {
-            LONGLONG pos;
-            LONG len;
+        const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
 
-            const long status = m_pSegment->ParseCues(cues_off, pos, len);
+        if (FAILED(hr))
+            return LoadComplete(hr);
 
-            if (status == 0)  //we have cues; fall through
-            {
-                pCues = m_pSegment->GetCues();
-                assert(pCues);
-
-                break;
-            }
-
-            if (status > 0)  //weird: parse was successful, but no cues
-            {
-                assert(m_pSegment->GetCues() == 0);
-
-                m_file.Clear();
-
-                m_async_state = &WebmMfSource::StateAsyncLoadCluster;
-                m_async_read.m_hrStatus = S_OK;
-
-                const BOOL b = SetEvent(m_hAsyncRead);
-                assert(b);
-
-                return 0;  //stay in async read state
-            }
-
-            if (status != mkvparser::E_BUFFER_NOT_FULL)
-                //return &WebmMfSource::StateQuit;
-                return LoadComplete(E_FAIL);
-
-            const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-
-            if (FAILED(hr))
-            {
-                Error(L"ParseCues AsyncReadInit failed.", hr);
-                //return &WebmMfSource::StateQuit;
-                return LoadComplete(hr);
-            }
-
-            if (hr == S_FALSE)  //async read in progress
-                return 0;       //no transition here
-
-            continue;
-        }  //parsing cues element
-    }
-
-    if (!pCues->LoadCuePoint())  //no more cue points
-    {
-        m_file.Clear();  //sets avail to 0, for parsing
-        m_file.ResetCurrentPosition(0);
-
-#ifdef _DEBUG
-        odbgstream os;
-        os << "StateAsyncParseCues: transitioning to "
-           << "StateAsyncLoadCluster"
-           << endl;
-#endif
-
-        m_async_state = &WebmMfSource::StateAsyncLoadCluster;
-    }
-
-    m_async_read.m_hrStatus = S_OK;
-
-    const BOOL b = SetEvent(m_hAsyncRead);
-    assert(b);
-
-    return 0;  //stay in async read state
-
+        if (hr == S_FALSE)  //async read in progress
+            return 0;       //no transition here
+    }  //parsing cues element
 }
 
 
@@ -1068,12 +1025,24 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
 
     dw = MFMEDIASOURCE_CAN_PAUSE;  //TODO: what about live webm?
 
+    if (m_bCanSeek)
+    {
+        dw |= MFMEDIASOURCE_CAN_SEEK;
+
+        if (m_file.HasSlowSeek())
+            dw |= MFMEDIASOURCE_HAS_SLOW_SEEK;
+    }
+
+    return S_OK;
+}
+
+
+bool WebmMfSource::HaveVideo() const
+{
     typedef streams_t::const_iterator iter_t;
 
     iter_t iter = m_streams.begin();
     const iter_t iter_end = m_streams.end();
-
-    bool have_video = false;
 
     while (iter != iter_end)
     {
@@ -1086,52 +1055,10 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
         assert(pTrack);
 
         if (pTrack->GetType() == 1) //video
-        {
-            have_video = true;
-            break;
-        }
+            return true;
     }
 
-    if (!have_video)
-        return S_OK;  //TODO: for now, assume no seeking possible
-
-    bool can_seek = false;
-
-    if (m_file.HasSlowSeek())
-        __noop;
-
-    else if (m_file.IsPartiallyDownloaded())  //?
-        __noop;
-
-    else if (const mkvparser::Cues* pCues = m_pSegment->GetCues())
-        can_seek = (pCues->GetCount() > 0);
-
-    else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
-    {
-        const int count = pSH->GetCount();
-
-        for (int idx = 0; idx < count; ++idx)
-        {
-            const mkvparser::SeekHead::Entry* const p = pSH->GetEntry(idx);
-            assert(p);
-
-            if (p->id == 0x0C53BB6B)  //Cues ID
-            {
-                can_seek = true;  //TODO: defend against empty Cues
-                break;
-            }
-        }
-    }
-
-    if (can_seek)
-    {
-        dw |= MFMEDIASOURCE_CAN_SEEK;
-
-        if (m_file.HasSlowSeek())
-            dw |= MFMEDIASOURCE_HAS_SLOW_SEEK;
-    }
-
-    return S_OK;
+    return false;
 }
 
 
@@ -3159,6 +3086,26 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     if (rr.empty())
     {
+        if (m_bCanSeek)
+        {
+            const mkvparser::Cues* const pCues = m_pSegment->GetCues();
+            assert(pCues);
+
+            if (pCues->LoadCuePoint())
+            {
+                //odbgstream os;
+                //os << "OnRequestSample: pCues->GetCount="
+                //   << pCues->GetCount()
+                //   << "; loaded cue point - more to parse"
+                //   << endl;
+
+                const BOOL b = SetEvent(m_hRequestSample);
+                assert(b);
+
+                return 0;
+            }
+        }
+
         if (IsStopped())
         {
             m_file.Clear();
@@ -3576,26 +3523,8 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
     rr.pop_front();
 
-    PurgeCache();
-
-    //This has the benefit that it guarantees that the next
-    //block has been loaded in cache.  PreloadCache uses spare
-    //cycles to do it in background, so it doesn't make any
-    //guarantee that the block will have loaded in the cache
-    //The problem with pre-fetching the next block here is
-    //that it duplicates the work that PreloadCache does, so
-    //we end up doing all the work twice.
-    //
-    //if (rr.empty())
-    //{
-    //    if (thread_state_t s = PreloadSample(pStream))
-    //        return s;
-    //}
-
-    //bool bDone;
-    //
-    //if (thread_state_t s = Parse(bDone))
-    //    return s;
+    if (!m_bCanSeek || m_pSegment->GetCues()->DoneParsing())
+        PurgeCache();
 
     const BOOL b = SetEvent(m_hRequestSample);
     assert(b);
@@ -5025,22 +4954,16 @@ bool WebmMfSource::Command::OnStart()
 
 LONGLONG WebmMfSource::Command::GetClusterPos(LONGLONG time_ns) const
 {
-    if (m_pSource->m_file.HasSlowSeek())  //check this here?
-        return -2;
+    if (time_ns <= 0)
+        return -1;  //force no-seek start
 
-    if (m_pSource->m_file.IsPartiallyDownloaded())
+    if (!m_pSource->m_bCanSeek)
         return -2;
 
     mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
+
     const mkvparser::Cues* const pCues = pSegment->GetCues();
-
-    if (pCues == 0)
-        return -2;  //means cannot seek
-
-    if (pCues->GetCount() <= 0)
-        return -2;
-
-    //TODO: must check how much of Cues has been parsed
+    assert(pCues);
 
     LONGLONG base_pos = -1;
 
@@ -5112,6 +5035,20 @@ LONGLONG WebmMfSource::Command::GetClusterPos(LONGLONG time_ns) const
 
         const CuePoint* pCP;
         const CuePoint::TrackPosition* pTP;
+
+        for (;;)
+        {
+            const bool bMore = pCues->LoadCuePoint();
+
+            pCP = pCues->GetLast();
+            assert(pCP);
+
+            if (pCP->GetTime(pSegment) >= time_ns)
+                break;
+
+            if (!bMore)
+                break;
+        }
 
         if (!pCues->Find(time_ns, pTrack, pCP, pTP))
             continue;
@@ -5394,7 +5331,7 @@ void WebmMfSource::Command::OnStartNoSeek() const
     MkvReader& f = m_pSource->m_file;
 
     f.ResetAvailable(0);
-    f.ResetCurrentPosition(pCurr->m_element_start);
+    f.Seek(pCurr->m_element_start);
 #endif
 }
 
@@ -5702,13 +5639,7 @@ void WebmMfSource::Command::OnStartInitStreams(
     MkvReader& f = m_pSource->m_file;
 
     f.ResetAvailable(base_pos);
-    f.ResetCurrentPosition(base_pos);
-
-    //TODO: we need to set curr pos to base_pos,
-    //serially loading the cache from that point.
-    //It's not clear whether we can even get here
-    //in the "slow seek" case, but it's still
-    //useful
+    f.Seek(base_pos);
 }
 #endif
 

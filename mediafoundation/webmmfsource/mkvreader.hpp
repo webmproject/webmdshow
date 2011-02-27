@@ -30,7 +30,7 @@ public:
     void ResetAvailable(LONGLONG);
     LONGLONG GetAvailable() const;
 
-    HRESULT ResetCurrentPosition(LONGLONG cluster_pos);
+    HRESULT Seek(LONGLONG pos);
     LONGLONG GetCurrentPosition() const;
 
     HRESULT AsyncReadInit(
