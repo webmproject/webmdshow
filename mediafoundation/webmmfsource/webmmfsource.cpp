@@ -3997,59 +3997,60 @@ WebmMfSource::Parse(bool& bDone)
     if (m_pCurr == 0)
         return 0;
 
-    bDone = false;
+    assert(bDone);
 
-    //if (thread_state_t s = PreloadCache(bDone))
-    //    return s;
+    for (;;)
+    {
+        LONGLONG pos;
+        LONG len;
 
-    if (!bDone)  //more parsing req'd
-        for (;;)
+        const long status = m_pCurr->Parse(pos, len);
+
+        if (status > 0)  //nothing left to parse on curr cluster
+            break;
+
+        if (status == 0)  //parsed something on curr cluster
         {
-            LONGLONG pos;
-            LONG len;
-
-            const long status = m_pCurr->Parse(pos, len);
-
-            if (status >= 0)
-                break;
-
-            if (status != mkvparser::E_BUFFER_NOT_FULL)  //bad file format
-            {
-                Error(L"Parse failed.", E_FAIL);
-                return &WebmMfSource::StateQuit;
-            }
-
-            const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
-
-            if (FAILED(hr))
-            {
-                Error(L"StateAsyncGetCurrBlockObjectInit AsyncReadInit.", hr);
-                return &WebmMfSource::StateQuit;
-            }
-
-            if (hr == S_FALSE)  //event will be set in Invoke
-            {
-                //const LONG page_size = m_file.GetPageSize();
-                //const LONG count = (len + page_size - 1) / page_size;
-
-                //const LONGLONG filepos = m_file.GetCurrentPosition();
-                //
-                //odbgstream os;
-                //os << "Parse: pCurr->Parse: ASYNC READ; pos=" << pos
-                //   //<< " len=" << len
-                //   //<< " page_count=" << count
-                //   //<< " curr cluster start=" << m_pCurr->m_element_start
-                //   << " filepos=" << filepos
-                //   << " pos-filepos=" << (pos - filepos)
-                //   << endl;
-
-                //m_async_state = &WebmMfSource::StateAsyncParseCurr;
-                m_async_state = &WebmMfSource::StateAsyncRequestSample;
-                return &WebmMfSource::StateAsyncRead;
-            }
+            bDone = false;
+            return 0;
         }
 
-    bDone = true;
+        if (status != mkvparser::E_BUFFER_NOT_FULL)  //bad file format
+        {
+            Error(L"Parse failed.", E_FAIL);
+            return &WebmMfSource::StateQuit;
+        }
+
+        const HRESULT hr = m_file.AsyncReadInit(pos, len, &m_async_read);
+
+        if (FAILED(hr))
+        {
+            Error(L"StateAsyncGetCurrBlockObjectInit AsyncReadInit.", hr);
+            return &WebmMfSource::StateQuit;
+        }
+
+        if (hr == S_FALSE)  //event will be set in Invoke
+        {
+            //const LONG page_size = m_file.GetPageSize();
+            //const LONG count = (len + page_size - 1) / page_size;
+
+            //const LONGLONG filepos = m_file.GetCurrentPosition();
+            //
+            //odbgstream os;
+            //os << "Parse: pCurr->Parse: ASYNC READ; pos=" << pos
+            //   //<< " len=" << len
+            //   //<< " page_count=" << count
+            //   //<< " curr cluster start=" << m_pCurr->m_element_start
+            //   << " filepos=" << filepos
+            //   << " pos-filepos=" << (pos - filepos)
+            //   << endl;
+
+            //m_async_state = &WebmMfSource::StateAsyncParseCurr;
+            m_async_state = &WebmMfSource::StateAsyncRequestSample;
+            return &WebmMfSource::StateAsyncRead;
+        }
+    }
+
     assert(bDone);
 
     //Create next cluster object (if it doesn't already exist).
@@ -4097,6 +4098,7 @@ WebmMfSource::Parse(bool& bDone)
         }
     }
 
+    assert(bDone);
     assert(m_pNext);
     assert(!m_pNext->EOS());
 
