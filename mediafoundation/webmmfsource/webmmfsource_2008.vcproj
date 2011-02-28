@@ -370,6 +370,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\common\registry.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\common\versionhandling.cpp"
 				>
 			</File>
