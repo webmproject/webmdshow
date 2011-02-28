@@ -287,6 +287,7 @@ Section "Uninstall" SecUninstall
 
   DeleteRegKey HKLM "${WMMF_UNINSTALL_KEY}"
   DeleteRegKey HKLM "${WMMF_OMAHA_CLIENT_SUBKEY}\${WMMF_OMAHA_GUID}"
+  DeleteRegKey HKCU "${WMMF_OMAHA_RESULT_SUBKEY}\${WMMF_OMAHA_GUID}"
   DeleteRegKey HKLM "${WMMF_OMAHA_RESULT_SUBKEY}\${WMMF_OMAHA_GUID}"
 SectionEnd
 
