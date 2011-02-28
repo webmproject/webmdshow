@@ -1072,10 +1072,9 @@ HRESULT MkvReader::AsyncReadInit(
     QWORD curr_pos;
 
     HRESULT hr = m_pStream->GetCurrentPosition(&curr_pos);
-    assert(SUCCEEDED(hr));  //TODO
-    //assert((curr_pos % m_info.dwPageSize) == 0);
 
-    //QWORD next_pos = curr_pos;
+    if (FAILED(hr))  //MF_E_SHUTDOWN
+        return hr;
 
     if (QWORD(pos) > curr_pos)
     {
@@ -1348,9 +1347,8 @@ HRESULT MkvReader::AsyncReadContinue(
     QWORD curr_pos;
 
     HRESULT hr = m_pStream->GetCurrentPosition(&curr_pos);
-    assert(SUCCEEDED(hr));  //TODO
 
-    if (QWORD(last_pos) > curr_pos)
+    if (SUCCEEDED(hr) && (QWORD(last_pos) > curr_pos))
     {
         hr = m_pStream->SetCurrentPosition(last_pos);
         assert(SUCCEEDED(hr));
@@ -1406,7 +1404,7 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
         page.len = cbRead;
         assert(page.len <= m_info.dwPageSize);
 
-#if 1 //def _DEBUG
+#ifdef _DEBUG
         //odbgstream os;
         //os << "AsyncReadCompletion: just called EndRead; cbRead="
         //   << cbRead
@@ -1415,8 +1413,7 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
         QWORD new_pos;
 
         hr = m_pStream->GetCurrentPosition(&new_pos);
-        assert(SUCCEEDED(hr));
-        assert(new_pos >= QWORD(page.pos + page.len));
+        assert(FAILED(hr) || (new_pos >= QWORD(page.pos + page.len)));
 
         //os << new_pos << endl;
 #endif
@@ -1531,12 +1528,11 @@ HRESULT MkvReader::AsyncReadPage(
         return S_OK;
     }
 
-#if 1 //def _DEBUG
+#ifdef _DEBUG
     QWORD new_pos;
 
     HRESULT hr = m_pStream->GetCurrentPosition(&new_pos);
-    assert(SUCCEEDED(hr));
-    assert(QWORD(key) >= new_pos);
+    assert(FAILED(hr) || (QWORD(key) >= new_pos));
 #endif
 
     hr = m_pStream->SetCurrentPosition(key);
