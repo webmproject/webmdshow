@@ -31,7 +31,7 @@ public:
     LONGLONG GetAvailable() const;
 
     HRESULT Seek(LONGLONG pos);
-    LONGLONG GetCurrentPosition() const;
+    //LONGLONG GetCurrentPosition() const;
 
     HRESULT AsyncReadInit(
         LONGLONG pos,

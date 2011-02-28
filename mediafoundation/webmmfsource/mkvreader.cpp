@@ -990,17 +990,17 @@ HRESULT MkvReader::Seek(LONGLONG pos_)
 }
 
 
-LONGLONG MkvReader::GetCurrentPosition() const
-{
-    QWORD pos;
-
-    const HRESULT hr = m_pStream->GetCurrentPosition(&pos);
-
-    if (FAILED(hr))
-        return -1;
-
-    return pos;
-}
+//LONGLONG MkvReader::GetCurrentPosition() const
+//{
+//    QWORD pos;
+//
+//    const HRESULT hr = m_pStream->GetCurrentPosition(&pos);
+//
+//    if (FAILED(hr))
+//        return -1;
+//
+//    return pos;
+//}
 
 
 void MkvReader::ResetAvailable(LONGLONG avail)
