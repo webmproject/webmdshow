@@ -1,8 +1,7 @@
+*.aps
 *.ncb
 *.suo
 *.user
 *~
 *.TMP
-
-
-mediafoundation/webmmfvorbisdec/tags
+tags
