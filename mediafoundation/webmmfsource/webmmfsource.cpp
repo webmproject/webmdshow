@@ -3971,8 +3971,8 @@ WebmMfSource::Parse(bool& bDone)
 
     bDone = true;
 
-    if (m_file.HasSlowSeek())
-        return 0;
+    //if (m_file.HasSlowSeek())
+    //    return 0;
 
     if (m_bThin || (m_rate != 1))
         return 0;
