@@ -24,6 +24,8 @@
 using std::hex;
 using std::endl;
 using std::boolalpha;
+using std::fixed;
+using std::setprecision;
 #endif
 
 //"D:\src\mediafoundation\topoedit\app\Debug\topoedit.exe"
@@ -1442,7 +1444,9 @@ HRESULT WebmMfSource::Start(
     if (pPos == 0)  //TODO: interpret this same as VT_EMPTY?
         return E_INVALIDARG;
 
-    switch (pPos->vt)
+    const PROPVARIANT& pos = *pPos;
+
+    switch (pos.vt)
     {
         case VT_I8:
         case VT_EMPTY:
@@ -1461,7 +1465,23 @@ HRESULT WebmMfSource::Start(
 
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource::Start" << endl;
+    os << L"WebmMfSource::Start: ";
+
+    if (pos.vt == VT_EMPTY)
+        os << "time=VT_EMPTY";
+    else
+    {
+        const LONGLONG reftime = pos.hVal.QuadPart;
+
+        os << "time[reftime]="
+           << reftime
+           << " time[sec]="
+           << fixed
+           << setprecision(3)
+           << (double(reftime) / 10000000.0);
+    }
+
+    os << endl;
 #endif
 
     if (m_pEvents == 0)
@@ -1484,7 +1504,7 @@ HRESULT WebmMfSource::Start(
     Command& c = cc.back();
 
     c.SetDesc(pDesc);
-    c.SetTime(*pPos);
+    c.SetTime(pos);
 
     const BOOL b = SetEvent(m_hCommand);
     assert(b);
