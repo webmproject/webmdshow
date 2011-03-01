@@ -370,6 +370,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\common\omahautil.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\common\omahautil.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\common\registry.hpp"
 				>
 			</File>
