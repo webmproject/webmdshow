@@ -1528,10 +1528,12 @@ HRESULT MkvReader::AsyncReadPage(
         return S_OK;
     }
 
+    HRESULT hr;
+
 #ifdef _DEBUG
     QWORD new_pos;
 
-    HRESULT hr = m_pStream->GetCurrentPosition(&new_pos);
+    hr = m_pStream->GetCurrentPosition(&new_pos);
     assert(FAILED(hr) || (QWORD(key) >= new_pos));
 #endif
 
