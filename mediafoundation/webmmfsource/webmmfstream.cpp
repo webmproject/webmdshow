@@ -381,27 +381,6 @@ HRESULT WebmMfStream::Pause()
 }
 
 
-#if 0
-//This is the wrong event queue: it must
-//be sent on the source's queue, not the stream's.
-HRESULT WebmMfStream::Update()
-{
-    m_bSelected = true;
-    m_bEOS = false;
-
-    HRESULT hr = m_pEvents->QueueEventParamUnk(
-                    MEUpdatedStream,
-                    GUID_NULL,
-                    S_OK,
-                    this);
-
-    assert(SUCCEEDED(hr));
-
-    return S_OK;
-}
-#endif
-
-
 HRESULT WebmMfStream::Shutdown()
 {
     if (m_pEvents == 0)
