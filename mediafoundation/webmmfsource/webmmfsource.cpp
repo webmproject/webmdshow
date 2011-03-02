@@ -1898,67 +1898,6 @@ HRESULT WebmMfSource::GetService(
 }
 
 
-
-#if 0
-HRESULT WebmMfSource::NewStream(
-    IMFStreamDescriptor* pSD,
-    const mkvparser::Track* pTrack)
-{
-    assert(pSD);
-    assert(pTrack);
-
-    WebmMfStream* pStream;
-    const LONGLONG type = pTrack->GetType();
-
-    if (type == 1)  //video
-    {
-        const HRESULT hr = WebmMfStreamVideo::CreateStream(
-                            pSD,
-                            this,
-                            pTrack,
-                            pStream);
-
-        assert(SUCCEEDED(hr));  //TODO
-        assert(pStream);
-    }
-    else
-    {
-        assert(type == 2);  //audio
-
-        const HRESULT hr = WebmMfStreamAudio::CreateStream(
-                            pSD,
-                            this,
-                            pTrack,
-                            pStream);
-
-        assert(SUCCEEDED(hr));  //TODO
-        assert(pStream);
-    }
-
-    const LONGLONG id_ = pTrack->GetNumber();
-    const ULONG id = static_cast<ULONG>(id_);
-
-    typedef streams_t::iterator iter_t;
-    typedef std::pair<iter_t, bool> status_t;
-
-    const status_t status = m_streams.insert(std::make_pair(id, pStream));
-    assert(status.second);  //new insertion
-    assert(status.first->first == id);
-    assert(status.first->second == pStream);
-
-    pStream->Select();
-
-    HRESULT hr = m_pEvents->QueueEventParamUnk(
-                    MENewStream,
-                    GUID_NULL,
-                    S_OK,
-                    pStream);
-
-    assert(SUCCEEDED(hr));
-
-    return S_OK;
-}
-#else
 HRESULT WebmMfSource::CreateStream(
     IMFStreamDescriptor* pSD,
     const mkvparser::Track* pTrack)
@@ -2008,30 +1947,8 @@ HRESULT WebmMfSource::CreateStream(
     assert(status.first->first == id);
     assert(status.first->second == pStream);
 
-    //hr = m_pEvents->QueueEventParamUnk(
-    //        MENewStream,
-    //        GUID_NULL,
-    //        S_OK,
-    //        pStream);
-    //assert(SUCCEEDED(hr));
-
     return S_OK;
 }
-
-#if 0
-HRESULT WebmMfSource::UpdatedStream(WebmMfStream* pStream)
-{
-    const HRESULT hr = m_pEvents->QueueEventParamUnk(
-                        MEUpdatedStream,
-                        GUID_NULL,
-                        S_OK,
-                        pStream);
-    assert(SUCCEEDED(hr));
-
-    return S_OK;
-}
-#endif
-
 
 HRESULT WebmMfSource::QueueStreamEvent(
     MediaEventType met,
@@ -2039,7 +1956,6 @@ HRESULT WebmMfSource::QueueStreamEvent(
 {
     return m_pEvents->QueueEventParamUnk(met, GUID_NULL, S_OK, pStream);
 }
-#endif
 
 
 #if 0 //TODO: restore this
