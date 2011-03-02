@@ -1,8 +1,10 @@
+#include "omahautil.hpp"
 #include "webmmfsource.hpp"
 #include "webmmfstream.hpp"
 #include "webmmfstreamvideo.hpp"
 #include "webmmfstreamaudio.hpp"
 #include "webmmfbytestreamhandler.hpp"
+#include "webmtypes.hpp"
 #include <mfapi.h>
 #include <mferror.h>
 #include <new>
@@ -2204,6 +2206,8 @@ unsigned WebmMfSource::Main()
        << GetCurrentThreadId()
        << endl;
 #endif
+
+    WebmUtil::set_omaha_usage_flags(WebmTypes::WebmMfAppId);
 
     for (;;)
     {
