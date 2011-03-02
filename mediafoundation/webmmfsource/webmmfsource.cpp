@@ -2932,106 +2932,6 @@ WebmMfSource::StateAsyncRequestSample()
 }
 
 
-#if 0
-bool WebmMfSource::PurgeCache()
-{
-    typedef streams_t::const_iterator iter_t;
-
-    iter_t i = m_streams.begin();
-    const iter_t j = m_streams.end();
-
-    using namespace mkvparser;
-
-    LONGLONG pos = -1;
-
-    while (i != j)
-    {
-        const streams_t::value_type& v = *i++;
-
-        const WebmMfStream* const pStream = v.second;
-        assert(pStream);
-
-        if (!pStream->IsSelected())
-        {
-            assert(!pStream->IsCurrBlockLocked());
-            continue;
-        }
-
-        const BlockEntry* const pCurrBlock = pStream->GetCurrBlock();
-
-        if (pCurrBlock == 0)
-            continue;
-
-        if (pCurrBlock->EOS())
-            continue;
-
-        const Cluster* const pCurr = pCurrBlock->GetCluster();
-        assert(pCurr);
-        assert(!pCurr->EOS());
-
-        LONGLONG curr_pos = pCurr->m_pos;
-
-        if (curr_pos < 0)
-            curr_pos *= -1;
-
-        if ((pos < 0) || (curr_pos < pos))
-            pos = curr_pos;
-    }
-
-    if (pos < 0)
-        return true;  //done
-
-    return m_file.Purge(pos);
-}
-#elif 0
-void WebmMfSource::PurgeCache()
-{
-    typedef streams_t::const_iterator iter_t;
-
-    iter_t i = m_streams.begin();
-    const iter_t j = m_streams.end();
-
-    using namespace mkvparser;
-
-    LONGLONG pos = -1;
-
-    while (i != j)
-    {
-        const streams_t::value_type& v = *i++;
-
-        const WebmMfStream* const pStream = v.second;
-        assert(pStream);
-
-        if (!pStream->IsSelected())
-            continue;
-
-        if (pStream->IsCurrBlockEOS())
-            continue;
-
-        if (!pStream->IsCurrBlockLocked())
-            return;
-
-        const BlockEntry* const pCurr = pStream->GetCurrBlock();
-
-        if (pCurr == 0)  //weird
-            continue;
-
-        if (pCurr->EOS())  //weird
-            continue;
-
-        const Block* const pBlock = pCurr->GetBlock();
-        assert(pBlock);
-
-        const LONGLONG start = pBlock->m_start;
-        assert(start > 0);
-
-        if ((pos < 0) || (start < pos))
-            pos = start;
-    }
-
-    m_file.Purge(pos);
-}
-#else
 void WebmMfSource::PurgeCache()
 {
     if (m_bCanSeek && !m_pSegment->GetCues()->DoneParsing())
@@ -3085,7 +2985,6 @@ void WebmMfSource::PurgeCache()
     if (pos >= 0)
         m_file.Purge(m_pSegment->m_start + pos);
 }
-#endif
 
 
 WebmMfSource::thread_state_t
