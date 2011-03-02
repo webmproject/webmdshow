@@ -1652,7 +1652,6 @@ HRESULT WebmMfSource::Shutdown()
 }
 
 
-#if 0  //TODO
 HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
 {
 #ifdef _DEBUG
@@ -1661,29 +1660,8 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
        << boolalpha << (bThin ? true : false)
        << " rate="
        << rate
-       << " state=" << m_state
+       //<< " state=" << m_state
        << endl;
-#endif
-
-    Lock lock;
-
-    HRESULT hr = lock.Seize(this);
-
-    if (FAILED(hr))
-        return hr;
-
-    if (m_pEvents == 0)
-        return MF_E_SHUTDOWN;
-
-    if (rate < 0)
-        return MF_E_REVERSE_UNSUPPORTED;  //TODO
-
-#if 0  //TODO: restore this
-    if ((m_pSegment->GetCues() == 0) && bThin)
-        return MF_E_THINNING_UNSUPPORTED;
-#else
-    if (bThin)
-        return MF_E_THINNING_UNSUPPORTED;
 #endif
 
     //IMFRateControl::SetRate Method
@@ -1705,55 +1683,6 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
     //you can still receive samples that were queued before the stream
     //switched to thinned or non-thinned mode. The MEStreamThinMode event
     //marks the exact point in the stream where the transition occurs.
-
-    //TODO: suppose bThin is false, but (m_rate != 1) ?
-
-    m_bThin = bThin;
-    m_rate = rate;
-
-    typedef streams_t::iterator iter_t;
-
-    iter_t i = m_streams.begin();
-    const iter_t j = m_streams.end();
-
-    while (i != j)
-    {
-        streams_t::value_type& value = *i++;
-
-        WebmMfStream* const pStream = value.second;
-        assert(pStream);
-
-        if (pStream->IsSelected())
-            pStream->SetRate(m_bThin, m_rate);
-    }
-
-    PROPVARIANT var;
-
-    var.vt = VT_R4;
-    var.fltVal = rate;
-
-    hr = m_pEvents->QueueEventParamVar(
-            MESourceRateChanged,
-            GUID_NULL,
-            S_OK,
-            &var);
-
-    assert(SUCCEEDED(hr));
-
-    return S_OK;
-}
-#else
-HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
-{
-#ifdef _DEBUG
-    odbgstream os;
-    os << "WebmMfSource::SetRate: bThin="
-       << boolalpha << (bThin ? true : false)
-       << " rate="
-       << rate
-       //<< " state=" << m_state
-       << endl;
-#endif
 
     Lock lock;
 
@@ -1820,7 +1749,6 @@ HRESULT WebmMfSource::OnSetRate(BOOL bThin, float rate)
 
     return hr;
 }
-#endif
 
 
 HRESULT WebmMfSource::GetRate(BOOL* pbThin, float* pRate)
