@@ -498,29 +498,12 @@ HRESULT WebmMfStream::Start(const PROPVARIANT& var)
 
 HRESULT WebmMfStream::Seek(const PROPVARIANT& var)
 {
-    if (m_bSelected <= 0)
+    if (!IsSelected())
         return S_FALSE;
 
-    //assert(m_pLocked == 0);
-    //m_bDiscontinuity = true;
-    ////TODO: m_curr = curr;
-    //assert(m_curr.pBE);
-    //m_pNextBlock = 0;
-
-    return OnSeek(var);
-}
-
-
-HRESULT WebmMfStream::OnSeek(const PROPVARIANT& var)
-{
-    //assert(pCurr);
-    assert(m_bSelected > 0);
     assert(m_pEvents);
 
     PurgeSamples();
-
-    //m_pCurr = pCurr;
-    //m_bDiscontinuity = true;
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEStreamSeeked,

@@ -135,8 +135,6 @@ public:
 
 protected:
 
-    HRESULT OnSeek(const PROPVARIANT& time);
-
     //bool HaveCurrBlockIndex(LONGLONG& cluster_pos) const;
 
     HRESULT ProcessSample(IMFSample*);
