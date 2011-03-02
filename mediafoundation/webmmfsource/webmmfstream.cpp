@@ -749,35 +749,6 @@ HRESULT WebmMfStream::SetEOS()
 
 
 #if 0
-HRESULT WebmMfStream::NotifyCurrCluster(const mkvparser::Cluster* pCluster)
-{
-    assert(pCluster);
-    assert(!pCluster->EOS());
-
-    const LONGLONG tn = m_pTrack->GetNumber();
-
-    const mkvparser::BlockEntry* pCurr = pCluster->GetFirst();
-
-    while (pCurr)
-    {
-        const mkvparser::Block* const pBlock = pCurr->GetBlock();
-        assert(pBlock);
-
-        if (pBlock->GetTrackNumber() == tn)
-        {
-            SetCurrBlock(pCurr);
-            return S_OK;
-        }
-
-        pCurr = pCluster->GetNext(pCurr);
-    }
-
-    return VFW_E_BUFFER_UNDERFLOW;
-}
-#endif
-
-
-#if 0
 bool WebmMfStream::IsCurrBlockLocked(LONGLONG& pos, LONG& len) const
 {
     if (m_pLocked)
