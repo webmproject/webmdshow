@@ -254,46 +254,6 @@ WebmMfStreamVideo::~WebmMfStreamVideo()
 }
 
 
-#if 0  //TODO: restore this
-HRESULT WebmMfStreamVideo::Seek(
-    const PROPVARIANT& var,
-    const SeekInfo& info,
-    bool bStart)
-{
-    assert(m_pLocked == 0);
-
-    m_bDiscontinuity = true;
-    m_curr = info;
-    m_pNextBlock = 0;  //means "we don't know yet"
-
-    assert(var.vt == VT_I8);
-
-    const LONGLONG reftime = var.hVal.QuadPart;
-    assert(reftime >= 0);
-
-    const mkvparser::BlockEntry* const pBE = info.pBE;
-
-    if ((pBE != 0) && !pBE->EOS())
-    {
-        const mkvparser::Block* const pB = pBE->GetBlock();
-        assert(pB);
-        assert(pB->IsKey());
-
-        const mkvparser::Cluster* const pCluster = pBE->GetCluster();
-
-        const LONGLONG time_ns = pB->GetTime(pCluster);
-        assert(time_ns >= 0);
-
-        if (m_thin_ns >= -1)  //rate change has been requested
-            m_thin_ns = time_ns;
-    }
-
-    if (bStart)
-        return OnStart(var);
-    else
-        return OnSeek(var);
-}
-#else
 HRESULT WebmMfStreamVideo::Start(const PROPVARIANT& var)
 {
     if (!IsSelected())
@@ -331,7 +291,6 @@ HRESULT WebmMfStreamVideo::Start(const PROPVARIANT& var)
 
     return OnStart(var);
 }
-#endif
 
 
 void WebmMfStreamVideo::OnDeselect()
