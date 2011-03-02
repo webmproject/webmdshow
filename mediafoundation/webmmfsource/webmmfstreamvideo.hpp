@@ -28,8 +28,6 @@ public:
 
     virtual ~WebmMfStreamVideo();
 
-    HRESULT Start(const PROPVARIANT&);
-
     bool GetSampleExtent(LONGLONG& pos, LONG& len);
     void GetSampleExtentCompletion();
 

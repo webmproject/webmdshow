@@ -591,15 +591,13 @@ bool WebmMfStream::IsShutdown() const
 }
 
 
-HRESULT WebmMfStream::OnStart(const PROPVARIANT& var)
+HRESULT WebmMfStream::Start(const PROPVARIANT& var)
 {
-    //assert(pCurr);
-    assert(m_bSelected > 0);
+    if (!IsSelected())
+        return S_FALSE;
+
     assert(m_samples.empty());
     assert(m_pEvents);
-
-    //m_pCurr = pCurr;
-    //m_bDiscontinuity = true;
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEStreamStarted,

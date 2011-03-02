@@ -81,11 +81,7 @@ public:
         void Init(const mkvparser::BlockEntry* pBE = 0);
     };
 
-    //virtual HRESULT Seek(
-    //    const PROPVARIANT& time,
-    //    const SeekInfo&,
-    //    bool bStart) = 0;
-    virtual HRESULT Start(const PROPVARIANT&) = 0;
+    HRESULT Start(const PROPVARIANT&);
 
     //TODO: implement thinning
     HRESULT Seek(const PROPVARIANT&);
@@ -139,7 +135,6 @@ public:
 
 protected:
 
-    HRESULT OnStart(const PROPVARIANT& time);
     HRESULT OnSeek(const PROPVARIANT& time);
 
     //bool HaveCurrBlockIndex(LONGLONG& cluster_pos) const;

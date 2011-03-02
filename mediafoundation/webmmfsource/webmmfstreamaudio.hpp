@@ -30,13 +30,6 @@ public:
 
     //HRESULT GetCurrMediaTime(LONGLONG&) const;
 
-    //HRESULT Seek(
-    //    const PROPVARIANT& time,
-    //    const SeekInfo&,
-    //    bool bStart);
-
-    HRESULT Start(const PROPVARIANT&);
-
     //void SetCurrBlockObject(const mkvparser::Cluster*);
     void SetCurrBlockIndex(const mkvparser::Cluster*);
     bool SetCurrBlockObject();
