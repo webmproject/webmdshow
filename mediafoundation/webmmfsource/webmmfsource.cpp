@@ -1700,22 +1700,6 @@ HRESULT WebmMfSource::SetRate(BOOL bThin, float rate)
     if (bThin && !ThinningSupported())
         return MF_E_THINNING_UNSUPPORTED;
 
-#if 0
-    m_commands.push_back(Command(bThin, rate, this));
-
-    const BOOL b = SetEvent(m_hCommand);
-    assert(b);
-#else
-    OnSetRate(bThin, rate);
-#endif
-
-    return S_OK;
-}
-
-HRESULT WebmMfSource::OnSetRate(BOOL bThin, float rate)
-{
-    assert(m_pEvents);
-
     typedef streams_t::iterator iter_t;
 
     iter_t i = m_streams.begin();
@@ -1739,15 +1723,15 @@ HRESULT WebmMfSource::OnSetRate(BOOL bThin, float rate)
     var.vt = VT_R4;
     var.fltVal = m_rate;
 
-    const HRESULT hr = m_pEvents->QueueEventParamVar(
-                        MESourceRateChanged,
-                        GUID_NULL,
-                        S_OK,
-                        &var);
+    hr = m_pEvents->QueueEventParamVar(
+            MESourceRateChanged,
+            GUID_NULL,
+            S_OK,
+            &var);
 
     assert(SUCCEEDED(hr));
 
-    return hr;
+    return S_OK;
 }
 
 

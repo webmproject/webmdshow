@@ -325,7 +325,6 @@ private:
     void PurgeRequests();
 
     bool ThinningSupported() const;
-    HRESULT OnSetRate(BOOL, float);
 
     bool m_bCanSeek;
     bool HaveVideo() const;
