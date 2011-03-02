@@ -204,12 +204,6 @@ private:
     const mkvparser::Cluster* m_pCurr;
     const mkvparser::Cluster* m_pNext;
 
-    //For preloading the cache, mostly intended
-    //to handle smooth playback of high datarate
-    //local files.
-    const mkvparser::Cluster* m_pPreload;
-    long m_preload_index;
-
     //for async load:
     thread_state_t StateAsyncParseEbmlHeader();
     thread_state_t StateAsyncParseSegmentHeaders();
