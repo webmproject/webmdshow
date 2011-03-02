@@ -268,14 +268,12 @@ private:
             kRestart,  //un-pause
             kPause,
             kStop
-            //kSetRate
         };
 
         const Kind m_kind;
         WebmMfSource* const m_pSource;
 
         Command(Kind, WebmMfSource*);
-        //Command(BOOL, float, WebmMfSource*);  //kSetRate
         Command(const Command&);
 
         ~Command();
@@ -288,13 +286,10 @@ private:
         void OnRestart() const;  //un-pause
         void OnPause() const;
         void OnStop() const;
-        //void OnSetRate() const;
 
     private:
         IMFPresentationDescriptor* m_pDesc;
         PROPVARIANT m_time;
-        //const int m_thin;
-        //const float m_rate;
 
         LONGLONG GetClusterPos(LONGLONG time_ns) const;
 

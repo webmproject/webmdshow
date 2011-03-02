@@ -3414,11 +3414,6 @@ bool WebmMfSource::OnCommand()
             bCancel = true;
             break;
 
-        //case Command::kSetRate:
-        //    c.OnSetRate();
-        //    bCancel = false;
-        //    break;
-
         default:
             assert(false);
             bCancel = false;
@@ -3444,33 +3439,15 @@ WebmMfSource::Command::Command(Kind k, WebmMfSource* pSource) :
     m_kind(k),
     m_pSource(pSource),
     m_pDesc(0)
-    //m_thin(-1),
-    //m_rate(-1)
 {
     PropVariantInit(&m_time);
 }
-
-
-//WebmMfSource::Command::Command(
-//    BOOL bThin,
-//    float rate,
-//    WebmMfSource* pSource) :
-//    m_kind(kSetRate),
-//    m_pSource(pSource),
-//    m_pDesc(0)
-//    //m_thin(bThin ? 1 : 0),
-//    //m_rate(rate)
-//{
-//    PropVariantInit(&m_time);
-//}
 
 
 WebmMfSource::Command::Command(const Command& rhs) :
     m_kind(rhs.m_kind),
     m_pSource(rhs.m_pSource),
     m_pDesc(rhs.m_pDesc)
-    //m_thin(rhs.m_thin),
-    //m_rate(rhs.m_rate)
 {
     if (m_pDesc)
         m_pDesc->AddRef();
@@ -4633,12 +4610,6 @@ void WebmMfSource::Command::OnRestart() const //unpause
     }
 #endif
 }
-
-
-//void WebmMfSource::Command::OnSetRate() const
-//{
-//    m_pSource->OnSetRate(m_thin, m_rate);
-//}
 
 
 WebmMfSource::thread_state_t WebmMfSource::OnAsyncRead()
