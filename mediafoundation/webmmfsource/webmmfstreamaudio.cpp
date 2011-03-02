@@ -252,24 +252,6 @@ WebmMfStreamAudio::~WebmMfStreamAudio()
 }
 
 
-#if 0  //TODO: restore this
-HRESULT WebmMfStreamAudio::Seek(
-    const PROPVARIANT& var,
-    const SeekInfo& curr,
-    bool bStart)
-{
-    assert(m_pLocked == 0);
-
-    m_bDiscontinuity = true;
-    m_curr = curr;
-    m_pNextBlock = 0;
-
-    if (bStart)
-        return OnStart(var);
-    else
-        return OnSeek(var);
-}
-#else
 HRESULT WebmMfStreamAudio::Start(const PROPVARIANT& var)
 {
     if (!IsSelected())
@@ -283,7 +265,6 @@ HRESULT WebmMfStreamAudio::Start(const PROPVARIANT& var)
 
     return OnStart(var);
 }
-#endif
 
 
 void WebmMfStreamAudio::OnDeselect()
