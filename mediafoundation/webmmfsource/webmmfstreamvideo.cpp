@@ -334,44 +334,6 @@ HRESULT WebmMfStreamVideo::Start(const PROPVARIANT& var)
 #endif
 
 
-#if 0
-void WebmMfStreamVideo::GetSeekInfo(LONGLONG time_ns, SeekInfo& i) const
-{
-#if 0  //TODO: RESTORE THIS
-    mkvparser::Segment* const pSegment = m_pTrack->m_pSegment;
-
-    if (const mkvparser::Cues* pCues = pSegment->GetCues())
-    {
-        const bool bFound = pCues->Find(time_ns, m_pTrack, i.pCP, i.pTP);
-
-        if (bFound)
-        {
-            i.pBE = pCues->GetBlock(i.pCP, i.pTP);
-
-            if ((i.pBE != 0) && !i.pBE->EOS())
-                return;
-        }
-    }
-#endif
-
-    i.pCP = 0;
-    i.pTP = 0;
-
-    //TODO: this isn't good enough, because it returns the
-    //last keyframe on the cluster.  We need to seek within
-    //a cluster; e.g. the lions clip.
-    //
-    //TODO: it's also not good enough for another reason:
-    //we find the closest cluster (loaded, not preloaded),
-    //but I don't think we have a guarantee that that
-    //cluster, or the previous clusters we search, are
-    //loaded in the cache.
-    const long status = m_pTrack->Seek(time_ns, i.pBE);
-    assert(status >= 0);
-}
-#endif
-
-
 void WebmMfStreamVideo::OnDeselect()
 {
     m_pNextBlock = 0;
