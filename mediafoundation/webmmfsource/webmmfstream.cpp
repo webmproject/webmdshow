@@ -840,12 +840,6 @@ void WebmMfStream::SeekInfo::Init(const mkvparser::BlockEntry* pBE_)
 }
 
 
-//bool WebmMfStream::HaveCurrBlockObject() const
-//{
-//    return m_curr.pBE ? true : false;
-//}
-
-
 LONGLONG WebmMfStream::GetCurrBlockClusterPosition() const
 {
     return m_cluster_pos;
