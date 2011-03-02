@@ -5,6 +5,8 @@
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
+using std::hex;
+using std::dec;
 #endif
 #undef DEBUG_PURGE
 //#define DEBUG_PURGE
@@ -984,9 +986,36 @@ HRESULT MkvReader::Seek(LONGLONG pos_)
         return E_INVALIDARG;
 
     const DWORD page_size = m_info.dwPageSize;
-    const QWORD pos = page_size * QWORD(pos_ / page_size);
+    const LONGLONG pos = page_size * (pos_ / page_size);
 
-    return m_pStream->SetCurrentPosition(pos);
+    //return m_pStream->SetCurrentPosition(pos);
+
+    QWORD curr_pos;
+
+    const HRESULT hr = m_pStream->Seek(
+                        msoBegin,
+                        pos,
+                        MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO,
+                        &curr_pos);
+
+#ifdef _DEBUG
+    odbgstream os;
+    os << "MkvReader::Seek: called pStream->Seek; hr=0x"
+       << hex
+       << hr
+       << dec
+       << "; pos=" << pos
+       << "; curr_pos=" << curr_pos
+       << endl;
+#endif
+
+    if (FAILED(hr))
+        return hr;
+
+    if (curr_pos != QWORD(pos))
+        return E_FAIL;
+
+    return S_OK;
 }
 
 
@@ -1403,20 +1432,6 @@ HRESULT MkvReader::AsyncReadCompletion(IMFAsyncResult* pResult)
     {
         page.len = cbRead;
         assert(page.len <= m_info.dwPageSize);
-
-#ifdef _DEBUG
-        //odbgstream os;
-        //os << "AsyncReadCompletion: just called EndRead; cbRead="
-        //   << cbRead
-        //   << " GetCurrPos=";
-
-        QWORD new_pos;
-
-        hr = m_pStream->GetCurrentPosition(&new_pos);
-        assert(FAILED(hr) || (new_pos >= QWORD(page.pos + page.len)));
-
-        //os << new_pos << endl;
-#endif
 
         if (page.len < m_info.dwPageSize)
         {
