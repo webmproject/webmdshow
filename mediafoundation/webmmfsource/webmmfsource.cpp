@@ -2057,92 +2057,6 @@ LONGLONG WebmMfSource::GetCurrTime(IMFPresentationDescriptor* pDesc) const
 }
 
 
-#if 0  //TODO
-void WebmMfSource::NotifyEOS()
-{
-    assert(m_cEOS > 0);
-    --m_cEOS;
-
-    if (m_cEOS > 0)
-        return;
-
-    if (m_pEvents == 0)  //weird
-        return;
-
-    const HRESULT hr = m_pEvents->QueueEventParamVar(
-                        MEEndOfPresentation,
-                        GUID_NULL,
-                        S_OK,
-                        0);
-
-    assert(SUCCEEDED(hr));
-}
-#elif 0
-void WebmMfSource::NotifyEOS(WebmMfStream* pStream)
-{
-    assert(pStream);
-    assert(pStream->m_cRef > 0);
-
-    if (pStream->m_context_key < m_context_key)  //stale
-        return;
-
-    //TODO
-
-    //Start
-    //   all streams are new
-    //   all (selected) streams go in eos map
-    //
-    //Seek
-    //   (don't know yet)
-    //
-    //Restart
-    //   only streams that are selected are active again
-    //   we can even have newly-created streams
-    //   streams that previously existed, but that aren't selected,
-    //     don't count towards the eos count so they need to be removed
-    //     from the eos map
-    //   stream that are newly-created are (asummed to be?) selected,
-    //     so they must get added to the eos map
-
-    const eos_map_t::iterator eos_map_iter = m_eos_map.find(m_context_key);
-
-    if (eos_map_iter == m_eos_map.end())  //not found (weird)
-        return;
-
-    eos_map_t::value_type& v = *eos_map_iter;
-    stream_keys_t& keys = v.second;
-
-    const ULONG key = pStream->m_stream_key;
-
-    typedef stream_keys_t::iterator iter_t;
-
-    const iter_t i = keys.begin();
-    const iter_t j = keys.end();
-
-    const iter_t k = std::find(i, j, key);
-
-    if (k == j)  //key not found (weird)
-        return;
-
-    keys.erase(k);
-
-    if (!keys.empty())
-        return;  //wait for other streams to reach EOS
-
-    m_eos_map.erase(eos_map_iter);
-
-    if (m_pEvents == 0)  //weird
-        return;
-
-    const HRESULT hr = m_pEvents->QueueEventParamVar(
-                        MEEndOfPresentation,
-                        GUID_NULL,
-                        S_OK,
-                        0);
-    hr;
-    assert(SUCCEEDED(hr));
-}
-#else
 void WebmMfSource::NotifyEOS()
 {
     if (m_pEvents == 0)  //weird
@@ -2189,7 +2103,6 @@ void WebmMfSource::NotifyEOS()
 
     assert(SUCCEEDED(hr));
 }
-#endif  //TODO: restore this
 
 
 WebmMfSource::CAsyncRead::CAsyncRead(WebmMfSource* p) :
