@@ -846,29 +846,6 @@ void WebmMfStream::SeekInfo::Init(const mkvparser::BlockEntry* pBE_)
 //}
 
 
-#if 0
-const mkvparser::Cluster* WebmMfStream::GetCurrBlockCluster()
-{
-    const mkvparser::Cluster*& pCurrCluster = m_curr.pCluster;
-
-    if (pCurrCluster == 0)
-    {
-        assert(m_cluster_pos >= 0);
-
-        mkvparser::Segment* const pSegment = m_pSource->m_pSegment;
-
-        pCurrCluster = pSegment->FindOrPreloadCluster(m_cluster_pos);
-        assert(pCurrCluster);
-        assert(!pCurrCluster->EOS());
-
-        SetCurrBlockIndex();
-    }
-
-    return pCurrCluster;
-}
-#endif
-
-
 LONGLONG WebmMfStream::GetCurrBlockClusterPosition() const
 {
     return m_cluster_pos;
