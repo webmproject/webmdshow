@@ -1587,57 +1587,6 @@ HRESULT WebmMfSource::Pause()
 }
 
 
-#if 0 //TODO: restore this
-HRESULT WebmMfSource::Shutdown()
-{
-    Lock lock;
-
-    HRESULT hr = lock.Seize(this);
-
-    if (FAILED(hr))
-        return hr;
-
-#ifdef _DEBUG
-    wodbgstream os;
-    os << L"WebmMfSource::Shutdown: requests.size="
-       << m_requests.size()
-       << endl;
-#endif
-
-    if (m_pEvents == 0)
-        return MF_E_SHUTDOWN;
-
-    typedef streams_t::iterator iter_t;
-
-    iter_t i = m_streams.begin();
-    const iter_t j = m_streams.end();
-
-    while (i != j)
-    {
-        const streams_t::value_type& v = *i++;
-
-        WebmMfStream* const pStream = v.second;
-        assert(pStream);
-
-        hr = pStream->Shutdown();
-        assert(SUCCEEDED(hr));
-    }
-
-    hr = m_pEvents->Shutdown();
-    assert(SUCCEEDED(hr));
-
-    const ULONG n = m_pEvents->Release();
-    n;
-    assert(n == 0);
-
-    m_pEvents = 0;
-
-    const BOOL b = SetEvent(m_hQuit);
-    assert(b);
-
-    return S_OK;
-}
-#else
 HRESULT WebmMfSource::Shutdown()
 {
     Lock lock;
@@ -1701,7 +1650,6 @@ HRESULT WebmMfSource::Shutdown()
 
     return S_OK;
 }
-#endif
 
 
 #if 0  //TODO
