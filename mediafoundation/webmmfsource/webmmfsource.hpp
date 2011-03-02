@@ -248,10 +248,11 @@ private:
     HRESULT ParseEbmlHeader(LONGLONG&);
 
     void PurgeCache();
-    thread_state_t PreloadCache(bool& bDone);
-    thread_state_t PreloadCache(const mkvparser::BlockEntry*);
+    //thread_state_t PreloadCache(bool& bDone);
+    //thread_state_t PreloadCache(const mkvparser::BlockEntry*);
     thread_state_t Parse(bool& bDone);
-    thread_state_t PreloadSample(WebmMfStream*);
+    thread_state_t Parse(const mkvparser::Cluster*, bool& bDone);
+    //thread_state_t PreloadSample(WebmMfStream*);
 
     thread_state_t LoadComplete(HRESULT);
 

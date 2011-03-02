@@ -2500,7 +2500,7 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
 
         if (IsStopped())
         {
-            m_file.Clear();
+            //m_file.Clear();
             return 0;
         }
 
@@ -2992,13 +2992,7 @@ void WebmMfSource::PurgeCache()
 WebmMfSource::thread_state_t
 WebmMfSource::Parse(bool& bDone)
 {
-    //odbgstream os;
-    //os << "Parse(begin)" << endl;
-
     bDone = true;
-
-    //if (m_file.HasSlowSeek())
-    //    return 0;
 
     if (m_bThin || (m_rate != 1))
         return 0;
@@ -3008,7 +3002,7 @@ WebmMfSource::Parse(bool& bDone)
     iter_t i = m_streams.begin();
     const iter_t j = m_streams.end();
 
-    m_pCurr = 0;
+    const mkvparser::Cluster* pCurr = 0;
 
     using namespace mkvparser;
 
@@ -3036,21 +3030,28 @@ WebmMfSource::Parse(bool& bDone)
 
         const LONGLONG start = pCurrCluster->m_element_start;
 
-        if ((m_pCurr == 0) || (start > m_pCurr->m_element_start))
-            m_pCurr = pCurrCluster;
+        if ((pCurr == 0) || (start > pCurr->m_element_start))
+            pCurr = pCurrCluster;
     }
 
-    if (m_pCurr == 0)
-        return 0;
+    return Parse(pCurr, bDone);
+}
 
-    assert(bDone);
+
+WebmMfSource::thread_state_t
+WebmMfSource::Parse(const mkvparser::Cluster* pCurr, bool& bDone)
+{
+    bDone = true;
+
+    if (pCurr == 0)
+        return 0;
 
     for (;;)
     {
         LONGLONG pos;
         LONG len;
 
-        const long status = m_pCurr->Parse(pos, len);
+        const long status = pCurr->Parse(pos, len);
 
         if (status > 0)  //nothing left to parse on curr cluster
             break;
@@ -3101,12 +3102,14 @@ WebmMfSource::Parse(bool& bDone)
 
     //Create next cluster object (if it doesn't already exist).
 
+    const mkvparser::Cluster* pNext;
+
     for (;;)
     {
         LONGLONG pos;
         LONG len;
 
-        const long status = m_pSegment->ParseNext(m_pCurr, m_pNext, pos, len);
+        const long status = m_pSegment->ParseNext(pCurr, pNext, pos, len);
 
         if (status > 0)  //EOF
             return 0;
@@ -3145,15 +3148,15 @@ WebmMfSource::Parse(bool& bDone)
     }
 
     assert(bDone);
-    assert(m_pNext);
-    assert(!m_pNext->EOS());
+    assert(pNext);
+    assert(!pNext->EOS());
 
     for (;;)
     {
         LONGLONG pos;
         LONG len;
 
-        const long status = m_pNext->Parse(pos, len);
+        const long status = pNext->Parse(pos, len);
 
         if (status > 0) //nothing remains to be parsed
             return 0;
@@ -4420,7 +4423,10 @@ void WebmMfSource::Command::OnStop() const
 
     assert(SUCCEEDED(hr));
 
-    //m_pSource->OnSetRate(FALSE, 1);
+    MkvReader& f = m_pSource->m_file;
+
+    f.ResetAvailable(0);
+    f.Seek(0);
 }
 
 
