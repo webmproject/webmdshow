@@ -1110,18 +1110,26 @@ HRESULT MkvReader::AsyncReadInit(
         const LONGLONG pad_len = pos - curr_pos;
         assert(pad_len <= LONG_MAX);
 
-        //odbgstream os;
-        //
-        //os << "AsyncReadInit: curr_pos=" << curr_pos
-        //   << " requested pos=" << pos
-        //   << " requested-curr=" << (pos - curr_pos)
-        //   << " requested-curr(pages)="
-        //   << (((pos - curr_pos) + m_info.dwPageSize - 1) /
-        //        m_info.dwPageSize)
-        //   << " requested len=" << len
-        //   << " pad len=" << pad_len
-        //   << " adjusted len=" << (len + pad_len)
-        //   << endl;
+#if 0 //def _DEBUG
+        const LONGLONG count =
+            (((pos - curr_pos) + m_info.dwPageSize - 1) /
+                m_info.dwPageSize);
+
+        if (count >= 16)
+        {
+            odbgstream os;
+
+            os << "AsyncReadInit: curr_pos=" << curr_pos
+               << " requested pos=" << pos
+               << " requested-curr=" << (pos - curr_pos)
+               << " requested-curr(pages)="
+               << count
+               << " requested len=" << len
+               << " pad len=" << pad_len
+               << " adjusted len=" << (len + pad_len)
+               << endl;
+        }
+#endif
 
         pos = curr_pos;
         len += static_cast<LONG>(pad_len);
