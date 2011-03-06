@@ -110,6 +110,7 @@ WebmMfSource::WebmMfSource(
     m_hThread(0),
     m_pCurr(0),
     m_pNext(0),
+    //m_bLive(true),
     m_bCanSeek(false),
     m_load_index(-1)
 {
@@ -123,6 +124,13 @@ WebmMfSource::WebmMfSource(
     assert(SUCCEEDED(hr));
     assert(m_pEvents);
 
+    QWORD length;
+
+    hr = pBS->GetLength(&length);
+    //MF_E_BYTESTREAM_UNKNOWN_LENGTH
+
+    m_bLive = FAILED(hr);
+
     m_commands.push_back(Command(Command::kStop, this));
 
     m_thread_state = &WebmMfSource::StateAsyncRead;
@@ -132,7 +140,12 @@ WebmMfSource::WebmMfSource(
 
 #ifdef _DEBUG
     wodbgstream os;
-    os << L"WebmMfSource: ctor; this=0x" << (const void*)this << endl;
+    os << L"WebmMfSource: ctor; this=0x"
+       << (const void*)this
+       << "; bLive="
+       << boolalpha
+       << m_bLive
+       << endl;
 #endif
 }
 #pragma warning(default:4355)
@@ -525,6 +538,9 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseEbmlHeader()
     if (result != 0)  //TODO: liberalize
         return LoadComplete(E_FAIL);
 
+    //if (m_pSegment->m_size < 0)
+    //    m_bLive = true;
+
     m_async_state = &WebmMfSource::StateAsyncParseSegmentHeaders;
     m_async_read.m_hrStatus = S_OK;
 
@@ -636,7 +652,16 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 
     m_bCanSeek = false;
 
-    if (!HaveVideo())
+    if (m_bLive)
+    {
+        __noop;
+
+#ifdef _DEBUG
+        odbgstream os;
+        os << "webmmfsource: cannot seek because live" << endl;
+#endif
+    }
+    else if (!HaveVideo())
         __noop;
 
     //else if (m_file.HasSlowSeek())
@@ -1169,7 +1194,13 @@ HRESULT WebmMfSource::GetCharacteristics(DWORD* pdw)
     //on how smart we are about parsing, on whether we have parsed
     //the entire file yet.
 
-    dw = MFMEDIASOURCE_CAN_PAUSE;  //TODO: what about live webm?
+    if (m_bLive)
+    {
+        dw = MFMEDIASOURCE_IS_LIVE;
+        return S_OK;
+    }
+
+    dw = MFMEDIASOURCE_CAN_PAUSE;
 
     if (m_bCanSeek)
     {

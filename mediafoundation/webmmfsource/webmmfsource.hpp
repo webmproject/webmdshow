@@ -316,6 +316,7 @@ private:
 
     bool ThinningSupported() const;
 
+    bool m_bLive;
     bool m_bCanSeek;
     bool HaveVideo() const;
 
