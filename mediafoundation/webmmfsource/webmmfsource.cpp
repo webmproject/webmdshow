@@ -639,11 +639,11 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     if (!HaveVideo())
         __noop;
 
-    else if (m_file.HasSlowSeek())
-        __noop;
+    //else if (m_file.HasSlowSeek())
+    //    __noop;
 
-    else if (m_file.IsPartiallyDownloaded())
-        __noop;
+    //else if (m_file.IsPartiallyDownloaded())
+    //    __noop;
 
     else if (m_pSegment->GetCues())
         m_bCanSeek = true;
@@ -689,8 +689,8 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 
 WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseCues()
 {
-    assert(!m_file.HasSlowSeek());
-    assert(!m_file.IsPartiallyDownloaded());  //?
+    //assert(!m_file.HasSlowSeek());
+    //assert(!m_file.IsPartiallyDownloaded());  //?
     assert(m_pSegment->GetCues() == 0);
 
     const mkvparser::SeekHead* const pSH = m_pSegment->GetSeekHead();
