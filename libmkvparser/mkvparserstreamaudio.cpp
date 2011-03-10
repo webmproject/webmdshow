@@ -351,8 +351,13 @@ void AudioStream::OnPopulateSample(
         const Cluster* const pNextCluster = pNextEntry->GetCluster();
 
         stop_ns = pNextBlock->GetTime(pNextCluster);
-        assert(stop_ns > start_ns);
-        //assert((stop_ns % 100) == 0);
+        //assert(stop_ns > start_ns);
+
+        if (stop_ns <= start_ns)
+        {
+            const LONGLONG ns_per_frame = 10000000;  //10ms
+            stop_ns = start_ns + LONGLONG(nFrames) * ns_per_frame;
+        }
     }
 
     __int64 start_reftime = (start_ns - base_ns) / 100;
