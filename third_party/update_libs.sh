@@ -28,7 +28,7 @@ install_dir_array=(x86/debug x64/debug x86/release x64/release)
 # libvpx stuff
 libvpx_dir="libvpx.git"
 libvpx_remote="git://review.webmproject.org/libvpx"
-libvpx_tag="755e2a2"  # TODO(tomfinegan): rename var; works only w/git hashes
+libvpx_git_target="bali"
 libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
 
 # TODO(tomfinegan): add proper command line parsing
@@ -163,6 +163,8 @@ ${target_dir}/${install_dir_array[$lib_index]}/
 }
 
 function clone_libvpx_and_checkout_tag() {
+  set -x
+  local git_quiet="-q"
   local clone_dir="$1"
   if [[ -z "$clone_dir" ]]; then
     die "clone_libvpx_and_checkout_tag: no clone_dir specified [arg1 empty]"
@@ -171,34 +173,39 @@ function clone_libvpx_and_checkout_tag() {
   if [[ -z "$git_remote" ]]; then
     die "clone_libvpx_and_checkout_tag: no git_remote specified [arg2 empty]"
   fi
-  local git_tag="$3"
-  if [[ -z "$git_tag" ]]; then
-    die "clone_libvpx_and_checkout_tag: no git_tag specified [arg3 empty]"
+  local git_checkout_target="$3"
+  if [[ -z "$git_checkout_target" ]]; then
+    die "clone_libvpx_and_checkout_tag: no git_checkout_target specified \
+        [arg3 empty]"
   fi
   # create a temp directory and clone into a child of the temp dir
   local tmp_path=$(mktemp -d)
   if [[ ! -d "${tmp_path}" ]]; then
-    die "clone_libvpx_and_checkout_tag: temp dir creation failed [tmp_path does not exist]"
+    die "clone_libvpx_and_checkout_tag: temp dir creation failed \
+         [tmp_path does not exist]"
   fi
   # clone the repo-- quietly, otherwise a line of git output lingers in
   # stdout and breaks the attempt to echo the full path to the clone.
   # Some weird issue w/sync in cygwin maybe...
-  git clone -q "${git_remote}" "${tmp_path}/${clone_dir}"
+  git clone ${git_quiet} "${git_remote}" "${tmp_path}/${clone_dir}"
   if [[ ! -d "${tmp_path}/${clone_dir}" ]]; then
     die "clone_libvpx_and_checkout_tag: clone failed [directory does not exist]"
   fi
   cd "${tmp_path}/${clone_dir}"
-  # checkout the specified tag
-  git checkout -q "${git_tag}"
+  # checkout
+  git checkout ${git_quiet} "${git_checkout_target}"
   # echo the clone path so the next bit of script can do something with it
   #echo "tmp_path=$tmp_path"
   #echo "clone_dir=$clone_dir"
   sync # flush git output from stdout (this doesn't work... perhaps I'm
        # "doing it wrong")
   echo "${tmp_path}/${clone_dir}"
+  exit 1
+  set +x
 }
 
 function build_libvpx() {
+  
   local clone_dir="$1"
   if [[ -z "$clone_dir" ]]; then
     die "build_libvpx: clone_dir not specified [arg1 empty]"
@@ -289,7 +296,11 @@ fi
 # libvpx stuff
 if [[ -z "${disable_libvpx_build}" ]]; then
   libvpx_full_path=$(clone_libvpx_and_checkout_tag "${libvpx_dir}" \
-"${libvpx_remote}" "${libvpx_tag}")
+"${libvpx_remote}" "${libvpx_git_target}")
+  # Since git refuses to obey -q under some circumstances at clone/checkout 
+  # time we have to clean up the directory here: awk abuse to the rescue!
+  libvpx_full_path=$(echo ${libvpx_full_path} | \
+                   awk 'BEGIN {FS="[ \n]"};{print $NF}')
   build_libvpx "${libvpx_full_path}"
   install_libvpx_files "${libvpx_full_path}"
 fi
