@@ -259,8 +259,8 @@ HRESULT AudioStream::SetConnectionMediaType(const AM_MEDIA_TYPE&)
 HRESULT AudioStream::UpdateAllocatorProperties(
     ALLOCATOR_PROPERTIES& props) const
 {
-    if (props.cBuffers <= 0)
-        props.cBuffers = 1;
+    if (props.cBuffers < 50)  //to handle laced audio
+        props.cBuffers = 50;
 
     const long size = GetBufferSize();
 
