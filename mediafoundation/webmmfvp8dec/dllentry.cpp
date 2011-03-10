@@ -125,9 +125,10 @@ STDAPI DllRegisterServer()
         { MFMediaType_Video, WebmTypes::MEDIASUBTYPE_VP80 }
     };
 
-    enum { cOutputTypes = 2 };
+    enum { cOutputTypes = 3 };
     MFT_REGISTER_TYPE_INFO pOutputTypes[cOutputTypes] =
     {
+        { MFMediaType_Video, MFVideoFormat_NV12 },
         { MFMediaType_Video, MFVideoFormat_YV12 },
         { MFMediaType_Video, MFVideoFormat_IYUV }
     };
