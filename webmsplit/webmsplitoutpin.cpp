@@ -746,11 +746,11 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
             assert(pCluster);
             assert(!pCluster->EOS());
 
-            if (pCluster->m_index >= 0)  //loaded
+            if (pCluster->GetIndex() >= 0)  //loaded
             {
                 const Cluster* const p = pSegment->GetLast();
                 assert(p);
-                assert(p->m_index >= 0);
+                assert(p->GetIndex() >= 0);
 
                 pCluster = p;
             }
