@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "playwebm_2008", "playwebm\p
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisdecoder_2008", "webmvorbisdecoder\webmvorbisdecoder_2008.vcproj", "{0E132E1D-37A1-4301-AE60-61BCB71724E9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmoggsource", "webmoggsource\webmoggsource.vcproj", "{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,16 @@ Global
 		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Win32.ActiveCfg = Release|Win32
 		{0E132E1D-37A1-4301-AE60-61BCB71724E9}.Release|Win32.Build.0 = Release|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Debug|Win32.Build.0 = Debug|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Release|Any CPU.ActiveCfg = Release|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Release|Win32.ActiveCfg = Release|Win32
+		{12AF5196-D5C9-490C-A263-84EA3BE9472D}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
