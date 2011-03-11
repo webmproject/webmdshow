@@ -2238,7 +2238,7 @@ unsigned WebmMfSource::Main()
        << endl;
 #endif
 
-    WebmUtil::set_omaha_usage_flags(WebmTypes::WebmMfAppId);
+    WebmUtil::set_omaha_usage_flags(WebmTypes::APPID_WebmMf);
 
     for (;;)
     {

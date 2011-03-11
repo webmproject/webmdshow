@@ -126,7 +126,7 @@ const CLSID WebmTypes::CLSID_WebmVorbisDecoder =
     {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
 };
 
-const GUID WebmTypes::WebmMfAppId =
+const GUID WebmTypes::APPID_WebmMf =
 { /* ED3112D0-5211-11DF-94AF-0026B977EEAA */
     0xED3112D0,
     0x5211,
