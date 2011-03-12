@@ -13,7 +13,7 @@
 //#include "mkvparserstream.hpp"
 #include "webmoggsourceoutpin.hpp"
 //#include "cmemallocator.hpp"
-//#include "cmediasample.hpp"
+#include "cmediasample.hpp"
 #include <vfwmsgs.h>
 #include <cassert>
 #include <sstream>
@@ -46,14 +46,19 @@ Outpin::Outpin(
 }
 
 
+#endif
+
+
 Outpin::~Outpin()
 {
     assert(m_hThread == 0);
     assert(!bool(m_pAllocator));
     assert(!bool(m_pInputPin));
 
-    delete m_pStream;
+    //TODO: delete m_pStream;
 }
+
+
 
 
 void Outpin::Init()  //transition from stopped
@@ -85,7 +90,7 @@ void Outpin::Final()  //transition to stopped
     assert(SUCCEEDED(hr));
 
     StopThread();
-    m_pStream->Init();
+    //TODO: m_pStream->Init();
 }
 
 
@@ -155,8 +160,12 @@ HRESULT Outpin::QueryInterface(const IID& iid, void** ppv)
     else if (iid == __uuidof(IPin))
         pUnk = static_cast<IPin*>(this);
 
+#if 0  //TODO
+
     else if (iid == __uuidof(IMediaSeeking))
         pUnk = static_cast<IMediaSeeking*>(this);
+
+#endif  //TODO
 
     else
     {
@@ -230,7 +239,8 @@ HRESULT Outpin::Connect(
 
         const AM_MEDIA_TYPE& mt = *pmt;
 
-        hr = m_pStream->SetConnectionMediaType(mt);
+        //TODO: hr = m_pStream->SetConnectionMediaType(mt);
+        hr = E_FAIL;
 
         if (FAILED(hr))
             return VFW_E_TYPE_NOT_ACCEPTED;
@@ -250,7 +260,8 @@ HRESULT Outpin::Connect(
 
             if (SUCCEEDED(hr))
             {
-                hr = m_pStream->SetConnectionMediaType(mt);
+                //TODO: hr = m_pStream->SetConnectionMediaType(mt);
+                hr = E_FAIL;
 
                 if (SUCCEEDED(hr))
                     break;
@@ -291,7 +302,7 @@ HRESULT Outpin::Connect(
 
     hr = pInputPin->GetAllocatorRequirements(&props);
 
-    m_pStream->UpdateAllocatorProperties(props);
+    //TODO: m_pStream->UpdateAllocatorProperties(props);
 
     hr = pAllocator->SetProperties(&props, &actual);
 
@@ -333,7 +344,7 @@ HRESULT Outpin::ReceiveConnection(
 
 HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
 {
-    return m_pStream->QueryAccept(pmt);
+    return E_FAIL;  //TODO: m_pStream->QueryAccept(pmt);
 }
 
 
@@ -373,6 +384,8 @@ HRESULT Outpin::EndFlush()
     return E_UNEXPECTED;
 }
 
+
+#if 0  //TODO
 
 HRESULT Outpin::GetCapabilities(DWORD* pdw)
 {
@@ -1085,10 +1098,12 @@ HRESULT Outpin::GetPreroll(LONGLONG* p)
     return S_OK;
 }
 
+#endif
+
 
 HRESULT Outpin::GetName(PIN_INFO& i) const
 {
-    const std::wstring name = m_pStream->GetName();
+    const std::wstring name = L""; //TODO: m_pStream->GetName();
 
     const size_t buflen = sizeof(i.achName)/sizeof(WCHAR);
 
@@ -1114,6 +1129,10 @@ unsigned Outpin::Main()
     assert(bool(m_pAllocator));
     assert(m_connection);
     assert(bool(m_pInputPin));
+
+#if 1
+    return 0;
+#else
 
     //TODO: we need duration to send NewSegment
     //HRESULT hr = m_connection->NewSegment(st, sp, 1);
@@ -1171,8 +1190,13 @@ unsigned Outpin::Main()
     m_pStream->Stop();
 
     return 0;
+
+#endif
+
 }
 
+
+#if 0
 
 HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 {

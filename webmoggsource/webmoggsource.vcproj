@@ -199,11 +199,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\common\cmediasample.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\cmediasample.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\common\cmediatypes.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\common\cmediatypes.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\cmemallocator.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\cmemallocator.hpp"
 				>
 			</File>
 			<File
@@ -244,6 +260,26 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+		</Filter>
+		<Filter
+			Name="Ogg Files"
+			>
+			<File
+				RelativePath=".\oggfile.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oggfile.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oggparser.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oggparser.hpp"
+				>
+			</File>
 		</Filter>
 		<File
 			RelativePath=".\dllentry.cpp"

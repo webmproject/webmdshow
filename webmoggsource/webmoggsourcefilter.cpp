@@ -98,7 +98,7 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
 
 #ifdef _DEBUG
     odbgstream os;
-    os << "webmsrc::ctor" << endl;
+    os << "webmoggsrc::ctor" << endl;
 #endif
 }
 #pragma warning(default:4355)
@@ -219,12 +219,10 @@ HRESULT Filter::GetClassID(CLSID* p)
     if (p == 0)
         return E_POINTER;
 
-    *p = WebmTypes::CLSID_WebmSource;
+    *p = WebmTypes::CLSID_WebmOggSource;
     return S_OK;
 }
 
-
-#if 0  //TODO
 
 HRESULT Filter::Stop()
 {
@@ -242,31 +240,6 @@ HRESULT Filter::Stop()
     {
         case State_Paused:
         case State_Running:
-
-            //Stop is synchronous.  When stop completes, all threads
-            //should be stopped.  What does "stopped" mean"  In our
-            //case it probably means "terminated".
-            //It's a bit tricky here because we hold the filter
-            //lock.  If threads need to acquire filter lock
-            //then we'll have to release it.  Only the FGM can call
-            //Stop, etc, so there's no problem to release lock
-            //while Stop is executing, to allow threads to acquire
-            //filter lock temporarily.
-            //The streaming thread will receiving an indication
-            //automatically (assuming it's connected), either via
-            //GetBuffer or Receive, so there's nothing this filter
-            //needs to do to tell the streaming thread to stop.
-            //One implementation strategy is to have build a
-            //vector of thread handles, and then wait for a signal
-            //on one of them.  When the handle is signalled
-            //(meaning that the thread has terminated), then
-            //we remove that handle from the vector, close the
-            //handle, and the wait again.  Repeat until the
-            //all threads have been terminated.
-            //We also need to clean up any unused samples,
-            //and decommit the allocator.  (In fact, we could
-            //decommit the allocator immediately, and then wait
-            //for the threads to terminated.)
 
             lock.Release();
 
@@ -484,7 +457,6 @@ HRESULT Filter::FindPin(
 }
 
 
-
 HRESULT Filter::QueryFilterInfo(FILTER_INFO* p)
 {
     if (p == 0)
@@ -588,12 +560,14 @@ HRESULT Filter::Load(LPCOLESTR filename, const AM_MEDIA_TYPE* pmt)
     if (m_file.IsOpen())
         return E_UNEXPECTED;
 
-    assert(m_pSegment == 0);
+    //assert(m_pSegment == 0);
 
     hr = m_file.Open(filename);
 
     if (FAILED(hr))
         return hr;
+
+#if 0
 
     hr = CreateSegment();
 
@@ -603,10 +577,15 @@ HRESULT Filter::Load(LPCOLESTR filename, const AM_MEDIA_TYPE* pmt)
         return hr;
     }
 
+#endif
+
     m_filename = filename;
 
     return S_OK;
 }
+
+
+#if 0  //TODO
 
 
 HRESULT Filter::CreateSegment()
@@ -778,6 +757,7 @@ void Filter::CreateOutpin(mkvparser::Stream* s)
     m_pins.push_back(p);
 }
 
+#endif  //TODO
 
 
 HRESULT Filter::GetCurFile(LPOLESTR* pname, AM_MEDIA_TYPE* pmt)
@@ -861,6 +841,8 @@ void Filter::OnStop()
     }
 }
 
+
+#if 0
 
 int Filter::GetConnectionCount() const
 {

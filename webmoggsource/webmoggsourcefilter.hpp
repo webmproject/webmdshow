@@ -10,6 +10,7 @@
 #include <strmif.h>
 #include <string>
 #include "clockable.hpp"
+#include "oggfile.hpp"
 #include <vector>
 
 namespace WebmOggSource
@@ -71,7 +72,7 @@ public:
     //local classes and methods
 
     void CreateOutpin(mkvparser::Stream*);
-    
+
 #endif  //TODO
 
 private:
@@ -109,35 +110,39 @@ public:
     //TODO: static const LONGLONG kNoSeek;
 
     FILTER_STATE m_state;
+    OggFile m_file;
+    std::wstring m_filename;
 
 #if 0  //TODO
 
-    MkvFile m_file;
-    std::wstring m_filename;
     mkvparser::Segment* m_pSegment;
     const mkvparser::Cluster* m_pSeekBase;
     LONGLONG m_seekBase_ns;
     __int64 m_currTime;  //requested seek time (reftime units)
     LONGLONG m_seekTime_ns;  //actual seek time (normalized)
-    
+
 #endif //TODO
 
     typedef std::vector<Outpin*> pins_t;
     pins_t m_pins;
-    
+
 #if 0  //TODO
 
     int GetConnectionCount() const;
     void SetCurrPosition(LONGLONG currTime, DWORD dwCurr, Outpin*);
+
+#endif  //TODO
 
 private:
 
     void OnStop();
     void OnStart();
 
+#if 0  //TODO
+
     HRESULT CreateSegment();
     void PopulateSamples(const HANDLE*, DWORD);
-    
+
 #endif  //TODO
 
 };

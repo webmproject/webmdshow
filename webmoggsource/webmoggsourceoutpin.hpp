@@ -14,13 +14,11 @@
 namespace WebmOggSource
 {
 
-class Outpin : public Pin,
-               public IMediaSeeking
+class Outpin : public Pin
+               //public IMediaSeeking
 {
     Outpin(const Outpin&);
     Outpin& operator=(const Outpin&);
-
-#if 0  //TODO
 
 protected:
     HRESULT OnDisconnect();
@@ -30,11 +28,13 @@ protected:
     GraphUtil::IMemInputPinPtr m_pInputPin;
     HANDLE m_hThread;
 
+#if 0  //TODO
     HRESULT PopulateSamples(mkvparser::Stream::samples_t&);
+#endif  //TODO
 
 public:
 
-    Outpin(Filter*, mkvparser::Stream*);
+    //TODO: Outpin(Filter*, mkvparser::Stream*);
     virtual ~Outpin();
 
     void Init();
@@ -74,6 +74,8 @@ public:
         REFERENCE_TIME,
         double);
 
+#if 0  //TODO
+
     //IMediaSeeking
 
     HRESULT STDMETHODCALLTYPE GetCapabilities(DWORD*);
@@ -111,7 +113,9 @@ public:
     HRESULT STDMETHODCALLTYPE GetRate(double*);
     HRESULT STDMETHODCALLTYPE GetPreroll(LONGLONG*);
 
-    mkvparser::Stream* const m_pStream;
+#endif  //TODO
+
+    //TODO: mkvparser::Stream* const m_pStream;
 
 private:
     static unsigned __stdcall ThreadProc(void*);
@@ -119,8 +123,6 @@ private:
 
     void StartThread();
     void StopThread();
-    
-#endif //TODO
 
 };
 
