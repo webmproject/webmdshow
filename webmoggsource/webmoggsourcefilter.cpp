@@ -26,6 +26,7 @@ using std::endl;
 #endif
 
 using std::wstring;
+using namespace oggparser;
 
 namespace WebmOggSource
 {
@@ -81,8 +82,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_nondelegating(this),
       m_pOuter(pOuter ? pOuter : &m_nondelegating),
       m_state(State_Stopped),
-      m_clock(0)
-      //m_pSegment(0),
+      m_clock(0),
+      m_pStream(0)
       //m_pSeekBase(0),
       //m_seekBase_ns(-1),
       //m_currTime(kNoSeek)
@@ -120,7 +121,7 @@ Filter::~Filter()
         delete p;
     }
 
-    //delete m_pSegment;
+    delete m_pStream;
 
     m_pClassFactory->LockServer(FALSE);
 }
@@ -560,155 +561,43 @@ HRESULT Filter::Load(LPCOLESTR filename, const AM_MEDIA_TYPE* pmt)
     if (m_file.IsOpen())
         return E_UNEXPECTED;
 
-    //assert(m_pSegment == 0);
+    assert(m_pStream == 0);
 
     hr = m_file.Open(filename);
 
     if (FAILED(hr))
         return hr;
 
-#if 0
+    OggStream* pStream;
 
-    hr = CreateSegment();
+    const long status = OggStream::Create(&m_file, pStream);
+
+    if (status < 0)  //error
+        return E_FAIL;
+
+    hr = OggInit(pStream);
 
     if (FAILED(hr))
     {
+        delete pStream;
         m_file.Close();
+
         return hr;
     }
 
-#endif
-
     m_filename = filename;
+    m_pStream = pStream;
 
     return S_OK;
 }
 
 
-#if 0  //TODO
-
-
-HRESULT Filter::CreateSegment()
+HRESULT Filter::OggInit(OggStream* pStream)
 {
     assert(m_file.IsOpen());
-    assert(m_pSegment == 0);
-
-    __int64 result, pos;
-
-    mkvparser::EBMLHeader h;
-
-    result = h.Parse(&m_file, pos);
-
-    if (result < 0)  //error
-    {
-        if (result == mkvparser::E_FILE_FORMAT_INVALID)
-            return VFW_E_INVALID_FILE_FORMAT;
-
-        //if (result == mkvparser::E_BUFFER_NOT_FULL)
-        //    return VFW_E_BUFFER_UNDERFLOW;  //require full header
-
-        return E_FAIL;
-    }
-
-    assert(result == 0);  //all data available in local file
-
-    if (h.m_version > 1)
-        return VFW_E_INVALID_FILE_FORMAT;
-
-    if (h.m_maxIdLength > 8)
-        return VFW_E_INVALID_FILE_FORMAT;
-
-    if (h.m_maxSizeLength > 8)
-        return VFW_E_INVALID_FILE_FORMAT;
-
-    const char* const docType = h.m_docType;
-
-    if (_stricmp(docType, "webm") == 0)
-        __noop;
-    else if (_stricmp(docType, "matroska") == 0)
-        __noop;
-    else
-        return VFW_E_INVALID_FILE_FORMAT;
-
-    if (h.m_docTypeVersion > 2)
-        return VFW_E_INVALID_FILE_FORMAT;
-
-    if (h.m_docTypeReadVersion > 2)
-        return VFW_E_INVALID_FILE_FORMAT;
-
-    //Just the EBML header has been consumed.  pos points
-    //to start of (first) segment.
-
-    mkvparser::Segment* p;
-
-    result = mkvparser::Segment::CreateInstance(&m_file, pos, p);
-
-    if (result < 0)  //error
-    {
-        if (result == mkvparser::E_FILE_FORMAT_INVALID)
-            return VFW_E_INVALID_FILE_FORMAT;
-
-        //if (result == mkvparser::E_BUFFER_NOT_FULL)
-        //    return VFW_E_BUFFER_UNDERFLOW;
-
-        return E_FAIL;
-    }
-
-    assert(result == 0);  //all data available in local file
-    assert(p);
-
-    std::auto_ptr<mkvparser::Segment> pSegment(p);
-
-#if 0
-    const HRESULT hr = pSegment->Load();
-
-    if (FAILED(hr))
-        return hr;
-#else
-    result = p->ParseHeaders();
-
-    if (result < 0)  //error
-    {
-        if (result == mkvparser::E_FILE_FORMAT_INVALID)
-            return VFW_E_INVALID_FILE_FORMAT;
-
-        return E_FAIL;  //TODO
-    }
-
-    assert(result == 0);  //all data available in local file
-#endif
-
-#ifdef _DEBUG
-    if (const mkvparser::SegmentInfo* pInfo = pSegment->GetInfo())
-    {
-        wstring muxingApp, writingApp;
-
-        if (const char* str = pInfo->GetMuxingAppAsUTF8())
-            muxingApp = mkvparser::Stream::ConvertFromUTF8(str);
-
-        if (const char* str = pInfo->GetWritingAppAsUTF8())
-            writingApp = mkvparser::Stream::ConvertFromUTF8(str);
-
-        pInfo = 0;
-    }
-#endif
-
-    const mkvparser::Tracks* const pTracks = pSegment->GetTracks();
-
-    if (pTracks == 0)
-        return S_FALSE;
-
     assert(m_pins.empty());
 
-    using namespace mkvparser;
-
 #if 0
-    typedef Stream::TCreateOutpins<VideoTrack, VideoStream, Filter> EV;
-    pTracks->EnumerateVideoTracks(EV(this, &VideoStream::CreateInstance));
-
-    typedef Stream::TCreateOutpins<AudioTrack, AudioStream, Filter> EA;
-    pTracks->EnumerateAudioTracks(EA(this, &AudioStream::CreateInstance));
-#else
     const ULONG n = pTracks->GetTracksCount();
 
     for (ULONG i = 0; i < n; ++i)
@@ -737,19 +626,25 @@ HRESULT Filter::CreateSegment()
                 CreateOutpin(s);
         }
     }
-#endif
 
     if (m_pins.empty())
         return VFW_E_INVALID_FILE_FORMAT;  //TODO: better return value here?
 
-    m_pSegment = pSegment.release();
-    m_pSeekBase = 0;
-    m_seekBase_ns = -1;
-    m_currTime = kNoSeek;
+    //m_pSeekBase = 0;
+    //m_seekBase_ns = -1;
+    //m_currTime = kNoSeek;
+
+#else
+
+    __noop;  //TODO
+
+#endif
 
     return S_OK;
 }
 
+
+#if 0  //TODO
 
 void Filter::CreateOutpin(mkvparser::Stream* s)
 {

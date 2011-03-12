@@ -27,7 +27,7 @@ public:
     HRESULT Close();
     bool IsOpen() const;
 
-    int Read(long long pos, long len, unsigned char* buf);
+    long Read(long long pos, long len, unsigned char* buf);
     //int Length(long long* total, long long* available);
 
 private:

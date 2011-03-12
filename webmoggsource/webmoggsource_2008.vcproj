@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="webmoggsource"
+	Name="webmoggsource_2008"
 	ProjectGUID="{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
 	RootNamespace="webmoggsource"
 	Keyword="Win32Proj"
@@ -68,7 +68,7 @@
 				GenerateManifest="false"
 				ModuleDefinitionFile="webmoggsource.def"
 				GenerateDebugInformation="true"
-				SubSystem="2"
+				SubSystem="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -82,6 +82,7 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
+				OutputFile="$(TargetDir)$(TargetName).bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"

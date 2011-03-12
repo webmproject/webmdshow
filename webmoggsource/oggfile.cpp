@@ -108,7 +108,7 @@ bool OggFile::IsOpen() const
 }
 
 
-int OggFile::Read(
+long OggFile::Read(
     long long pos,
     long len,
     unsigned char* buf)
@@ -128,13 +128,16 @@ int OggFile::Read(
     if (len == 0)
         return 0;  //success
 
-    if ((pos + len) > m_length)
-        return -1;
+    //if ((pos + len) > m_length)
+    //    return oggparser::E_END_OF_FILE;
 
     const HRESULT hr = SetPosition(pos);
-    assert(SUCCEEDED(hr));
+
+    if (FAILED(hr))
+        return -1;
 
     DWORD cbRead;
+
     const BOOL b = ReadFile(m_hFile, buf, len, &cbRead, 0);
 
     if (!b)
@@ -145,7 +148,13 @@ int OggFile::Read(
         return -1;
     }
 
-    return (cbRead >= ULONG(len)) ? 0 : -1;
+    //Testing for the End of a File
+    //http://msdn.microsoft.com/en-us/library/aa365690(v=vs.85).aspx
+
+    if (cbRead < DWORD(len))
+        return oggparser::E_END_OF_FILE;
+
+    return 0;  //success
 }
 
 

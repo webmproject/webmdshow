@@ -25,7 +25,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "playwebm_2008", "playwebm\p
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisdecoder_2008", "webmvorbisdecoder\webmvorbisdecoder_2008.vcproj", "{0E132E1D-37A1-4301-AE60-61BCB71724E9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmoggsource", "webmoggsource\webmoggsource.vcproj", "{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmoggsource_2008", "webmoggsource\webmoggsource_2008.vcproj", "{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

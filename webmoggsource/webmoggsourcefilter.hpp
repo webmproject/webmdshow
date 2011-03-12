@@ -112,10 +112,10 @@ public:
     FILTER_STATE m_state;
     OggFile m_file;
     std::wstring m_filename;
+    oggparser::OggStream* m_pStream;
 
 #if 0  //TODO
 
-    mkvparser::Segment* m_pSegment;
     const mkvparser::Cluster* m_pSeekBase;
     LONGLONG m_seekBase_ns;
     __int64 m_currTime;  //requested seek time (reftime units)
@@ -135,12 +135,12 @@ public:
 
 private:
 
+    HRESULT OggInit(oggparser::OggStream*);
     void OnStop();
     void OnStart();
 
 #if 0  //TODO
 
-    HRESULT CreateSegment();
     void PopulateSamples(const HANDLE*, DWORD);
 
 #endif  //TODO
