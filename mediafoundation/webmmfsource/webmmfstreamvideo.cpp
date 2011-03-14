@@ -323,6 +323,8 @@ void WebmMfStreamVideo::SetCurrBlockIndex(const mkvparser::Cluster* pCluster)
             m_curr.pBE = 0;  //means we lazy-init
             m_curr.pCP = pCP;
             m_curr.pTP = pTP;
+
+            return;
         }
     }
 
@@ -757,8 +759,6 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
 
     if (bKey)
     {
-        assert(frame_count == 1);  //TODO
-
         hr = pSample->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
         assert(SUCCEEDED(hr));
     }
