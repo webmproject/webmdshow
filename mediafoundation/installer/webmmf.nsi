@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+; Copyright (c) 2011 The WebM project authors. All Rights Reserved.
 ;
 ; Use of this source code is governed by a BSD-style license and patent
 ; grant that can be found in the LICENSE file in the root of the source
@@ -7,16 +7,18 @@
 ; file in the root of the source tree.
 ;
 
-;http://nsis.sourceforge.net/Simple_tutorials
-;http://www.fredshack.com/docs/nsis.html
-;http://nsis.sourceforge.net/Docs/Contents.html
+; WebM Media Foundation components installer.
 
-;WebM Media Foundation components installer.
-
+  !include "FileAssociation.nsh"
+  !insertmacro RegisterExtension
+  ${FileAssociation_VERBOSE} 4   # all verbosity
+  !insertmacro UnRegisterExtension
+  ${FileAssociation_VERBOSE} 4   # no script
   !include "Library.nsh"
   !include "MUI2.nsh"
-  !include "x64.nsh"
   !include "webmmf_util.nsh"
+  !include "x64.nsh"
+
   !define MUI_COMPONENTSPAGE_NODESC
   !define MUI_ICON "..\..\webm.ico"
   !define MUI_UNICON "..\..\webm.ico"
@@ -28,7 +30,7 @@
   Name "WebM Media Foundation"
   OutFile "install_webmmf.exe"
 
-  ; we need to register COM dll's: admin required
+  ; COM and Media Foundation registration require admin privileges.
   RequestExecutionLevel "admin"
 
   ; WMMF_UNINSTALL_KEY is where information is stored for Add/Remove Programs
@@ -73,6 +75,12 @@
   !define WMMF_OMAHA_APPNAME "WebM Media Foundation Components"
   !define WMMF_OMAHA_REBOOT_REQUIRED 3010
   !define WMMF_OMAHA_SUCCESS 0
+  ; File association related...
+  !define WMMF_FILE_EXT ".webm"
+  !define WMMF_FILE_EXT_DESCRIPTION "WebM Media File"
+  !define WMP_EXTENSIONS_HKLM_SUBKEY \
+"Software\Microsoft\Multimedia\WMPlayer\Extensions\.webm"
+  !define WMP_PATH "$PROGRAMFILES\Windows Media Player\wmplayer.exe"
 ;--------------------------------
 ;Interface Settings
 
@@ -99,6 +107,7 @@
 
 Section "Install" SecInstall
 
+  ; Allow user to inspect intaller DetailPrint output
   SetAutoClose false
 
   ${If} ${RunningX64}
@@ -214,6 +223,13 @@ Section "Install" SecInstall
 
   ${EndIf}
 
+  ; Associate WebM files with Windows Media Player
+  ${RegisterExtension} "${WMP_PATH}" "${WMMF_FILE_EXT}" \
+"${WMMF_FILE_EXT_DESCRIPTION}"
+  ; And let WMP know it's OK to open them...
+  WriteRegDWORD HKLM "${WMP_EXTENSIONS_HKLM_SUBKEY}" "Permissions" 0x00000001
+  WriteRegDWORD HKLM "${WMP_EXTENSIONS_HKLM_SUBKEY}" "Runtime" 0x00000001
+
   # Tell Omaha we need a reboot to complete update/install
   IfRebootFlag 0 +3
     WriteRegDWORD HKLM "${WMMF_OMAHA_RESULT_SUBKEY}\${WMMF_OMAHA_GUID}" \
@@ -232,6 +248,7 @@ SectionEnd
 
 Section "Uninstall" SecUninstall
 
+  ; Allow user to inspect intaller DetailPrint output
   SetAutoClose false
 
   ; 32-bit component uninstall (always removed)
@@ -284,6 +301,14 @@ Section "Uninstall" SecUninstall
     RMDir /r /REBOOTOK "${WMMF_INSTALL_PATH64}"
 
   ${EndIf}
+
+  ; Delete WebM Windows Media Player file association
+  ${UnRegisterExtension} "${WMMF_FILE_EXT}" "${WMMF_FILE_EXT_DESCRIPTION}"
+  ; TODO(tomfinegan): Seems a bit heavy handed to delete the extensions
+  ;                   subkey for .webm in WMP land... otoh it might be
+  ;                   better to err on the side of keeping the registry
+  ;                   clean.
+  DeleteRegKey HKLM "${WMP_EXTENSIONS_HKLM_SUBKEY}"
 
   DeleteRegKey HKLM "${WMMF_UNINSTALL_KEY}"
   DeleteRegKey HKLM "${WMMF_OMAHA_CLIENT_SUBKEY}\${WMMF_OMAHA_GUID}"
