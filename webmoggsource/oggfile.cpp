@@ -123,10 +123,10 @@ long OggFile::Read(
         return -1;
 
     if (pos > m_length)
-        return -1;
+        return oggparser::E_END_OF_FILE;
 
-    if (len == 0)
-        return 0;  //success
+    //if (len == 0)
+    //    return 0;  //success
 
     //if ((pos + len) > m_length)
     //    return oggparser::E_END_OF_FILE;
@@ -134,7 +134,7 @@ long OggFile::Read(
     const HRESULT hr = SetPosition(pos);
 
     if (FAILED(hr))
-        return -1;
+        return oggparser::E_READ_ERROR;
 
     DWORD cbRead;
 
@@ -145,7 +145,7 @@ long OggFile::Read(
         const DWORD e = GetLastError();
         e;
 
-        return -1;
+        return oggparser::E_READ_ERROR;
     }
 
     //Testing for the End of a File

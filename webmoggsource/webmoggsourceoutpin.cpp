@@ -10,9 +10,7 @@
 #include <comdef.h>
 #include <uuids.h>
 #include "webmoggsourcefilter.hpp"
-//#include "mkvparserstream.hpp"
 #include "webmoggsourceoutpin.hpp"
-//#include "cmemallocator.hpp"
 #include "cmediasample.hpp"
 #include <vfwmsgs.h>
 #include <cassert>
@@ -32,21 +30,15 @@ using std::boolalpha;
 namespace WebmOggSource
 {
 
-#if 0 //TODO
-
-
 Outpin::Outpin(
     Filter* pFilter,
-    mkvparser::Stream* pStream) :
-    Pin(pFilter, PINDIR_OUTPUT, pStream->GetId().c_str()),
-    m_pStream(pStream),
+    OggTrack* pTrack) :
+    Pin(pFilter, PINDIR_OUTPUT, pTrack->GetId().c_str()),
+    m_pTrack(pTrack),
     m_hThread(0)
 {
-    m_pStream->GetMediaTypes(m_preferred_mtv);
+    m_pTrack->GetMediaTypes(m_preferred_mtv);
 }
-
-
-#endif
 
 
 Outpin::~Outpin()
@@ -55,7 +47,7 @@ Outpin::~Outpin()
     assert(!bool(m_pAllocator));
     assert(!bool(m_pInputPin));
 
-    //TODO: delete m_pStream;
+    delete m_pTrack;
 }
 
 
@@ -90,7 +82,7 @@ void Outpin::Final()  //transition to stopped
     assert(SUCCEEDED(hr));
 
     StopThread();
-    //TODO: m_pStream->Init();
+    m_pTrack->Init();
 }
 
 
@@ -239,11 +231,10 @@ HRESULT Outpin::Connect(
 
         const AM_MEDIA_TYPE& mt = *pmt;
 
-        //TODO: hr = m_pStream->SetConnectionMediaType(mt);
-        hr = E_FAIL;
-
-        if (FAILED(hr))
-            return VFW_E_TYPE_NOT_ACCEPTED;
+        //hr = m_pTrack->SetConnectionMediaType(mt);
+        //
+        //if (FAILED(hr))
+        //    return VFW_E_TYPE_NOT_ACCEPTED;
 
         m_connection_mtv.Add(mt);
     }
@@ -258,14 +249,18 @@ HRESULT Outpin::Connect(
 
             hr = pin->ReceiveConnection(this, &mt);
 
+#if 0
             if (SUCCEEDED(hr))
             {
-                //TODO: hr = m_pStream->SetConnectionMediaType(mt);
-                hr = E_FAIL;
+                hr = m_pTrack->SetConnectionMediaType(mt);
 
                 if (SUCCEEDED(hr))
                     break;
             }
+#else
+            if (SUCCEEDED(hr))
+                break;
+#endif
 
             ++i;
         }
@@ -284,7 +279,6 @@ HRESULT Outpin::Connect(
 
     if (FAILED(hr))
     {
-        //hr = CMemAllocator::CreateInstance(&pAllocator);
         hr = CMediaSample::CreateAllocator(&pAllocator);
 
         if (FAILED(hr))
@@ -302,7 +296,7 @@ HRESULT Outpin::Connect(
 
     hr = pInputPin->GetAllocatorRequirements(&props);
 
-    //TODO: m_pStream->UpdateAllocatorProperties(props);
+    m_pTrack->UpdateAllocatorProperties(props);  //modify props as req'd
 
     hr = pAllocator->SetProperties(&props, &actual);
 
@@ -344,7 +338,7 @@ HRESULT Outpin::ReceiveConnection(
 
 HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
 {
-    return E_FAIL;  //TODO: m_pStream->QueryAccept(pmt);
+    return m_pTrack->QueryAccept(pmt);
 }
 
 
@@ -1103,7 +1097,7 @@ HRESULT Outpin::GetPreroll(LONGLONG* p)
 
 HRESULT Outpin::GetName(PIN_INFO& i) const
 {
-    const std::wstring name = L""; //TODO: m_pStream->GetName();
+    const std::wstring name = m_pTrack->GetName();
 
     const size_t buflen = sizeof(i.achName)/sizeof(WCHAR);
 
@@ -1130,15 +1124,10 @@ unsigned Outpin::Main()
     assert(m_connection);
     assert(bool(m_pInputPin));
 
-#if 1
-    return 0;
-#else
-
     //TODO: we need duration to send NewSegment
     //HRESULT hr = m_connection->NewSegment(st, sp, 1);
 
-    typedef mkvparser::Stream::samples_t samples_t;
-    samples_t samples;
+    OggTrack::samples_t samples;
 
     for (;;)
     {
@@ -1157,51 +1146,28 @@ unsigned Outpin::Main()
 
         IMediaSample** const pSamples = &samples[0];
 
-        const samples_t::size_type nSamples_ = samples.size();
+        const OggTrack::samples_t::size_type nSamples_ = samples.size();
         const long nSamples = static_cast<long>(nSamples_);
 
         long nProcessed;
 
         hr = m_pInputPin->ReceiveMultiple(pSamples, nSamples, &nProcessed);
 
-        //TODO: there is a potential problem here.  If the upstream decoder
-        //rejects the sample (problem with bitstream, etc), then this
-        //terminates this streaming thread, but the filter isn't in the
-        //Stopped state.
-        //Now say the use notices that the window isn't displaying any video.
-        //He closes the window to stop play, but this causes the FGM to
-        //call IMediaSeeking::SetPosition to reset the position back to 0.
-        //But since we weren't stopped when that happened, we restart the
-        //thread, thinking that a play had been interrupted by a seek request,
-        //but that's not the case, because the thread had already been
-        //interrupted much earlier, because the bitstream failed to decode.
-        //We probably need a stronger test: instead of testing whether we
-        //were stopped or not stopped, we need to test whether we we not
-        //stopped and thread wasn't already terminated.
-
-        if (hr != S_OK)
+        if (hr != S_OK)  //TODO: signal error to FGM
             break;
 
-        mkvparser::Stream::Clear(samples);
-        Sleep(0);       //better way to do this?
+        OggTrack::Clear(samples);
     }
 
-    mkvparser::Stream::Clear(samples);
-    m_pStream->Stop();
+    OggTrack::Clear(samples);
+    //m_pTrack->Stop();
 
     return 0;
-
-#endif
-
 }
 
 
-#if 0
-
-HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
+HRESULT Outpin::PopulateSamples(OggTrack::samples_t& samples)
 {
-    mkvparser::Segment* const pSegment = m_pStream->m_pTrack->m_pSegment;
-
     for (;;)
     {
         assert(samples.empty());
@@ -1215,25 +1181,10 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 
         long count;
 
-        for (;;)
-        {
-            hr = m_pStream->GetSampleCount(count);
+        hr = m_pTrack->GetSampleCount(count);
 
-            if (SUCCEEDED(hr))
-                break;
-
-            if (hr != VFW_E_BUFFER_UNDERFLOW)
-                return hr;
-#if 0
-            hr = m_pStream->Preload();
-
-            if (FAILED(hr))
-                return hr;
-#else
-            const long status = pSegment->LoadCluster();
-            assert(status == 0);
-#endif
-        }
+        if (FAILED(hr))  //TODO: handle underflow if req'd for ogg parsing
+            return hr;
 
         if (hr != S_OK)      //EOS
             return S_FALSE;  //report EOS
@@ -1260,37 +1211,20 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
         if (FAILED(hr))
             return hr;
 
-        for (;;)
-        {
-            hr = m_pStream->PopulateSamples(samples);
+        hr = m_pTrack->PopulateSamples(samples);
 
-            if (SUCCEEDED(hr))
-                break;
+        if (FAILED(hr))
+            return hr;
 
-            if (hr != VFW_E_BUFFER_UNDERFLOW)
-                return hr;
-#if 0
-            hr = m_pStream->Preload();
-
-            if (FAILED(hr))
-                return hr;
-#else
-            const long status = pSegment->LoadCluster();
-            assert(status == 0);
-#endif
-        }
-
-        if (hr != 2)
-            return hr;  //either have samples, or EOS
+        if (hr != 2)    //2 means "must parse more, and then re-try"
+            return hr;  //have samples (0) or EOS (1), so we're done
 
         hr = lock.Release();
         assert(SUCCEEDED(hr));
 
-        mkvparser::Stream::Clear(samples);
+        OggTrack::Clear(samples);
     }
 }
-
-#endif  //TODO
 
 } //end namespace WebmOggSource
 

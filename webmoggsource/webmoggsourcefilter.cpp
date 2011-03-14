@@ -10,10 +10,9 @@
 #include <uuids.h>
 #include "webmoggsourcefilter.hpp"
 #include "cenumpins.hpp"
-//#include "mkvparserstreamvideo.hpp"
-//#include "mkvparserstreamaudio.hpp"
 #include "webmoggsourceoutpin.hpp"
 #include "webmtypes.hpp"
+#include "oggtrackaudio.hpp"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>
@@ -636,7 +635,17 @@ HRESULT Filter::OggInit(OggStream* pStream)
 
 #else
 
-    __noop;  //TODO
+    //TODO: for now, just hard-code a single Vorbis audio track, since that's
+    //all our OggStream parser supports anyway.  If there's interest in
+    //generalizing this component to work with an ogg container having
+    //multiple tracks ("logical bitreams", in Ogg parlance), then we can just
+    //add support for that later.
+
+    //TODO: use logical bitstream id instead of hard-coding 1
+    OggTrackAudio* const pTrack = new OggTrackAudio(pStream, 1);
+    Outpin* const pOutpin = new Outpin(this, pTrack);
+
+    m_pins.push_back(pOutpin);
 
 #endif
 

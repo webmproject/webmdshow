@@ -281,6 +281,22 @@
 				RelativePath=".\oggparser.hpp"
 				>
 			</File>
+			<File
+				RelativePath=".\oggtrack.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oggtrack.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oggtrackaudio.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oggtrackaudio.hpp"
+				>
+			</File>
 		</Filter>
 		<File
 			RelativePath=".\dllentry.cpp"

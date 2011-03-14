@@ -8,6 +8,7 @@
 
 #pragma once
 #include "webmoggsourcepin.hpp"
+#include "oggtrack.hpp"
 #include <comdef.h>
 #include "graphutil.hpp"
 
@@ -28,13 +29,11 @@ protected:
     GraphUtil::IMemInputPinPtr m_pInputPin;
     HANDLE m_hThread;
 
-#if 0  //TODO
-    HRESULT PopulateSamples(mkvparser::Stream::samples_t&);
-#endif  //TODO
+    HRESULT PopulateSamples(OggTrack::samples_t&);
 
 public:
 
-    //TODO: Outpin(Filter*, mkvparser::Stream*);
+    Outpin(Filter*, OggTrack*);
     virtual ~Outpin();
 
     void Init();
@@ -115,7 +114,7 @@ public:
 
 #endif  //TODO
 
-    //TODO: mkvparser::Stream* const m_pStream;
+    OggTrack* const m_pTrack;
 
 private:
     static unsigned __stdcall ThreadProc(void*);
