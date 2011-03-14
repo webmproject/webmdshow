@@ -27,18 +27,18 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE 
+1 TEXTINCLUDE
 BEGIN
     "resource.h\0"
 END
 
-2 TEXTINCLUDE 
+2 TEXTINCLUDE
 BEGIN
     "#include ""afxres.h""\r\n"
     "\0"
 END
 
-3 TEXTINCLUDE 
+3 TEXTINCLUDE
 BEGIN
     "\r\n"
     "\0"
@@ -70,12 +70,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Google"
-            VALUE "FileDescription", "Webm MF VP8 Decoder"
+            VALUE "FileDescription", "WebM MF VP8 Decoder"
             VALUE "FileVersion", "0, 23, 0, 0"
             VALUE "InternalName", "webmmfvp8dec"
-            VALUE "LegalCopyright", "Copyright (C) 2010"
+            VALUE "LegalCopyright", "Copyright (C) 2011"
             VALUE "OriginalFilename", "webmmfvp8dec.dll"
-            VALUE "ProductName", "Webm MF VP8 Decoder"
+            VALUE "ProductName", "WebM MF VP8 Decoder"
             VALUE "ProductVersion", "0, 23, 0, 0"
         END
     END
