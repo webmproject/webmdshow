@@ -10,10 +10,6 @@
 ; WebM Media Foundation components installer.
 
   !include "FileAssociation.nsh"
-  !insertmacro RegisterExtension
-  ${FileAssociation_VERBOSE} 4   # all verbosity
-  !insertmacro UnRegisterExtension
-  ${FileAssociation_VERBOSE} 4   # no script
   !include "Library.nsh"
   !include "MUI2.nsh"
   !include "webmmf_util.nsh"
