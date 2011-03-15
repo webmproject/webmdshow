@@ -60,35 +60,26 @@ public:
 
     typedef std::list<Descriptor> descriptors_t;
 
-    unsigned char m_capture_pattern[4];
-    unsigned char m_version;
-    unsigned char m_header;
-    long long m_granule_pos;
-    unsigned long m_serial_num;
-    unsigned long m_sequence_num;
-    unsigned long m_crc;  //signed or unsigned?
-    descriptors_t m_descriptors;
+    static long GetLength(const descriptors_t&);
+    static long Copy(
+        const descriptors_t&,
+        IOggReader*,
+        unsigned char* buf);
+
+    unsigned char capture_pattern[4];
+    unsigned char version;
+    unsigned char header;
+    long long granule_pos;
+    unsigned long serial_num;
+    unsigned long sequence_num;
+    unsigned long crc;  //signed or unsigned?
+    descriptors_t descriptors;
 
     long Read(IOggReader*, long long&);
 };
 
 //rfc5334.txt
 //Ogg Media Types
-//
-
-enum CodecType
-{
-    kVorbis  //0x01vorbis
-};
-
-struct VorbisCodec
-{
-    //sampling rate
-    //etc
-    //ident hdr
-    //comment hdr
-    //setup hdr
-};
 
 
 class OggStream
@@ -96,40 +87,57 @@ class OggStream
     OggStream(const OggStream&);
     OggStream& operator=(const OggStream&);
 
-private:
+public:
 
     IOggReader* const m_pReader;
+
     explicit OggStream(IOggReader*);
-
-public:
-
-    static long Create(IOggReader*, OggStream*&);
-
-public:
-
     ~OggStream();
-
-    //We should have a way to identify the "tracks" in this stream.
 
     struct Packet
     {
         OggPage::descriptors_t descriptors;
         long long granule_pos;
+
+        long GetLength() const;
+        long Copy(IOggReader*, unsigned char* buf) const;
+        long IsHeader(IOggReader*, const char*) const;
     };
 
+    typedef std::list<Packet> packets_t;
+
+    long Init(Packet& ident, Packet& comment, Packet& setup);
+    long Reset();
     long Parse();
-    long GetPacket(Packet&);  //need way to identify which track
+    long GetPacket(Packet&);
 
 private:
 
+    unsigned long m_page_num;
+    unsigned long m_page_base;
     long long m_pos;
+    long long m_base;
 
-    typedef std::list<Packet> packets_t;
     packets_t m_packets;
 
-    long Init();
     long ReadPage(OggPage&);
+};
 
+
+class VorbisIdent
+{
+public:
+    unsigned long version;
+    unsigned char channels;
+    unsigned long sample_rate;
+    long bitrate_maximum;
+    long bitrate_nominal;
+    long bitrate_minimum;
+    unsigned short blocksize_0;
+    unsigned short blocksize_1;
+    unsigned char framing;
+
+    long Read(IOggReader*, const OggStream::Packet&);
 };
 
 

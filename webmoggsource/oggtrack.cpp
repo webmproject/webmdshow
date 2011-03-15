@@ -1,5 +1,6 @@
 #include <strmif.h>
 #include "oggtrack.hpp"
+#include "oggparser.hpp"
 #include <sstream>
 #include <iomanip>
 #include <cassert>
@@ -13,7 +14,7 @@ OggTrack::OggTrack(
     m_pStream(pStream),
     m_id(id)
 {
-    Init();
+    //Init();
 }
 
 
@@ -23,12 +24,14 @@ OggTrack::~OggTrack()
 }
 
 
-void OggTrack::Init()
+void OggTrack::Reset()
 {
     //m_base_time_ns = -1;
     //SetCurr(0);  //lazy init this later
     //m_pStop = m_pTrack->GetEOS();  //means play entire stream
     m_bDiscontinuity = true;
+    m_pStream->Reset();
+    OnReset();
 }
 
 
@@ -50,6 +53,63 @@ std::wstring OggTrack::GetName() const
 }
 
 
+#if 0
+
+HRESULT OggTrack::InitCurr()
+{
+    if (m_pCurr)
+        return S_OK;
+
+    //lazy-init of first block
+
+    Segment* const pSegment = m_pTrack->m_pSegment;
+
+    if (pSegment->GetCount() <= 0)
+        return VFW_E_BUFFER_UNDERFLOW;
+
+    const mkvparser::BlockEntry* pCurr;
+
+    const long status = m_pTrack->GetFirst(pCurr);
+
+    if (status == E_BUFFER_NOT_FULL)
+        return VFW_E_BUFFER_UNDERFLOW;
+
+    assert(status >= 0);  //success
+    assert(pCurr);
+    assert(pCurr->EOS() ||
+           (m_pTrack->GetType() == 2) ||
+           pCurr->GetBlock()->IsKey());
+
+    SetCurr(pCurr);
+
+    const Cluster* const pBase = pSegment->GetFirst();
+    assert(pBase);
+    assert(!pBase->EOS());
+
+    m_base_time_ns = pBase->GetFirstTime();
+
+#ifdef _DEBUG
+    if (!m_pCurr->EOS())
+    {
+        const Block* const pBlock = m_pCurr->GetBlock();
+
+        const LONGLONG time_ns = pBlock->GetTime(m_pCurr->GetCluster());
+
+        const LONGLONG dt_ns = time_ns - m_base_time_ns;
+        assert(dt_ns >= 0);
+
+        const double dt_sec = double(dt_ns) / 1000000000;
+        assert(dt_sec >= 0);
+    }
+#endif
+
+
+    return S_OK;
+}
+
+#endif
+
+
 void OggTrack::Clear(samples_t& samples)
 {
     while (!samples.empty())
@@ -64,11 +124,11 @@ void OggTrack::Clear(samples_t& samples)
 }
 
 
+#if 0  //TODO
+
 HRESULT OggTrack::GetSampleCount(long& count)
 {
     count = 0;
-
-#if 0  //TODO
 
     HRESULT hr = InitCurr();
 
@@ -91,16 +151,16 @@ HRESULT OggTrack::GetSampleCount(long& count)
 
     count = pCurrBlock->GetFrameCount();
 
-#endif  //TODO
-
     return S_OK;
 }
 
+#endif  //TODO
+
+
+#if 0  //TODO
 
 HRESULT OggTrack::PopulateSamples(const samples_t& samples)
 {
-#if 0  //TODO
-
     HRESULT hr = InitCurr();
 
     if (FAILED(hr))
@@ -160,11 +220,10 @@ HRESULT OggTrack::PopulateSamples(const samples_t& samples)
     SetCurr(pNext);
     m_bDiscontinuity = false;
 
-#endif  //TODO
-
     return S_OK;
 }
 
+#endif  //TODO
 
 
 }  //end namespace WebmOggSource

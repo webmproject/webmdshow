@@ -82,7 +82,7 @@ void Outpin::Final()  //transition to stopped
     assert(SUCCEEDED(hr));
 
     StopThread();
-    m_pTrack->Init();
+    m_pTrack->Reset();
 }
 
 
@@ -206,8 +206,6 @@ HRESULT Outpin::Connect(
 
     if (FAILED(hr))
         return hr;
-
-    assert(m_pFilter->m_file.IsOpen());
 
     if (m_pFilter->m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
@@ -1155,6 +1153,8 @@ unsigned Outpin::Main()
 
         if (hr != S_OK)  //TODO: signal error to FGM
             break;
+
+        //TODO: check whether nProcessed < nSamples
 
         OggTrack::Clear(samples);
     }

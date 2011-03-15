@@ -82,7 +82,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_pOuter(pOuter ? pOuter : &m_nondelegating),
       m_state(State_Stopped),
       m_clock(0),
-      m_pStream(0)
+      //m_file
+      m_stream(&m_file)
       //m_pSeekBase(0),
       //m_seekBase_ns(-1),
       //m_currTime(kNoSeek)
@@ -120,7 +121,7 @@ Filter::~Filter()
         delete p;
     }
 
-    delete m_pStream;
+    //delete m_pStream;
 
     m_pClassFactory->LockServer(FALSE);
 }
@@ -560,38 +561,36 @@ HRESULT Filter::Load(LPCOLESTR filename, const AM_MEDIA_TYPE* pmt)
     if (m_file.IsOpen())
         return E_UNEXPECTED;
 
-    assert(m_pStream == 0);
+    //assert(m_pStream == 0);
 
     hr = m_file.Open(filename);
 
     if (FAILED(hr))
         return hr;
 
-    OggStream* pStream;
+    //OggStream* pStream;
 
-    const long status = OggStream::Create(&m_file, pStream);
+    //const long status = OggStream::Create(&m_file, pStream);
 
-    if (status < 0)  //error
-        return E_FAIL;
+    //if (status < 0)  //error
+    //    return E_FAIL;
 
-    hr = OggInit(pStream);
+    hr = OggInit();
 
     if (FAILED(hr))
     {
-        delete pStream;
         m_file.Close();
-
         return hr;
     }
 
     m_filename = filename;
-    m_pStream = pStream;
+    //m_pStream = pStream;
 
     return S_OK;
 }
 
 
-HRESULT Filter::OggInit(OggStream* pStream)
+HRESULT Filter::OggInit()
 {
     assert(m_file.IsOpen());
     assert(m_pins.empty());
@@ -642,7 +641,15 @@ HRESULT Filter::OggInit(OggStream* pStream)
     //add support for that later.
 
     //TODO: use logical bitstream id instead of hard-coding 1
-    OggTrackAudio* const pTrack = new OggTrackAudio(pStream, 1);
+    //OggTrackAudio* const pTrack = new OggTrackAudio(&m_stream, 1);
+
+    OggTrackAudio* pTrack;
+
+    HRESULT hr = OggTrackAudio::Create(&m_stream, pTrack);
+
+    if (FAILED(hr))
+        return hr;
+
     Outpin* const pOutpin = new Outpin(this, pTrack);
 
     m_pins.push_back(pOutpin);

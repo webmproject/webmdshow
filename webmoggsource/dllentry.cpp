@@ -86,10 +86,10 @@ STDAPI DllUnregisterServer()
 
     //assert(SUCCEEDED(hr));
 
-#if 0
+#if 1
     hr = ComReg::UnRegisterCustomFileType(
-            L".webm",
-            WebmTypes::CLSID_WebmSource);
+            L".ogg",
+            WebmTypes::CLSID_WebmOggSource);
     assert(SUCCEEDED(hr));
 #endif
 
@@ -133,10 +133,10 @@ STDAPI DllRegisterServer()
 
     assert(SUCCEEDED(hr));
 
-#if 0
+#if 1
     hr = ComReg::RegisterCustomFileType(
-            L".webm",
-            WebmTypes::CLSID_WebmSource,
+            L".ogg",
+            WebmTypes::CLSID_WebmOggSource,
             GUID_NULL,
             GUID_NULL);
 

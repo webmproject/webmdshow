@@ -17,7 +17,7 @@ long oggparser::ReadInt(
     {
         unsigned char b;
 
-        const long result = pReader->Read(pos, 1, &b);
+        const long result = pReader->Read(pos++, 1, &b);
 
         if (result < 0)  //error
             return len;
@@ -44,70 +44,70 @@ long OggPage::Read(IOggReader* pReader, long long& pos)
     if (pos < 0)
         return -1;
 
-    long result = pReader->Read(pos, 4, m_capture_pattern);
+    long result = pReader->Read(pos, 4, capture_pattern);
 
     if (result < 0)  //error
         return result;
 
-    if (memcmp(m_capture_pattern, "OggS", 4) != 0)
+    if (memcmp(capture_pattern, "OggS", 4) != 0)
         return E_FILE_FORMAT_INVALID;
 
     pos += 4;  //consume capture_pattern
 
-    long long version;
+    long long version_;
 
-    result = ReadInt(pReader, pos, 1, version);
+    result = ReadInt(pReader, pos, 1, version_);
 
     if (result < 0)  //error
         return result;
 
     ++pos;  //consume version
 
-    m_version = static_cast<unsigned char>(version);
+    version = static_cast<unsigned char>(version_);
 
-    long long header;
+    long long header_;
 
-    result = ReadInt(pReader, pos, 1, header);
+    result = ReadInt(pReader, pos, 1, header_);
 
     if (result < 0)  //error
         return result;
 
     ++pos;  //consume header flag
 
-    m_header = static_cast<unsigned char>(header);
+    header = static_cast<unsigned char>(header_);
 
-    result = ReadInt(pReader, pos, 8, m_granule_pos);
+    result = ReadInt(pReader, pos, 8, granule_pos);
 
     if (result < 0)  //error
         return result;
 
     pos += 8;  //consume granule pos
 
-    long long serial_num;
+    long long serial_num_;
 
-    result = ReadInt(pReader, pos, 4, serial_num);
+    result = ReadInt(pReader, pos, 4, serial_num_);
 
     if (result < 0)  //error
         return result;
 
     pos += 4;  //consume serial number
 
-    m_serial_num = static_cast<unsigned long>(serial_num);
+    serial_num = static_cast<unsigned long>(serial_num_);
 
-    long long sequence_num;
+    long long sequence_num_;
 
-    result = ReadInt(pReader, pos, 4, sequence_num);
+    result = ReadInt(pReader, pos, 4, sequence_num_);
 
     if (result < 0)  //error
         return result;
 
     pos += 4;  //consume page sequence number
 
-    m_sequence_num = static_cast<unsigned long>(sequence_num);
+    sequence_num = static_cast<unsigned long>(sequence_num_);
 
-    long long crc;
+    long long crc_;
 
-    result = ReadInt(pReader, pos, 4, crc);
+    result = ReadInt(pReader, pos, 4, crc_);
 
     if (result < 0)  //error
         return result;
@@ -116,7 +116,7 @@ long OggPage::Read(IOggReader* pReader, long long& pos)
 
     //http://www.ross.net/crc/download/crc_v3.txt
 
-    m_crc = static_cast<unsigned long>(crc);
+    crc = static_cast<unsigned long>(crc_);
 
     long long segments_count;
 
@@ -130,14 +130,14 @@ long OggPage::Read(IOggReader* pReader, long long& pos)
 
     ++pos;  //consume segment count
 
-    m_descriptors.clear();
+    descriptors.clear();
 
     while (segments_count > 0)
     {
-        m_descriptors.push_back(Descriptor());
+        descriptors.push_back(Descriptor());
 
         {
-            Descriptor& data = m_descriptors.back();
+            Descriptor& data = descriptors.back();
 
             data.pos = -1;  //fill in later
             data.len = 0;
@@ -155,7 +155,7 @@ long OggPage::Read(IOggReader* pReader, long long& pos)
             ++pos;  //consume lacing value
 
             {
-                Descriptor& payload = m_descriptors.back();
+                Descriptor& payload = descriptors.back();
                 payload.len += static_cast<long>(lacing_value);
 
                 if (--segments_count <= 0)
@@ -163,7 +163,7 @@ long OggPage::Read(IOggReader* pReader, long long& pos)
                     if (lacing_value == 255)  //pkt continued on next page
                         payload.len = -payload.len;
                     else  //pkt completed on curr page
-                        m_header |= OggPage::fDone;
+                        header |= OggPage::fDone;
 
                     break;
                 }
@@ -176,8 +176,8 @@ long OggPage::Read(IOggReader* pReader, long long& pos)
 
     typedef descriptors_t::iterator iter_t;
 
-    iter_t iter = m_descriptors.begin();
-    const iter_t iter_end = m_descriptors.end();
+    iter_t iter = descriptors.begin();
+    const iter_t iter_end = descriptors.end();
 
     while (iter != iter_end)
     {
@@ -191,6 +191,7 @@ long OggPage::Read(IOggReader* pReader, long long& pos)
 }
 
 
+#if 0
 long OggStream::Create(IOggReader* pReader, OggStream*& pStream)
 {
     if (pReader == NULL)
@@ -409,11 +410,15 @@ long OggStream::Create(IOggReader* pReader, OggStream*& pStream)
 
     return result;
 }
+#endif
 
 
 OggStream::OggStream(IOggReader* p) :
     m_pReader(p),
-    m_pos(0)
+    m_page_num(0),
+    m_page_base(0),
+    m_pos(0),
+    m_base(0)
 {
 }
 
@@ -423,7 +428,10 @@ OggStream::~OggStream()
 }
 
 
-long OggStream::Init()
+long OggStream::Init(
+    Packet& ident,
+    Packet& comment,
+    Packet& setup)
 {
     OggPage page;
 
@@ -432,54 +440,39 @@ long OggStream::Init()
     if (result < 0)
         return result;
 
-    if (!(page.m_header & OggPage::fBOS))
+    if (!(page.header & OggPage::fBOS))
         return E_FILE_FORMAT_INVALID;
 
-    if (page.m_header & OggPage::fEOS)
+    if (page.header & OggPage::fEOS)
         return E_FILE_FORMAT_INVALID;
 
-    if (!(page.m_header & OggPage::fDone))
+    if (!(page.header & OggPage::fDone))
         return E_FILE_FORMAT_INVALID;
 
-    if (page.m_granule_pos != 0)
+    if (page.granule_pos != 0)
         return E_FILE_FORMAT_INVALID;
 
     if (m_pos != 58)
         return E_FILE_FORMAT_INVALID;
 
-    Packet ident;
-
     if (GetPacket(ident) < 1)
         return E_FILE_FORMAT_INVALID;
 
-    //TODO: must vet packet itself
+    if (ident.descriptors.size() != 1)
+        return E_FILE_FORMAT_INVALID;
 
-    {
-        const char str[] = "\x01vorbis";
+    if (ident.GetLength() != 30)
+        return E_FILE_FORMAT_INVALID;
 
-        const OggPage::descriptors_t& dd = ident.descriptors;
-
-        const OggPage::Descriptor& d = dd.front();
-        assert(d.len > 0);
-        assert(size_t(d.len) >= strlen(str));
-
-        void* const p = _malloca(d.len);
-        unsigned char* const buf = static_cast<unsigned char*>(p);
-
-        result = m_pReader->Read(d.pos, d.len, buf);
-        assert(result == 0);
-        assert(memcmp(buf, str, strlen(str)) == 0);
-    }
+    if (ident.IsHeader(m_pReader, "\x01vorbis") <= 0)
+        return E_FILE_FORMAT_INVALID;
 
     if (!m_packets.empty())
         return E_FILE_FORMAT_INVALID;
 
-    Packet comment;
-
     for (;;)
     {
         result = ReadPage(page);
-        //TODO: handle underflow
 
         if (result < 0)  //error
             return result;
@@ -488,55 +481,37 @@ long OggStream::Init()
             break;
     }
 
-    {
-        const char str[] = "\x03vorbis";
-
-        const OggPage::descriptors_t& dd = comment.descriptors;
-
-        const OggPage::Descriptor& d = dd.front();
-        assert(d.len > 0);
-        assert(size_t(d.len) >= strlen(str));
-
-        void* const p = _malloca(d.len);
-        unsigned char* const buf = static_cast<unsigned char*>(p);
-
-        result = m_pReader->Read(d.pos, d.len, buf);
-        assert(result == 0);
-        assert(memcmp(buf, str, strlen(str)) == 0);
-    }
-
-    Packet setup;
+    if (comment.IsHeader(m_pReader, "\x03vorbis") <= 0)
+        return E_FILE_FORMAT_INVALID;
 
     while (GetPacket(setup) < 1)
     {
         result = ReadPage(page);
-        //TODO: handle underflow
 
         if (result < 0)  //error
             return result;
     }
 
-    {
-        const char str[] = "\x05vorbis";
-
-        const OggPage::descriptors_t& dd = setup.descriptors;
-
-        const OggPage::Descriptor& d = dd.front();
-        assert(d.len > 0);
-        assert(size_t(d.len) >= strlen(str));
-
-        void* const p = _malloca(d.len);
-        unsigned char* const buf = static_cast<unsigned char*>(p);
-
-        result = m_pReader->Read(d.pos, d.len, buf);
-        assert(result == 0);
-        assert(memcmp(buf, str, strlen(str)) == 0);
-    }
+    if (setup.IsHeader(m_pReader, "\x05vorbis") <= 0)
+        return E_FILE_FORMAT_INVALID;
 
     if (!m_packets.empty())
         return E_FILE_FORMAT_INVALID;
 
+    m_base = m_pos;
+    m_page_base = m_page_num;
+
     return 0;
+}
+
+
+long OggStream::Reset()
+{
+    m_pos = m_base;
+    m_page_num = m_page_base;
+    m_packets.clear();
+
+    return 0;  //success
 }
 
 
@@ -549,9 +524,14 @@ long OggStream::ReadPage(OggPage& page)
     if (result < 0)  //error
         return result;
 
-    assert(!page.m_descriptors.empty());
+    if (page.sequence_num != m_page_num)
+        return E_FILE_FORMAT_INVALID;
 
-    if (page.m_header & OggPage::fContinued)
+    ++m_page_num;
+
+    assert(!page.descriptors.empty());
+
+    if (page.header & OggPage::fContinued)
     {
         if (m_packets.empty())
             return E_FILE_FORMAT_INVALID;
@@ -570,8 +550,8 @@ long OggStream::ReadPage(OggPage& page)
             d.len = labs(d.len);
         }
 
-        dd.push_back(page.m_descriptors.front());
-        page.m_descriptors.pop_front();
+        dd.push_back(page.descriptors.front());
+        page.descriptors.pop_front();
     }
     else if (!m_packets.empty())
     {
@@ -588,7 +568,7 @@ long OggStream::ReadPage(OggPage& page)
         }
     }
 
-    OggPage::descriptors_t& dd = page.m_descriptors;
+    OggPage::descriptors_t& dd = page.descriptors;
 
     while (!dd.empty())
     {
@@ -605,7 +585,7 @@ long OggStream::ReadPage(OggPage& page)
 
     assert(!m_packets.empty());
 
-    if (page.m_granule_pos < 0)  //no packet was completed by this page
+    if (page.granule_pos < 0)  //no packet was completed by this page
     {
         const Packet& pkt = m_packets.back();
 
@@ -646,7 +626,7 @@ long OggStream::ReadPage(OggPage& page)
 
         assert(pkt.granule_pos < 0);
 
-        pkt.granule_pos = page.m_granule_pos;
+        pkt.granule_pos = page.granule_pos;
         return 0;
     }
 
@@ -709,6 +689,240 @@ long OggStream::GetPacket(Packet& pkt_)
     m_packets.pop_front();
 
     return 1;  //successfully consumed pkt
+}
+
+
+long OggPage::GetLength(const descriptors_t& dd)
+{
+    long result = 0;
+
+    typedef descriptors_t::const_iterator iter_t;
+
+    iter_t i = dd.begin();
+    const iter_t j = dd.end();
+
+    while (i != j)
+    {
+        const Descriptor& d = *i++;
+
+        if (d.len < 0)
+            return -1;
+
+        result += d.len;
+    }
+
+    return result;
+}
+
+
+long OggStream::Packet::GetLength() const
+{
+    return OggPage::GetLength(descriptors);
+}
+
+
+long OggPage::Copy(
+    const descriptors_t& dd,
+    IOggReader* pReader,
+    unsigned char* buf)
+{
+    if (buf == NULL)
+        return -1;
+
+    unsigned char* const buf_base = buf;
+
+    typedef descriptors_t::const_iterator iter_t;
+
+    iter_t i = dd.begin();
+    const iter_t j = dd.end();
+
+    while (i != j)
+    {
+        const Descriptor& d = *i++;
+
+        const long result = pReader->Read(d.pos, d.len, buf);
+
+        if (result < 0)  //error
+            return result;
+
+        buf += d.len;
+    }
+
+    const ptrdiff_t len_ = buf - buf_base;
+    const long len = static_cast<long>(len_);
+
+    return len;
+}
+
+
+long OggStream::Packet::Copy(
+    IOggReader* pReader,
+    unsigned char* buf) const
+{
+    return OggPage::Copy(descriptors, pReader, buf);
+}
+
+
+long OggStream::Packet::IsHeader(IOggReader* pReader, const char* str) const
+{
+    if (pReader == NULL)
+        return -1;
+
+    if (str == NULL)
+        return -1;
+
+    typedef OggPage::descriptors_t::const_iterator iter_t;
+
+    const OggPage::descriptors_t& dd = descriptors;
+
+    iter_t i = dd.begin();
+    const iter_t j = dd.end();
+
+    while (i != j)
+    {
+        const OggPage::Descriptor& d = *i++;
+
+        long long pos = d.pos;
+        const long long pos_end = d.pos + d.len;
+
+        while ((*str != '\0') && (pos != pos_end))
+        {
+            unsigned char c;
+
+            const long result = pReader->Read(pos++, 1, &c);
+
+            if (result < 0)  //error
+                return result;
+
+            if (*str++ != c)
+                return 0;  //does not match
+        }
+
+        if (*str == '\0')
+            return 1;  //match
+    }
+
+    return -1;  //ran out of payload to compare
+}
+
+
+long VorbisIdent::Read(IOggReader* pReader, const OggStream::Packet& ident)
+{
+    if (pReader == NULL)
+        return -1;
+
+    const OggPage::descriptors_t& dd = ident.descriptors;
+
+    if (dd.size() != 1)
+        return -1;
+
+    const OggPage::Descriptor& d = dd.front();
+
+    //58 = size of first page
+    //26 + 1 + 1 = 28
+    //30 = size of ident pkt
+
+    if (d.len != 30)  //weird
+        return -1;
+
+    long long pos = d.pos;
+
+    unsigned char h[7];
+
+    long result = pReader->Read(pos, 7, h);
+
+    if (result < 0)
+        return result;
+
+    pos += 7;
+
+    if (memcmp(h, "\x01vorbis", 7) != 0)
+        return -1;
+
+    long long val;
+
+    result = ReadInt(pReader, pos, 4, val);
+
+    if (result < 0)
+        return result;
+
+    pos += 4;  //consume version
+
+    version = static_cast<unsigned long>(val);
+
+    result = ReadInt(pReader, pos, 1, val);
+
+    if (result < 0)
+        return result;
+
+    ++pos;  //consume channels
+
+    channels = static_cast<unsigned char>(val);
+
+    result = ReadInt(pReader, pos, 4, val);
+
+    if (result < 0)
+        return result;
+
+    pos += 4;  //consume sample_rate
+
+    sample_rate = static_cast<unsigned long>(val);
+
+    result = ReadInt(pReader, pos, 4, val);
+
+    if (result < 0)
+        return result;
+
+    pos += 4;  //consume bitrate_max
+
+    bitrate_maximum = static_cast<long>(val);
+
+    result = ReadInt(pReader, pos, 4, val);
+
+    if (result < 0)
+        return result;
+
+    pos += 4;  //consume bitrate_avg
+
+    bitrate_nominal = static_cast<long>(val);
+
+    result = ReadInt(pReader, pos, 4, val);
+
+    if (result < 0)
+        return result;
+
+    pos += 4;  //consume bitrate_min
+
+    bitrate_minimum = static_cast<long>(val);
+
+    unsigned char b;
+
+    result = pReader->Read(pos, 1, &b);
+
+    if (result < 0)
+        return result;
+
+    ++pos;
+
+    int e = b & 0x0F;
+
+    blocksize_0 = 1 << e;
+
+    e = (b & 0xF0) >> 4;
+
+    blocksize_1 = 1 << e;
+
+    result = pReader->Read(pos, 1, &b);
+
+    if (result < 0)
+        return result;
+
+    ++pos;
+    assert((pos - d.pos) == 30);
+
+    framing = (b & 0x01);
+
+    return 0;
 }
 
 

@@ -110,9 +110,12 @@ public:
     //TODO: static const LONGLONG kNoSeek;
 
     FILTER_STATE m_state;
-    OggFile m_file;
+
+private:
+
     std::wstring m_filename;
-    oggparser::OggStream* m_pStream;
+    OggFile m_file;
+    oggparser::OggStream m_stream;
 
 #if 0  //TODO
 
@@ -135,7 +138,7 @@ public:
 
 private:
 
-    HRESULT OggInit(oggparser::OggStream*);
+    HRESULT OggInit();
     void OnStop();
     void OnStart();
 

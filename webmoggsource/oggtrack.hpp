@@ -1,14 +1,14 @@
 #pragma once
 #include <string>
 #include <vector>
-
-class CMediaTypes;
+//#include "cmediatypes.hpp"
 
 namespace oggparser
 {
-    class OggStream;
+class OggStream;
 }
 
+class CMediaTypes;
 
 namespace WebmOggSource
 {
@@ -21,13 +21,12 @@ class OggTrack
 protected:
     oggparser::OggStream* const m_pStream;
     const ULONG m_id;
-
     OggTrack(oggparser::OggStream*, ULONG);
 
 public:
     virtual ~OggTrack();
 
-    void Init();
+    void Reset();
     //void Stop();
 
     std::wstring GetId() const;    //IPin::QueryId
@@ -38,11 +37,11 @@ public:
     //HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&);
     virtual HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const = 0;
 
-    HRESULT GetSampleCount(long&);
+    virtual HRESULT GetSampleCount(long&) = 0;
 
     typedef std::vector<IMediaSample*> samples_t;
 
-    HRESULT PopulateSamples(const samples_t&);
+    virtual HRESULT PopulateSamples(const samples_t&) = 0;
     static void Clear(samples_t&);
 
 protected:
@@ -54,6 +53,7 @@ protected:
 
     virtual std::wostream& GetKind(std::wostream&) const = 0;
     virtual std::wstring GetCodecName() const = 0;
+    virtual void OnReset() = 0;
 
     //HRESULT InitCurr();
 
