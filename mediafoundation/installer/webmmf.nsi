@@ -13,6 +13,7 @@
   !include "Library.nsh"
   !include "MUI2.nsh"
   !include "webmmf_util.nsh"
+  !include "WinVer.nsh"
   !include "x64.nsh"
 
   !define MUI_COMPONENTSPAGE_NODESC
@@ -217,14 +218,18 @@ Section "Install" SecInstall
 
     !undef LIBRARY_X64
 
-  ${EndIf}
+  ${EndIf} ; ${If} ${RunningX64}
 
-  ; Associate WebM files with Windows Media Player
-  ${RegisterExtension} "${WMP_PATH}" "${WMMF_FILE_EXT}" \
+  ${If} ${AtLeastWin7}
+    ; Associate WebM files with Windows Media Player
+    DetailPrint "Associating .webm files with Windows Media Player..."
+    ${RegisterExtension} "${WMP_PATH}" "${WMMF_FILE_EXT}" \
 "${WMMF_FILE_EXT_DESCRIPTION}"
-  ; And let WMP know it's OK to open them...
-  WriteRegDWORD HKLM "${WMP_EXTENSIONS_HKLM_SUBKEY}" "Permissions" 0x00000001
-  WriteRegDWORD HKLM "${WMP_EXTENSIONS_HKLM_SUBKEY}" "Runtime" 0x00000001
+    ; And let WMP know it's OK to open them...
+    WriteRegDWORD HKLM "${WMP_EXTENSIONS_HKLM_SUBKEY}" "Permissions" 0x00000001
+    WriteRegDWORD HKLM "${WMP_EXTENSIONS_HKLM_SUBKEY}" "Runtime" 0x00000001
+    DetailPrint "Done."
+  ${EndIf} ; ${If} ${AtLeastWin7}
 
   # Tell Omaha we need a reboot to complete update/install
   IfRebootFlag 0 +3
