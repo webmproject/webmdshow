@@ -650,6 +650,13 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
 
     assert(m_pSegment->GetCount() == 0);
 
+    LONGLONG total, avail;
+
+    const long status = m_file.Length(&total, &avail);
+
+    if (status < 0)  //weird
+        return LoadComplete(E_FAIL);
+
     m_bCanSeek = false;
 
     if (m_bLive)
@@ -673,6 +680,9 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
     else if (m_pSegment->GetCues())
         m_bCanSeek = true;
 
+    else if (total < 0)  //don't know total file size
+        __noop;
+
     else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
     {
         const int count = pSH->GetCount();
@@ -687,6 +697,10 @@ WebmMfSource::thread_state_t WebmMfSource::StateAsyncParseSegmentHeaders()
                 assert(cues_off >= 0);
 
                 const LONGLONG pos = m_pSegment->m_start + cues_off;
+
+                if (pos >= total)
+                    break;  //don't bother trying to parse the cues
+
                 m_file.Seek(pos);
 
                 m_async_state = &WebmMfSource::StateAsyncParseCues;
