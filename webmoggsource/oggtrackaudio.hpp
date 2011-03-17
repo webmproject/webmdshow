@@ -40,7 +40,7 @@ protected:
     typedef oggparser::OggStream::packets_t packets_t;
     packets_t m_packets;
 
-    long GetBufferSize() const;
+    //long GetBufferSize() const;
     REFERENCE_TIME GetCurrTime() const;
 
     HRESULT PopulateSample(

@@ -8,7 +8,8 @@
 
 using namespace oggparser;
 
-enum { cBuffers = 64 };
+enum { cBuffers = 1024 };
+enum { cbBuffer = 1024 };
 
 namespace WebmOggSource
 {
@@ -197,11 +198,16 @@ HRESULT OggTrackAudio::UpdateAllocatorProperties(
     if (props.cBuffers <= 0)
         props.cBuffers = cBuffers;
 
+#if 0
     const long size = GetBufferSize();
     assert(size > 0);
 
     if (props.cbBuffer < size)
         props.cbBuffer = size;
+#else
+    if (props.cbBuffer < cbBuffer)
+        props.cbBuffer = cbBuffer;
+#endif
 
     if (props.cbAlign <= 0)
         props.cbAlign = 1;
@@ -213,14 +219,14 @@ HRESULT OggTrackAudio::UpdateAllocatorProperties(
 }
 
 
-long OggTrackAudio::GetBufferSize() const
-{
-    const long blocks_per_frame = m_fmt.blocksize_1;  //?
-    const long bytes_per_block = sizeof(float) * m_fmt.channels;
-    const long bytes_per_frame = blocks_per_frame * bytes_per_block;
-
-    return bytes_per_frame;
-}
+//long OggTrackAudio::GetBufferSize() const
+//{
+//    const long blocks_per_frame = m_fmt.blocksize_1;  //?
+//    const long bytes_per_block = sizeof(float) * m_fmt.channels;
+//    const long bytes_per_frame = blocks_per_frame * bytes_per_block;
+//
+//    return bytes_per_frame;
+//}
 
 
 std::wostream& OggTrackAudio::GetKind(std::wostream& os) const
@@ -319,6 +325,8 @@ HRESULT OggTrackAudio::GetSampleCount(long& count)
             }
         }
 
+        assert(pkt.GetLength() <= cbBuffer);
+
         m_packets.push_back(pkt);
 
         if (pkt.granule_pos >= 0)
@@ -377,8 +385,8 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
 
     while (!m_packets.empty())
     {
-        IMediaSample* const pSample = *tgt_iter++;
         const OggStream::Packet& pkt = m_packets.front();
+        IMediaSample* const pSample = *tgt_iter++;
 
         const HRESULT hr = PopulateSample(pkt, pSample);
 
@@ -404,6 +412,7 @@ HRESULT OggTrackAudio::PopulateSample(
 
     const long len = pkt.GetLength();
     assert(len > 0);
+    assert(len <= cbBuffer);
 
     BYTE* ptr;
 
