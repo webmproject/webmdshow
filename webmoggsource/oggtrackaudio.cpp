@@ -5,6 +5,13 @@
 #include <new>
 #include <cassert>
 #include <uuids.h>
+#if 0 //def _DEBUG
+#include "odbgstream.hpp"
+#include <iomanip>
+using std::endl;
+using std::fixed;
+using std::setprecision;
+#endif
 
 using namespace oggparser;
 
@@ -42,7 +49,8 @@ OggTrackAudio::OggTrackAudio(
     oggparser::OggStream* pStream,
     ULONG id) :
     OggTrack(pStream, id),
-    m_granule_pos(0)
+    m_granule_pos(0),
+    m_reftime(0)
 {
 }
 
@@ -71,6 +79,7 @@ HRESULT OggTrackAudio::Init()
 void OggTrackAudio::OnReset()
 {
     m_granule_pos = 0;
+    m_reftime = 0;
 }
 
 
@@ -347,58 +356,114 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
     if (m_packets.empty())
         return E_FAIL;
 
-    if (ss.size() != m_packets.size())
+    const packets_t::size_type packet_count = m_packets.size();
+
+    if (ss.size() != packet_count)
         return E_FAIL;
 
     if (m_granule_pos < 0)
         return E_FAIL;
 
+    if (m_reftime < 0)
+        return E_FAIL;
+
     const LONGLONG granule_pos = m_packets.back().granule_pos;
-    //assert(granule_pos > m_granule_pos);
+    assert((granule_pos < 0) || (granule_pos > m_granule_pos));
+
+    float samples_per_packet;
+
+    if (granule_pos < 0)  //EOS, and no terminating granule_pos
+        samples_per_packet = 1024;  //?
+    else
+    {
+        const LONGLONG total_samples = granule_pos - m_granule_pos;
+        samples_per_packet = float(total_samples) / packet_count;
+    }
+
+    const float samples_per_sec = static_cast<float>(m_fmt.sample_rate);
+
+    LONGLONG curr_samples = m_granule_pos;
+    LONGLONG curr_reftime = m_reftime;
 
     samples_t::const_iterator tgt_iter = ss.begin();
 
+    while (m_packets.size() > 1)
     {
-        IMediaSample* const pSample = *tgt_iter++;
-        assert(pSample);
-
         const OggStream::Packet& pkt = m_packets.front();
+        IMediaSample* const pSample = *tgt_iter++;
 
         HRESULT hr = PopulateSample(pkt, pSample);
 
         if (FAILED(hr))
             return hr;
 
-        m_packets.pop_front();
-
-        REFERENCE_TIME reftime = GetCurrTime();
-        assert(reftime >= 0);
-
-        hr = pSample->SetTime(&reftime, 0);
-        assert(SUCCEEDED(hr));
-
-        hr = pSample->SetDiscontinuity(m_bDiscontinuity ? TRUE : FALSE);
-        assert(SUCCEEDED(hr));
-
         m_bDiscontinuity = false;
+
+        const float next_samples_ = curr_samples + samples_per_packet;
+        LONGLONG next_samples = static_cast<LONGLONG>(next_samples_);
+
+        const float next_sec = next_samples_ / samples_per_sec;
+        const float next_reftime_ = next_sec * 10000000.0F;
+
+        LONGLONG next_reftime = static_cast<LONGLONG>(next_reftime_);
+
+        hr = pSample->SetMediaTime(&curr_samples, &next_samples);
+        assert(SUCCEEDED(hr));
+
+        hr = pSample->SetTime(&curr_reftime, &next_reftime);
+        assert(SUCCEEDED(hr));
+
+        curr_samples = next_samples;
+        curr_reftime = next_reftime;
+
+        m_packets.pop_front();
     }
 
-    while (!m_packets.empty())
     {
         const OggStream::Packet& pkt = m_packets.front();
-        IMediaSample* const pSample = *tgt_iter++;
 
-        const HRESULT hr = PopulateSample(pkt, pSample);
+        IMediaSample* const pSample = *tgt_iter++;
+        assert(tgt_iter == ss.end());
+
+        HRESULT hr = PopulateSample(pkt, pSample);
 
         if (FAILED(hr))
             return hr;
 
+        m_bDiscontinuity = false;
+
+        if (granule_pos < 0)  //EOS, and no granule_pos on page
+        {
+            m_granule_pos = -1;  //EOS
+            m_reftime = -1;
+
+            hr = pSample->SetMediaTime(0, 0);
+            assert(SUCCEEDED(hr));
+
+            hr = pSample->SetTime(&curr_reftime, 0);
+            assert(SUCCEEDED(hr));
+        }
+        else
+        {
+            m_granule_pos = granule_pos;
+
+            const float next_samples_ = static_cast<float>(m_granule_pos);
+
+            const float next_sec = next_samples_ / samples_per_sec;
+            const float next_reftime_ = next_sec * 10000000.0F;
+
+            m_reftime = static_cast<LONGLONG>(next_reftime_);
+
+            hr = pSample->SetMediaTime(&curr_samples, &m_granule_pos);
+            assert(SUCCEEDED(hr));
+
+            hr = pSample->SetTime(&curr_reftime, &m_reftime);
+            assert(SUCCEEDED(hr));
+        }
+
         m_packets.pop_front();
+        assert(m_packets.empty());
     }
-
-    assert(tgt_iter == ss.end());
-
-    m_granule_pos = granule_pos;
 
     return S_OK;
 }
@@ -432,36 +497,42 @@ HRESULT OggTrackAudio::PopulateSample(
     hr = pSample->SetActualDataLength(len);
     assert(SUCCEEDED(hr));
 
+    hr = pSample->SetDiscontinuity(m_bDiscontinuity ? TRUE : FALSE);
+    assert(SUCCEEDED(hr));
+
+    //m_bDiscontinuity = false;
+
     hr = pSample->SetSyncPoint(TRUE);
     assert(SUCCEEDED(hr));
 
     hr = pSample->SetPreroll(FALSE);
     assert(SUCCEEDED(hr));
 
-    hr = pSample->SetMediaTime(0, 0);
-    assert(SUCCEEDED(hr));
+    //hr = pSample->SetMediaTime(&t.curr_samples, &t.next_samples);
+    //assert(SUCCEEDED(hr));
 
-    //discontinuity
+    //hr = pSample->SetTime(&t.curr_reftime, &t.next_reftime);
+    //assert(SUCCEEDED(hr));
 
     return S_OK;
 }
 
 
-REFERENCE_TIME OggTrackAudio::GetCurrTime() const
-{
-    assert(m_granule_pos >= 0);
-    assert(m_fmt.sample_rate > 0);
-
-    const double samples = static_cast<double>(m_granule_pos);
-    const double samples_per_sec = m_fmt.sample_rate;
-
-    const double sec = samples / samples_per_sec;
-
-    const double reftime_ = sec * 10000000.0;
-    const REFERENCE_TIME reftime = static_cast<REFERENCE_TIME>(reftime_);
-
-    return reftime;
-}
+//REFERENCE_TIME OggTrackAudio::GetCurrTime() const
+//{
+//    assert(m_granule_pos >= 0);
+//    assert(m_fmt.sample_rate > 0);
+//
+//    const double samples = static_cast<double>(m_granule_pos);
+//    const double samples_per_sec = m_fmt.sample_rate;
+//
+//    const double sec = samples / samples_per_sec;
+//
+//    const double reftime_ = sec * 10000000.0;
+//    const REFERENCE_TIME reftime = static_cast<REFERENCE_TIME>(reftime_);
+//
+//    return reftime;
+//}
 
 
 }  //end namespace WebmOggSource

@@ -35,13 +35,14 @@ protected:
     oggparser::OggStream::Packet m_setup;
 
     oggparser::VorbisIdent m_fmt;
-    long long m_granule_pos;
+    LONGLONG m_granule_pos;
+    LONGLONG m_reftime;
 
     typedef oggparser::OggStream::packets_t packets_t;
     packets_t m_packets;
 
     //long GetBufferSize() const;
-    REFERENCE_TIME GetCurrTime() const;
+    //REFERENCE_TIME GetCurrTime() const;
 
     HRESULT PopulateSample(
         const oggparser::OggStream::Packet&,
