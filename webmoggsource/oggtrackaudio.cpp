@@ -383,6 +383,8 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
     const float samples_per_sec = static_cast<float>(m_fmt.sample_rate);
 
     LONGLONG curr_samples = m_granule_pos;
+    float curr_samples_ = static_cast<float>(curr_samples);
+
     LONGLONG curr_reftime = m_reftime;
 
     samples_t::const_iterator tgt_iter = ss.begin();
@@ -390,7 +392,9 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
     while (m_packets.size() > 1)
     {
         const OggStream::Packet& pkt = m_packets.front();
+
         IMediaSample* const pSample = *tgt_iter++;
+        assert(pSample);
 
         HRESULT hr = PopulateSample(pkt, pSample);
 
@@ -399,7 +403,7 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
 
         m_bDiscontinuity = false;
 
-        const float next_samples_ = curr_samples + samples_per_packet;
+        const float next_samples_ = curr_samples_ + samples_per_packet;
         LONGLONG next_samples = static_cast<LONGLONG>(next_samples_);
 
         const float next_sec = next_samples_ / samples_per_sec;
@@ -414,6 +418,8 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
         assert(SUCCEEDED(hr));
 
         curr_samples = next_samples;
+        curr_samples_ = next_samples_;
+
         curr_reftime = next_reftime;
 
         m_packets.pop_front();
@@ -423,6 +429,7 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
         const OggStream::Packet& pkt = m_packets.front();
 
         IMediaSample* const pSample = *tgt_iter++;
+        assert(pSample);
         assert(tgt_iter == ss.end());
 
         HRESULT hr = PopulateSample(pkt, pSample);
@@ -445,14 +452,14 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
         }
         else
         {
-            m_granule_pos = granule_pos;
+            m_granule_pos = granule_pos;  //next_samples
 
             const float next_samples_ = static_cast<float>(m_granule_pos);
 
             const float next_sec = next_samples_ / samples_per_sec;
             const float next_reftime_ = next_sec * 10000000.0F;
 
-            m_reftime = static_cast<LONGLONG>(next_reftime_);
+            m_reftime = static_cast<LONGLONG>(next_reftime_);  //next_reftime
 
             hr = pSample->SetMediaTime(&curr_samples, &m_granule_pos);
             assert(SUCCEEDED(hr));
