@@ -1198,15 +1198,9 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 
             if (hr != VFW_E_BUFFER_UNDERFLOW)
                 return hr;
-#if 0
-            hr = m_pStream->Preload();
 
-            if (FAILED(hr))
-                return hr;
-#else
             const long status = pSegment->LoadCluster();
-            assert(status == 0);
-#endif
+            assert(status >= 0);
         }
 
         if (hr != S_OK)      //EOS
@@ -1243,15 +1237,9 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
 
             if (hr != VFW_E_BUFFER_UNDERFLOW)
                 return hr;
-#if 0
-            hr = m_pStream->Preload();
 
-            if (FAILED(hr))
-                return hr;
-#else
             const long status = pSegment->LoadCluster();
-            assert(status == 0);
-#endif
+            assert(status >= 0);
         }
 
         if (hr != 2)
