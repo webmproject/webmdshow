@@ -256,6 +256,7 @@ HRESULT AudioStream::SetConnectionMediaType(const AM_MEDIA_TYPE&)
 #endif
 
 
+#if 0
 HRESULT AudioStream::UpdateAllocatorProperties(
     ALLOCATOR_PROPERTIES& props) const
 {
@@ -275,6 +276,7 @@ HRESULT AudioStream::UpdateAllocatorProperties(
 
     return S_OK;
 }
+#endif
 
 
 long AudioStream::GetBufferSize() const
@@ -293,6 +295,12 @@ long AudioStream::GetBufferSize() const
     const long size = nAvgBytesPerSec;  //TODO: make a better estimate
 
     return size;
+}
+
+
+long AudioStream::GetBufferCount() const
+{
+    return 50;  //?
 }
 
 

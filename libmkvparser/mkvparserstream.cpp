@@ -477,6 +477,29 @@ HRESULT Stream::InitCurr()
 }
 
 
+HRESULT Stream::UpdateAllocatorProperties(
+    ALLOCATOR_PROPERTIES& props) const
+{
+    const long cBuffers = GetBufferCount();
+
+    if (props.cBuffers <= cBuffers)  //to handle laced frames
+        props.cBuffers = cBuffers;
+
+    const long cbBuffer = GetBufferSize();
+
+    if (props.cbBuffer < cbBuffer)
+        props.cbBuffer = cbBuffer;
+
+    if (props.cbAlign <= 0)
+        props.cbAlign = 1;
+
+    if (props.cbPrefix < 0)
+        props.cbPrefix = 0;
+
+    return S_OK;
+}
+
+
 void Stream::Clear(samples_t& samples)
 {
     while (!samples.empty())
@@ -515,6 +538,8 @@ HRESULT Stream::GetSampleCount(long& count)
     assert(pCurrBlock->GetTrackNumber() == m_pTrack->GetNumber());
 
     count = pCurrBlock->GetFrameCount();
+    assert(count <= GetBufferCount());
+
     return S_OK;
 }
 

@@ -271,11 +271,12 @@ HRESULT VideoStream::QueryAccept(const AM_MEDIA_TYPE* pmt) const
 }
 
 
+#if 0
 HRESULT VideoStream::UpdateAllocatorProperties(
     ALLOCATOR_PROPERTIES& props) const
 {
-    if (props.cBuffers <= 0)
-        props.cBuffers = 1;
+    if (props.cBuffers <= cBuffers)  //to handle laced video
+        props.cBuffers = cBuffers;
 
     const long size = GetBufferSize();
 
@@ -290,6 +291,7 @@ HRESULT VideoStream::UpdateAllocatorProperties(
 
     return S_OK;
 }
+#endif
 
 
 long VideoStream::GetBufferSize() const
@@ -307,6 +309,12 @@ long VideoStream::GetBufferSize() const
     const long size = static_cast<LONG>(size_);
 
     return size;
+}
+
+
+long VideoStream::GetBufferCount() const
+{
+    return 10;  //?
 }
 
 

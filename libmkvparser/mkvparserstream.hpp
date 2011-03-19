@@ -36,7 +36,7 @@ public:
     virtual HRESULT QueryAccept(const AM_MEDIA_TYPE*) const = 0;
 
     virtual HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&);
-    virtual HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const = 0;
+    HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const;
 
     //HRESULT Preload();  //exactly one cluster
 
@@ -82,6 +82,9 @@ protected:
     virtual std::wostream& GetKind(std::wostream&) const = 0;
 
     HRESULT InitCurr();
+
+    virtual long GetBufferSize() const = 0;
+    virtual long GetBufferCount() const = 0;
 
     virtual void OnPopulateSample(
                 const BlockEntry*,

@@ -25,11 +25,13 @@ public:
 
     void GetMediaTypes(CMediaTypes&) const;
     HRESULT QueryAccept(const AM_MEDIA_TYPE*) const;
-    HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const;
-    long GetBufferSize() const;
+    //HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const;
 
 protected:
     std::wostream& GetKind(std::wostream&) const;
+
+    long GetBufferSize() const;
+    long GetBufferCount() const;
 
     void OnPopulateSample(const BlockEntry*, const samples_t&) const;
 
