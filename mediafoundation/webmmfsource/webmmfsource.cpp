@@ -2520,22 +2520,10 @@ WebmMfSource::thread_state_t WebmMfSource::OnRequestSample()
             const mkvparser::Cues* const pCues = m_pSegment->GetCues();
             assert(pCues);
 
-            if (pCues->LoadCuePoint())
-            {
-                //const mkvparser::CuePoint* const pCP = pCues->GetLast();
-                //const LONGLONG time_ns = pCP->GetTime(m_pSegment);
-                //
-                //odbgstream os;
-                //os << "OnRequestSample: pCues->GetCount="
-                //   << pCues->GetCount()
-                //   << "; loaded cue point t[ns]=" << time_ns
-                //   << " t[sec]="
-                //   << std::fixed
-                //   << std::setprecision(3)
-                //   << (double(time_ns) / 1000000000.0)
-                //   << "; MORE TO PARSE"
-                //   << endl;
+            pCues->LoadCuePoint();
 
+            if (!pCues->DoneParsing())
+            {
                 const BOOL b = SetEvent(m_hRequestSample);
                 assert(b);
 
@@ -3777,7 +3765,7 @@ LONGLONG WebmMfSource::Command::GetClusterPos(LONGLONG time_ns) const
 
         for (;;)
         {
-            const bool bMore = pCues->LoadCuePoint();
+            pCues->LoadCuePoint();
 
             pCP = pCues->GetLast();
             assert(pCP);
@@ -3785,7 +3773,7 @@ LONGLONG WebmMfSource::Command::GetClusterPos(LONGLONG time_ns) const
             if (pCP->GetTime(pSegment) >= time_ns)
                 break;
 
-            if (!bMore)
+            if (pCues->DoneParsing())
                 break;
         }
 

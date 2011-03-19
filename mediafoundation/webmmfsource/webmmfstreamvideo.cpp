@@ -298,7 +298,7 @@ void WebmMfStreamVideo::SetCurrBlockIndex(const mkvparser::Cluster* pCluster)
 
     for (;;)
     {
-        const bool bMore = pCues->LoadCuePoint();
+        pCues->LoadCuePoint();
 
         pCP = pCues->GetLast();
         assert(pCP);
@@ -306,7 +306,7 @@ void WebmMfStreamVideo::SetCurrBlockIndex(const mkvparser::Cluster* pCluster)
         if (pCP->GetTime(pSegment) >= m_time_ns)
             break;
 
-        if (!bMore)
+        if (pCues->DoneParsing())
             break;
     }
 
@@ -906,7 +906,7 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
     {
         for (;;)
         {
-            const bool bMore = pCues->LoadCuePoint();
+            pCues->LoadCuePoint();
 
             pCP = pCues->GetLast();
             assert(pCP);
@@ -914,7 +914,7 @@ HRESULT WebmMfStreamVideo::GetSample(IUnknown* pToken)
             if (pCP->GetTime(pSegment) >= m_time_ns)
                 break;
 
-            if (!bMore)
+            if (pCues->DoneParsing())
                 break;
         }
 
