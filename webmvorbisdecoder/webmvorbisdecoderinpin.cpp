@@ -254,6 +254,7 @@ HRESULT Inpin::BeginFlush()
 #endif
 
     m_bFlush = true;
+    m_first_reftime = -1;
 
     if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
     {
