@@ -451,28 +451,6 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
 #define DEBUG_RECEIVE
 
-#ifdef DEBUG_RECEIVE
-    {
-        odbgstream os;
-        os << "webmvorbisdec::inpin::receive: ";
-
-        os << std::fixed << std::setprecision(3);
-
-        if (hr == S_OK)
-            os << "start[ms]="
-               << double(start_reftime_) / 10000
-               << "; stop[ms]="
-               << double(stop_reftime_) / 10000
-               << "; dt[ms]="
-               << double(stop_reftime_ - start_reftime_) / 10000;
-
-        else if (hr == VFW_S_NO_STOP_TIME)
-            os << "start[ms]=" << double(start_reftime_) / 10000;
-
-        os << endl;
-    }
-#endif
-
     Filter::Lock lock;
 
     hr = lock.Seize(m_pFilter);
@@ -521,7 +499,43 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
         m_start_reftime = m_first_reftime;
         m_samples = 0;
+
+#ifdef DEBUG_RECEIVE
+        odbgstream os;
+        os << std::fixed << std::setprecision(3);
+
+        os << "\nwebmvorbisdec::Inpin::Receive: RESET FIRST REFTIME;"
+           << " st=" << m_start_reftime
+           << " st[sec]=" << (double(m_start_reftime) / 10000000)
+           << endl;
+#endif
+
+        const int status = vorbis_synthesis_restart(&m_dsp_state);
+        status;
+        assert(status == 0);  //success
     }
+
+#ifdef DEBUG_RECEIVE
+    {
+        odbgstream os;
+        os << "webmvorbisdec::inpin::receive: ";
+
+        os << std::fixed << std::setprecision(3);
+
+        if (hr == S_OK)
+            os << "start[sec]="
+               << double(start_reftime_) / 10000000
+               << "; stop[sec]="
+               << double(stop_reftime_) / 10000000
+               << "; dt[ms]="
+               << double(stop_reftime_ - start_reftime_) / 10000;
+
+        else if (hr == VFW_S_NO_STOP_TIME)
+            os << "start[sec]=" << double(start_reftime_) / 10000000;
+
+        os << endl;
+    }
+#endif
 
     BYTE* buf_in;
 
@@ -660,19 +674,27 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     //hr = pOutSample->SetTime(&start_reftime_, 0);
     assert(SUCCEEDED(hr));
 
-    odbgstream os;
-    os << "webmvorbisdec::Inpin::Receive: total_samples="
-       << total_samples
-       << " samples="
-       << m_samples
-       << " secs="
-       << secs
-       << " st=" << m_start_reftime
-       << " st[ms]=" << (double(m_start_reftime) / 10000)
-       << " sp=" << stop_reftime
-       << " sp[ms]=" << (double(stop_reftime) / 10000)
-       << " dt[ms]=" << (double(stop_reftime - m_start_reftime) / 10000)
-       << endl;
+#ifdef DEBUG_RECEIVE
+    {
+        odbgstream os;
+        os << std::fixed << std::setprecision(3);
+
+        os << "webmvorbisdec::Inpin::Receive:"
+           //<< " st=" << m_start_reftime
+           << " st[sec]=" << (double(m_start_reftime) / 10000000)
+           //<< " sp=" << stop_reftime
+           << " sp[sec]=" << (double(stop_reftime) / 10000000)
+           << " dt[ms]=" << (double(stop_reftime - m_start_reftime) / 10000)
+           << " total_samples="
+           << total_samples
+           << " samples[count]="
+           << m_samples
+           << " samples[secs]="
+           << secs
+           << '\n'
+           << endl;
+    }
+#endif
 
     m_start_reftime = stop_reftime;
 
@@ -690,14 +712,14 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     hr = lock.Release();
     assert(SUCCEEDED(hr));
 
-    os << "webmvorbisdec::Inpin::Receive: calling downstream pin (before)"
-       << endl;
+    //os << "webmvorbisdec::Inpin::Receive: calling downstream pin (before)"
+    //   << endl;
 
     hr = outpin.m_pInputPin->Receive(pOutSample);
 
-    os << "webmvorbisdec::Inpin::Receive: called downstream pin (after); "
-       << "hr=0x" << hex << hr << dec
-       << endl;
+    //os << "webmvorbisdec::Inpin::Receive: called downstream pin (after); "
+    //   << "hr=0x" << hex << hr << dec
+    //   << endl;
 
     return hr;
 }
