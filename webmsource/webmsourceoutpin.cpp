@@ -514,7 +514,7 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
         return S_OK;
     }
 
-    if (pSegment->Unparsed() <= 0)  //done parsing
+    if (pSegment->DoneParsing())
     {
         const Cluster* const pCluster = pSegment->GetLast();
 
@@ -534,6 +534,9 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
 
     if (const Cues* pCues = pSegment->GetCues())
     {
+        while (!pCues->DoneParsing())
+            pCues->LoadCuePoint();
+
         const CuePoint* const pCP = pCues->GetLast();
         assert(pCP);  //TODO
 
@@ -591,7 +594,7 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
         }
     }
 
-    const long status = pSegment->LoadCluster();
+    const long status = pSegment->LoadCluster();  //force progress
     assert(status >= 0);
 
     {
