@@ -807,6 +807,30 @@ HRESULT Filter::CreateSegment()
     m_seekBase_ns = -1;
     m_currTime = kNoSeek;
 
+    if (m_pSegment->GetCues())
+        __noop;
+    else if (const mkvparser::SeekHead* pSH = m_pSegment->GetSeekHead())
+    {
+        const int count = pSH->GetCount();
+
+        for (int idx = 0; idx < count; ++idx)
+        {
+            const mkvparser::SeekHead::Entry* const p = pSH->GetEntry(idx);
+
+            if (p->id == 0x0C53BB6B)  //Cues ID
+            {
+                const LONGLONG cues_off = p->pos;  //relative to segment
+                assert(cues_off >= 0);
+
+                long len;
+
+                const long status = m_pSegment->ParseCues(cues_off, pos, len);
+                status;
+                assert(status >= 0);
+            }
+        }
+    }
+
     return S_OK;
 }
 
@@ -968,6 +992,17 @@ void Filter::SetCurrPosition(
 
         if (const Cues* pCues = m_pSegment->GetCues())
         {
+            while (!pCues->DoneParsing())
+            {
+                pCues->LoadCuePoint();
+
+                const CuePoint* const pCP = pCues->GetLast();
+                assert(pCP);
+
+                if (pCP->GetTime(m_pSegment) >= ns)
+                    break;
+            }
+
             const CuePoint* pCP;
             const CuePoint::TrackPosition* pTP;
 
@@ -1049,6 +1084,17 @@ void Filter::SetCurrPosition(
 
         if (const Cues* pCues = m_pSegment->GetCues())
         {
+            while (!pCues->DoneParsing())
+            {
+                pCues->LoadCuePoint();
+
+                const CuePoint* const pCP = pCues->GetLast();
+                assert(pCP);
+
+                if (pCP->GetTime(m_pSegment) >= ns)
+                    break;
+            }
+
             const CuePoint* pCP;
             const CuePoint::TrackPosition* pTP;
 
