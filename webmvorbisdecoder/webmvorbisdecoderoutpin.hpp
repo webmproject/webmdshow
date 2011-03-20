@@ -111,8 +111,23 @@ public:
     void OnInpinConnect(const AM_MEDIA_TYPE&);
     HRESULT OnInpinDisconnect();
 
+    const WAVEFORMATEX* GetFormat() const;
+    //bool m_bDone;
+    //bool Done() const;
+
 private:
     void SetDefaultMediaTypes();
+
+private:
+    HANDLE m_hThread;
+    //HANDLE m_hQuit;
+    //long m_sample_count;  //output buffer quota target
+
+    static unsigned __stdcall ThreadProc(void*);
+    unsigned Main();
+
+    void StartThread();
+    void StopThread();
 
 };
 

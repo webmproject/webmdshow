@@ -32,7 +32,8 @@ namespace WebmVorbisDecoderLib
 Inpin::Inpin(Filter* p) :
     Pin(p, PINDIR_INPUT, L"input"),
     m_bEndOfStream(false),
-    m_bFlush(false)
+    m_bFlush(false),
+    m_bDone(false)
 {
     AM_MEDIA_TYPE mt;
 
@@ -49,7 +50,18 @@ Inpin::Inpin(Filter* p) :
     m_preferred_mtv.Add(mt);
 
     m_packet.packetno = -1;
+
+    m_hSamples = CreateEvent(0, 0, 0, 0);
+    assert(m_hSamples);
 }
+
+
+Inpin::~Inpin()
+{
+    const BOOL b = CloseHandle(m_hSamples);
+    assert(b);
+}
+
 
 HRESULT Inpin::QueryInterface(const IID& iid, void** ppv)
 {
@@ -186,8 +198,6 @@ HRESULT Inpin::ReceiveConnection(
 
     m_pPinConnection = pin;
 
-    //TODO: init decompressor here?
-
     m_pFilter->m_outpin.OnInpinConnect(mt);
 
     return S_OK;
@@ -206,27 +216,20 @@ HRESULT Inpin::EndOfStream()
     if (!bool(m_pPinConnection))
         return VFW_E_NOT_CONNECTED;
 
+#ifdef _DEBUG
+    odbgstream os;
+    os << "webmvorbisdecoder::inpin::EOS" << endl;
+#endif
+
+    if (m_bFlush)
+        return S_FALSE;  //?
+
     m_bEndOfStream = true;
 
-    if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
-    {
-        lock.Release();
+    m_buffers.push_back(0);
 
-#ifdef _DEBUG
-        odbgstream os;
-        os << "webmvorbisdecoder::inpin::EOS: calling pin->EOS" << endl;
-#endif
-
-        const HRESULT hr = pPin->EndOfStream();
-
-#ifdef _DEBUG
-        os << "webmvorbisdecoder::inpin::EOS: called pin->EOS; hr=0x"
-           << hex << hr << dec
-           << endl;
-#endif
-
-        return hr;
-    }
+    const BOOL b = SetEvent(m_hSamples);
+    assert(b);
 
     return S_OK;
 }
@@ -234,6 +237,11 @@ HRESULT Inpin::EndOfStream()
 
 HRESULT Inpin::BeginFlush()
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "webmvorbisdecoder::inpin::beginflush(begin)" << endl;
+#endif
+
     Filter::Lock lock;
 
     HRESULT hr = lock.Seize(m_pFilter);
@@ -244,25 +252,51 @@ HRESULT Inpin::BeginFlush()
     if (!bool(m_pPinConnection))
         return VFW_E_NOT_CONNECTED;
 
-    //TODO:
-    //if (m_bFlush)
-    //    return S_FALSE;
-
-#if 0 //def _DEBUG
-    odbgstream os;
-    os << "webmvorbisdecoder::inpin::beginflush" << endl;
-#endif
+    //IPin::EndOfStream
+    //The IPin::BeginFlush method flushes any queued end-of-stream
+    //notifications. This is intended for input pins only.
 
     m_bFlush = true;
+    m_bEndOfStream = false;
+    m_bDone = false;
     m_first_reftime = -1;
+
+    while (!m_buffers.empty())
+    {
+        IMediaSample* const pSample = m_buffers.front();
+        m_buffers.pop_front();
+
+        if (pSample)
+            pSample->Release();
+    }
+
+    typedef channels_t::iterator iter_t;
+
+    iter_t i = m_channels.begin();
+    const iter_t j = m_channels.end();
+
+    while (i != j)
+    {
+        samples_t& ss = *i++;
+        ss.clear();
+    }
 
     if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
     {
         lock.Release();
 
         const HRESULT hr = pPin->BeginFlush();
+
+#ifdef _DEBUG
+        os << "webmvorbisdecoder::inpin::beginflush(end #1)" << endl;
+#endif
+
         return hr;
     }
+
+#ifdef _DEBUG
+    os << "webmvorbisdecoder::inpin::beginflush(end #2)" << endl;
+#endif
 
     return S_OK;
 }
@@ -286,17 +320,49 @@ HRESULT Inpin::EndFlush()
 #endif
 
     m_bFlush = false;
-    m_bEndOfStream = false;
 
     if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
     {
-        lock.Release();
+        hr = lock.Release();
+        assert(SUCCEEDED(hr));
 
-        const HRESULT hr = pPin->EndFlush();
-        return hr;
+        hr = pPin->EndFlush();
     }
 
     return S_OK;
+}
+
+
+void Inpin::OnCompletion()
+{
+    Filter::Lock lock;
+
+    HRESULT hr = lock.Seize(m_pFilter);
+    assert(SUCCEEDED(hr));
+
+    while (!m_buffers.empty())
+    {
+        IMediaSample* const pSample = m_buffers.front();
+
+        if (pSample == 0)
+            break;
+
+        m_buffers.pop_front();
+        pSample->Release();
+    }
+
+    typedef channels_t::iterator iter_t;
+
+    iter_t i = m_channels.begin();
+    const iter_t j = m_channels.end();
+
+    while (i != j)
+    {
+        samples_t& ss = *i++;
+        ss.clear();
+    }
+
+    m_bDone = true;
 }
 
 
@@ -356,7 +422,8 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (fmt.channels == 0)
         return S_FALSE;
 
-    //TODO: check for max channels value?
+    if (fmt.channels > 2)  //TODO: handle up to 8
+        return S_FALSE;
 
     if (fmt.samplesPerSec == 0)
         return S_FALSE;
@@ -446,10 +513,15 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (pInSample == 0)
         return E_INVALIDARG;
 
-    __int64 start_reftime_, stop_reftime_;
-    HRESULT hr = pInSample->GetTime(&start_reftime_, &stop_reftime_);
+    HRESULT hr;
 
-#define DEBUG_RECEIVE
+//#define DEBUG_RECEIVE
+#undef DEBUG_RECEIVE
+
+#ifdef DEBUG_RECEIVE
+    __int64 start_reftime_, stop_reftime_;
+    hr = pInSample->GetTime(&start_reftime_, &stop_reftime_);
+#endif
 
     Filter::Lock lock;
 
@@ -485,6 +557,9 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (m_bFlush)
         return S_FALSE;
 
+    if (m_bDone)
+        return S_FALSE;
+
     if (m_first_reftime < 0)
     {
         LONGLONG sp;
@@ -492,7 +567,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         hr = pInSample->GetTime(&m_first_reftime, &sp);
 
         if (FAILED(hr))
-            return hr;
+            return S_OK;
 
         if (m_first_reftime < 0)
             return S_OK;
@@ -513,6 +588,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         const int status = vorbis_synthesis_restart(&m_dsp_state);
         status;
         assert(status == 0);  //success
+
+        m_bDiscontinuity = true;
     }
 
 #ifdef DEBUG_RECEIVE
@@ -537,9 +614,23 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     }
 #endif
 
+    Decode(pInSample);
+
+    hr = lock.Release();
+    assert(SUCCEEDED(hr));
+
+    if (FAILED(hr))
+        return hr;
+
+    return PopulateSamples();
+}
+
+
+void Inpin::Decode(IMediaSample* pInSample)
+{
     BYTE* buf_in;
 
-    hr = pInSample->GetPointer(&buf_in);
+    HRESULT hr = pInSample->GetPointer(&buf_in);
     assert(SUCCEEDED(hr));
     assert(buf_in);
 
@@ -558,37 +649,6 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     status = vorbis_synthesis_blockin(&m_dsp_state, &m_block);
     assert(status == 0);  //TODO
 
-#if 0 //TODO
-    if (pInSample->IsPreroll() == S_OK)
-        return S_OK;
-#endif
-
-    hr = lock.Release();
-    assert(SUCCEEDED(hr));
-
-    GraphUtil::IMediaSamplePtr pOutSample;
-
-    hr = outpin.m_pAllocator->GetBuffer(&pOutSample, 0, 0, 0);
-
-    if (FAILED(hr))
-        return S_FALSE;
-
-    assert(bool(pOutSample));
-
-    hr = lock.Seize(m_pFilter);
-
-    if (FAILED(hr))
-        return hr;
-
-    if (m_pFilter->m_state == State_Stopped)
-        return VFW_E_NOT_RUNNING;
-
-    if (!bool(outpin.m_pPinConnection))  //should never happen
-        return S_FALSE;
-
-    if (!bool(outpin.m_pInputPin))  //should never happen
-        return S_FALSE;
-
     typedef VorbisTypes::VORBISFORMAT2 FMT;
 
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
@@ -599,102 +659,111 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     assert(fmt.channels > 0);
     assert(fmt.samplesPerSec > 0);
 
+    float** sv;
+
+    const int pcmout_count = vorbis_synthesis_pcmout(&m_dsp_state, &sv);
+
+    if (pcmout_count <= 0)
+        return;
+
+    assert(sv);
+
+    for (DWORD i = 0; i < fmt.channels; ++i)
+    {
+        const float* const first = sv[i];
+        const float* const last = first + pcmout_count;
+
+        samples_t& ss = m_channels[i];
+        ss.insert(ss.end(), first, last);
+    }
+
+    sv = 0;
+
+    status = vorbis_synthesis_read(&m_dsp_state, pcmout_count);
+    assert(status == 0);
+}
+
+
+void Inpin::PopulateSample(
+    IMediaSample* pOutSample,
+    long target_count,
+    const WAVEFORMATEX& wfx)
+{
+    assert(pOutSample);
+    assert(target_count >= 1);
+
+    const DWORD channels = wfx.nChannels;
+    assert(channels > 0);
+    assert(channels <= 2);  //TODO
+    assert(channels == m_channels.size());
+
+    const long block_align = wfx.nBlockAlign;
+    assert(size_t(block_align) == (channels * sizeof(float)));
+
+    //ALLOCATOR_PROPERTIES props;
+
+    //hr = outpin.m_pAllocator->GetProperties(&props);
+    //assert(SUCCEEDED(hr));
+
+    //if (FAILED(hr))
+    //    return hr;
+
+    //const long cbBuffer = props.cbBuffer;
+    //assert(cbBuffer >= block_align);
+
     const long size = pOutSample->GetSize();
     assert(size >= 0);
+    assert(size >= block_align);
 
-    const long max_samples = size / (fmt.channels * sizeof(float));
-    assert(max_samples > 0);
+    const long samples_ = size / block_align;  //max samples in buffer
+    assert(samples_ >= 1);
+
+    const long samples = (samples_ < target_count) ? samples_ : target_count;
+
+    const long len_out = samples * block_align;
+    assert(len_out <= size);
 
     BYTE* dst;
 
-    hr = pOutSample->GetPointer(&dst);
+    HRESULT hr = pOutSample->GetPointer(&dst);
     assert(SUCCEEDED(hr));
     assert(dst);
 
-    BYTE* const dst_end = dst + size;
+    BYTE* const dst_end = dst + len_out;
     dst_end;
 
-    long total_samples = 0;
-
-    while (total_samples < max_samples)
+    for (long i = 0; i < samples; ++i)
     {
-        float** sv;  //samples vector
-
-        const int count = vorbis_synthesis_pcmout(&m_dsp_state, &sv);
-
-        if (count < 0)  //error?
-            return S_FALSE;
-
-        if (count == 0)
-            break;
-
-        long samples = max_samples - total_samples;
-
-        if (samples > count)
-            samples = count;
-
-        for (long i = 0; i < samples; ++i)
+        for (DWORD j = 0; j < channels; ++j)
         {
-            for (DWORD j = 0; j < fmt.channels; ++j)
-            {
-                const float* const src = sv[j] + i;
-                assert(src);
+            samples_t& ss = m_channels[j];
+            assert(!ss.empty());
 
-                memcpy(dst, src, sizeof(float));
-                dst += sizeof(float);
-            }
+            const float& s = ss.front();
+
+            memcpy(dst, &s, sizeof(float));  //TODO: proper channel mapping
+
+            dst += sizeof(float);
+            assert(dst <= dst_end);
+
+            ss.pop_front();  //OK for deque (horrible for vector)
         }
-
-        assert(dst <= dst_end);
-
-        status = vorbis_synthesis_read(&m_dsp_state, samples);
-        assert(status == 0);
-
-        total_samples += samples;
-        assert(total_samples <= max_samples);
     }
 
-    if (total_samples <= 0)
-        return S_OK;
-
-    const long len_out = total_samples * fmt.channels * sizeof(float);
-    assert(len_out <= size);
+    assert(dst == dst_end);
 
     hr = pOutSample->SetActualDataLength(len_out);
     assert(SUCCEEDED(hr));
 
-    m_samples += total_samples;
+    m_samples += samples;
 
-    const double secs = m_samples / double(fmt.samplesPerSec);
+    const double secs = m_samples / double(wfx.nSamplesPerSec);
     const double ticks = secs * 10000000;
 
     LONGLONG stop_reftime = m_first_reftime + static_cast<LONGLONG>(ticks);
 
     hr = pOutSample->SetTime(&m_start_reftime, &stop_reftime);
-    //hr = pOutSample->SetTime(&start_reftime_, 0);
     assert(SUCCEEDED(hr));
-
-#ifdef DEBUG_RECEIVE
-    {
-        odbgstream os;
-        os << std::fixed << std::setprecision(3);
-
-        os << "webmvorbisdec::Inpin::Receive:"
-           //<< " st=" << m_start_reftime
-           << " st[sec]=" << (double(m_start_reftime) / 10000000)
-           //<< " sp=" << stop_reftime
-           << " sp[sec]=" << (double(stop_reftime) / 10000000)
-           << " dt[ms]=" << (double(stop_reftime - m_start_reftime) / 10000)
-           << " total_samples="
-           << total_samples
-           << " samples[count]="
-           << m_samples
-           << " samples[secs]="
-           << secs
-           << '\n'
-           << endl;
-    }
-#endif
 
     m_start_reftime = stop_reftime;
 
@@ -704,24 +773,116 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     hr = pOutSample->SetPreroll(FALSE);
     assert(SUCCEEDED(hr));
 
+#if 0
     hr = pInSample->IsDiscontinuity();
-    hr = pOutSample->SetDiscontinuity(hr == S_OK);
-
-    hr = pOutSample->SetMediaTime(0, 0);
-
-    hr = lock.Release();
     assert(SUCCEEDED(hr));
 
-    //os << "webmvorbisdec::Inpin::Receive: calling downstream pin (before)"
-    //   << endl;
+    hr = pOutSample->SetDiscontinuity(BOOL(hr == S_OK));
+    assert(SUCCEEDED(hr));
+#else
+    hr = pOutSample->SetDiscontinuity(m_bDiscontinuity ? TRUE : FALSE);
+    assert(SUCCEEDED(hr));
 
-    hr = outpin.m_pInputPin->Receive(pOutSample);
+    m_bDiscontinuity = false;
+#endif
 
-    //os << "webmvorbisdec::Inpin::Receive: called downstream pin (after); "
-    //   << "hr=0x" << hex << hr << dec
-    //   << endl;
+    hr = pOutSample->SetMediaTime(0, 0);
+    assert(SUCCEEDED(hr));
+}
 
-    return hr;
+
+HRESULT Inpin::PopulateSamples()
+{
+    //Filter is NOT locked
+
+    const Outpin& outpin = m_pFilter->m_outpin;
+
+    for (;;)
+    {
+        GraphUtil::IMediaSamplePtr pOutSample;
+
+        HRESULT hr = outpin.m_pAllocator->GetBuffer(&pOutSample, 0, 0, 0);
+
+        if (FAILED(hr))
+            return hr;
+
+        Filter::Lock lock;
+
+        hr = lock.Seize(m_pFilter);
+        assert(SUCCEEDED(hr));
+
+        if (FAILED(hr))
+            return hr;
+
+        if (m_pFilter->m_state == State_Stopped)
+            return VFW_E_NOT_RUNNING;
+
+        if (m_bEndOfStream)
+            return VFW_E_SAMPLE_REJECTED_EOS;
+
+        if (m_bFlush)
+            return S_FALSE;
+
+        if (m_bDone)
+            return S_FALSE;
+
+        if (!bool(outpin.m_pPinConnection))  //weird
+            return S_FALSE;
+
+        if (!bool(outpin.m_pInputPin))  //weird
+            return S_FALSE;
+
+        //if (!bool(outpin.m_pAllocator))  //weird
+        //    return S_FALSE;
+
+        const WAVEFORMATEX* const pwfx = outpin.GetFormat();
+        assert(pwfx);
+        assert(pwfx->nChannels > 0);
+        assert(pwfx->nChannels == m_channels.size());
+
+        const long actual_count = m_channels[0].size();
+        const long target_count = pwfx->nSamplesPerSec / 4;
+
+        if (actual_count < target_count)
+            return S_OK;
+
+        PopulateSample(pOutSample, target_count, *pwfx);
+
+        m_buffers.push_back(pOutSample.Detach());
+
+        const BOOL b = SetEvent(m_hSamples);
+        assert(b);
+    }
+}
+
+
+int Inpin::GetSample(IMediaSample** ppSample)
+{
+    assert(ppSample);
+
+    IMediaSample*& pSample = *ppSample;
+
+    if (m_buffers.empty())
+    {
+        pSample = 0;
+
+        if (m_packet.packetno < 0)  //stopped
+            return -2;  //terminate
+
+        assert(m_pFilter->m_state != State_Stopped);
+        return -1;  //wait
+    }
+
+    assert(!m_bFlush);
+
+    pSample = m_buffers.front();
+    m_buffers.pop_front();
+
+    if (pSample)
+        return 1;
+
+    assert(m_buffers.empty());
+    return 0;  //EOS
 }
 
 
@@ -761,20 +922,7 @@ HRESULT Inpin::ReceiveMultiple(
 
 HRESULT Inpin::ReceiveCanBlock()
 {
-    Filter::Lock lock;
-
-    const HRESULT hr = lock.Seize(m_pFilter);
-
-    if (FAILED(hr))
-        return S_OK;  //?
-
-    if (IMemInputPin* pPin = m_pFilter->m_outpin.m_pInputPin)
-    {
-        lock.Release();
-        return pPin->ReceiveCanBlock();
-    }
-
-    return S_FALSE;
+    return S_OK;  //because we wait for output sample
 }
 
 
@@ -804,6 +952,19 @@ HRESULT Inpin::Start()
 {
     m_bEndOfStream = false;
     m_bFlush = false;
+    m_bDone = false;
+
+    ogg_packet& pkt = m_packet;
+
+    assert(pkt.packetno < 0);
+
+    if (!bool(m_pPinConnection))
+        return S_FALSE;
+
+    const Outpin& outpin = m_pFilter->m_outpin;
+
+    if (!bool(outpin.m_pPinConnection))
+        return S_FALSE;
 
     typedef VorbisTypes::VORBISFORMAT2 FMT;
 
@@ -839,8 +1000,6 @@ HRESULT Inpin::Start()
 
     pb += setup_len;
     assert(pb == pb_end);
-
-    ogg_packet& pkt = m_packet;
 
     pkt.packet = id_buf;
     pkt.bytes = id_len;
@@ -888,12 +1047,32 @@ HRESULT Inpin::Start()
     //m_start_reftime
     //m_samples
 
+    m_channels.clear();
+    m_channels.resize(fmt.channels);
+
+    assert(m_buffers.empty());
+
     return S_OK;
 }
 
 
 void Inpin::Stop()
 {
+    while (!m_buffers.empty())
+    {
+        IMediaSample* const pSample = m_buffers.front();
+        m_buffers.pop_front();
+
+        if (pSample)
+            pSample->Release();
+    }
+
+    const BOOL b = SetEvent(m_hSamples);  //tell thread to terminate
+    assert(b);
+
+    m_channels.clear();
+    m_first_reftime = -1;
+
     if (m_packet.packetno < 0)
         return;
 

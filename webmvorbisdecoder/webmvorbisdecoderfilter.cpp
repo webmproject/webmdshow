@@ -224,7 +224,16 @@ HRESULT Filter::Stop()
         case State_Paused:
         case State_Running:
             m_state = State_Stopped;
-            OnStop();    //decommit outpin's allocator
+
+            //Stop inpin first, to signal thread to terminate.
+            m_inpin.Stop();
+
+            hr = lock.Release();
+            assert(SUCCEEDED(hr));
+
+            //Now stop outpin, to terminate its thread too.
+            m_outpin.Stop();
+
             break;
 
         case State_Stopped:
@@ -508,13 +517,6 @@ void Filter::OnStart()
 
     hr = m_outpin.Start();
     assert(SUCCEEDED(hr));  //TODO
-}
-
-
-void Filter::OnStop()
-{
-    m_outpin.Stop();
-    m_inpin.Stop();
 }
 
 

@@ -18,6 +18,7 @@
 #include <mmreg.h>
 #include <uuids.h>
 #include <cassert>
+#include <process.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include "iidstr.hpp"
@@ -33,16 +34,24 @@ namespace WebmVorbisDecoderLib
 
 
 Outpin::Outpin(Filter* pFilter) :
-    Pin(pFilter, PINDIR_OUTPUT, L"output")
+    Pin(pFilter, PINDIR_OUTPUT, L"output"),
+    m_hThread(0)
 {
     SetDefaultMediaTypes();
+
+    //m_hQuit = CreateEvent(0, 0, 0, 0);
+    //assert(m_hQuit);
 }
 
 
 Outpin::~Outpin()
 {
+    assert(m_hThread == 0);
     assert(!bool(m_pAllocator));
     assert(!bool(m_pInputPin));
+
+    //const BOOL b = CloseHandle(m_hQuit);
+    //assert(b);
 }
 
 
@@ -57,6 +66,10 @@ HRESULT Outpin::Start()  //transition from stopped
     const HRESULT hr = m_pAllocator->Commit();
     hr;
     assert(SUCCEEDED(hr));  //TODO
+
+    //m_bDone = false;
+
+    StartThread();
 
     return S_OK;
 }
@@ -73,6 +86,10 @@ void Outpin::Stop()  //transition to stopped
     const HRESULT hr = m_pAllocator->Decommit();
     hr;
     assert(SUCCEEDED(hr));
+
+    StopThread();
+
+    //m_bDone = true;
 }
 
 
@@ -215,8 +232,10 @@ HRESULT Outpin::Connect(
 
     hr = pInputPin->GetAllocatorRequirements(&props);
 
-    if (props.cBuffers <= 0)
-        props.cBuffers = 10;
+    const long cBuffers = 3;
+
+    if (props.cBuffers < cBuffers)
+        props.cBuffers = cBuffers;
 
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
     assert(mt.formattype == FORMAT_WaveFormatEx);
@@ -225,10 +244,8 @@ HRESULT Outpin::Connect(
 
     const WAVEFORMATEX& wfx = (WAVEFORMATEX&)(*mt.pbFormat);
 
-    const long rate = wfx.nSamplesPerSec;
-    const long size = wfx.nBlockAlign;
-
-    const long cbBuffer = (rate * size) / 2;  //half-sec worth of payload
+    const DWORD target_count = wfx.nSamplesPerSec / 4;
+    const long cbBuffer = target_count * wfx.nBlockAlign;
 
     if (props.cbBuffer < cbBuffer)
         props.cbBuffer = cbBuffer;
@@ -784,6 +801,184 @@ void Outpin::SetDefaultMediaTypes()
     mt.pbFormat = 0;
 
     m_preferred_mtv.Add(mt);
+}
+
+
+const WAVEFORMATEX* Outpin::GetFormat() const
+{
+    if (!bool(m_pPinConnection))
+        return 0;
+
+    if (m_connection_mtv.Empty())
+        return 0;
+
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+    assert(mt.formattype == FORMAT_WaveFormatEx);
+    assert(mt.cbFormat >= sizeof(WAVEFORMATEX));
+    assert(mt.pbFormat);
+
+    const WAVEFORMATEX& wfx = (WAVEFORMATEX&)(*mt.pbFormat);
+
+    return &wfx;
+}
+
+
+void Outpin::StartThread()
+{
+    assert(m_hThread == 0);
+
+    const uintptr_t h = _beginthreadex(
+                            0,  //security
+                            0,  //stack size
+                            &Outpin::ThreadProc,
+                            this,
+                            0,   //run immediately
+                            0);  //thread id
+
+    m_hThread = reinterpret_cast<HANDLE>(h);
+    assert(m_hThread);
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << "webmvorbisdec::Outpin[" << m_id << "]::StartThread: hThread=0x"
+       << hex << h << dec
+       << endl;
+#endif
+}
+
+
+void Outpin::StopThread()
+{
+    if (m_hThread == 0)
+        return;
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << "webmvorbisdec::Outpin[" << m_id << "]::StopThread: hThread=0x"
+       << hex << uintptr_t(m_hThread) << dec
+       << endl;
+#endif
+
+    //BOOL b = SetEvent(m_hQuit);
+    //assert(b);
+
+    const DWORD dw = WaitForSingleObject(m_hThread, 5000);
+    assert(dw == WAIT_OBJECT_0);
+
+    const BOOL b = CloseHandle(m_hThread);
+    assert(b);
+
+    m_hThread = 0;
+}
+
+
+//bool Outpin::Done() const
+//{
+//    if (m_hThread == 0)
+//        return true;
+//
+//    const DWORD dw = WaitForSingleObject(m_hThread, 0);
+//
+//    if (dw == WAIT_TIMEOUT)
+//        return false;
+//
+//    assert(dw == WAIT_OBJECT_0);
+//
+//    return true;
+//}
+
+
+unsigned Outpin::ThreadProc(void* pv)
+{
+    Outpin* const pPin = static_cast<Outpin*>(pv);
+    assert(pPin);
+
+#ifdef _DEBUG
+    wodbgstream os;
+    os << "webmvorbisdec::Outpin["
+       << pPin->m_id
+       << "]::ThreadProc(begin): hThread=0x"
+       << hex << uintptr_t(pPin->m_hThread) << dec
+       << endl;
+#endif
+
+    pPin->Main();
+
+#ifdef _DEBUG
+    os << "webmvorbisdec::Outpin["
+       << pPin->m_id << "]::ThreadProc(end): hThread=0x"
+       << hex << uintptr_t(pPin->m_hThread) << dec
+       << endl;
+#endif
+
+    return 0;
+}
+
+
+unsigned Outpin::Main()
+{
+    assert(bool(m_pPinConnection));
+    assert(bool(m_pInputPin));
+
+    Inpin& inpin = m_pFilter->m_inpin;
+    const HANDLE hSamples = inpin.m_hSamples;
+
+    for (;;)
+    {
+        GraphUtil::IMediaSamplePtr pSample;
+
+        Filter::Lock lock;
+
+        HRESULT hrLock = lock.Seize(m_pFilter);
+        assert(SUCCEEDED(hrLock));
+
+        if (FAILED(hrLock))
+            return 0;  //TODO: signal error
+
+        const int status = inpin.GetSample(&pSample);
+
+        hrLock = lock.Release();
+        assert(SUCCEEDED(hrLock));
+
+        if (FAILED(hrLock))
+            return 0;
+
+        if (status < -1)  //terminate thread
+            return 0;
+
+        if (status == 0)  //EOS (no payload)
+        {
+#ifdef _DEBUG
+            odbgstream os;
+            os << "webmvorbisdec::outpin::EOS: calling pin->EOS" << endl;
+#endif
+
+            const HRESULT hrEOS = m_pPinConnection->EndOfStream();
+            hrEOS;
+
+#ifdef _DEBUG
+            os << "webmvorbisdec::outpin::EOS: called pin->EOS; hr=0x"
+               << hex << hrEOS << dec
+               << endl;
+#endif
+        }
+        else if (status > 0)  //have payload to send downstream
+        {
+            const HRESULT hrReceive = m_pInputPin->Receive(pSample);
+
+            if (hrReceive == S_OK)
+                continue;
+
+            inpin.OnCompletion();
+        }
+
+        const DWORD dw = WaitForSingleObject(hSamples, INFINITE);
+
+        if (dw == WAIT_FAILED)
+            return 0;  //signal error to FGM
+
+        assert(dw == WAIT_OBJECT_0);
+    }
 }
 
 

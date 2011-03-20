@@ -87,7 +87,6 @@ public:
     Outpin m_outpin;
 
 private:
-    void OnStop();
     void OnStart();
 
 };

@@ -10,6 +10,9 @@
 #include "webmvorbisdecoderpin.hpp"
 #include "graphutil.hpp"
 #include "vorbis/codec.h"
+#include <vector>
+#include <deque>
+#include <list>
 
 namespace WebmVorbisDecoderLib
 {
@@ -21,6 +24,7 @@ class Inpin : public Pin, public IMemInputPin
 
 public:
     explicit Inpin(Filter*);
+    ~Inpin();
 
     //IUnknown interface:
 
@@ -80,16 +84,20 @@ public:
     HRESULT Start();  //from stopped to running/paused
     void Stop();      //from running/paused to stopped
 
+    HANDLE m_hSamples;
+    int GetSample(IMediaSample**);
+    void OnCompletion();
+
 protected:
     HRESULT GetName(PIN_INFO&) const;
     HRESULT OnDisconnect();
 
-public:
+private:
     GraphUtil::IMemAllocatorPtr m_pAllocator;
 
-private:
     bool m_bEndOfStream;
     bool m_bFlush;
+    bool m_bDone;
 
     ogg_packet m_packet;
 
@@ -101,6 +109,18 @@ private:
     LONGLONG m_first_reftime;
     LONGLONG m_start_reftime;
     double m_samples;
+    bool m_bDiscontinuity;
+
+    typedef std::deque<float> samples_t;
+    typedef std::vector<samples_t> channels_t;
+    channels_t m_channels;
+
+    typedef std::list<IMediaSample*> buffers_t;
+    buffers_t m_buffers;
+
+    void Decode(IMediaSample*);
+    void PopulateSample(IMediaSample*, long, const WAVEFORMATEX&);
+    HRESULT PopulateSamples();
 
 };
 
