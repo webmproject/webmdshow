@@ -86,7 +86,6 @@ protected:
 
 public:
     GraphUtil::IMemAllocatorPtr m_pAllocator;
-    HRESULT OnApplyPostProcessing();
 
 private:
     bool m_bEndOfStream;
