@@ -1264,6 +1264,17 @@ void Filter::SetCurrPositionVideo(
         __noop;
     else if (const Cues* pCues = m_pSegment->GetCues())
     {
+        while (!pCues->DoneParsing())
+        {
+            pCues->LoadCuePoint();
+
+            const CuePoint* const pCP = pCues->GetLast();
+            assert(pCP);
+
+            if (pCP->GetTime(m_pSegment) >= ns)
+                break;
+        }
+
         const CuePoint* pCP;
         const CuePoint::TrackPosition* pTP;
 
@@ -1385,6 +1396,17 @@ void Filter::SetCurrPositionAudio(
         __noop;
     else if (const Cues* pCues = m_pSegment->GetCues())
     {
+        while (!pCues->DoneParsing())
+        {
+            pCues->LoadCuePoint();
+
+            const CuePoint* const pCP = pCues->GetLast();
+            assert(pCP);
+
+            if (pCP->GetTime(m_pSegment) >= ns)
+                break;
+        }
+
         const CuePoint* pCP;
         const CuePoint::TrackPosition* pTP;
 
