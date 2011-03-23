@@ -117,8 +117,8 @@ STDAPI DllRegisterServer()
             WebmTypes::CLSID_WebmVorbisDecoder,
             friendlyname,
             filename,
-            L"Webm.WebmVorbisDecoder",
-            L"Webm.WebmVorbisDecoder.1",
+            L"Webm.VorbisDecoder",
+            L"Webm.VorbisDecoder.1",
             false,  //not insertable
             false,  //not a control
             ComReg::kBoth,  //DShow filters must support "both"
