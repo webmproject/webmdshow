@@ -717,8 +717,28 @@ HRESULT Outpin::GetDuration(LONGLONG* p)
 
     const Cues* const pCues = pSegment->GetCues();
 
-    if ((pCues != 0) && m_pFilter->InCache() && (pSegment->Unparsed() > 0))
+    if (pSegment->DoneParsing() || !m_pFilter->InCache() || (pCues == 0))
     {
+        const Cluster* const pCluster = pSegment->GetLast();
+
+        if ((pCluster == 0) || pCluster->EOS())
+        {
+            reftime = 0;
+            return S_OK;
+        }
+
+        duration_ns = pCluster->GetLastTime();
+        assert(duration_ns >= 0);
+
+        reftime = duration_ns / 100;
+
+        return S_OK;
+    }
+
+    {
+        while (!pCues->DoneParsing())
+            pCues->LoadCuePoint();
+
         const CuePoint* const pCP = pCues->GetLast();
         assert(pCP);  //TODO
 

@@ -136,7 +136,7 @@ void Filter::Init()
     if (!m_inpin.m_reader.IsOpen())
         return;
 
-    if (m_pSegment->Unparsed() <= 0)
+    if (m_pSegment->DoneParsing())
         return;  //nothing for thread to do
 
     const uintptr_t h = _beginthreadex(
@@ -1074,7 +1074,7 @@ unsigned Filter::Main()
                 return 1;
         }
 
-        const bool bDone = (m_pSegment->Unparsed() <= 0);
+        const bool bDone = m_pSegment->DoneParsing();
 #endif
 
         OnNewCluster();
@@ -1463,8 +1463,8 @@ bool Filter::InCache()
     if (status < 0)
         return false;
 
-    assert(total >= 0);
-    assert(avail <= total);
+    if (total < 0)
+        return false;
 
     return (avail >= total);
 }
