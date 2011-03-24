@@ -24,6 +24,8 @@
 using std::endl;
 using std::hex;
 using std::dec;
+using std::fixed;
+using std::setprecision;
 #endif
 
 namespace VP8DecoderLib
@@ -687,6 +689,15 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     hr = pOutSample->SetDiscontinuity(hr == S_OK);
 
     hr = pOutSample->SetMediaTime(0, 0);
+
+#if 0
+    //LONGLONG st, sp;
+    hr = pOutSample->GetTime(&st, &sp);
+    assert(SUCCEEDED(hr));
+
+    odbgstream os;
+    os << "V: " << fixed << setprecision(3) << (double(st)/10000000.0) << endl;
+#endif
 
     lock.Release();
 
