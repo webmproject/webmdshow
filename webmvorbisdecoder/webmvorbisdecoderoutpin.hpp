@@ -126,6 +126,7 @@ private:
     static unsigned __stdcall ThreadProc(void*);
     unsigned Main();
 
+public:
     void StartThread();
     void StopThread();
 

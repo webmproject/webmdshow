@@ -216,8 +216,10 @@ HRESULT Filter::Stop()
     if (FAILED(hr))
         return hr;
 
-    //odbgstream os;
-    //os << "mkvsplit::Filter::Stop" << endl;
+#ifdef _DEBUG
+    odbgstream os;
+    os << "webmvorbisdec::Filter::Stop(begin)" << endl;
+#endif
 
     switch (m_state)
     {
@@ -241,6 +243,10 @@ HRESULT Filter::Stop()
             break;
     }
 
+#ifdef _DEBUG
+    os << "webmvorbisdec::Filter::Stop(end)" << endl;
+#endif
+
     return S_OK;
 }
 
@@ -257,8 +263,10 @@ HRESULT Filter::Pause()
     if (FAILED(hr))
         return hr;
 
-    //odbgstream os;
-    //os << "mkvsplit::Filter::Pause" << endl;
+#ifdef _DEBUG
+    odbgstream os;
+    os << "webmvorbisdec::Filter::Pause" << endl;
+#endif
 
     switch (m_state)
     {
@@ -286,8 +294,10 @@ HRESULT Filter::Run(REFERENCE_TIME start)
     if (FAILED(hr))
         return hr;
 
-    //odbgstream os;
-    //os << "mkvsplit::Filter::Run" << endl;
+#ifdef _DEBUG
+    odbgstream os;
+    os << "webmvorbisdec::Filter::Run" << endl;
+#endif
 
     switch (m_state)
     {

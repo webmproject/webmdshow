@@ -67,8 +67,6 @@ HRESULT Outpin::Start()  //transition from stopped
     hr;
     assert(SUCCEEDED(hr));  //TODO
 
-    //m_bDone = false;
-
     StartThread();
 
     return S_OK;

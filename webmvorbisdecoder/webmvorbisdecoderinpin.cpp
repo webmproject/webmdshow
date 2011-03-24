@@ -252,14 +252,112 @@ HRESULT Inpin::BeginFlush()
     if (!bool(m_pPinConnection))
         return VFW_E_NOT_CONNECTED;
 
+    //IPin::BeginFlush
+    //In a flush operation, a filter discards whatever data it was processing.
+    //It rejects new data until the flush is completed. The flush is
+    //completed when the upstream pin calls the IPin::EndFlush method.
+    //Flushing enables the filter graph to be more responsive when events
+    //alter the normal data flow. For example, flushing occurs during a seek.
+    //
+    //When BeginFlush is called, the filter performs the following steps:
+    //
+    //(1) Passes the IPin::BeginFlush call downstream.
+    //
+    //(2) Sets an internal flag that causes all data-streaming methods to
+    //    fail, such as IMemInputPin::Receive.
+    //
+    //(3) Returns from any blocked calls to the Receive method.
+    //
+    //
+    //When the BeginFlush notification reaches a renderer filter,
+    //the renderer frees any samples that it holds.
+    //
+    //After BeginFlush is called, the pin rejects all samples from upstream,
+    //with a return value of S_FALSE, until the IPin::EndFlush method is
+    //called.
+
     //IPin::EndOfStream
     //The IPin::BeginFlush method flushes any queued end-of-stream
     //notifications. This is intended for input pins only.
 
     m_bFlush = true;
+
+    Outpin& outpin = m_pFilter->m_outpin;
+
+    if (IPin* const pPin = outpin.m_pPinConnection)
+    {
+#ifdef _DEBUG
+        os << "webmvorbisdecoder::inpin::beginflush:"
+           << " flushing downstream filter"
+           << endl;
+#endif
+
+        hr = pPin->BeginFlush();  //safe to do this here, while holding lock?
+
+#ifdef _DEBUG
+        os << "webmvorbisdecoder::inpin::beginflush:"
+           << " called BeginFlush: hr=0x" << hex << hr << dec
+           << "\nwebmvorbisdecoder::inpin::beginflush: waiting for thread"
+           << "to terminate"
+           << endl;
+#endif
+
+        const BOOL b = SetEvent(m_hSamples);  //to terminate thread
+        assert(b);
+
+        hr = lock.Release();
+        assert(SUCCEEDED(hr));
+
+        //The thread might not exist yet, if we have been connected but not
+        //started.  In which case, attempting to stop the thread is benign.
+
+        outpin.StopThread();
+    }
+
+#ifdef _DEBUG
+    os << "webmvorbisdecoder::inpin::beginflush(end #2): thread terminated"
+       << endl;
+#endif
+
+    return S_OK;
+}
+
+
+HRESULT Inpin::EndFlush()
+{
+    Filter::Lock lock;
+
+    HRESULT hr = lock.Seize(m_pFilter);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (!bool(m_pPinConnection))
+        return VFW_E_NOT_CONNECTED;
+
+#ifdef _DEBUG
+    odbgstream os;
+    os << "webmvorbisdecoder::inpin::endflush(begin)" << endl;
+#endif
+
+    //IPin::EndFlush
+    //When this method is called, the filter performs the following actions:
+    //
+    //(1) Waits for all queued samples to be discarded.
+    //
+    //(2) Frees any buffered data, including any pending end-of-stream
+    //notifications.
+    //
+    //(3) Clears any pending EC_COMPLETE notifications.
+    //
+    //(4) Calls EndFlush downstream.
+    //
+    //When the method returns, the pin can accept new samples.
+
+    m_bFlush = false;
     m_bEndOfStream = false;
-    m_bDone = false;
     m_first_reftime = -1;
+    m_bDone = false;
 
     while (!m_buffers.empty())
     {
@@ -281,53 +379,38 @@ HRESULT Inpin::BeginFlush()
         ss.clear();
     }
 
-    if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
+    Outpin& outpin = m_pFilter->m_outpin;
+
+    if (IPin* const pPin = outpin.m_pPinConnection)
     {
-        lock.Release();
-
-        const HRESULT hr = pPin->BeginFlush();
-
 #ifdef _DEBUG
-        os << "webmvorbisdecoder::inpin::beginflush(end #1)" << endl;
+        os << "webmvorbisdecoder::inpin::endflush: calling endflush on"
+           << " downstream filter"
+           << endl;
 #endif
 
-        return hr;
+        hr = pPin->EndFlush();  //safe to call this without releasing lock?
+
+        if (m_pFilter->m_state != State_Stopped)
+        {
+#ifdef _DEBUG
+            os << "webmvorbisdecoder::inpin::endflush: state != stopped,"
+               << " so starting thread"
+               << endl;
+#endif
+
+            outpin.StartThread();
+
+#ifdef _DEBUG
+            os << "webmvorbisdecoder::inpin::endflush: started thread"
+               << endl;
+#endif
+        }
     }
 
 #ifdef _DEBUG
-    os << "webmvorbisdecoder::inpin::beginflush(end #2)" << endl;
+    os << "webmvorbisdecoder::inpin::endflush(end)" << endl;
 #endif
-
-    return S_OK;
-}
-
-
-HRESULT Inpin::EndFlush()
-{
-    Filter::Lock lock;
-
-    HRESULT hr = lock.Seize(m_pFilter);
-
-    if (FAILED(hr))
-        return hr;
-
-    if (!bool(m_pPinConnection))
-        return VFW_E_NOT_CONNECTED;
-
-#if 0 //def _DEBUG
-    odbgstream os;
-    os << "webmvorbisdecoder::inpin::endflush" << endl;
-#endif
-
-    m_bFlush = false;
-
-    if (IPin* pPin = m_pFilter->m_outpin.m_pPinConnection)
-    {
-        hr = lock.Release();
-        assert(SUCCEEDED(hr));
-
-        hr = pPin->EndFlush();
-    }
 
     return S_OK;
 }
@@ -344,8 +427,8 @@ void Inpin::OnCompletion()
     {
         IMediaSample* const pSample = m_buffers.front();
 
-        if (pSample == 0)
-            break;
+        if (pSample == 0)  //EOS notification
+            break;         //don't throw EOS notification away
 
         m_buffers.pop_front();
         pSample->Release();
@@ -862,6 +945,12 @@ int Inpin::GetSample(IMediaSample** ppSample)
 
     IMediaSample*& pSample = *ppSample;
 
+    if (m_bFlush)
+    {
+        pSample = 0;
+        return -2;  //terminate
+    }
+
     if (m_buffers.empty())
     {
         pSample = 0;
@@ -872,8 +961,6 @@ int Inpin::GetSample(IMediaSample** ppSample)
         assert(m_pFilter->m_state != State_Stopped);
         return -1;  //wait
     }
-
-    assert(!m_bFlush);
 
     pSample = m_buffers.front();
     m_buffers.pop_front();
