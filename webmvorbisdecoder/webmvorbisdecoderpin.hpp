@@ -82,6 +82,8 @@ public:
     //    REFERENCE_TIME tStop,
     //    double dRate);
 
+    enum { kSampleRateDivisor = 8 };
+
 protected:
     virtual HRESULT GetName(PIN_INFO&) const = 0;
     virtual HRESULT OnDisconnect();

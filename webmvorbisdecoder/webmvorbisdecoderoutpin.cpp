@@ -21,10 +21,13 @@
 #include <process.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
+#include <iomanip>
 #include "iidstr.hpp"
 using std::endl;
 using std::dec;
 using std::hex;
+using std::fixed;
+using std::setprecision;
 #endif
 
 using std::wstring;
@@ -242,7 +245,7 @@ HRESULT Outpin::Connect(
 
     const WAVEFORMATEX& wfx = (WAVEFORMATEX&)(*mt.pbFormat);
 
-    const DWORD target_count = wfx.nSamplesPerSec / 4;
+    const DWORD target_count = wfx.nSamplesPerSec / Pin::kSampleRateDivisor;
     const long cbBuffer = target_count * wfx.nBlockAlign;
 
     if (props.cbBuffer < cbBuffer)
@@ -962,6 +965,19 @@ unsigned Outpin::Main()
         }
         else if (status > 0)  //have payload to send downstream
         {
+#if 0
+            LONGLONG st, sp;
+            const HRESULT hr = pSample->GetTime(&st, &sp);
+            assert(SUCCEEDED(hr));
+
+            odbgstream os;
+            os << "A: "
+               << fixed
+               << setprecision(3)
+               << (double(st)/10000000.0)
+               << endl;
+#endif
+
             const HRESULT hrReceive = m_pInputPin->Receive(pSample);
 
             if (hrReceive == S_OK)

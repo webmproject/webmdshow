@@ -923,13 +923,13 @@ HRESULT Inpin::PopulateSamples()
         assert(pwfx->nChannels > 0);
         assert(pwfx->nChannels == m_channels.size());
 
-        const long actual_count = m_channels[0].size();
-        const long target_count = pwfx->nSamplesPerSec / 4;
+        const long actual = m_channels[0].size();
+        const long target = pwfx->nSamplesPerSec / Pin::kSampleRateDivisor;
 
-        if (actual_count < target_count)
+        if (actual < target)
             return S_OK;
 
-        PopulateSample(pOutSample, target_count, *pwfx);
+        PopulateSample(pOutSample, target, *pwfx);
 
         m_buffers.push_back(pOutSample.Detach());
 
