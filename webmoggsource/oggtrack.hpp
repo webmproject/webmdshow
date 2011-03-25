@@ -34,7 +34,7 @@ public:
     virtual void GetMediaTypes(CMediaTypes&) const = 0;
     virtual HRESULT QueryAccept(const AM_MEDIA_TYPE*) const = 0;
 
-    //HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&);
+    virtual HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&) = 0;
     virtual HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const = 0;
 
     virtual HRESULT GetSampleCount(long&) = 0;

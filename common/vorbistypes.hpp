@@ -30,6 +30,7 @@ namespace VorbisTypes
 
     //Matroska/FFmpeg:
     extern const GUID MEDIASUBTYPE_Vorbis2;
+    extern const GUID MEDIASUBTYPE_Vorbis2_Xiph_Lacing;
     extern const GUID FORMAT_Vorbis2;
 
     //Xiph/Ogg Decoder:

@@ -232,13 +232,16 @@ INTERFACENAME = { /* ED3110FF-5211-11DF-94AF-0026B977EEAA */
 //  };
 
 
+//webm vorbis2 subtype with Xiph lacing: MEDIASUBTYPE_Vorbis2_Xiph_Lacing
+//INTERFACENAME = { /* ED311105-5211-11DF-94AF-0026B977EEAA */
+//    0xED311105,
+//    0x5211,
+//    0x11DF,
+//    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
+//  };
+
+
 //unclaimed:
-INTERFACENAME = { /* ED311105-5211-11DF-94AF-0026B977EEAA */
-    0xED311105,
-    0x5211,
-    0x11DF,
-    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
-  };
 INTERFACENAME = { /* ED311106-5211-11DF-94AF-0026B977EEAA */
     0xED311106,
     0x5211,

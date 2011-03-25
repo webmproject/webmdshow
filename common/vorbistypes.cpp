@@ -18,6 +18,16 @@ const GUID VorbisTypes::MEDIASUBTYPE_Vorbis2 =
     { 0x89, 0x05, 0x58, 0x8F, 0xEC, 0x1A, 0xDE, 0xD9 }
 };
 
+
+const GUID VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing =
+{ /* ED311105-5211-11DF-94AF-0026B977EEAA */
+    0xED311105,
+    0x5211,
+    0x11DF,
+    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
+};
+
+
 // {B36E107F-A938-4387-93C7-55E966757473}
 const GUID VorbisTypes::FORMAT_Vorbis2 =
 {

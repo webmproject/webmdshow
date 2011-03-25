@@ -15,8 +15,8 @@ using std::setprecision;
 
 using namespace oggparser;
 
-enum { cBuffers = 1024 };
-enum { cbBuffer = 1024 };
+//enum { cBuffers = 1024 };
+//enum { cbBuffer = 1024 };
 
 namespace WebmOggSource
 {
@@ -50,7 +50,9 @@ OggTrackAudio::OggTrackAudio(
     ULONG id) :
     OggTrack(pStream, id),
     m_granule_pos(0),
-    m_reftime(0)
+    m_reftime(0),
+    m_pfnGetSampleCount(0),
+    m_pfnPopulateSamples(0)
 {
 }
 
@@ -148,6 +150,9 @@ void OggTrackAudio::GetMediaTypes(CMediaTypes& mtv) const
     mt.pbFormat = pb;
 
     mtv.Add(mt);
+
+    mt.subtype = VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing;
+    mtv.Add(mt);
 }
 
 
@@ -161,8 +166,15 @@ HRESULT OggTrackAudio::QueryAccept(const AM_MEDIA_TYPE* pmt) const
     if (mt.majortype != MEDIATYPE_Audio)
         return S_FALSE;
 
-    if (mt.subtype != VorbisTypes::MEDIASUBTYPE_Vorbis2)
+    if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2)
+        __noop;
+    else if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing)
+        __noop;
+    else
         return S_FALSE;
+
+    if (mt.formattype == GUID_NULL)
+        return S_OK;  //for now, just ignore remaining items
 
     if (mt.formattype != VorbisTypes::FORMAT_Vorbis2)
         return S_FALSE;
@@ -201,22 +213,53 @@ HRESULT OggTrackAudio::QueryAccept(const AM_MEDIA_TYPE* pmt) const
 }
 
 
+HRESULT OggTrackAudio::SetConnectionMediaType(const AM_MEDIA_TYPE& mt)
+{
+    if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2)
+    {
+        m_pfnGetSampleCount = &OggTrackAudio::GetSampleCountVorbis2;
+        m_pfnPopulateSamples = &OggTrackAudio::PopulateSamplesVorbis2;
+    }
+    else if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing)
+    {
+        m_pfnGetSampleCount =
+            &OggTrackAudio::GetSampleCountVorbis2XiphLacing;
+
+        m_pfnPopulateSamples =
+            &OggTrackAudio::PopulateSamplesVorbis2XiphLacing;
+    }
+    else
+        return E_FAIL;
+
+    m_subtype = mt.subtype;
+    return S_OK;
+}
+
+
 HRESULT OggTrackAudio::UpdateAllocatorProperties(
     ALLOCATOR_PROPERTIES& props) const
 {
-    if (props.cBuffers <= 0)
+    long cBuffers;
+    long cbBuffer;
+
+    if (m_subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2)
+    {
+        cBuffers = 256;
+        cbBuffer = 8 * 1024;  //TODO: synthesize a better estimate
+    }
+    else
+    {
+        assert(m_subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing);
+
+        cBuffers = 1;
+        cbBuffer = 64 * 1024;
+    }
+
+    if (props.cBuffers < cBuffers)
         props.cBuffers = cBuffers;
 
-#if 0
-    const long size = GetBufferSize();
-    assert(size > 0);
-
-    if (props.cbBuffer < size)
-        props.cbBuffer = size;
-#else
     if (props.cbBuffer < cbBuffer)
         props.cbBuffer = cbBuffer;
-#endif
 
     if (props.cbAlign <= 0)
         props.cbAlign = 1;
@@ -252,6 +295,12 @@ std::wstring OggTrackAudio::GetCodecName() const
 
 HRESULT OggTrackAudio::GetSampleCount(long& count)
 {
+    return (this->*m_pfnGetSampleCount)(count);
+}
+
+
+HRESULT OggTrackAudio::GetSampleCountVorbis2(long& count)
+{
     //m_granule_pos represents the trailing edge of the
     //audio we have already consumed.  It is therefore
     //the leading edge of the sample(s) we are about
@@ -281,38 +330,9 @@ HRESULT OggTrackAudio::GetSampleCount(long& count)
             assert(pkt.granule_pos > m_granule_pos);
 
             count = m_packets.size();
-            assert(count <= cBuffers);
-
             return S_OK;
         }
     }
-
-#if 0
-    count = 0;
-
-    typedef packets_t::const_iterator iter_t;
-
-    iter_t i = m_packets.begin();
-    const iter_t j = m_packets.end();
-
-    while (i != j)
-    {
-        ++count;
-
-        const OggStream::Packet& pkt = *i;
-
-        if (pkt.granule_pos >= 0)
-        {
-            assert(pkt.granule_pos > m_granule_pos);
-            break;
-        }
-    }
-
-    if (i != j)  //found an eligible packet
-        return S_OK;
-
-    assert(count == m_packets.size());
-#endif
 
     for (;;)
     {
@@ -328,13 +348,16 @@ HRESULT OggTrackAudio::GetSampleCount(long& count)
                     return E_FAIL;
 
                 count = m_packets.size();
-                assert(count <= cBuffers);
 
-                return (count <= 0) ? S_FALSE : S_OK;
+                if (count <= 0)
+                    return S_FALSE;
+
+                if (m_packets.back().granule_pos < 0)
+                    return E_FAIL;
+
+                return S_OK;
             }
         }
-
-        assert(pkt.GetLength() <= cbBuffer);
 
         m_packets.push_back(pkt);
 
@@ -343,8 +366,61 @@ HRESULT OggTrackAudio::GetSampleCount(long& count)
             assert(pkt.granule_pos > m_granule_pos);
 
             count = m_packets.size();
-            assert(count <= cBuffers);
+            return S_OK;
+        }
+    }
+}
 
+
+HRESULT OggTrackAudio::GetSampleCountVorbis2XiphLacing(long& count)
+{
+    if (m_granule_pos < 0)
+        return E_FAIL;
+
+    if (!m_packets.empty())  //weird
+    {
+        const OggStream::Packet& pkt = m_packets.back();
+
+        if (pkt.granule_pos >= 0)
+        {
+            assert(pkt.granule_pos > m_granule_pos);
+
+            count = 1;
+            return S_OK;
+        }
+    }
+
+    for (;;)
+    {
+        OggStream::Packet pkt;
+
+        while (m_pStream->GetPacket(pkt) < 1)  //not found
+        {
+            const long result = m_pStream->Parse();
+
+            if (result < 0)  //error
+            {
+                if (result != oggparser::E_END_OF_FILE)
+                    return E_FAIL;
+
+                if (m_packets.empty())
+                    return S_FALSE;
+
+                if (m_packets.back().granule_pos < 0)
+                    return E_FAIL;
+
+                count = 1;
+                return S_OK;
+            }
+        }
+
+        m_packets.push_back(pkt);
+
+        if (pkt.granule_pos >= 0)
+        {
+            assert(pkt.granule_pos > m_granule_pos);
+
+            count = 1;
             return S_OK;
         }
     }
@@ -352,6 +428,12 @@ HRESULT OggTrackAudio::GetSampleCount(long& count)
 
 
 HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
+{
+    return (this->*m_pfnPopulateSamples)(ss);
+}
+
+
+HRESULT OggTrackAudio::PopulateSamplesVorbis2(const samples_t& ss)
 {
     if (m_packets.empty())
         return E_FAIL;
@@ -368,7 +450,12 @@ HRESULT OggTrackAudio::PopulateSamples(const samples_t& ss)
         return E_FAIL;
 
     const LONGLONG granule_pos = m_packets.back().granule_pos;
-    assert((granule_pos < 0) || (granule_pos > m_granule_pos));
+
+    if (granule_pos < 0)
+        return E_FAIL;
+
+    if (granule_pos <= m_granule_pos)
+        return E_FAIL;
 
     float samples_per_packet;
 
@@ -484,7 +571,6 @@ HRESULT OggTrackAudio::PopulateSample(
 
     const long len = pkt.GetLength();
     assert(len > 0);
-    assert(len <= cbBuffer);
 
     BYTE* ptr;
 
@@ -524,6 +610,231 @@ HRESULT OggTrackAudio::PopulateSample(
     return S_OK;
 }
 
+
+HRESULT OggTrackAudio::PopulateSamplesVorbis2XiphLacing(const samples_t& ss)
+{
+    packets_t::size_type packet_count = m_packets.size();
+
+    if (packet_count == 0)
+        return E_FAIL;
+
+    if (packet_count > 256)
+        return E_FAIL;
+
+    if (ss.size() != 1)
+        return E_FAIL;
+
+    if (m_granule_pos < 0)
+        return E_FAIL;
+
+    if (m_reftime < 0)
+        return E_FAIL;
+
+    const LONGLONG granule_pos = m_packets.back().granule_pos;
+
+    if (granule_pos < 0)
+        return E_FAIL;
+
+    if (granule_pos <= m_granule_pos)
+        return E_FAIL;
+
+    IMediaSample* const pSample = ss.front();
+    assert(pSample);
+
+    BYTE* tgt_ptr;
+
+    HRESULT hr = pSample->GetPointer(&tgt_ptr);
+    assert(SUCCEEDED(hr));
+    assert(tgt_ptr);
+
+    const long tgt_size = pSample->GetSize();
+
+    if (tgt_size <= 0)
+        return E_FAIL;
+
+    BYTE* const tgt_buf = tgt_ptr;
+    BYTE* const tgt_end = tgt_buf + tgt_size;
+
+    *tgt_ptr++ = static_cast<BYTE>(--packet_count);  //biased count
+
+#if 0
+    while (packet_count > 0)
+    {
+        assert(m_packets.size() > 1);
+        const OggStream::Packet& pkt = m_packets.front();
+
+        const long pkt_len = pkt.GetLength();
+
+        if (pkt_len <= 0)
+            return E_FAIL;
+
+        long len = pkt_len;
+
+        while (len >= 255)
+        {
+            if (tgt_ptr >= tgt_end)
+                return E_FAIL;
+
+            *tgt_ptr++ = 255;
+            len -= 255;
+        }
+
+        {
+            if (tgt_ptr >= tgt_end)
+                return E_FAIL;
+
+            *tgt_ptr++ = static_cast<BYTE>(len);
+        }
+
+        if ((tgt_ptr + pkt_len) >= tgt_end)
+            return E_FAIL;
+
+        const long result = pkt.Copy(m_pStream->m_pReader, tgt_ptr);
+        result;
+        assert(result == pkt_len);
+
+        if (*tgt_ptr & 0x01)  //first byte of audio frame always even
+            return E_FAIL;
+
+        tgt_ptr += pkt_len;
+        assert(tgt_ptr < tgt_end);
+
+        m_packets.pop_front();
+        assert(!m_packets.empty());
+
+        --packet_count;
+    }
+
+    {
+        assert(m_packets.size() == 1);
+        const OggStream::Packet& pkt = m_packets.front();
+
+        const long pkt_len = pkt.GetLength();
+
+        if (pkt_len <= 0)
+            return E_FAIL;
+
+        if ((tgt_ptr + pkt_len) > tgt_end)
+            return E_FAIL;
+
+        const long result = pkt.Copy(m_pStream->m_pReader, tgt_ptr);
+        result;
+        assert(result == pkt_len);
+
+        if (*tgt_ptr & 0x01)  //first byte for audio frame always even
+            return E_FAIL;
+
+        tgt_ptr += pkt_len;
+        assert(tgt_ptr <= tgt_end);
+
+        m_packets.pop_front();
+        assert(m_packets.empty());
+    }
+#else
+    typedef packets_t::iterator iter_t;
+
+    iter_t iter = m_packets.begin();
+    const iter_t iter_end = m_packets.end();
+
+    while (packet_count > 0)
+    {
+        assert(iter != iter_end);
+        const OggStream::Packet& pkt = *iter++;
+
+        const long pkt_len = pkt.GetLength();
+
+        if (pkt_len <= 0)
+            return E_FAIL;
+
+        long len = pkt_len;
+
+        while (len >= 255)
+        {
+            if (tgt_ptr >= tgt_end)
+                return E_FAIL;
+
+            *tgt_ptr++ = 255;
+            len -= 255;
+        }
+
+        {
+            if (tgt_ptr >= tgt_end)
+                return E_FAIL;
+
+            *tgt_ptr++ = static_cast<BYTE>(len);
+        }
+
+        --packet_count;
+    }
+
+    assert(iter != iter_end);
+    ++iter;
+    assert(iter == iter_end);
+
+    while (!m_packets.empty())
+    {
+        const OggStream::Packet& pkt = m_packets.front();
+
+        const long pkt_len = pkt.GetLength();
+
+        if (pkt_len <= 0)
+            return E_FAIL;
+
+        if ((tgt_ptr + pkt_len) > tgt_end)
+            return E_FAIL;
+
+        const long result = pkt.Copy(m_pStream->m_pReader, tgt_ptr);
+        result;
+        assert(result == pkt_len);
+
+        if (*tgt_ptr & 0x01)  //first byte for audio frame always even
+            return E_FAIL;
+
+        tgt_ptr += pkt_len;
+        assert(tgt_ptr <= tgt_end);
+
+        m_packets.pop_front();
+    }
+#endif
+
+    const long tgt_len = tgt_ptr - tgt_buf;
+    assert(tgt_len <= tgt_size);
+
+    hr = pSample->SetActualDataLength(tgt_len);
+    assert(SUCCEEDED(hr));
+
+    LONGLONG curr_samples = m_granule_pos;
+    LONGLONG curr_reftime = m_reftime;
+
+    m_granule_pos = granule_pos;  //next_samples
+
+    const float next_samples_ = static_cast<float>(m_granule_pos);
+    const float samples_per_sec = static_cast<float>(m_fmt.sample_rate);
+
+    const float next_sec = next_samples_ / samples_per_sec;
+    const float next_reftime_ = next_sec * 10000000.0F;
+
+    m_reftime = static_cast<LONGLONG>(next_reftime_);  //next_reftime
+
+    hr = pSample->SetMediaTime(&curr_samples, &m_granule_pos);
+    assert(SUCCEEDED(hr));
+
+    hr = pSample->SetTime(&curr_reftime, &m_reftime);
+    assert(SUCCEEDED(hr));
+
+    hr = pSample->SetDiscontinuity(m_bDiscontinuity ? TRUE : FALSE);
+    assert(SUCCEEDED(hr));
+
+    m_bDiscontinuity = false;
+
+    hr = pSample->SetSyncPoint(TRUE);
+    assert(SUCCEEDED(hr));
+
+    hr = pSample->SetPreroll(FALSE);
+    assert(SUCCEEDED(hr));
+
+    return S_OK;
+}
 
 //REFERENCE_TIME OggTrackAudio::GetCurrTime() const
 //{

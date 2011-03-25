@@ -222,12 +222,35 @@ HRESULT Outpin::Connect(
         if (hr != S_OK)
             return VFW_E_TYPE_NOT_ACCEPTED;
 
-        hr = pin->ReceiveConnection(this, pmt);
+        //The media type could me only a partial match,
+        //so we need to fill it in before attemping
+        //to use it.
+
+        const ULONG n = m_preferred_mtv.Size();
+        LONG idx = -1;
+
+        for (ULONG i = 0; i < n; ++i)
+        {
+            const AM_MEDIA_TYPE& mt = m_preferred_mtv[i];
+
+            if (pmt->subtype == mt.subtype)
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx < 0)  //weird
+            return VFW_E_TYPE_NOT_ACCEPTED;
+
+        const AM_MEDIA_TYPE& mt = m_preferred_mtv[idx];
+
+        hr = pin->ReceiveConnection(this, &mt);
 
         if (FAILED(hr))
             return hr;
 
-        const AM_MEDIA_TYPE& mt = *pmt;
+        //const AM_MEDIA_TYPE& mt = *pmt;
 
         //hr = m_pTrack->SetConnectionMediaType(mt);
         //
@@ -270,6 +293,9 @@ HRESULT Outpin::Connect(
 
         m_connection_mtv.Add(mt);
     }
+
+    hr = m_pTrack->SetConnectionMediaType(m_connection_mtv[0]);
+    assert(SUCCEEDED(hr));
 
     GraphUtil::IMemAllocatorPtr pAllocator;
 

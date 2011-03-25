@@ -578,7 +578,7 @@ long OggStream::ReadPage(OggPage& page)
         Packet& pkt = m_packets.back();
 
         pkt.descriptors.push_back(d);
-        pkt.granule_pos = -1;  //TODO: must set this!
+        pkt.granule_pos = -1;
 
         dd.pop_front();
     }
