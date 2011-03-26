@@ -313,7 +313,7 @@ long AudioStream::GetBufferSize() const
 
 long AudioStream::GetBufferCount() const
 {
-    return 50;  //?
+    return 256;
 }
 
 
