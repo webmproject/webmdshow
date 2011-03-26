@@ -66,7 +66,8 @@ CmdLine::CmdLine() :
     m_auto_alt_ref(-1),
     m_arnr_maxframes(-1),
     m_arnr_strength(-1),
-    m_arnr_type(-1)
+    m_arnr_type(-1),
+    m_ogg_to_webm(-1)
 {
 }
 
@@ -1276,6 +1277,11 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
+    status = ParseOpt(i, arg, len, L"ogg-to-webm", m_ogg_to_webm, 0, 1, 1);
+
+    if (status)
+        return status;
+
     status = ParseOpt(
                 i,
                 arg,
@@ -1682,6 +1688,11 @@ int CmdLine::GetARNRStrength() const
 int CmdLine::GetARNRType() const
 {
     return m_arnr_type;
+}
+
+int CmdLine::GetOggToWebm() const
+{
+    return m_ogg_to_webm;
 }
 
 void CmdLine::PrintVersion() const

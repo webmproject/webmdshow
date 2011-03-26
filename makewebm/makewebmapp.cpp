@@ -120,19 +120,70 @@ int App::operator()(int argc, wchar_t* argv[])
 
     IBaseFilterPtr pReader;
 
-    hr = pBuilder->AddSourceFilter(
-            m_cmdline.GetInputFileName(),
-            L"source",
-            &pReader);
-
-    if (FAILED(hr))
+    if (m_cmdline.GetOggToWebm() > 0)
     {
-        wcout << "Unable to add source filter to graph.\n"
-              << hrtext(hr)
-              << L" (0x" << hex << hr << dec << L")"
-              << endl;
+        hr = pReader.CreateInstance(WebmTypes::CLSID_WebmOggSource);
 
-        return 1;
+        if (FAILED(hr))
+        {
+            wcout << "Unable to create instance of Ogg source filter.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return 1;
+        }
+
+        const GraphUtil::IFileSourceFilterPtr pFile(pReader);
+
+        if (!pFile)
+        {
+            wcout << "Ogg source filter does not support IFileSourceFilter."
+                  << endl;
+
+            return 1;
+        }
+
+        hr = pFile->Load(m_cmdline.GetInputFileName(), 0);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to load Ogg source filter.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return 1;
+        }
+
+        hr = m_pGraph->AddFilter(pReader, L"oggsource");
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to add Ogg source filter to graph.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return 1;
+        }
+    }
+    else
+    {
+        hr = pBuilder->AddSourceFilter(
+                m_cmdline.GetInputFileName(),
+                L"source",
+                &pReader);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to add source filter to graph.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return 1;
+        }
     }
 
     assert(bool(pReader));
@@ -1306,6 +1357,9 @@ void App::DumpAudioMediaType(const AM_MEDIA_TYPE& mt)
     if (mt.subtype == MEDIASUBTYPE_Vorbis2)
         wcout << "Vorbis2 (Matroska)";
 
+    else if (mt.subtype == MEDIASUBTYPE_Vorbis2_Xiph_Lacing)
+        wcout << "Vorbis2 (Matroska - Xiph Lacing)";
+
     else if (mt.subtype == MEDIASUBTYPE_Vorbis)
         wcout << "Vorbis (Xiph)";
 
@@ -1986,7 +2040,32 @@ HRESULT App::ConnectVideoConverter(IPin* pDemuxOutpin, IPin* pVP8Inpin) const
 
 bool App::ConnectAudio(IPin* pDemuxOutpin, IPin* pMuxInpin) const
 {
-    HRESULT hr = m_pGraph->ConnectDirect(pDemuxOutpin, pMuxInpin, 0);
+    HRESULT hr;
+
+    if (m_cmdline.GetOggToWebm() > 0)
+    {
+        AM_MEDIA_TYPE mt;
+        memset(&mt, 0, sizeof mt);
+
+        mt.majortype = MEDIATYPE_Audio;
+        mt.subtype = VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing;
+
+        hr = m_pGraph->ConnectDirect(pDemuxOutpin, pMuxInpin, &mt);
+
+        if (FAILED(hr))
+        {
+            wcout << L"Unable to connect to muxer using Xiph lacing.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    hr = m_pGraph->ConnectDirect(pDemuxOutpin, pMuxInpin, 0);
 
     if (SUCCEEDED(hr))
         return true;  //connected
