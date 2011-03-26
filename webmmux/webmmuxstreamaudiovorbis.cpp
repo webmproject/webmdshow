@@ -87,13 +87,12 @@ bool StreamAudioVorbis::QueryAccept(const AM_MEDIA_TYPE& mt)
 
     const DWORD ident_len = fmt.headerSize[0];
 
-    if (ident_len == 0)  //TODO: should be 30?
+    if (ident_len != 30)
         return false;
 
     const DWORD comments_len = fmt.headerSize[1];
 
-    //TODO: I think the comments header is optional
-    if (comments_len == 0)
+    if (comments_len == 0)  //TODO: req'd?
         return false;
 
     const DWORD setup_len = fmt.headerSize[2];
@@ -373,12 +372,10 @@ void StreamAudioVorbis::WriteTrackCodecPrivate()
     assert(f.samplesPerSec > 0);
 
     const DWORD ident_len = f.headerSize[0];
-    assert(ident_len > 0);
-    assert(ident_len <= 255);
+    assert(ident_len == 30);
 
     const DWORD comment_len = f.headerSize[1];
     assert(comment_len > 0);
-    assert(comment_len <= 255);
 
     const DWORD setup_len = f.headerSize[2];
     assert(setup_len > 0);
@@ -389,11 +386,19 @@ void StreamAudioVorbis::WriteTrackCodecPrivate()
     const BYTE* const pb = static_cast<const BYTE*>(pv);
     const BYTE* const hdr_ptr = pb + sizeof(F);
 
-    const ULONG len = 1 + 1 + 1 + hdr_len;
+    ULONG len = 1 + 1;
     //1 byte = number of headers - 1
-    //1 byte = ident len
-    //1 byte = comment len
-    //(len of setup_len is implied by total len)
+    //1 byte = ident len (always 30)
+
+    ULONG n = comment_len;
+    while (n >= 255)
+    {
+        ++len;
+        n -= 255;
+    }
+
+    ++len;
+    len += hdr_len;
 
     EbmlIO::File& file = m_context.m_file;
 
@@ -406,7 +411,16 @@ void StreamAudioVorbis::WriteTrackCodecPrivate()
     val = static_cast<BYTE>(ident_len);
     file.Write(&val, 1);
 
-    val = static_cast<BYTE>(comment_len);
+    n = comment_len;
+    while (n >= 255)
+    {
+        val = 255;
+        file.Write(&val, 1);
+
+        n -= 255;
+    }
+
+    val = static_cast<BYTE>(n);
     file.Write(&val, 1);
 
     file.Write(hdr_ptr, hdr_len);
