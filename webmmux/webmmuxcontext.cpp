@@ -254,7 +254,9 @@ void Context::InitSegment()
     m_file.Serialize8UInt(0x01FFFFFFFFFFFFFFLL);
 #endif
 
-    InitFirstSeekHead();  //Meta Seek
+    if (m_pVideo)
+        InitFirstSeekHead();  //Meta Seek
+
     InitInfo();      //Segment Info
     WriteTrack();
 }
@@ -263,7 +265,9 @@ void Context::InitSegment()
 void Context::FinalSegment()
 {
     m_cues_pos = m_file.GetPosition();  //end of clusters
-    WriteCues();
+
+    if (m_pVideo)
+        WriteCues();
 
 #if 0
     m_second_seekhead_pos = m_file.GetPosition();  //end of cues
@@ -286,7 +290,9 @@ void Context::FinalSegment()
 
     m_file.Write8UInt(size);  //total size of the segment
 
-    FinalFirstSeekHead();
+    if (m_pVideo)
+        FinalFirstSeekHead();
+
     FinalInfo();
     //FinalClusters(m_cues_pos);
 }
