@@ -128,39 +128,67 @@ HRESULT WebmMfStreamAudio::CreateStreamDescriptor(
     const BYTE* const end = begin + cp_size;
 
     const BYTE* p = begin;
-    assert(p < end);
+
+    if (p >= end)
+        return E_FAIL;
 
     const BYTE n = *p++;
-    n;
-    assert(n == 2);
-    assert(p < end);
 
-    const ULONG id_len = *p++;  //TODO: don't assume < 255
-    assert(id_len < 255);
-    assert(id_len > 0);
-    assert(p < end);
+    if ((n != 2) || (p >= end))
+        return E_FAIL;
 
-    const ULONG comment_len = *p++;  //TODO: don't assume < 255
-    assert(comment_len < 255);
-    assert(comment_len > 0);
-    assert(p < end);
+    const ULONG id_len = *p++;
+
+    if ((id_len != 30) || (p >= end))
+        return E_FAIL;
+
+    ULONG comment_len = 0;
+
+    for (;;)
+    {
+        const BYTE b = *p++;
+
+        if (p >= end)
+            return E_FAIL;
+
+        comment_len += b;
+
+        if (b < 255)
+            break;
+    }
+
+    if (comment_len < 7)
+        return E_FAIL;
 
     //p points to first header
 
     const BYTE* const id_hdr = p;
-    id_hdr;
+
+    if ((end - id_hdr) < 30)
+        return E_FAIL;
+
+    if (memcmp(id_hdr, "\x01vorbis", 7) != 0)
+        return E_FAIL;
 
     const BYTE* const comment_hdr = id_hdr + id_len;
-    comment_hdr;
+
+    if ((end - comment_hdr) < ptrdiff_t(comment_len))
+        return E_FAIL;
+
+    if (memcmp(comment_hdr, "\x03vorbis", 7) != 0)
+        return E_FAIL;
 
     const BYTE* const setup_hdr = comment_hdr + comment_len;
-    setup_hdr;
-    assert(setup_hdr < end);
 
     const ptrdiff_t setup_len_ = end - setup_hdr;
-    assert(setup_len_ > 0);
+
+    if (setup_len_ < 7)
+        return E_FAIL;
 
     const DWORD setup_len = static_cast<DWORD>(setup_len_);
+
+    if (memcmp(setup_hdr, "\x05vorbis", 7) != 0)
+        return E_FAIL;
 
     const size_t hdr_len = id_len + comment_len + setup_len;
 
