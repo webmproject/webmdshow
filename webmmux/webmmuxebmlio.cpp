@@ -58,15 +58,6 @@ __int64 EbmlIO::File::GetPosition() const
 }
 
 
-
-//void EbmlIO::File::Serialize(
-//    const void* buf,
-//    ULONG len)
-//{
-//    EbmlIO::Serialize(m_pStream, buf, len);
-//}
-
-
 void EbmlIO::File::Write(const void* buf, ULONG cb)
 {
     EbmlIO::Write(m_pStream, buf, cb);
@@ -77,7 +68,6 @@ void EbmlIO::File::Serialize8UInt(__int64 val)
 {
     EbmlIO::Serialize(m_pStream, &val, 8);
 }
-
 
 
 void EbmlIO::File::Serialize4UInt(ULONG val)
@@ -95,6 +85,30 @@ void EbmlIO::File::Serialize2UInt(USHORT val)
 void EbmlIO::File::Serialize1UInt(BYTE val)
 {
     EbmlIO::Serialize(m_pStream, &val, 1);
+}
+
+
+BYTE EbmlIO::File::GetSerializeUIntSize(__int64 val)
+{
+    assert(val >= 0);
+
+    for (int size = 1; size < 8; ++size)
+    {
+        const LONGLONG max = 1LL << (8 * size);
+
+        if (val < max)
+            return static_cast<BYTE>(size);
+
+        ++size;
+    }
+
+    return 8;
+}
+
+
+void EbmlIO::File::SerializeUInt(__int64 val, BYTE size)
+{
+    EbmlIO::Serialize(m_pStream, &val, size);
 }
 
 
@@ -161,6 +175,12 @@ void EbmlIO::File::Write2UInt(USHORT val)
 void EbmlIO::File::Write1UInt(BYTE val)
 {
     EbmlIO::Write1UInt(m_pStream, val);
+}
+
+
+void EbmlIO::File::WriteUInt(__int64 val, ULONG size)
+{
+    return EbmlIO::WriteUInt(m_pStream, val, size);
 }
 
 
@@ -264,6 +284,71 @@ void EbmlIO::Write1UInt(ISequentialStream* pStream, BYTE val)
     val |= 0x80;          //always write 1 byte
 
     Serialize(pStream, &val, 1);
+}
+
+
+void EbmlIO::WriteUInt(
+    ISequentialStream* pStream,
+    __int64 val,
+    ULONG size)
+{
+    assert(pStream);
+    assert(val >= 0);
+    assert(size <= 8);
+
+    //size = 8
+    //assert(val <= 0x00FFFFFFFFFFFFFE);  //0000 000x 1111 1111 ...
+    //val |= 0x0100000000000000;          //always write 8 bytes
+    //(1 << 56) - 1
+    //max = (1 << (n * 7)) - 2
+
+    //size = 4
+    //assert(val <= 0x0FFFFFFE);  //000x 1111 1111 ...
+    //val |= 0x10000000;  //always write 4 bytes
+    //(1 << 28) - 1
+    //max = (1 << (n * 7)) - 2
+
+    //size = 2
+    //assert(val <= 0x3FFE);  //0x11 1111 1111 1110
+    //val |= 0x4000;          //always write 2 bytes
+    //(1 << 14) - 1
+    //max = (1 << (n * 7)) - 2
+
+    //size = 1
+    //assert(val <= 0x7E);  //x111 1110
+    //val |= 0x80;          //always write 1 byte
+    //(1 << 7) - 1
+    //max = (1 << (n * 7)) - 2
+
+    if (size > 0)
+    {
+        const LONGLONG bit = 1LL << (size * 7);
+        assert(val <= (bit - 2));
+
+        val |= bit;
+        Serialize(pStream, &val, size);
+
+        return;
+    }
+
+    size = 1;
+    LONGLONG bit;
+
+    for (;;)
+    {
+        bit = 1LL << (size * 7);
+        const LONGLONG max = bit - 2;
+
+        if (val <= max)
+            break;
+
+        ++size;
+    }
+
+    assert(size <= 8);
+
+    val |= bit;
+    Serialize(pStream, &val, size);
 }
 
 

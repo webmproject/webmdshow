@@ -387,7 +387,7 @@ void StreamAudioVorbis::WriteTrackCodecPrivate()
     const BYTE* const hdr_ptr = pb + sizeof(F);
 
     ULONG len = 1 + 1;
-    //1 byte = number of headers - 1
+    //1 byte = number of headers - 1 (always 2)
     //1 byte = ident len (always 30)
 
     ULONG n = comment_len;
@@ -403,7 +403,7 @@ void StreamAudioVorbis::WriteTrackCodecPrivate()
     EbmlIO::File& file = m_context.m_file;
 
     file.WriteID2(0x63A2);  //Codec Private
-    file.Write4UInt(len);
+    file.WriteUInt(len);
 
     BYTE val = 2;  //number of headers - 1
     file.Write(&val, 1);

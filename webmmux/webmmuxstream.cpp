@@ -223,7 +223,7 @@ void Stream::Frame::WriteBlockGroup(
     //begin block group
 
     file.WriteID1(0xA0);  //block group
-    file.Write4UInt(block_group_size);
+    file.WriteUInt(block_group_size);
 
 #ifdef _DEBUG
     const __int64 pos = file.GetPosition();
@@ -252,7 +252,7 @@ void Stream::Frame::WriteBlockGroup(
     if (duration > 0)
     {
         file.WriteID1(0x9B);  //BlockDuration ID
-        file.Write1UInt(4);
+        file.Write1UInt(4);  //TODO: use min size
         file.Serialize4UInt(duration);
     }
 
@@ -278,7 +278,7 @@ void Stream::Frame::WriteBlock(
     const BYTE id = simple_block ? 0xA3 : 0xA1;  //SimpleBlock vs. Block
 
     file.WriteID1(id);
-    file.Write4UInt(block_size);
+    file.WriteUInt(block_size);
 
 #ifdef _DEBUG
     const __int64 pos = file.GetPosition();

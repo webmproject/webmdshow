@@ -34,6 +34,10 @@ namespace EbmlIO
         void Serialize4UInt(ULONG);
         void Serialize2UInt(USHORT);
         void Serialize1UInt(BYTE);
+
+        static BYTE GetSerializeUIntSize(__int64);
+        void SerializeUInt(__int64, BYTE size);
+
         void Serialize2SInt(SHORT);
         void Serialize4Float(float);
 
@@ -48,6 +52,7 @@ namespace EbmlIO
         void Write4UInt(ULONG);
         void Write2UInt(USHORT);
         void Write1UInt(BYTE);
+        void WriteUInt(__int64, ULONG size = 0);
 
         void Write1String(const char*);
         //void Write1String(const char* str, size_t len);
@@ -77,6 +82,7 @@ namespace EbmlIO
     void Write4UInt(ISequentialStream*, ULONG);
     void Write2UInt(ISequentialStream*, USHORT);
     void Write1UInt(ISequentialStream*, BYTE);
+    void WriteUInt(ISequentialStream*, __int64, ULONG size = 0);
 
     void Write1String(ISequentialStream*, const char*);
     void Write1String(ISequentialStream*, const char*, size_t);

@@ -1270,17 +1270,17 @@ void Context::CreateNewClusterAudioOnly()
     c.m_pos = m_file.GetPosition();
     c.m_timecode = af_first_time;
 
+    //Write 7-byte cluster header
     m_file.WriteID4(0x1F43B675);  //Cluster ID
+    m_file.SetPosition(3, STREAM_SEEK_CUR);  //TODO: write -1, then patch
 
-#if 0
-    m_file.Write4UInt(0);         //patch size later, during close
-#else
-    m_file.SetPosition(4, STREAM_SEEK_CUR);
-#endif
+    m_file.WriteID1(0xE7);  //TimeCode ID
 
-    m_file.WriteID1(0xE7);
-    m_file.Write1UInt(4);
-    m_file.Serialize4UInt(c.m_timecode);
+    const BYTE timecode_size = m_file.GetSerializeUIntSize(c.m_timecode);
+    assert(timecode_size <= 8);
+
+    m_file.Write1UInt(timecode_size);
+    m_file.SerializeUInt(c.m_timecode, timecode_size);
 
     const __int64 off = c.m_pos - m_segment_pos - 12;
     assert(off >= 0);
@@ -1320,15 +1320,11 @@ void Context::CreateNewClusterAudioOnly()
         WriteAudioFrame(c, cFrames);
     }
 
-    const __int64 pos = m_file.GetPosition();
-
-    const __int64 size_ = pos - c.m_pos - 8;
-    assert(size_ <= ULONG_MAX);
-
-    const ULONG size = static_cast<ULONG>(size_);
+    const LONGLONG pos = m_file.GetPosition();
+    const LONGLONG size = pos - (c.m_pos + 7);  //7 = ID (4) + size (3)
 
     m_file.SetPosition(c.m_pos + 4);
-    m_file.Write4UInt(size);
+    m_file.WriteUInt(size, 3);
 
     m_file.SetPosition(pos);
 }

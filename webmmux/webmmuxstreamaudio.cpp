@@ -88,8 +88,8 @@ void StreamAudio::WriteTrackSettings()
     assert(channels > 0);
 
     f.WriteID1(0x9F);  //Channels ID
-    f.Write1UInt(2);
-    f.Serialize2UInt(channels);
+    f.Write1UInt(1);
+    f.Serialize1UInt(channels);
 
     const __int64 end_pos = f.GetPosition();
 
