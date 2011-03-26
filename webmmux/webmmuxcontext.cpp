@@ -22,6 +22,8 @@ using std::endl;
 using std::wstring;
 using std::wostringstream;
 
+enum { kAudioClusterSizeInTimeMs = 5000 };  //TODO: parameterize this
+
 namespace WebmMuxLib
 {
 
@@ -792,7 +794,7 @@ void Context::NotifyAudioFrame(
 
         //TODO: THIS ASSUMES TIMECODE HAS MS RESOLUTION!
         //THIS IS WRONG AND NEEDS TO BE FIXED
-        if (dt >= 1000)
+        if (dt >= kAudioClusterSizeInTimeMs)
             CreateNewClusterAudioOnly();
 
         return;
@@ -1314,7 +1316,7 @@ void Context::CreateNewClusterAudioOnly()
 
         const LONG dt = LONG(t) - LONG(c.m_timecode);
 
-        if (dt > 1000)
+        if (dt > kAudioClusterSizeInTimeMs)
             break;
 
         WriteAudioFrame(c, cFrames);
