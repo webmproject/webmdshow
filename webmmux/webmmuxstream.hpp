@@ -40,6 +40,7 @@ public:
     protected:
         Frame();
         virtual ~Frame();
+        virtual int GetLacing() const;
 
         void WriteBlock(
             const Stream&,

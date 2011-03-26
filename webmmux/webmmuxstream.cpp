@@ -182,6 +182,12 @@ Stream::TrackUID_t Stream::CreateTrackUID()
 }
 
 
+int Stream::Frame::GetLacing() const
+{
+    return 0;
+}
+
+
 ULONG Stream::Frame::GetBlockSize() const
 {
     const ULONG result = 1 + 2 + 1 + GetSize();  //tn, tc, flg, f
@@ -303,6 +309,13 @@ void Stream::Frame::WriteBlock(
 
     if (simple_block & IsKey())
         flags |= BYTE(1 << 7);
+
+    const int lacing = GetLacing();
+    assert(lacing >= 0);
+    assert(lacing <= 3);
+
+    const BYTE fLacing = static_cast<BYTE>(lacing << 1);
+    flags |= fLacing;
 
     file.Write(&flags, 1);   //written as binary, not uint
 

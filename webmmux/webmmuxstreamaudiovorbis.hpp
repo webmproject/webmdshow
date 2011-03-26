@@ -25,7 +25,7 @@ class StreamAudioVorbis : public StreamAudio
     StreamAudioVorbis& operator=(const StreamAudioVorbis&);
 
 protected:
-    StreamAudioVorbis(Context&, const BYTE*, ULONG);
+    StreamAudioVorbis(Context&, const AM_MEDIA_TYPE&);
 
     ULONG GetSamplesPerSec() const;
     BYTE GetChannels() const;
@@ -49,6 +49,7 @@ public:
     int EndOfStream();
 
 private:
+    const GUID m_subtype;
     const VorbisTypes::VORBISFORMAT2& GetFormat() const;
 
     class VorbisFrame : public AudioFrame
@@ -61,6 +62,10 @@ private:
         ULONG m_duration;
         BYTE* m_data;
         ULONG m_size;
+        int m_lacing;
+
+    protected:
+        int GetLacing() const;
 
     public:
         explicit VorbisFrame(IMediaSample*, StreamAudioVorbis*);

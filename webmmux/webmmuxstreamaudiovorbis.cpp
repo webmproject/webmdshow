@@ -43,6 +43,9 @@ void StreamAudioVorbis::GetMediaTypes(CMediaTypes& mtv)
     mt.pbFormat = 0;
 
     mtv.Add(mt);
+
+    mt.subtype = VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing;
+    mtv.Add(mt);
 }
 
 
@@ -51,7 +54,11 @@ bool StreamAudioVorbis::QueryAccept(const AM_MEDIA_TYPE& mt)
     if (mt.majortype != MEDIATYPE_Audio)
         return false;
 
-    if (mt.subtype != VorbisTypes::MEDIASUBTYPE_Vorbis2)
+    if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2)
+        __noop;
+    else if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing)
+        __noop;
+    else
         return false;
 
     if (mt.formattype != VorbisTypes::FORMAT_Vorbis2)
@@ -139,11 +146,7 @@ StreamAudio* StreamAudioVorbis::CreateStream(
     const AM_MEDIA_TYPE& mt)
 {
     assert(QueryAccept(mt));
-
-    const BYTE* const pb = mt.pbFormat;
-    const ULONG cb = mt.cbFormat;
-
-    return new (std::nothrow) StreamAudioVorbis(ctx, pb, cb);
+    return new (std::nothrow) StreamAudioVorbis(ctx, mt);
 }
 
 
@@ -221,6 +224,13 @@ StreamAudioVorbis::VorbisFrame::VorbisFrame(
     assert(m_data);  //TODO
 
     memcpy(m_data, ptr, m_size);
+
+    const GUID& g = pStream->m_subtype;
+
+    if (g == VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing)
+        m_lacing = 1;
+    else
+        m_lacing = 0;
 }
 #endif
 
@@ -251,6 +261,12 @@ StreamAudioVorbis::GetFormat() const
 
     const VORBISFORMAT2& fmt = *pfmt;
     return fmt;
+}
+
+
+int StreamAudioVorbis::VorbisFrame::GetLacing() const
+{
+    return m_lacing;
 }
 
 
@@ -317,9 +333,9 @@ const BYTE* StreamAudioVorbis::VorbisFrame::GetData() const
 
 StreamAudioVorbis::StreamAudioVorbis(
     Context& ctx,
-    const BYTE* pb,
-    ULONG cb) :
-    StreamAudio(ctx, pb, cb)
+    const AM_MEDIA_TYPE& mt) :
+    StreamAudio(ctx, mt.pbFormat, mt.cbFormat),
+    m_subtype(mt.subtype)
 {
 }
 

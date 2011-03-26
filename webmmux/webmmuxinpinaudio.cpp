@@ -87,6 +87,9 @@ HRESULT InpinAudio::OnInit()
     if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2)
         pStream = StreamAudioVorbis::CreateStream(ctx, mt);
 
+    else if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis2_Xiph_Lacing)
+        pStream = StreamAudioVorbis::CreateStream(ctx, mt);
+
     else if (mt.subtype == VorbisTypes::MEDIASUBTYPE_Vorbis)
         pStream = StreamAudioVorbisOgg::CreateStream(ctx, mt);
 
