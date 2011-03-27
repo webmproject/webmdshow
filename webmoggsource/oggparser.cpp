@@ -1,7 +1,7 @@
 #include "oggparser.hpp"
 #include <cstring>
 #include <cassert>
-#include <malloc.h>
+//#include <malloc.h>
 
 typedef std::list<oggparser::OggPage> pages_t;
 
@@ -418,7 +418,8 @@ OggStream::OggStream(IOggReader* p) :
     m_page_num(0),
     m_page_base(0),
     m_pos(0),
-    m_base(0)
+    m_base(0),
+    m_serial_num(0)
 {
 }
 
@@ -433,15 +434,36 @@ long OggStream::Init(
     Packet& comment,
     Packet& setup)
 {
+    assert(m_packets.empty());
+    assert(m_page_num == 0);
+
     OggPage page;
 
-    long result = ReadPage(page);
+    for (;;)
+    {
+        long result = page.Read(m_pReader, m_pos);
 
-    if (result < 0)
-        return result;
+        if (result < 0)
+            return result;
 
-    if (!(page.header & OggPage::fBOS))
+        if (!(page.header & OggPage::fBOS))
+            return E_FILE_FORMAT_INVALID;
+
+        if (OggPage::Match(page.descriptors, m_pReader, "\x01vorbis") >= 1)
+            break;
+    }
+
+    if (page.descriptors.size() != 1)
         return E_FILE_FORMAT_INVALID;
+
+    if (OggPage::GetLength(page.descriptors) != 30)
+        return E_FILE_FORMAT_INVALID;
+
+    if (page.header & OggPage::fContinued)
+        return E_FILE_FORMAT_INVALID;
+
+    //if (!(page.header & OggPage::fBOS))
+    //    return E_FILE_FORMAT_INVALID;
 
     if (page.header & OggPage::fEOS)
         return E_FILE_FORMAT_INVALID;
@@ -452,45 +474,26 @@ long OggStream::Init(
     if (page.granule_pos != 0)
         return E_FILE_FORMAT_INVALID;
 
-    if (m_pos != 58)
+    if (page.sequence_num != m_page_num++)
         return E_FILE_FORMAT_INVALID;
 
-    if (GetPacket(ident) < 1)
-        return E_FILE_FORMAT_INVALID;
+    m_serial_num = page.serial_num;
 
-    if (ident.descriptors.size() != 1)
-        return E_FILE_FORMAT_INVALID;
+    ident.descriptors = page.descriptors;
+    ident.granule_pos = 0;
 
-    if (ident.GetLength() != 30)
-        return E_FILE_FORMAT_INVALID;
+    long result = GetPacket(comment, 10);
 
-    if (ident.IsHeader(m_pReader, "\x01vorbis") <= 0)
-        return E_FILE_FORMAT_INVALID;
-
-    if (!m_packets.empty())
-        return E_FILE_FORMAT_INVALID;
-
-    for (;;)
-    {
-        result = ReadPage(page);
-
-        if (result < 0)  //error
-            return result;
-
-        if (GetPacket(comment) >= 1)
-            break;
-    }
+    if (result < 0)
+        return result;
 
     if (comment.IsHeader(m_pReader, "\x03vorbis") <= 0)
         return E_FILE_FORMAT_INVALID;
 
-    while (GetPacket(setup) < 1)
-    {
-        result = ReadPage(page);
+    result = GetPacket(setup, 10);
 
-        if (result < 0)  //error
-            return result;
-    }
+    if (result < 0)
+        return result;
 
     if (setup.IsHeader(m_pReader, "\x05vorbis") <= 0)
         return E_FILE_FORMAT_INVALID;
@@ -515,19 +518,17 @@ long OggStream::Reset()
 }
 
 
-long OggStream::ReadPage(OggPage& page)
+#if 0
+long OggStream::GetPackets(OggPage& page, long long page_pos)
 {
+#if 0
     const long long page_pos = m_pos;
 
     long result = page.Read(m_pReader, m_pos);
 
     if (result < 0)  //error
         return result;
-
-    if (page.sequence_num != m_page_num)
-        return E_FILE_FORMAT_INVALID;
-
-    ++m_page_num;
+#endif
 
     assert(!page.descriptors.empty());
 
@@ -661,16 +662,166 @@ long OggStream::ReadPage(OggPage& page)
     //You also need it for seeking, obviously.
 
 }
+#endif
 
 
-long OggStream::Parse()
+long OggStream::ParsePage()
 {
+    if (m_pos < 0)
+        return E_END_OF_FILE;
+
     OggPage page;
-    return ReadPage(page);
+
+    const long long page_pos = m_pos;
+
+    const long result = page.Read(m_pReader, m_pos);
+
+    if (result < 0)  //error
+        return result;
+
+    if (page.serial_num != m_serial_num)
+        return 0;
+
+    if (page.sequence_num != m_page_num++)
+        return E_FILE_FORMAT_INVALID;
+
+    assert(!page.descriptors.empty());
+
+    if (page.header & OggPage::fContinued)
+    {
+        if (m_packets.empty())
+            return E_FILE_FORMAT_INVALID;
+
+        Packet& pkt = m_packets.back();
+
+        OggPage::descriptors_t& dd = pkt.descriptors;
+
+        if (!dd.empty())  //predicate should always be true
+        {
+            OggPage::Descriptor& d = dd.back();
+
+            if (d.len >= 0)
+                return E_FILE_FORMAT_INVALID;
+
+            d.len = labs(d.len);
+        }
+
+        dd.push_back(page.descriptors.front());
+        page.descriptors.pop_front();
+    }
+    else if (!m_packets.empty())
+    {
+        const Packet& pkt = m_packets.back();
+
+        const OggPage::descriptors_t& dd = pkt.descriptors;
+
+        if (!dd.empty())  //predicate should always be true
+        {
+            const OggPage::Descriptor& d = dd.back();
+
+            if (d.len < 0)
+                return E_FILE_FORMAT_INVALID;
+        }
+    }
+
+    OggPage::descriptors_t& dd = page.descriptors;
+
+    while (!dd.empty())
+    {
+        OggPage::Descriptor& d = dd.front();
+
+        m_packets.push_back(Packet());
+        Packet& pkt = m_packets.back();
+
+        pkt.descriptors.push_back(d);
+        pkt.granule_pos = -1;
+
+        dd.pop_front();
+    }
+
+    assert(!m_packets.empty());
+
+    if (page.granule_pos < 0)  //no packet was completed by this page
+    {
+        const Packet& pkt = m_packets.back();
+
+        const OggPage::descriptors_t& dd = pkt.descriptors;
+
+        if (!dd.empty())  //predicate should always be true
+        {
+            const OggPage::Descriptor& d = dd.back();
+
+            if (d.len >= 0)  //not incomplete
+                return E_FILE_FORMAT_INVALID;
+        }
+
+        return 0;  //no granule pos, so nothing else to do just yet
+    }
+
+    typedef packets_t::reverse_iterator iter_t;
+
+    iter_t iter = m_packets.rbegin();
+    const iter_t iter_end = m_packets.rend();
+
+    while (iter != iter_end)
+    {
+        Packet& pkt = *iter++;
+
+        OggPage::descriptors_t& dd = pkt.descriptors;
+
+        if (dd.empty())  //weird
+            continue;
+
+        OggPage::Descriptor& d = dd.back();
+
+        if (d.len < 0)  //last packet wasn't completed on this cluster
+            continue;   //try earlier packet
+
+        if (d.pos <= page_pos)  //we have navigated off of curr page
+            return E_FILE_FORMAT_INVALID;
+
+        assert(pkt.granule_pos < 0);
+
+        pkt.granule_pos = page.granule_pos;
+
+        if (page.header & OggPage::fEOS)
+            m_pos = -1;  //means end-of-stream
+
+        return 0;
+    }
+
+    return E_FILE_FORMAT_INVALID;
 }
 
 
-long OggStream::GetPacket(Packet& pkt_)
+long OggStream::GetPacket(Packet& pkt)
+{
+    return GetPacket(pkt, 0);
+}
+
+
+long OggStream::GetPacket(Packet& pkt, int max_count)
+{
+    int count = 0;
+
+    while (ParsePacket(pkt) < 1)
+    {
+        const long result = ParsePage();
+
+        if (result < 0)  //error
+            return result;
+
+        ++count;
+
+        if ((max_count > 0) && (count >= max_count))
+            return E_FILE_FORMAT_INVALID;
+    }
+
+    return 1;  //success
+}
+
+
+long OggStream::ParsePacket(Packet& pkt_)
 {
     if (m_packets.empty())
         return 0;  //no packet available for consumption
@@ -765,6 +916,15 @@ long OggStream::Packet::Copy(
 
 long OggStream::Packet::IsHeader(IOggReader* pReader, const char* str) const
 {
+    return OggPage::Match(descriptors, pReader, str);
+}
+
+
+long OggPage::Match(
+    const descriptors_t& dd,
+    IOggReader* pReader,
+    const char* str)
+{
     if (pReader == NULL)
         return -1;
 
@@ -772,8 +932,6 @@ long OggStream::Packet::IsHeader(IOggReader* pReader, const char* str) const
         return -1;
 
     typedef OggPage::descriptors_t::const_iterator iter_t;
-
-    const OggPage::descriptors_t& dd = descriptors;
 
     iter_t i = dd.begin();
     const iter_t j = dd.end();

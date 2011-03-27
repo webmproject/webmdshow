@@ -65,6 +65,7 @@ public:
         const descriptors_t&,
         IOggReader*,
         unsigned char* buf);
+    static long Match(const descriptors_t&, IOggReader*, const char*);
 
     unsigned char capture_pattern[4];
     unsigned char version;
@@ -108,19 +109,22 @@ public:
 
     long Init(Packet& ident, Packet& comment, Packet& setup);
     long Reset();
-    long Parse();
     long GetPacket(Packet&);
 
 private:
 
+    unsigned long m_serial_num;
     unsigned long m_page_num;
     unsigned long m_page_base;
     long long m_pos;
     long long m_base;
 
+    long GetPacket(Packet&, int);
+    long ParsePacket(Packet&);
+    long ParsePage();
+
     packets_t m_packets;
 
-    long ReadPage(OggPage&);
 };
 
 

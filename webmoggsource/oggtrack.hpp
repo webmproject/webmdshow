@@ -37,7 +37,7 @@ public:
     virtual HRESULT SetConnectionMediaType(const AM_MEDIA_TYPE&) = 0;
     virtual HRESULT UpdateAllocatorProperties(ALLOCATOR_PROPERTIES&) const = 0;
 
-    virtual HRESULT GetSampleCount(long&) = 0;
+    virtual HRESULT GetPackets(long& count) = 0;
 
     typedef std::vector<IMediaSample*> samples_t;
 

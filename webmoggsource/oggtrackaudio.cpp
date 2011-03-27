@@ -292,14 +292,27 @@ std::wstring OggTrackAudio::GetCodecName() const
     return L"Vorbis";
 }
 
-
-HRESULT OggTrackAudio::GetSampleCount(long& count)
+#if 0
+HRESULT OggTrackAudio::GetPackets(long& count)
 {
-    return (this->*m_pfnGetSampleCount)(count);
+    const long result = GetPackets();
+
+    if (result < 0)
+        return E_FAIL;
+
+    if (m_packets.empty())
+        return S_FALSE;
+
+    count = (this->*m_pfnGetSampleCount)();
+
+    if (count <= 0)
+        return E_FAIL;
+
+    return S_OK;
 }
 
 
-HRESULT OggTrackAudio::GetSampleCountVorbis2(long& count)
+long OggTrackAudio::GetPackets()
 {
     //m_granule_pos represents the trailing edge of the
     //audio we have already consumed.  It is therefore
@@ -319,63 +332,7 @@ HRESULT OggTrackAudio::GetSampleCountVorbis2(long& count)
     //without a media time and hope for the best.
 
     if (m_granule_pos < 0)
-        return E_FAIL;
-
-    if (!m_packets.empty())
-    {
-        const OggStream::Packet& pkt = m_packets.back();
-
-        if (pkt.granule_pos >= 0)
-        {
-            assert(pkt.granule_pos > m_granule_pos);
-
-            count = m_packets.size();
-            return S_OK;
-        }
-    }
-
-    for (;;)
-    {
-        OggStream::Packet pkt;
-
-        while (m_pStream->GetPacket(pkt) < 1)  //not found
-        {
-            const long result = m_pStream->Parse();
-
-            if (result < 0)  //error
-            {
-                if (result != oggparser::E_END_OF_FILE)
-                    return E_FAIL;
-
-                count = m_packets.size();
-
-                if (count <= 0)
-                    return S_FALSE;
-
-                if (m_packets.back().granule_pos < 0)
-                    return E_FAIL;
-
-                return S_OK;
-            }
-        }
-
-        m_packets.push_back(pkt);
-
-        if (pkt.granule_pos >= 0)
-        {
-            assert(pkt.granule_pos > m_granule_pos);
-
-            count = m_packets.size();
-            return S_OK;
-        }
-    }
-}
-
-
-HRESULT OggTrackAudio::GetSampleCountVorbis2XiphLacing(long& count)
-{
-    if (m_granule_pos < 0)
-        return E_FAIL;
+        return -1;
 
     if (!m_packets.empty())  //weird
     {
@@ -384,8 +341,54 @@ HRESULT OggTrackAudio::GetSampleCountVorbis2XiphLacing(long& count)
         if (pkt.granule_pos >= 0)
         {
             assert(pkt.granule_pos > m_granule_pos);
+            return 0;  //success
+        }
+    }
 
-            count = 1;
+    for (;;)
+    {
+        OggStream::Packet pkt;
+
+        const long result = m_pStream->GetPacket(pkt);
+
+        if (result < 0)  //error (or EOF)
+        {
+            if (result != oggparser::E_END_OF_FILE)
+                return result;
+
+            if (m_packets.empty())
+                return 0;
+
+            if (m_packets.back().granule_pos < 0)
+                return -1;
+
+            return 0;  //done
+        }
+
+        m_packets.push_back(pkt);
+
+        if (pkt.granule_pos >= 0)
+        {
+            assert(pkt.granule_pos > m_granule_pos);
+            return 0;  //success
+        }
+    }
+}
+#else
+HRESULT OggTrackAudio::GetPackets(long& count)
+{
+    if (!m_packets.empty())  //weird
+    {
+        const OggStream::Packet& pkt = m_packets.back();
+
+        if (pkt.granule_pos >= 0)
+        {
+            assert(m_granule_pos >= 0);
+            assert(pkt.granule_pos > m_granule_pos);
+
+            count = (this->*m_pfnGetSampleCount)();
+            assert(count > 0);
+
             return S_OK;
         }
     }
@@ -394,36 +397,60 @@ HRESULT OggTrackAudio::GetSampleCountVorbis2XiphLacing(long& count)
     {
         OggStream::Packet pkt;
 
-        while (m_pStream->GetPacket(pkt) < 1)  //not found
+        const long result = m_pStream->GetPacket(pkt);
+
+        if (result < 0)  //error (or EOF)
         {
-            const long result = m_pStream->Parse();
+            if (result != oggparser::E_END_OF_FILE)
+                return E_FAIL;
 
-            if (result < 0)  //error
-            {
-                if (result != oggparser::E_END_OF_FILE)
-                    return E_FAIL;
-
-                if (m_packets.empty())
-                    return S_FALSE;
-
-                if (m_packets.back().granule_pos < 0)
-                    return E_FAIL;
-
-                count = 1;
-                return S_OK;
-            }
+            break;
         }
 
         m_packets.push_back(pkt);
 
         if (pkt.granule_pos >= 0)
         {
+            assert(m_granule_pos >= 0);
             assert(pkt.granule_pos > m_granule_pos);
 
-            count = 1;
+            count = (this->*m_pfnGetSampleCount)();
+            assert(count > 0);
+
             return S_OK;
         }
     }
+
+    //no more packets in stream
+
+    if (m_packets.empty())
+        return S_FALSE;  //EOS
+
+    const OggStream::Packet& back = m_packets.back();
+
+    if (back.granule_pos < 0)
+        return E_FAIL;
+
+    assert(m_granule_pos >= 0);
+    assert(back.granule_pos > m_granule_pos);
+
+    count = (this->*m_pfnGetSampleCount)();
+    assert(count > 0);
+
+    return S_OK;
+}
+#endif
+
+long OggTrackAudio::GetSampleCountVorbis2() const
+{
+    const packets_t::size_type size = m_packets.size();
+    return static_cast<long>(size);
+}
+
+
+long OggTrackAudio::GetSampleCountVorbis2XiphLacing() const
+{
+    return 1;
 }
 
 

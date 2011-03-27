@@ -1207,13 +1207,15 @@ HRESULT Outpin::PopulateSamples(OggTrack::samples_t& samples)
 
         long count;
 
-        hr = m_pTrack->GetSampleCount(count);
+        hr = m_pTrack->GetPackets(count);
 
         if (FAILED(hr))  //TODO: handle underflow if req'd for ogg parsing
             return hr;
 
         if (hr != S_OK)      //EOS
             return S_FALSE;  //report EOS
+
+        assert(count > 0);
 
         hr = lock.Release();
         assert(SUCCEEDED(hr));
