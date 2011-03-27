@@ -20,6 +20,7 @@ namespace WebmTypes
     extern const CLSID CLSID_WebmSplit;
     extern const CLSID CLSID_WebmVorbisDecoder;
     extern const CLSID CLSID_WebmOggSource;
+    extern const CLSID CLSID_WebmColorConversion;
 
 
     extern const GUID APPID_WebmMf;         //Media Foundation Application ID
