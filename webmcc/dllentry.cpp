@@ -29,16 +29,6 @@ namespace WebmColorConversion
 }  //end namespace WebmColorConversion
 
 
-HRESULT WebmColorConversion::CreateInstance(
-        IClassFactory*,
-        IUnknown*,
-        const IID&,
-        void**)
-{
-    return E_FAIL;
-}
-
-
 static CFactory s_factory(&s_cLock, &WebmColorConversion::CreateInstance);
 
 

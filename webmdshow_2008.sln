@@ -28,6 +28,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmoggsource_2008", "webmoggsource\webmoggsource_2008.vcproj", "{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmcc_2008", "webmcc\webmcc_2008.vcproj", "{19116917-FB35-44C1-8BC3-A77D4864B112}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F4D58D10-0A22-4C8F-A961-844ACBE97C9B} = {F4D58D10-0A22-4C8F-A961-844ACBE97C9B}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcc_2008", "libcc\libcc_2008.vcproj", "{F4D58D10-0A22-4C8F-A961-844ACBE97C9B}"
 EndProject
