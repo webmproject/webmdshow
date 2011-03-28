@@ -22,7 +22,7 @@ class Outpin : public Pin,
     Outpin& operator=(const Outpin&);
 
 protected:
-    HRESULT OnDisconnect();
+    //HRESULT OnDisconnect();
     HRESULT GetName(PIN_INFO&) const;
 
 public:
