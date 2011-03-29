@@ -1,0 +1,17 @@
+text on2_dec_control
+text on2_dec_decode
+text on2_dec_destroy
+text on2_dec_err_to_string
+text on2_dec_error
+text on2_dec_error_detail
+text on2_dec_get_caps
+text on2_dec_get_frame
+text on2_dec_get_mem_map
+text on2_dec_get_stream_info
+text on2_dec_iface_name
+text on2_dec_init_ver
+text on2_dec_peek_stream_info
+text on2_dec_register_put_frame_cb
+text on2_dec_register_put_slice_cb
+text on2_dec_set_mem_map
+text on2_dec_xma_init_ver
