@@ -275,13 +275,13 @@ HRESULT Outpin::Connect(
 }
 
 
-//HRESULT Outpin::OnDisconnect()
-//{
-//    m_pInputPin = 0;
-//    m_pAllocator = 0;
-//
-//    return S_OK;
-//}
+HRESULT Outpin::OnDisconnect()
+{
+    m_pInputPin = 0;
+    m_pAllocator = 0;
+
+    return S_OK;
+}
 
 
 HRESULT Outpin::ReceiveConnection(
