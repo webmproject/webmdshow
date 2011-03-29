@@ -27,7 +27,7 @@ void __cpuid(int CPUInfo[4], int InfoType);
     int regs[4];\
 	__cpuid(regs,func); a=regs[0];	b=regs[1];	c=regs[2];	d=regs[3];\
 } while(0)
-#else
+#elif 0
 #define cpuid(func,a,b,c,d)\
 	__asm mov eax, func;\
 	__asm cpuid;\
@@ -42,14 +42,15 @@ void __cpuid(int CPUInfo[4], int InfoType);
 #define HAS_SSE   0x02
 #define HAS_SSE2  0x04
 #define HAS_SSE3  0x08
-#ifndef BIT
-#define BIT(n) (1<<n)
-#endif
+//#ifndef BIT
+//#define BIT(n) (1<<n)
+//#endif
 
+#if 0
 static int
 x86_simd_caps(void) {
     unsigned int flags = 0;
-    unsigned int eax, /* ebx, */ ecx,edx;
+    unsigned int eax, ebx, ecx, edx;
 
     /* Ensure that the CPUID instruction supports extended features */
     cpuid(0,eax,ebx,ecx,edx);
@@ -65,6 +66,7 @@ x86_simd_caps(void) {
     
     return flags;
 }
+#endif
 
 
 #if 0

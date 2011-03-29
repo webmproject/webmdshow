@@ -1,6 +1,7 @@
 //#include "on2_ports/config.h"
 #include "on2_blit/on2_blit_internal.h"
 #include "on2_ports/x86.h"
+#include <windows.h>
 
 extern void
 CC_RGB24toYV12_MMX_INLINE(unsigned char *src_buf, int w, int h,
@@ -223,9 +224,56 @@ on2_blit_x86(on2_image_t *dst, const on2_image_t *src, int *info) {
 #endif
 
 
-on2_rgb_to_yuv_t on2_get_rgb_to_yuv(img_fmt_t dst, img_fmt_t src)
-{
-    const int caps = x86_simd_caps();
+//#define cpuid(func,a,b,c,d)\
+//	__asm mov eax, func;\
+//	__asm cpuid;\
+//	__asm mov a, eax;\
+//	__asm mov b, ebx;\
+//	__asm mov c, ecx;\
+//	__asm mov [d], edx;
+//#endif
+//#endif
+//
+//#define HAS_MMX   0x01
+//#define HAS_SSE   0x02
+//#define HAS_SSE2  0x04
+//#define HAS_SSE3  0x08
+//#ifndef BIT
+//#define BIT(n) (1<<n)
+//#endif
+//
+
+static DWORD
+x86_simd_caps(void) {
+    DWORD reg_eax, /* reg_ebx, */ reg_ecx, reg_edx;
+    DWORD flags;
+
+	__asm mov eax, 0;
+	__asm cpuid;
+	__asm mov [reg_eax], eax;
+
+	if(reg_eax == 0)
+	    return 0;
+
+	__asm mov eax, 1;
+	__asm cpuid;
+	__asm mov [reg_eax], eax;
+	//__asm mov [reg_ebx], ebx;
+	__asm mov [reg_ecx], ecx;
+	__asm mov [reg_edx], edx;
+
+	flags = 0;
+	if(reg_edx & (1 << 23)) flags |= HAS_MMX;
+	if(reg_edx & (1 << 25)) flags |= HAS_SSE;
+	if(reg_edx & (1 << 26)) flags |= HAS_SSE2;
+	if(reg_ecx & (1 << 0)) flags |= HAS_SSE3;
+
+	return flags;
+}
+
+
+on2_rgb_to_yuv_t on2_get_rgb_to_yuv(img_fmt_t dst, img_fmt_t src) {
+    const DWORD caps = x86_simd_caps();
 
     if (dst != IMG_FMT_YV12)  //TODO: liberalize?
         return NULL;
