@@ -522,7 +522,7 @@ HRESULT Inpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (bmih.biHeight % 2)  //TODO
         return S_FALSE;
 
-    if (bmih.biCompression != mt.subtype.Data1)
+    if (bmih.biCompression != BI_RGB)
         return S_FALSE;
 
     return S_OK;
@@ -858,12 +858,9 @@ int Inpin::GetSample(IMediaSample** ppSample)
     {
         pSample = 0;
 
-#if 0  //TODO: need another way to handle this
-        if (m_packet.packetno < 0)  //stopped
+        if (m_pFilter->m_state == State_Stopped)
             return -2;  //terminate
-#endif
 
-        assert(m_pFilter->m_state != State_Stopped);
         return -1;  //wait
     }
 
@@ -956,9 +953,6 @@ HRESULT Inpin::Start()
         return S_FALSE;
 
     assert(m_samples.empty());
-
-    //TODO: based on input and output media types,
-    //select a color conversion function.
 
     return S_OK;
 }

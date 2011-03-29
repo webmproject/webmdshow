@@ -24,6 +24,7 @@ class Outpin : public Pin,
 
 protected:
     HRESULT GetName(PIN_INFO&) const;
+    HRESULT OnDisconnect();
 
 public:
     explicit Outpin(Filter*);
@@ -114,6 +115,7 @@ public:
 private:
     void SetDefaultMediaTypes();
     on2_rgb_to_yuv_t m_rgb_to_yuv;
+    void PopulateSample(IMediaSample* pIn, IMediaSample* pOut);
 
 private:
     HANDLE m_hThread;

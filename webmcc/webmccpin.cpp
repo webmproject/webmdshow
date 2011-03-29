@@ -11,6 +11,7 @@
 #include "webmccfilter.hpp"
 #include <vfwmsgs.h>
 #include <cassert>
+#include <uuids.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -184,5 +185,42 @@ HRESULT Pin::QueryId(LPWSTR* p)
 
     return S_OK;
 }
+
+
+const AM_MEDIA_TYPE* Pin::GetMediaType() const
+{
+    if (m_connection_mtv.Empty())
+        return 0;
+
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+
+    return &mt;
+}
+
+
+const VIDEOINFOHEADER* Pin::GetVideoInfo() const
+{
+    if (m_connection_mtv.Empty())
+        return 0;
+
+    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+
+    if (mt.majortype != MEDIATYPE_Video)
+        return 0;
+
+    if (mt.formattype != FORMAT_VideoInfo)
+        return 0;
+
+    if (mt.cbFormat < sizeof(VIDEOINFOHEADER))
+        return 0;
+
+    if (mt.pbFormat == 0)
+        return 0;
+
+    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+
+    return &vih;
+}
+
 
 }  //end namespace WebmColorConversion

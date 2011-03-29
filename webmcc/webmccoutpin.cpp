@@ -17,7 +17,7 @@
 #include <uuids.h>
 #include <cassert>
 #include <process.h>
-#include <amvideo.h>
+//#include <amvideo.h>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 #include <iomanip>
@@ -164,12 +164,30 @@ HRESULT Outpin::Connect(
         if (hr != S_OK)
             return VFW_E_TYPE_NOT_ACCEPTED;
 
-        hr = pin->ReceiveConnection(this, pmt);
+        LONG idx = -1;
+
+        const ULONG n = m_preferred_mtv.Size();
+
+        for (ULONG i = 0; i < n; ++i)
+        {
+            const AM_MEDIA_TYPE& mt = m_preferred_mtv[i];
+
+            if (mt.subtype == mt.subtype)
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx < 0)  //weird
+            return VFW_E_TYPE_NOT_ACCEPTED;
+
+        const AM_MEDIA_TYPE& mt = m_preferred_mtv[idx];
+
+        hr = pin->ReceiveConnection(this, &mt);
 
         if (FAILED(hr))
             return hr;
-
-        const AM_MEDIA_TYPE& mt = *pmt;
 
         m_connection_mtv.Add(mt);
     }
@@ -221,24 +239,23 @@ HRESULT Outpin::Connect(
 
     hr = pInputPin->GetAllocatorRequirements(&props);
 
-    const long cBuffers = 3;
+    const long cBuffers = 2;
 
     if (props.cBuffers < cBuffers)
         props.cBuffers = cBuffers;
 
-#if 1
-    const long cbBuffer = 42;  //TODO
-#else
-    const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_WaveFormatEx);
-    assert(mt.cbFormat >= 18);
-    assert(mt.pbFormat);
+    const VIDEOINFOHEADER* const pvih = this->GetVideoInfo();
+    assert(pvih);
 
-    const WAVEFORMATEX& wfx = (WAVEFORMATEX&)(*mt.pbFormat);
+    const BITMAPINFOHEADER& bmih = pvih->bmiHeader;
 
-    const DWORD target_count = wfx.nSamplesPerSec / Pin::kSampleRateDivisor;
-    const long cbBuffer = target_count * wfx.nBlockAlign;
-#endif
+    const LONG w = bmih.biWidth;
+    const LONG h = labs(bmih.biHeight);
+
+    const LONG y = w * h;
+    const LONG uv = (w/2) * (h/2);
+
+    const LONG cbBuffer = y + 2 * uv;
 
     if (props.cbBuffer < cbBuffer)
         props.cbBuffer = cbBuffer;
@@ -262,6 +279,15 @@ HRESULT Outpin::Connect(
     m_pPinConnection = pin;
     m_pAllocator = pAllocator;
     m_pInputPin = pInputPin;
+
+    return S_OK;
+}
+
+
+HRESULT Outpin::OnDisconnect()
+{
+    m_pInputPin = 0;
+    m_pAllocator = 0;
 
     return S_OK;
 }
@@ -292,50 +318,33 @@ HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (!bool(inpin.m_pPinConnection))
         return VFW_E_NO_TYPES;
 
-#if 1
-    return S_FALSE;  //TODO
-#else
     const AM_MEDIA_TYPE& mtOut = *pmt;
 
-    if (mtOut.majortype != MEDIATYPE_Audio)
+    if (mtOut.majortype != MEDIATYPE_Video)
         return S_FALSE;
 
-    if (mtOut.subtype != MEDIASUBTYPE_IEEE_FLOAT)
+    if (mtOut.subtype != MEDIASUBTYPE_YV12)
         return S_FALSE;
 
-    if (mtOut.formattype != FORMAT_WaveFormatEx)
+    if (mtOut.formattype == GUID_NULL)
+        return S_OK;
+
+    if (mtOut.formattype != FORMAT_VideoInfo)
         return S_FALSE;
 
     if (mtOut.pbFormat == 0)
         return S_FALSE;
 
-    if (mtOut.cbFormat < 18)
+    if (mtOut.cbFormat < sizeof(VIDEOINFOHEADER))
         return S_FALSE;
 
-    const WAVEFORMATEX& wfxOut = (WAVEFORMATEX&)(*mtOut.pbFormat);
+    const VIDEOINFOHEADER& vihOut = (VIDEOINFOHEADER&)(*mtOut.pbFormat);
+    const BITMAPINFOHEADER& bmihOut = vihOut.bmiHeader;
+    bmihOut;
 
-    if (wfxOut.wFormatTag != WAVE_FORMAT_IEEE_FLOAT)
-        return S_FALSE;
-
-    if (wfxOut.cbSize > 0)
-        return S_FALSE;
-
-    const AM_MEDIA_TYPE& mtIn = inpin.m_connection_mtv[0];
-    const WAVEFORMATEX& wfxIn = (WAVEFORMATEX&)(*mtIn.pbFormat);
-
-    if (wfxOut.nChannels != wfxIn.nChannels)
-        return S_FALSE;
-
-    if (wfxOut.nSamplesPerSec != wfxIn.nSamplesPerSec)
-        return S_FALSE;
-
-    if (wfxOut.nBlockAlign != wfxIn.nBlockAlign)
-        return S_FALSE;
-
-    //TODO: check bits/sample
+    //TODO: vet vih and bmih
 
     return S_OK;
-#endif
 }
 
 
@@ -746,6 +755,7 @@ void Outpin::OnInpinConnect(const AM_MEDIA_TYPE& mtIn)
     bmih.biSize = sizeof(BITMAPINFOHEADER);  //40
     bmih.biWidth = bmihIn.biWidth;
     bmih.biHeight = bmihIn.biHeight;
+    bmih.biPlanes = 1;
     bmih.biBitCount = 12;
     memcpy(&bmih.biCompression, "YV12", 4);
     bmih.biSizeImage = 0;  //TODO
@@ -941,14 +951,17 @@ unsigned Outpin::Main()
 
             HRESULT hr = m_pAllocator->GetBuffer(&pOutSample, 0, 0, 0);
 
-            if (FAILED(hr))
-                return hr;
-
-            hr = m_pInputPin->Receive(pOutSample);
-
             if (hr == S_OK)
-                continue;
+            {
+                PopulateSample(pInSample, pOutSample);
 
+                hr = m_pInputPin->Receive(pOutSample);
+
+                if (hr == S_OK)
+                    continue;
+            }
+
+            pInSample = 0;
             inpin.OnCompletion();
         }
 
@@ -959,6 +972,172 @@ unsigned Outpin::Main()
 
         assert(dw == WAIT_OBJECT_0);
     }
+}
+
+
+void Outpin::PopulateSample(
+    IMediaSample* pIn,
+    IMediaSample* pOut)
+{
+    assert(pIn);
+    assert(pOut);
+
+    //input
+
+    const Inpin& inpin = m_pFilter->m_inpin;
+
+    const VIDEOINFOHEADER* const pvih_in = inpin.GetVideoInfo();
+    assert(pvih_in);
+
+    const RECT& rc_in = pvih_in->rcSource;
+
+    const LONG rc_in_w = rc_in.right - rc_in.left;
+    assert(rc_in_w >= 0);
+    assert(rc_in_w % 2 == 0);  //TODO
+
+    //BITMAPINFOHEADER Structure
+    //http://msdn.microsoft.com/en-us/library/dd183376%28v=vs.85%29.aspx
+
+    const BITMAPINFOHEADER& bmih_in = pvih_in->bmiHeader;
+
+    const LONG w_in = bmih_in.biWidth;  //stride
+    assert(w_in > 0);
+    assert(w_in % 2 == 0);  //TODO
+    //assert(w_in == rc_in_w);
+
+    const LONG hh_in = bmih_in.biHeight;
+    assert(hh_in);
+
+    const LONG h_in = labs(hh_in);
+    assert(h_in % 2 == 0);  //TODO
+
+    BYTE* buf_in;
+
+    HRESULT hr = pIn->GetPointer(&buf_in);
+    assert(SUCCEEDED(hr));
+    assert(buf_in);
+
+    const AM_MEDIA_TYPE* const pmt_in = inpin.GetMediaType();
+    assert(pmt_in);
+
+    const GUID& subtype_in = pmt_in->subtype;
+
+    ULONG bytes_per_pixel;
+
+    if (subtype_in == MEDIASUBTYPE_RGB24)
+        bytes_per_pixel = 3;
+    else
+    {
+        assert(subtype_in == MEDIASUBTYPE_RGB32);
+        bytes_per_pixel = 4;
+    }
+
+    const ULONG stride_in = w_in * bytes_per_pixel;
+    const ULONG size_in = stride_in * h_in;  //calculated
+
+    const long actual_size_in = pIn->GetActualDataLength();
+    assert(actual_size_in >= 0);
+    assert(ULONG(actual_size_in) == size_in);
+
+    //output
+
+    const VIDEOINFOHEADER* const pvih_out = this->GetVideoInfo();
+    assert(pvih_out);
+
+    const RECT& rc_out = pvih_out->rcSource;
+
+    const LONG rc_out_w = rc_out.right - rc_out.left;
+    assert(rc_out_w >= 0);
+    assert(rc_out_w % 2 == 0);  //TODO
+
+    const BITMAPINFOHEADER& bmih_out = pvih_out->bmiHeader;
+
+    const LONG w_out = bmih_out.biWidth;  //stride
+    assert(w_out > 0);
+    assert(w_out % 2 == 0);  //TODO
+
+    const LONG hh_out = bmih_out.biHeight;
+    assert(hh_out);
+
+    const LONG h_out = labs(hh_out);
+    assert(h_out % 2 == 0);  //TODO
+
+    BYTE* buf_out;
+
+    hr = pOut->GetPointer(&buf_out);
+    assert(SUCCEEDED(hr));
+    assert(buf_out);
+
+    const AM_MEDIA_TYPE* const pmt_out = this->GetMediaType();
+    assert(pmt_out);
+    assert(pmt_out->subtype == MEDIASUBTYPE_YV12);
+
+    BYTE* const y = buf_out;
+
+    const ULONG y_stride = w_out;
+    const ULONG y_height = h_out;
+
+    const ULONG y_size = y_stride * y_height;
+
+    const ULONG uv_stride = y_stride / 2;
+    const ULONG uv_height = y_height / 2;
+
+    const ULONG uv_size = uv_stride * uv_height;
+
+    const ULONG size_out = y_size + 2 * uv_size;  //calculated
+
+    const long actual_size_out = pOut->GetSize();
+    assert(actual_size_out >= 0);
+    assert(ULONG(actual_size_out) >= size_out);
+
+    BYTE* const u = y + uv_size;
+    BYTE* const v = u + uv_size;
+
+    assert(m_rgb_to_yuv);
+    (*m_rgb_to_yuv)(buf_in, w_in, h_in, y, u, v, stride_in, y_stride);
+
+    hr = pOut->SetActualDataLength(size_out);
+    assert(SUCCEEDED(hr));
+
+    REFERENCE_TIME st, sp;
+
+    hr = pIn->GetTime(&st, &sp);
+
+    if (hr == S_OK)
+    {
+        hr = pOut->SetTime(&st, &sp);
+        assert(SUCCEEDED(hr));
+    }
+    else if (SUCCEEDED(hr))
+    {
+        hr = pOut->SetTime(&st, 0);
+        assert(SUCCEEDED(hr));
+    }
+    else
+    {
+        hr = pOut->SetTime(0, 0);
+        assert(SUCCEEDED(hr));
+    }
+
+    hr = pOut->SetSyncPoint(TRUE);
+    assert(SUCCEEDED(hr));
+
+    hr = pOut->SetPreroll(FALSE);  //TODO
+    assert(SUCCEEDED(hr));
+
+    hr = pOut->SetMediaType(0);
+    assert(SUCCEEDED(hr));
+
+    const HRESULT hrDiscontinuity = pIn->IsDiscontinuity();
+    assert(SUCCEEDED(hrDiscontinuity));
+
+    const bool bDiscontinuity = (hrDiscontinuity == S_OK);
+
+    hr = pOut->SetDiscontinuity(bDiscontinuity ? TRUE : FALSE);
+    assert(SUCCEEDED(hr));
+
+    hr = pOut->SetMediaTime(0, 0);
+    assert(SUCCEEDED(hr));
 }
 
 

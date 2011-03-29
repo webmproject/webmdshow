@@ -9,6 +9,7 @@
 #pragma once
 #include "cmediatypes.hpp"
 #include "graphutil.hpp"
+#include <amvideo.h>
 #include <string>
 
 namespace WebmColorConversion
@@ -81,6 +82,9 @@ public:
     //    REFERENCE_TIME tStart,
     //    REFERENCE_TIME tStop,
     //    double dRate);
+
+    const AM_MEDIA_TYPE* GetMediaType() const;
+    const VIDEOINFOHEADER* GetVideoInfo() const;
 
 protected:
     virtual HRESULT GetName(PIN_INFO&) const = 0;
