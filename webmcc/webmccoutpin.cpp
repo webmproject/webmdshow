@@ -1009,6 +1009,7 @@ void Outpin::PopulateSample(
     assert(hh_in);
 
     const LONG h_in = labs(hh_in);
+    assert(h_in > 0);
     assert(h_in % 2 == 0);  //TODO
 
     BYTE* buf_in;
@@ -1022,7 +1023,7 @@ void Outpin::PopulateSample(
 
     const GUID& subtype_in = pmt_in->subtype;
 
-    ULONG bytes_per_pixel;
+    LONG bytes_per_pixel;
 
     if (subtype_in == MEDIASUBTYPE_RGB24)
         bytes_per_pixel = 3;
@@ -1032,12 +1033,14 @@ void Outpin::PopulateSample(
         bytes_per_pixel = 4;
     }
 
-    const ULONG stride_in = w_in * bytes_per_pixel;
+    const LONG stride_in = w_in * bytes_per_pixel;
     const ULONG size_in = stride_in * h_in;  //calculated
 
     const long actual_size_in = pIn->GetActualDataLength();
     assert(actual_size_in >= 0);
     assert(ULONG(actual_size_in) == size_in);
+
+    BYTE* const rgb = buf_in + stride_in * (h_in - 1);
 
     //output
 
@@ -1074,7 +1077,7 @@ void Outpin::PopulateSample(
 
     BYTE* const y = buf_out;
 
-    const ULONG y_stride = w_out;
+    const LONG y_stride = w_out;
     const ULONG y_height = h_out;
 
     const ULONG y_size = y_stride * y_height;
@@ -1090,11 +1093,11 @@ void Outpin::PopulateSample(
     assert(actual_size_out >= 0);
     assert(ULONG(actual_size_out) >= size_out);
 
-    BYTE* const u = y + uv_size;
-    BYTE* const v = u + uv_size;
+    BYTE* const v = y + y_size;
+    BYTE* const u = v + uv_size;
 
     assert(m_rgb_to_yuv);
-    (*m_rgb_to_yuv)(buf_in, w_in, h_in, y, u, v, stride_in, y_stride);
+    (*m_rgb_to_yuv)(rgb, w_in, h_in, y, u, v, -1 * stride_in, y_stride);
 
     hr = pOut->SetActualDataLength(size_out);
     assert(SUCCEEDED(hr));
