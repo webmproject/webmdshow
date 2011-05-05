@@ -9,7 +9,9 @@
 #ifndef __WEBMDSHOW_COMMON_MEMUTIL_HPP__
 #define __WEBMDSHOW_COMMON_MEMUTIL_HPP__
 
-#include "debugutil.hpp"
+#pragma once
+
+#include "chromium/base/basictypes.h"
 
 namespace WebmUtil
 {
