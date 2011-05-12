@@ -104,6 +104,9 @@ public:
     HRESULT STDMETHODCALLTYPE SetWritingApp(const wchar_t*);
     HRESULT STDMETHODCALLTYPE GetWritingApp(wchar_t**);
 
+    HRESULT STDMETHODCALLTYPE SetMuxMode(WebmMuxMode);
+    HRESULT STDMETHODCALLTYPE GetMuxMode(WebmMuxMode*);
+
 private:
 
     class nondelegating_t : public IUnknown

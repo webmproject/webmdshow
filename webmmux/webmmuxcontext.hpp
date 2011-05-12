@@ -7,6 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
+#include "scratchbuf.hpp"
 #include "webmmuxebmlio.hpp"
 #include "webmmuxstreamvideo.hpp"
 #include "webmmuxstreamaudio.hpp"
@@ -23,6 +24,7 @@ class Context
 public:
 
    EbmlIO::File m_file;
+   WebmUtil::EbmlScratchBuf m_buf;
    std::wstring m_writing_app;
 
    Context();
@@ -49,6 +51,12 @@ public:
     ULONG GetTimecodeScale() const;
     ULONG GetTimecode() const;  //of frame most recently written to file
 
+    bool GetLiveMuxMode() const;
+    void SetLiveMuxMode(bool is_live);
+
+    void BufferData();
+    void FlushBufferedData();
+
 private:
 
    StreamVideo* m_pVideo;
@@ -71,8 +79,7 @@ private:
    void WriteTrack();
 
    __int64 m_segment_pos;
-   __int64 m_first_seekhead_pos;
-   //__int64 m_second_seekhead_pos;
+   __int64 m_seekhead_pos;
    __int64 m_info_pos;
    __int64 m_track_pos;
    __int64 m_cues_pos;
@@ -133,6 +140,19 @@ private:
     int m_cEOS;
     int EOS(Stream*);
 
+    bool m_bLiveMux;
+
+    struct BufferedElementSizeInfo
+    {
+        unsigned __int64 offset; // offset to size value in |m_buf|
+        int byte_count;          // num bytes for storage of size value
+        int num_bytes_to_ignore; // num bytes to ignore in buffer (ID size +
+                                 // |byte_count|)
+    };
+
+    bool m_bBufferData;
+    BufferedElementSizeInfo m_buf_element_info;
+    void ResetBuffer();
 };
 
 

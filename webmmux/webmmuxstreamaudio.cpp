@@ -7,6 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
+#include "webmconstants.hpp"
 #include "webmmuxcontext.hpp"
 #include <cstdlib>
 #include <cassert>
@@ -57,51 +58,54 @@ const void* StreamAudio::GetFormat(ULONG& cb) const
 
 void StreamAudio::WriteTrackType()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID1(0x83);     //TrackType ID
-    f.Write1UInt(1);
-    f.Serialize1UInt(2);  //2=audio
+    buf.WriteID1(WebmUtil::kEbmlTrackTypeID);
+    buf.Write1UInt(1);
+    buf.Serialize1UInt(WebmUtil::kEbmlTrackTypeAudio);
 }
 
 
 void StreamAudio::WriteTrackSettings()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID1(0xE1);  //Audio settings
+    // we need the starting length of |buf| to properly calculate
+    // |num_bytes_to_ignore|
+    const uint64 buf_start_len = buf.GetBufferLength();
 
-    //allocate 2 bytes of storage for size of settings
-    const __int64 begin_pos = f.SetPosition(2, STREAM_SEEK_CUR);
+    buf.WriteID1(WebmUtil::kEbmlAudioSettingsID);
 
-    //const WAVEFORMATEX& wfx = GetFormat();
-    const ULONG samples_per_sec_ = GetSamplesPerSec();
+    // store audio settings offset for patching later
+    const uint64 audio_len_offset = buf.GetBufferLength();
+
+    // We must exclude |num_bytes_to_ignore| from the size we obtain from
+    // |buf|.  The value from |buf| includes the bytes storing all preceding
+    // data in the track entry -- using it as-is would result in an invalid
+    // tracks element.
+    const uint64 num_bytes_to_ignore = buf_start_len + 1 + sizeof(uint16);
+
+    // reserve 2 bytes for size of settings
+    buf.Serialize2UInt(0);
+
+    const uint32 samples_per_sec_ = GetSamplesPerSec();
     assert(samples_per_sec_ > 0);
 
     const float samples_per_sec = static_cast<float>(samples_per_sec_);
 
-    f.WriteID1(0xB5);  //SamplingFrequency ID
-    f.Write1UInt(4);
-    f.Serialize4Float(samples_per_sec);
+    buf.WriteID1(WebmUtil::kEbmlSamplingFrequencyID);
+    buf.Write1UInt(4);
+    buf.Serialize4Float(samples_per_sec);
 
-    const BYTE channels = GetChannels();
+    const uint8 channels = GetChannels();
     assert(channels > 0);
 
-    f.WriteID1(0x9F);  //Channels ID
-    f.Write1UInt(1);
-    f.Serialize1UInt(channels);
+    buf.WriteID1(WebmUtil::kEbmlChannelsID);
+    buf.Write1UInt(1);
+    buf.Serialize1UInt(channels);
 
-    const __int64 end_pos = f.GetPosition();
-
-    const __int64 size_ = end_pos - begin_pos;
-    assert(size_ <= USHRT_MAX);
-
-    const USHORT size = static_cast<USHORT>(size_);
-
-    f.SetPosition(begin_pos - 2);
-    f.Write2UInt(size);
-
-    f.SetPosition(end_pos);
+    const uint64 audio_len = buf.GetBufferLength() - num_bytes_to_ignore;
+    buf.RewriteUInt(audio_len_offset, audio_len, sizeof(uint16));
 }
 
 

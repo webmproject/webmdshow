@@ -7,13 +7,17 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmmuxcontext.hpp"
-#include "webmmuxstreamaudiovorbisogg.hpp"
-#include "vorbistypes.hpp"
-#include "cmediatypes.hpp"
-#include <cassert>
 #include <uuids.h>
 #include <vfwmsgs.h>
+
+#include <cassert>
+
+#include "cmediatypes.hpp"
+#include "vorbistypes.hpp"
+#include "webmconstants.hpp"
+#include "webmmuxcontext.hpp"
+#include "webmmuxstreamaudiovorbisogg.hpp"
+
 #ifdef _DEBUG
 #include <odbgstream.hpp>
 #include <iomanip>
@@ -313,52 +317,37 @@ StreamAudioVorbisOgg::StreamAudioVorbisOgg(
 {
 }
 
-
-//void StreamAudioVorbisOgg::Final()
-//{
-//    const HRESULT hr = FinalizeTrackCodecPrivate();
-//    hr;
-//    SUCCEEDED(hr);
-//}
-
-
 void StreamAudioVorbisOgg::WriteTrackCodecID()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID1(0x86);  //Codec ID
-    f.Write1String("A_VORBIS");
+    buf.WriteID1(WebmUtil::kEbmlCodecIDID);
+    buf.Write1String("A_VORBIS");
 }
 
 
 void StreamAudioVorbisOgg::WriteTrackCodecName()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID3(0x258688);  //Codec Name
-    f.Write1UTF8(L"VORBIS");
+    buf.WriteID3(WebmUtil::kEbmlCodecNameID);
+    buf.Write1UTF8(L"VORBIS");
 }
 
 
 void StreamAudioVorbisOgg::WriteTrackCodecPrivate()
 {
-    EbmlIO::File& file = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    m_codec_private_data_pos = file.GetPosition();
+    // Note: this enables buffering for all streams!!
+    m_context.BufferData();
+    m_codec_private_data_pos = buf.GetBufferLength();
 
-    const USHORT size = kPRIVATE_DATA_BYTES_RESERVED - 3;
+    const uint16 size = kPRIVATE_DATA_BYTES_RESERVED - 3;
 
-    file.WriteID1(0xEC); // Void
-    file.Write2UInt(size);
-
-    file.SetPosition(size, STREAM_SEEK_CUR);
-
-#if 0 //def _DEBUG
-    odbgstream ods;
-    ods << "["__FUNCTION__"] " << "RESERVED SPACE! m_codec_private_data_pos="
-        << m_codec_private_data_pos << " kPRIVATE_DATA_BYTES_RESERVED="
-        << kPRIVATE_DATA_BYTES_RESERVED << std::endl;
-#endif
+    buf.WriteID1(WebmUtil::kEbmlVoidID);
+    buf.Write2UInt(size);
+    buf.Fill(0, size);
 }
 
 
@@ -367,77 +356,94 @@ HRESULT StreamAudioVorbisOgg::FinalizeTrackCodecPrivate()
     if (m_ident.empty() || m_comment.empty() || m_setup.empty())
         return S_OK;
 
-    EbmlIO::File& file = m_context.m_file;
-
-    const __int64 old_pos = file.GetPosition();
-    file.SetPosition(m_codec_private_data_pos);
-
-    const DWORD ident_len = static_cast<const DWORD>(m_ident.size());
+    const uint32 ident_len = static_cast<const uint32>(m_ident.size());
     assert(ident_len > 0);
     assert(ident_len <= 255);
 
-    const DWORD comment_len = static_cast<const DWORD>(m_comment.size());
+    const uint32 comment_len = static_cast<const uint32>(m_comment.size());
     assert(comment_len > 0);
     assert(comment_len <= 255);
 
-    const DWORD setup_len = static_cast<const DWORD>(m_setup.size());
+    const uint32 setup_len = static_cast<const uint32>(m_setup.size());
     assert(setup_len > 0);
 
-    const DWORD hdr_len = ident_len + comment_len + setup_len;
+    const uint32 hdr_len = ident_len + comment_len + setup_len;
 
-    const ULONG len = 1 + 1 + 1 + hdr_len;
-    //1 byte = number of headers - 1
-    //1 byte = ident len
-    //1 byte = comment len
-    //(len of setup_len is implied by total len)
+    // 1 byte to store header count (total headers - 1)
+    // 1 byte each for vorbis ident and comment headers
+    // - len of setup_len is implied by total len
+    const uint32 codec_private_length = 1 + 1 + 1 + hdr_len;
 
-    file.WriteID2(0x63A2);  //Codec Private
-    file.Write4UInt(len);
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
+    uint64 rewrite_offset = m_codec_private_data_pos;
 
-    BYTE val = 2;  //number of headers - 1
-    file.Write(&val, 1);
+    rewrite_offset += buf.RewriteID(rewrite_offset,
+                                    WebmUtil::kEbmlCodecPrivateID,
+                                    sizeof(uint16));
+    rewrite_offset += buf.RewriteUInt(rewrite_offset, codec_private_length,
+                                      sizeof(uint32));
 
-    val = static_cast<BYTE>(ident_len);
-    file.Write(&val, 1);
+    uint8 val = 2;  //number of headers - 1
+    rewrite_offset += buf.RewriteUInt(rewrite_offset, val, sizeof(uint8));
 
-    val = static_cast<BYTE>(comment_len);
-    file.Write(&val, 1);
-    file.Write(&m_ident[0], ident_len);
+    // write ident length
+    val = static_cast<uint8>(ident_len);
+    rewrite_offset += buf.RewriteUInt(rewrite_offset, val, sizeof(uint8));
 
-    // TODO(tomfinegan): if |PRIVATE_DATA_BYTES_RESERVED| did not allow for
-    // enough storage, we could write an empty comment header to avoid
-    // trouble. (assuming that buys us enough space)
-    file.Write(&m_comment[0], comment_len);
-    file.Write(&m_setup[0], setup_len);
+    // write comment length
+    val = static_cast<uint8>(comment_len);
+    rewrite_offset += buf.RewriteUInt(rewrite_offset, val, sizeof(uint8));
 
-    // fill in any remaining space with a Void element
-    const __int64& private_begin_pos = m_codec_private_data_pos;
-    const __int64 private_end_pos =
-        private_begin_pos + kPRIVATE_DATA_BYTES_RESERVED;
+    // write ident data
+    rewrite_offset += buf.Rewrite(rewrite_offset, &m_ident[0], ident_len);
 
-    if (file.GetPosition() < private_end_pos)
+    // write comment data
+    rewrite_offset += buf.Rewrite(rewrite_offset, &m_comment[0], comment_len);
+
+    // write vorbis decoder setup data
+    rewrite_offset += buf.Rewrite(rewrite_offset, &m_setup[0], setup_len);
+
+
+    // TODO(tomfinegan): we need to update the track element length at the same
+    //                   time we erase the extra reserved space; save this for
+    //                   later since I agree with the whole "Premature
+    //                   optimization is the root of all evil" argument.
+    //
+    // erase any unused space from that reserved in |WriteTrackCodecPrivate|
+    //if (buf.GetBufferLength() < kPRIVATE_DATA_BYTES_RESERVED)
+    //{
+    //    int32 num_bytes_to_erase =
+    //        kPRIVATE_DATA_BYTES_RESERVED - rewrite_offset;
+    //    buf.Erase(rewrite_offset, num_bytes_to_erase);
+    //}
+
+    // Fill any remaining reserved space with a proper EBML Void element
+    if (buf.GetBufferLength() < kPRIVATE_DATA_BYTES_RESERVED)
     {
-        __int64 llbytes_to_write = private_end_pos - file.GetPosition();
+        uint64 void_element_size =
+            kPRIVATE_DATA_BYTES_RESERVED - rewrite_offset;
 
-        assert(llbytes_to_write >= 3); // 1 for id, 2 for len
-        assert(llbytes_to_write < kPRIVATE_DATA_BYTES_RESERVED);
+        // assert that we have more than 3 bytes remaining-- I don't know how
+        // parsers will handle a void element with a size of 0 and no contents
+        assert(void_element_size > 3); // 3 = kEbmlVoidID + uint16
 
-        USHORT bytes_to_write = static_cast<USHORT>(llbytes_to_write);
-
-        bytes_to_write = bytes_to_write - 1 - 2; // Void type, length
-
-        // create a void element and set its size (no need to fill)
-        file.WriteID1(0xEC); // Void
-        file.Write2UInt(bytes_to_write);
+        rewrite_offset += buf.RewriteID(rewrite_offset, WebmUtil::kEbmlVoidID,
+                                        sizeof(uint8));
+        rewrite_offset += buf.RewriteUInt(rewrite_offset, void_element_size,
+                                          sizeof(uint16));
+        void_element_size -= 3;
+        const uint8 fill_val = 0;
+        for (int i = 0; i < void_element_size; ++i)
+        {
+            rewrite_offset += buf.Rewrite(rewrite_offset, &fill_val,
+                                          sizeof(uint8));
+        }
+        assert(rewrite_offset == kPRIVATE_DATA_BYTES_RESERVED);
     }
 
-    const __int64 actual_bytes_written =
-        file.GetPosition() - private_begin_pos;
-
-    actual_bytes_written;
-    assert(actual_bytes_written <= kPRIVATE_DATA_BYTES_RESERVED);
-
-    file.SetPosition(old_pos);
+    // Normal file writing can proceed; flush the data we've had Context
+    // buffering now that we've written the vorbis decoder setup data.
+    m_context.FlushBufferedData();
 
     return S_OK;
 }

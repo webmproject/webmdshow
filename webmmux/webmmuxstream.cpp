@@ -7,6 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
+#include "webmconstants.hpp"
 #include "webmmuxstream.hpp"
 #include "webmmuxcontext.hpp"
 #include <cassert>
@@ -64,12 +65,25 @@ int Stream::GetTrackNumber() const
 
 void Stream::WriteTrackEntry(int tn)
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& entry_buf = m_context.m_buf;
 
-    f.WriteID1(0xAE);  //TrackEntry ID (level 2)
+    // we need the starting length of |entry_buf| to properly calculate
+    // |num_bytes_to_ignore|
+    const uint64 buf_start_len = entry_buf.GetBufferLength();
 
-    //allocate 2 bytes for track entry size field
-    const __int64 begin_pos = f.SetPosition(2, STREAM_SEEK_CUR);
+    entry_buf.WriteID1(WebmUtil::kEbmlTrackEntryID);
+
+    // store entry offset for patching later
+    const uint64 entry_len_offset = entry_buf.GetBufferLength();
+
+    // We must exclude |num_bytes_to_ignore| from the size we obtain from
+    // |entry_buf|.  The value from |entry_buf| includes the bytes storing
+    // all preceding data in the track entry -- using it as-is would result
+    // in an invalid tracks element.
+    const uint64 num_bytes_to_ignore = buf_start_len + 1 + sizeof(uint16);
+
+    // reserve 2 bytes for patching in the size...
+    entry_buf.Serialize2UInt(0);
 
     WriteTrackNumber(tn);
     WriteTrackUID();
@@ -80,46 +94,36 @@ void Stream::WriteTrackEntry(int tn)
     WriteTrackCodecName();
     WriteTrackSettings();
 
-    const __int64 end_pos = f.GetPosition();
-
-    const __int64 size_ = end_pos - begin_pos;
-    assert(size_ <= USHRT_MAX);
-
-    const USHORT size = static_cast<USHORT>(size_);
-
-    f.SetPosition(begin_pos - 2);
-    f.Write2UInt(size);
-
-    f.SetPosition(end_pos);
+    const uint64 entry_len = entry_buf.GetBufferLength() - num_bytes_to_ignore;
+    entry_buf.RewriteUInt(entry_len_offset, entry_len, sizeof(uint16));
 }
 
 
 void Stream::WriteTrackNumber(int tn_)
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
     assert(tn_ > 0);
     assert(tn_ < 128);
 
     m_trackNumber = tn_;
+    const uint8 track_num = static_cast<uint8>(tn_);
 
-    const BYTE tn = static_cast<BYTE>(tn_);
-
-    f.WriteID1(0xD7);     //track number ID  //1101 0111
-    f.Write1UInt(1);
-    f.Serialize1UInt(tn);
+    buf.WriteID1(WebmUtil::kEbmlTrackNumberID);
+    buf.Write1UInt(1);
+    buf.Serialize1UInt(track_num);
 }
 
 
 void Stream::WriteTrackUID()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
     const TrackUID_t uid = CreateTrackUID();
 
-    f.WriteID2(0x73C5);    //TrackUID ID
-    f.Write1UInt(8);
-    f.Serialize8UInt(uid);
+    buf.WriteID2(WebmUtil::kEbmlTrackUIDID);
+    buf.Write1UInt(8);
+    buf.Serialize8UInt(uid);
 }
 
 
@@ -222,7 +226,7 @@ void Stream::Frame::WriteBlockGroup(
 
     //begin block group
 
-    file.WriteID1(0xA0);  //block group
+    file.WriteID1(WebmUtil::kEbmlBlockGroupID);
     file.WriteUInt(block_group_size);
 
 #ifdef _DEBUG
@@ -244,14 +248,14 @@ void Stream::Frame::WriteBlockGroup(
 
         const SHORT val = static_cast<SHORT>(tc);
 
-        file.WriteID1(0xFB);  //ReferenceBlock ID
+        file.WriteID1(WebmUtil::kEbmlReferenceBlockID);
         file.Write1UInt(2);
         file.Serialize2SInt(val);
     }
 
     if (duration > 0)
     {
-        file.WriteID1(0x9B);  //BlockDuration ID
+        file.WriteID1(WebmUtil::kEbmlBlockDurationID);
         file.Write1UInt(4);  //TODO: use min size
         file.Serialize4UInt(duration);
     }

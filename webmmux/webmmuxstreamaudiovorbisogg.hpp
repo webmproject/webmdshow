@@ -28,7 +28,6 @@ class StreamAudioVorbisOgg : public StreamAudio
 
 protected:
     StreamAudioVorbisOgg(Context&, const BYTE*, ULONG);
-    //virtual void Final();  //grant last wishes
 
     ULONG GetSamplesPerSec() const;
     BYTE GetChannels() const;
@@ -40,10 +39,6 @@ protected:
 public:
     static void GetMediaTypes(CMediaTypes&);
     static bool QueryAccept(const AM_MEDIA_TYPE&);
-
-    //static HRESULT GetAllocatorRequirements(
-    //                const AM_MEDIA_TYPE&,
-    //                ALLOCATOR_PROPERTIES&);
 
     static StreamAudio* CreateStream(Context&, const AM_MEDIA_TYPE&);
 
@@ -80,7 +75,7 @@ private:
         const BYTE* GetData() const;
     };
 
-    __int64 m_codec_private_data_pos;
+    unsigned __int64 m_codec_private_data_pos;
 
     HRESULT FinalizeTrackCodecPrivate();
 };

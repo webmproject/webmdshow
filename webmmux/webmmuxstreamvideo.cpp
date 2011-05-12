@@ -7,6 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
+#include "webmconstants.hpp"
 #include "webmmuxcontext.hpp"
 #include "mediatypeutil.hpp"
 #include <amvideo.h>
@@ -109,11 +110,11 @@ float StreamVideo::GetFramerate() const
 
 void StreamVideo::WriteTrackType()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID1(0x83);     //track type
-    f.Write1UInt(1);
-    f.Serialize1UInt(1);  //1=video
+    buf.WriteID1(WebmUtil::kEbmlTrackTypeID);
+    buf.Write1UInt(1);
+    buf.Serialize1UInt(WebmUtil::kEbmlTrackTypeVideo);
 }
 
 

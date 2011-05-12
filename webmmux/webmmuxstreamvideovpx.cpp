@@ -7,6 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
+#include "webmconstants.hpp"
 #include "webmmuxcontext.hpp"
 #include "webmmuxstreamvideovpx.hpp"
 #include <climits>
@@ -126,69 +127,73 @@ StreamVideoVPx::StreamVideoVPx(
 
 void StreamVideoVPx::WriteTrackCodecID()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID1(0x86);  //Codec ID
-    f.Write1String("V_VP8");
+    buf.WriteID1(WebmUtil::kEbmlCodecIDID);
+    buf.Write1String("V_VP8");
 }
 
 
 void StreamVideoVPx::WriteTrackCodecName()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID3(0x258688);  //Codec Name
-    f.Write1UTF8(L"VP8");
+    buf.WriteID3(WebmUtil::kEbmlCodecNameID);
+    buf.Write1UTF8(L"VP8");
 }
 
 
 void StreamVideoVPx::WriteTrackSettings()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID1(0xE0);  //video settings
+    // we need the starting length of |buf| to properly calculate
+    // |num_bytes_to_ignore|
+    const uint64 buf_start_len = buf.GetBufferLength();
 
-    //allocate 2 bytes of storage for size of settings
-    const __int64 begin_pos = f.SetPosition(2, STREAM_SEEK_CUR);
+    buf.WriteID1(WebmUtil::kEbmlVideoSettingsID);
+
+    // store length offset for patching later
+    const uint64 len_offset = buf.GetBufferLength();
+
+    // We must exclude |num_bytes_to_ignore| from the size we obtain from
+    // |buf|.  The value from |buf| includes the bytes storing all preceding
+    // data in the track entry -- using it as-is would result in an invalid
+    // tracks element.
+    const uint64 num_bytes_to_ignore = buf_start_len + 1 + sizeof(uint16);
+
+    // reserve 2 bytes for patching in the size...
+    buf.Serialize2UInt(0);
 
     const BITMAPINFOHEADER& bmih = GetBitmapInfoHeader();
     assert(bmih.biSize >= sizeof(BITMAPINFOHEADER));
     assert(bmih.biWidth > 0);
-    assert(bmih.biWidth <= USHRT_MAX);
+    assert(bmih.biWidth <= kuint16max);
     assert(bmih.biHeight > 0);
-    assert(bmih.biHeight <= USHRT_MAX);
+    assert(bmih.biHeight <= kuint16max);
 
-    const USHORT width = static_cast<USHORT>(bmih.biWidth);
-    const USHORT height = static_cast<USHORT>(bmih.biHeight);
+    const uint16 width = static_cast<uint16>(bmih.biWidth);
+    const uint16 height = static_cast<uint16>(bmih.biHeight);
 
-    f.WriteID1(0xB0);  //width
-    f.Write1UInt(2);
-    f.Serialize2UInt(width);
+    buf.WriteID1(WebmUtil::kEbmlVideoWidth);
+    buf.Write1UInt(2);
+    buf.Serialize2UInt(width);
 
-    f.WriteID1(0xBA);  //height
-    f.Write1UInt(2);
-    f.Serialize2UInt(height);
+    buf.WriteID1(WebmUtil::kEbmlVideoHeight);
+    buf.Write1UInt(2);
+    buf.Serialize2UInt(height);
 
     const float framerate = GetFramerate();
 
     if (framerate > 0)
     {
-        f.WriteID3(0x2383E3);  //frame rate
-        f.Write1UInt(4);
-        f.Serialize4Float(framerate);
+        buf.WriteID3(WebmUtil::kEbmlVideoFrameRate);
+        buf.Write1UInt(4);
+        buf.Serialize4Float(framerate);
     }
 
-    const __int64 end_pos = f.GetPosition();
-
-    const __int64 size_ = end_pos - begin_pos;
-    assert(size_ <= USHRT_MAX);
-
-    const USHORT size = static_cast<USHORT>(size_);
-
-    f.SetPosition(begin_pos - 2);
-    f.Write2UInt(size);
-
-    f.SetPosition(end_pos);
+    const uint64 video_len = buf.GetBufferLength() - num_bytes_to_ignore;
+    buf.RewriteUInt(len_offset, video_len, sizeof(uint16));
 }
 
 

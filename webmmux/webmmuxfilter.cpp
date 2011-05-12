@@ -1303,6 +1303,48 @@ HRESULT Filter::GetWritingApp(wchar_t** p)
 }
 
 
+HRESULT Filter::SetMuxMode(WebmMuxMode mux_mode)
+{
+    Lock lock;
+
+    int imux_mode = mux_mode;
+    if (imux_mode < kWebmMuxModeDefault && mux_mode > kWebmMuxModeLive)
+        return E_INVALIDARG;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+
+    m_ctx.SetLiveMuxMode(mux_mode == kWebmMuxModeLive);
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetMuxMode(WebmMuxMode* pMuxMode)
+{
+    if (pMuxMode == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_ctx.GetLiveMuxMode())
+        *pMuxMode = kWebmMuxModeLive;
+    else
+        *pMuxMode = kWebmMuxModeDefault;
+
+    return S_OK;
+}
+
 
 HRESULT Filter::OnEndOfStream()
 {

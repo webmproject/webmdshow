@@ -1,4 +1,4 @@
-// Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+// Copyright (c) 2011 The WebM project authors. All Rights Reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -6,14 +6,19 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include <strmif.h>
-#include <comdef.h>
-#include "webmmuxcontext.hpp"
-#include "versionhandling.hpp"
-#include "comreg.hpp"
 #include <cassert>
 #include <ctime>
 #include <sstream>
+
+#include <strmif.h>
+#include <comdef.h>
+
+#include "comreg.hpp"
+#include "scratchbuf.hpp"
+#include "versionhandling.hpp"
+#include "webmconstants.hpp"
+#include "webmmuxcontext.hpp"
+
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -30,9 +35,14 @@ namespace WebmMuxLib
 extern HMODULE s_hModule;
 
 Context::Context() :
+   m_bLiveMux(false),
+   m_bBufferData(false),
    m_pVideo(0),
    m_pAudio(0),
-   m_timecode_scale(1000000)  //TODO
+   m_timecode_scale(1000000),  //TODO
+   m_info_pos(0),
+   m_seekhead_pos(0),
+   m_segment_pos(0)
 {
     //Seed the random number generator, which is needed
     //for creation of unique TrackUIDs.
@@ -119,7 +129,13 @@ void Context::Open(IStream* pStream)
         }
 #endif
 
-        m_file.SetPosition(0);
+        ResetBuffer();
+
+        if (!m_bLiveMux)
+            m_file.SetPosition(0);
+        else
+            assert(m_file.GetPosition() == 0);
+
         WriteEbmlHeader();
         InitSegment();
     }
@@ -173,88 +189,87 @@ ULONG Context::GetTimecode() const
 
 void Context::WriteEbmlHeader()
 {
-    m_file.WriteID4(0x1A45DFA3);
+    m_buf.WriteID4(WebmUtil::kEbmlID);
 
-    //Allocate 1 byte of storage for Ebml header size.
-    const __int64 start_pos = m_file.SetPosition(1, STREAM_SEEK_CUR);
+    // store the header size offset for later correction
+    const uint64 offset_header_size = m_buf.GetBufferLength();
+    m_buf.Write1UInt(0xF); // temp size
 
-    //EBML Version
+    // We must exclude |num_bytes_to_ignore| from the size we obtain from
+    // |m_buf|.  The value from |m_buf| includes the bytes storing
+    // kEbmlID and the size written into the buffer-- using it would result in
+    // an invalid WebM file.
+    const uint64 num_bytes_to_ignore = 4 + sizeof(uint8);
 
-    m_file.WriteID2(0x4286);
-    m_file.Write1UInt(1);
-    m_file.Serialize1UInt(1);  //EBML Version = 1
+    // EBML Version
+    m_buf.WriteID2(WebmUtil::kEbmlVersionID);
+    m_buf.Write1UInt(1);      // element size
+    m_buf.Serialize1UInt(1);  // EBML Version = 1
 
-    //EBML Read Version
+    // EBML Read Version
+    m_buf.WriteID2(WebmUtil::kEbmlReadVersionID);
+    m_buf.Write1UInt(1);      // element size
+    m_buf.Serialize1UInt(1);  // EBML Read Version = 1
 
-    m_file.WriteID2(0x42F7);
-    m_file.Write1UInt(1);
-    m_file.Serialize1UInt(1);  //EBML Read Version = 1
+    // EBML Max ID Length
+    m_buf.WriteID2(WebmUtil::kEbmlMaxIDLengthID);
+    m_buf.Write1UInt(1);      // element size
+    m_buf.Serialize1UInt(4);  // EBML Max ID Length = 4
 
-    //EBML Max ID Length
+    // EBML Max Size Length
+    m_buf.WriteID2(WebmUtil::kEbmlMaxSizeLengthID);
+    m_buf.Write1UInt(1);      // element size
+    m_buf.Serialize1UInt(8);  // EBML Max Size Length = 8
 
-    m_file.WriteID2(0x42F2);
-    m_file.Write1UInt(1);
-    m_file.Serialize1UInt(4);  //EBML Max ID Length = 4
+    // Doc Type
+    m_buf.WriteID2(WebmUtil::kEbmlDocTypeID);
+    m_buf.Write1String("webm");
 
-    //EBML Max Size Length
+    // Pad our doc type (so it can be changed to matroska easily)
+    m_buf.WriteID1(WebmUtil::kEbmlVoidID);
+    const int32 void_element_size = 9;
+    m_buf.Write1UInt(void_element_size);
+    for (int32 i = 0; i < void_element_size; ++i)
+    {
+        m_buf.Serialize1UInt(0);
+    }
 
-    m_file.WriteID2(0x42F3);
-    m_file.Write1UInt(1);
-    m_file.Serialize1UInt(8);  //EBML Max Size Length = 8
+    // Doc Type Version
+    m_buf.WriteID2(WebmUtil::kEbmlDocTypeVersionID);
+    m_buf.Write1UInt(1);      // element size
+    m_buf.Serialize1UInt(2);  // Doc Type Version
 
-    //Doc Type
+    // Doc Type Read Version
+    m_buf.WriteID2(WebmUtil::kEbmlDocTypeReadVersionID);
+    m_buf.Write1UInt(1);      // element size
+    m_buf.Serialize1UInt(2);  // Doc Type Read Version
 
-    m_file.WriteID2(0x4282);
+    // patch in the actual length of the EBML header
+    const uint64 actual_header_length =
+        m_buf.GetBufferLength() - num_bytes_to_ignore;
+    assert(actual_header_length < 255);
+    m_buf.RewriteUInt(offset_header_size, actual_header_length, 1);
 
-    //Some parsers don't like embedded NULs in the stream,
-    //so this little trick won't work:
-    //m_file.Write1String("webm", strlen("matroska"));
-    //So do this instead:
-    m_file.Write1String("webm");
-
-    m_file.WriteID1(0xEC);  //Void element
-    m_file.Write1UInt(9);
-    m_file.SetPosition(9, STREAM_SEEK_CUR);
-
-    //Doc Type Version
-
-    m_file.WriteID2(0x4287);
-    m_file.Write1UInt(1);
-    m_file.Serialize1UInt(2);  //Doc Type Version
-
-    //Doc Type Read Version
-
-    m_file.WriteID2(0x4285);
-    m_file.Write1UInt(1);
-    m_file.Serialize1UInt(2);  //Doc Type Read Version
-
-    const __int64 stop_pos = m_file.GetPosition();
-
-    const __int64 size_ = stop_pos - start_pos;
-    assert(size_ <= 126);  //1-byte EBML u-int type
-
-    const BYTE size = static_cast<BYTE>(size_);
-
-    m_file.SetPosition(start_pos - 1);
-    m_file.Write1UInt(size);
-
-    m_file.SetPosition(stop_pos);
+    // dump |m_buf| into the out file
+    m_file.Write(m_buf.GetBufferPtr(),
+                 static_cast<ULONG>(m_buf.GetBufferLength()));
+    m_buf.Reset();
 }
 
 
 void Context::InitSegment()
 {
-    m_segment_pos = m_file.GetPosition();
+    m_file.WriteID4(WebmUtil::kEbmlSegmentID);  //Segment ID
 
-    m_file.WriteID4(0x18538067);  //Segment ID
+    if (m_bLiveMux == false)
+    {
+        m_segment_pos = m_file.GetPosition() - 4;
+        m_file.Serialize8UInt(0x01FFFFFFFFFFFFFFLL);
+    }
+    else
+        m_file.Serialize1UInt(0xF);
 
-#if 0
-    m_file.Write8UInt(0);         //will need to be filled in later
-#else
-    m_file.Serialize8UInt(0x01FFFFFFFFFFFFFFLL);
-#endif
-
-    if (m_pVideo)
+    if (m_pVideo && !m_bLiveMux)
         InitFirstSeekHead();  //Meta Seek
 
     InitInfo();      //Segment Info
@@ -266,69 +281,68 @@ void Context::FinalSegment()
 {
     m_cues_pos = m_file.GetPosition();  //end of clusters
 
-    if (m_pVideo)
+    if (m_pVideo && !m_bLiveMux)
         WriteCues();
 
-#if 0
-    m_second_seekhead_pos = m_file.GetPosition();  //end of cues
-    WriteSecondSeekHead();
-#else
     m_clusters.clear();
-#endif
 
-    const __int64 maxpos = m_file.GetPosition();
-    m_file.SetSize(maxpos);
+    if (!m_bLiveMux)
+    {
+        const __int64 maxpos = m_file.GetPosition();
+        m_file.SetSize(maxpos);
 
-    const __int64 size = maxpos - m_segment_pos - 12;
-    assert(size >= 0);
+        const __int64 size = maxpos - m_segment_pos - 12;
+        assert(size >= 0);
 
-    m_file.SetPosition(m_segment_pos);
+        m_file.SetPosition(m_segment_pos);
 
-    const ULONG id = m_file.ReadID4();
-    assert(id == 0x18538067);  //Segment ID
-    id;
+        const ULONG id = m_file.ReadID4();
+        assert(id == WebmUtil::kEbmlSegmentID);
+        id;
 
-    m_file.Write8UInt(size);  //total size of the segment
+        m_file.Write8UInt(size);  //total size of the segment
+    }
 
-    if (m_pVideo)
+    if (m_pVideo && !m_bLiveMux)
         FinalFirstSeekHead();
 
     FinalInfo();
-    //FinalClusters(m_cues_pos);
 }
 
 
 void Context::FinalInfo()
 {
-    m_file.SetPosition(m_duration_pos);
+    if (!m_bLiveMux)
+    {
+        m_file.SetPosition(m_duration_pos);
 
-    m_file.WriteID2(0x4489);         //Duration ID
-    m_file.Write1UInt(4);            //payload size
+        m_file.WriteID2(WebmUtil::kEbmlDurationID); // Duration ID
+        m_file.Write1UInt(4);                       // payload size
 
-    const float duration = static_cast<float>(m_max_timecode);
-    m_file.Serialize4Float(duration);
+        const float duration = static_cast<float>(m_max_timecode);
+        m_file.Serialize4Float(duration);
+    }
 }
 
 
 void Context::InitFirstSeekHead()
 {
-    m_first_seekhead_pos = m_file.GetPosition();
+    m_seekhead_pos = m_file.GetPosition();
 
-    //The SeekID is 2 + 1 + 4 = 7 bytes.
-    //The SeekPos is 2 + 1 + 8 = 11 bytes.
-    //Total payload for a seek entry is 7 + 11 = 18 bytes.
-    //The Seek entry is 2 + 1 + 18 = 21 bytes.
+    // The SeekID is 2 + 1 + 4 = 7 bytes.
+    // The SeekPos is 2 + 1 + 8 = 11 bytes.
+    // Total payload for a seek entry is 7 + 11 = 18 bytes.
+    // The Seek entry is 2 + 1 + 18 = 21 bytes.
 
-    //(first seek head)
-    //SegmentInfo (1/4)
-    //Track (2/4)
-    //(clusters)
-    //Cues (3/4)
-    //2nd SeekHead (4/4)
+    // (first seek head)
+    // SegmentInfo (1/3)
+    // Track (2/3)
+    // (clusters)
+    // Cues (3/3)
 
-    const BYTE size = (4-1) + (3*21);  //(SeekHead ID - Void ID) + payload
+    const BYTE size = (4-1) + (3*21);  // (SeekHead ID - Void ID) + payload
 
-    m_file.WriteID1(0xEC); //Void
+    m_file.WriteID1(WebmUtil::kEbmlVoidID);
     m_file.Write1UInt(size);
     m_file.SetPosition(size, STREAM_SEEK_CUR);
 }
@@ -337,68 +351,27 @@ void Context::InitFirstSeekHead()
 
 void Context::FinalFirstSeekHead()
 {
-    const LONGLONG start_pos = m_file.SetPosition(m_first_seekhead_pos);
-    const BYTE size = 3*21;
-
-    m_file.WriteID4(0x114D9B74);  //SeekHead ID
-    m_file.Write1UInt(size);
-
-    WriteSeekEntry(0x1549A966, m_info_pos);   //SegmentInfo  (1/4)
-    WriteSeekEntry(0x1654AE6B, m_track_pos);  //Track  (2/4)
-    WriteSeekEntry(0x1C53BB6B, m_cues_pos);   //Cues (3/4)
-    //WriteSeekEntry(0x114D9B74, m_second_seekhead_pos);   //2nd SeekHead (4/4)
-
-    assert((m_file.GetPosition() - start_pos) == (4 + 1 + size));
-}
-
-
-#if 0
-void Context::WriteSecondSeekHead()
-{
-    m_file.WriteID4(0x114D9B74);  //Seek Head
-
-    //start_pos = start of payload
-    const __int64 start_pos = m_file.SetPosition(4, STREAM_SEEK_CUR);
-
-    clusters_t& cc = m_clusters;
-
-#if 0
-    typedef clusters_t::const_iterator iter_t;
-
-    iter_t i = cc.begin();
-    const iter_t j = cc.end();
-
-    while (i != j)
+    if (!m_bLiveMux)
     {
-        const Cluster& c = *i++;
-        WriteSeekEntry(0x1F43B675, c.m_pos);
+        const LONGLONG start_pos = m_file.SetPosition(m_seekhead_pos);
+        const BYTE payload_size = 3*21;
+
+        m_file.WriteID4(WebmUtil::kEbmlSeekHeadID);
+        m_file.Write1UInt(payload_size);
+
+        WriteSeekEntry(WebmUtil::kEbmlSegmentInfoID, m_info_pos);
+        WriteSeekEntry(WebmUtil::kEbmlTracksID, m_track_pos);
+        WriteSeekEntry(WebmUtil::kEbmlCuesID, m_cues_pos);
+
+        assert((m_file.GetPosition() - start_pos) == (4 + 1 + payload_size));
     }
-#else
-    while (!cc.empty())
-    {
-        const Cluster& c = cc.front();
-        WriteSeekEntry(0x1F43B675, c.m_pos);
-        cc.pop_front();
-    }
-#endif
-
-    const __int64 stop_pos = m_file.GetPosition();
-
-    const __int64 size_ = stop_pos - start_pos;
-    assert(size_ <= ULONG_MAX);
-
-    const ULONG size = static_cast<ULONG>(size_);
-
-    m_file.SetPosition(start_pos - 4);
-    m_file.Write4UInt(size);
-
-    m_file.SetPosition(stop_pos);
 }
-#endif
 
 
 void Context::WriteSeekEntry(ULONG id, __int64 pos_)
 {
+    assert(m_bLiveMux == false);
+
     //The SeekID is 2 + 1 + 4 = 7 bytes.
     //The SeekPos is 2 + 1 + 8 = 11 bytes.
     //Total payload for a seek entry is 7 + 11 = 18 bytes.
@@ -410,19 +383,19 @@ void Context::WriteSeekEntry(ULONG id, __int64 pos_)
     const __int64 start_pos = m_file.GetPosition();
 #endif
 
-    m_file.WriteID2(0x4DBB);  //Seek Entry ID
-    m_file.Write1UInt(18);    //payload size of this Seek Entry
+    m_file.WriteID2(WebmUtil::kEbmlSeekEntryID);
+    m_file.Write1UInt(18);  // payload size
 
-    m_file.WriteID2(0x53AB);  //SeekID ID
-    m_file.Write1UInt(4);     //payload size is 4 bytes
+    m_file.WriteID2(WebmUtil::kEbmlSeekIDID);
+    m_file.Write1UInt(4);   // payload size is 4 bytes
     m_file.WriteID4(id);
 
     const __int64 pos = pos_ - m_segment_pos - 12;
     assert(pos >= 0);
 
-    m_file.WriteID2(0x53AC);     //SeekPos ID
-    m_file.Write1UInt(8);        //payload size is 8 bytes
-    m_file.Serialize8UInt(pos);  //payload
+    m_file.WriteID2(WebmUtil::kEbmlSeekPositionID);
+    m_file.Write1UInt(8);        // payload size is 8 bytes
+    m_file.Serialize8UInt(pos);  // payload
 
 #ifdef _DEBUG
     const __int64 stop_pos = m_file.GetPosition();
@@ -433,32 +406,41 @@ void Context::WriteSeekEntry(ULONG id, __int64 pos_)
 
 void Context::InitInfo()
 {
-    m_info_pos = m_file.GetPosition();
+    if (!m_bLiveMux)
+        m_info_pos = m_file.GetPosition();
 
-    m_file.WriteID4(0x1549A966);  //Segment Info ID
+    m_buf.WriteID4(WebmUtil::kEbmlSegmentInfoID);
 
-    //allocate 2 bytes of storage for size
-    const __int64 pos = m_file.SetPosition(2, STREAM_SEEK_CUR);
+    const uint64 size_pos = m_buf.GetBufferLength();
+    // pad with 0; we're going to patch the size into the buffer
+    m_buf.Serialize2UInt(0);
 
-    m_file.WriteID3(0x2AD7B1);                //TimeCodeScale ID
-    m_file.Write1UInt(4);                     //payload size
-    m_file.Serialize4UInt(m_timecode_scale);
+    // We must exclude |num_bytes_to_ignore| from the size we obtain from
+    // |m_buf|.  The value from |m_buf| includes the bytes storing
+    // kEbmlSegmentInfoID and the size written into the buffer-- using it
+    // would result in invalid segment info.
+    const uint64 num_bytes_to_ignore = 4 + sizeof(uint16);
 
-    m_duration_pos = m_file.GetPosition();  //remember where duration is
+    m_buf.WriteID3(WebmUtil::kEbmlTimeCodeScaleID);
+    m_buf.Write1UInt(4);  // payload size
+    m_buf.Serialize4UInt(m_timecode_scale);
 
-#if 0
-    m_file.WriteID2(0x4489);         //Duration ID
-    m_file.Write1UInt(4);            //payload size
-    m_file.Serialize4Float(0.0);     //set value again during close
-#else
-    m_file.WriteID1(0xEC); //Void
-    m_file.Write1UInt(5);  //(Duration ID - Void ID) + payload
-    m_file.SetPosition(5, STREAM_SEEK_CUR);
-#endif
+    if (!m_bLiveMux)
+    {
+        // remember where duration is
+        m_duration_pos = m_file.GetPosition() + m_buf.GetBufferLength();
+        m_buf.WriteID1(WebmUtil::kEbmlVoidID);
+        m_buf.Write1UInt(5);  // (Duration ID - Void ID) + payload
 
-    //MuxingApp
+        // reserve space in the buffer
+        for (int32 i = 0; i < 5; ++i)
+        {
+            m_buf.Serialize1UInt(0xF);
+        }
+    }
 
-    m_file.WriteID2(0x4D80);  //MuxingApp ID
+    // MuxingApp
+    m_buf.WriteID2(WebmUtil::kEbmlMuxingAppID);
 
     wstring fname;
     ComReg::ComRegGetModuleFileName(s_hModule, fname);
@@ -467,56 +449,73 @@ void Context::InitInfo()
     os << L"webmmux-";
     VersionHandling::GetVersion(fname.c_str(), os);
 
-    m_file.Write1UTF8(os.str().c_str());  //writes both EBML size and payload
+    m_buf.Write1UTF8(os.str().c_str()); // writes both EBML size and payload
 
-    //WritingApp
-
+    // WritingApp
     if (!m_writing_app.empty())
     {
-        m_file.WriteID2(0x5741);  //WritingApp ID
-        m_file.Write1UTF8(m_writing_app.c_str());
+        m_buf.WriteID2(WebmUtil::kEbmlWritingAppID);
+        m_buf.Write1UTF8(m_writing_app.c_str());
     }
 
-    const __int64 newpos = m_file.GetPosition();
+    const uint64 actual_seginfo_len =
+        m_buf.GetBufferLength() - num_bytes_to_ignore;
+    m_buf.RewriteUInt(size_pos, actual_seginfo_len, sizeof(uint16));
 
-    const __int64 size_ = newpos - pos;
-    const USHORT size = static_cast<USHORT>(size_);
-
-    m_file.SetPosition(pos - 2);
-    m_file.Write2UInt(size);
-
-    m_file.SetPosition(newpos);
+    m_file.Write(m_buf.GetBufferPtr(),
+                 static_cast<ULONG>(m_buf.GetBufferLength()));
+    m_buf.Reset();
 }
 
 
 void Context::WriteTrack()
 {
-    m_track_pos = m_file.GetPosition();
+    if (!m_bLiveMux)
+        m_track_pos = m_file.GetPosition();
 
-    m_file.WriteID4(0x1654AE6B);  //Tracks element (level 1)
+    assert(m_bBufferData == false);
 
-    //allocate 2 bytes of storage for size of Tracks element (level 1)
-    const __int64 begin_pos = m_file.SetPosition(2, STREAM_SEEK_CUR);
+    m_buf.WriteID4(WebmUtil::kEbmlTracksID);
 
-    int tn = 0;
+    // store tracks element offset for patching later
+    const uint64 track_len_offset = m_buf.GetBufferLength();
+
+    // We must exclude |num_bytes_to_ignore| from the size we obtain from
+    // |m_buf|.  The value from |m_buf| includes the bytes storing
+    // kEbmlTracksID and the size written into the buffer-- using it
+    // would result in invalid segment info.
+    const uint64 num_bytes_to_ignore = 4 + sizeof(uint16);
+
+    // reserve two bytes for the size of the tracks element
+    m_buf.Serialize2UInt(0);
+
+    int track_num = 0;
 
     if (m_pVideo)
-        m_pVideo->WriteTrackEntry(++tn);
+        m_pVideo->WriteTrackEntry(++track_num);
 
     if (m_pAudio)  //TODO: allow for multiple audio streams
-        m_pAudio->WriteTrackEntry(++tn);
+        m_pAudio->WriteTrackEntry(++track_num);
 
-    const __int64 end_pos = m_file.GetPosition();
+    if (m_bBufferData)
+    {
+        // Buffering was enabled by one of the tracks while writing the entry.
+        // Currently this should only happen with Vorbis audio from the
+        // Xiph.org directshow filter.
+        m_buf_element_info.byte_count = sizeof(uint16);
+        m_buf_element_info.num_bytes_to_ignore = num_bytes_to_ignore;
+        m_buf_element_info.offset = track_len_offset;
+    }
+    else
+    {
+        uint64 actual_tracks_len =
+            m_buf.GetBufferLength() - num_bytes_to_ignore;
+        m_buf.RewriteUInt(track_len_offset, actual_tracks_len, sizeof(uint16));
+        m_file.Write(m_buf.GetBufferPtr(),
+                     static_cast<ULONG>(m_buf.GetBufferLength()));
+        m_buf.Reset();
+    }
 
-    const __int64 size_ = end_pos - begin_pos;
-    assert(size_ <= USHRT_MAX);
-
-    const USHORT size = static_cast<USHORT>(size_);
-
-    m_file.SetPosition(begin_pos - 2);
-    m_file.Write2UInt(size);
-
-    m_file.SetPosition(end_pos);
 }
 
 
@@ -1066,6 +1065,7 @@ void Context::CreateNewCluster(const StreamVideo::VideoFrame* pvf_stop)
     os << endl;
 #endif
 
+    assert(m_bBufferData == false);
     assert(m_pVideo);
 
     const StreamVideo::frames_t& vframes = m_pVideo->GetFrames();
@@ -1099,17 +1099,10 @@ void Context::CreateNewCluster(const StreamVideo::VideoFrame* pvf_stop)
         }
     }
 
-    m_file.WriteID4(0x1F43B675);  //Cluster ID
-
-#if 0
-    m_file.Write4UInt(0);         //patch size later, during close
-#elif 0
-    m_file.SetPosition(4, STREAM_SEEK_CUR);
-#else
-    m_file.Serialize4UInt(0x1FFFFFFF);
-#endif
-
-    m_file.WriteID1(0xE7);
+    m_file.WriteID4(WebmUtil::kEbmlClusterID);
+    m_file.Serialize4UInt(0x1FFFFFFF);  // temp cluster size; rewritten below
+                                        // if |m_bLiveMux| is false
+    m_file.WriteID1(WebmUtil::kEbmlTimeCodeID);
     m_file.Write1UInt(4);
     m_file.Serialize4UInt(c.m_timecode);
 
@@ -1239,22 +1232,29 @@ void Context::CreateNewCluster(const StreamVideo::VideoFrame* pvf_stop)
         WriteAudioFrame(c, cFrames);   //write 1st audio frame
     }
 
-    const __int64 pos = m_file.GetPosition();
+    if (m_bLiveMux == false)
+    {
+        // In default (not live) mode we must seek back to the
+        // cluster size pos, and replace the -1 placeholder with
+        // the correct value.
+        const __int64 pos = m_file.GetPosition();
 
-    const __int64 size_ = pos - c.m_pos - 8;
-    assert(size_ <= ULONG_MAX);
+        const __int64 size_ = pos - c.m_pos - 8;
+        assert(size_ <= ULONG_MAX);
 
-    const ULONG size = static_cast<ULONG>(size_);
+        const ULONG size = static_cast<ULONG>(size_);
 
-    m_file.SetPosition(c.m_pos + 4);
-    m_file.Write4UInt(size);
+        m_file.SetPosition(c.m_pos + 4);
+        m_file.Write4UInt(size);
 
-    m_file.SetPosition(pos);
+        m_file.SetPosition(pos);
+    }
 }
 
 
 void Context::CreateNewClusterAudioOnly()
 {
+    assert(m_bBufferData == false);
     assert(m_pAudio);
 
     const StreamAudio::frames_t& aframes = m_pAudio->GetFrames();
@@ -1270,19 +1270,17 @@ void Context::CreateNewClusterAudioOnly()
     clusters_t& cc = m_clusters;
     assert(cc.empty() || (af_first_time > cc.back().m_timecode));
 
-    //const Cluster* const pPrevCluster = cc.empty() ? 0 : &cc.back();
-
     cc.push_back(Cluster());
     Cluster& c = cc.back();
 
     c.m_pos = m_file.GetPosition();
     c.m_timecode = af_first_time;
 
-    //Write 7-byte cluster header
-    m_file.WriteID4(0x1F43B675);  //Cluster ID
-    m_file.SetPosition(3, STREAM_SEEK_CUR);  //TODO: write -1, then patch
-
-    m_file.WriteID1(0xE7);  //TimeCode ID
+    // Write 7-byte cluster header
+    m_file.WriteID4(WebmUtil::kEbmlClusterID);
+    m_file.WriteUInt(0x3FFFFF, 3);  // temp cluster size; rewritten below if
+                                    // |m_bLiveMux| is false
+    m_file.WriteID1(WebmUtil::kEbmlTimeCodeID);
 
     const BYTE timecode_size = m_file.GetSerializeUIntSize(c.m_timecode);
     assert(timecode_size <= 8);
@@ -1328,13 +1326,19 @@ void Context::CreateNewClusterAudioOnly()
         WriteAudioFrame(c, cFrames);
     }
 
-    const LONGLONG pos = m_file.GetPosition();
-    const LONGLONG size = pos - (c.m_pos + 7);  //7 = ID (4) + size (3)
+    if (m_bLiveMux == false)
+    {
+        // In default (not live) mode we must seek back to the
+        // cluster size pos, and replace the -1 placeholder with
+        // the correct value.
+        const LONGLONG pos = m_file.GetPosition();
+        const LONGLONG size = pos - (c.m_pos + 7);  //7 = ID (4) + size (3)
 
-    m_file.SetPosition(c.m_pos + 4);
-    m_file.WriteUInt(size, 3);
+        m_file.SetPosition(c.m_pos + 4);
+        m_file.WriteUInt(size, 3);
 
-    m_file.SetPosition(pos);
+        m_file.SetPosition(pos);
+    }
 }
 
 
@@ -1495,5 +1499,39 @@ void Context::FlushAudio(StreamAudio* pAudio)
     }
 }
 
+bool Context::GetLiveMuxMode() const
+{
+    return m_bLiveMux;
+}
 
-}  //end namespace WebmMuxLib
+void Context::SetLiveMuxMode(bool is_live)
+{
+    m_bLiveMux = is_live;
+}
+
+void Context::BufferData()
+{
+    assert(m_bBufferData == false);
+    m_bBufferData = true;
+}
+
+void Context::FlushBufferedData()
+{
+    assert(m_bBufferData == true);
+    const uint64 element_size =
+        m_buf.GetBufferLength() - m_buf_element_info.num_bytes_to_ignore;
+    m_buf.RewriteUInt(m_buf_element_info.offset, element_size,
+                      m_buf_element_info.byte_count);
+    m_file.Write(m_buf.GetBufferPtr(),
+                 static_cast<ULONG>(m_buf.GetBufferLength()));
+    m_buf.Reset();
+    m_bBufferData = false;
+}
+
+void Context::ResetBuffer()
+{
+    m_bBufferData = false;
+    m_buf.Reset();
+}
+
+} // namespace WebmMuxLib

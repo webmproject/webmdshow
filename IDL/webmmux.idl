@@ -17,15 +17,24 @@ import "ocidl.idl";
 library WebmMuxLib
 {
 
+enum WebmMuxMode
+{
+    kWebmMuxModeDefault = 0,
+    kWebmMuxModeLive = 1
+};
+
 [
     object,
-    uuid(ED311101-5211-11DF-94AF-0026B977EEAA),
+    uuid(ED311106-5211-11DF-94AF-0026B977EEAA),
     helpstring("WebM Muxer Interface")
 ]
 interface IWebmMux : IUnknown
 {
     HRESULT SetWritingApp([in, string] const wchar_t*);
     HRESULT GetWritingApp([out, string] wchar_t**);
+
+    HRESULT SetMuxMode([in] enum WebmMuxMode);
+    HRESULT GetMuxMode([out] enum WebmMuxMode*);
 }
 
 [

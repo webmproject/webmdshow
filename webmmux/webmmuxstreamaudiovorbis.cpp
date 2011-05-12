@@ -7,6 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
+#include "webmconstants.hpp"
 #include "webmmuxcontext.hpp"
 #include "webmmuxstreamaudiovorbis.hpp"
 #include "vorbistypes.hpp"
@@ -341,19 +342,19 @@ StreamAudioVorbis::StreamAudioVorbis(
 
 void StreamAudioVorbis::WriteTrackCodecID()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID1(0x86);  //Codec ID
-    f.Write1String("A_VORBIS");
+    buf.WriteID1(WebmUtil::kEbmlCodecIDID);
+    buf.Write1String("A_VORBIS");
 }
 
 
 void StreamAudioVorbis::WriteTrackCodecName()
 {
-    EbmlIO::File& f = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
-    f.WriteID3(0x258688);  //Codec Name
-    f.Write1UTF8(L"VORBIS");
+    buf.WriteID3(WebmUtil::kEbmlCodecNameID);
+    buf.Write1UTF8(L"VORBIS");
 }
 
 
@@ -400,30 +401,29 @@ void StreamAudioVorbis::WriteTrackCodecPrivate()
     ++len;
     len += hdr_len;
 
-    EbmlIO::File& file = m_context.m_file;
+    WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
+    buf.WriteID2(WebmUtil::kEbmlCodecPrivateID);
+    buf.WriteUInt(len, 0);
 
-    file.WriteID2(0x63A2);  //Codec Private
-    file.WriteUInt(len);
+    uint8 val = 2;  //number of headers - 1
+    buf.Write(&val, 1);
 
-    BYTE val = 2;  //number of headers - 1
-    file.Write(&val, 1);
-
-    val = static_cast<BYTE>(ident_len);
-    file.Write(&val, 1);
+    val = static_cast<uint8>(ident_len);
+    buf.Write(&val, 1);
 
     n = comment_len;
     while (n >= 255)
     {
         val = 255;
-        file.Write(&val, 1);
+        buf.Write(&val, 1);
 
         n -= 255;
     }
 
-    val = static_cast<BYTE>(n);
-    file.Write(&val, 1);
+    val = static_cast<uint8>(n);
+    buf.Write(&val, 1);
 
-    file.Write(hdr_ptr, hdr_len);
+    buf.Write(hdr_ptr, hdr_len);
 }
 
 
