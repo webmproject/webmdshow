@@ -25,7 +25,7 @@ namespace EbmlIO
 
         HRESULT SetSize(__int64);
 
-        __int64 SetPosition(__int64, STREAM_SEEK = STREAM_SEEK_SET);
+        __int64 SetPosition(__int64, STREAM_SEEK origin = STREAM_SEEK_SET);
         __int64 GetPosition() const;
 
         void Write(const void*, ULONG);
