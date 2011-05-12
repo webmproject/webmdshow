@@ -46,7 +46,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL;$(SolutionDir)third_party"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;_WIN32_WINNT=0x0400;NOMINMAX"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
@@ -130,7 +130,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)IDL;$(SolutionDir)third_party"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL;NOMINMAX;_WIN32_WINNT=0x0400;NOMINMAX"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -264,6 +264,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\common\scratchbuf.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\scratchbuf.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\common\versionhandling.cpp"
 				>
 			</File>
@@ -277,6 +285,10 @@
 			</File>
 			<File
 				RelativePath="..\common\vorbistypes.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\webmconstants.hpp"
 				>
 			</File>
 			<File
