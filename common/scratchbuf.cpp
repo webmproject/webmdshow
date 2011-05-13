@@ -12,8 +12,9 @@
 
 #include "memutil.hpp"
 #include "scratchbuf.hpp"
+#include "webmconstants.hpp"
 
-namespace
+namespace WebmUtil
 {
 
 template <typename Val>
@@ -30,7 +31,7 @@ void SerializeNum(std::vector<uint8>& buf_, const Val* ptr, int32 size)
 }
 
 template <typename Val>
-void SerializeAndByteSwapNum(std::vector<uint8>& buf_, const Val* ptr,
+void ByteSwapAndSerializeNum(std::vector<uint8>& buf_, const Val* ptr,
                              int32 size)
 {
     assert(ptr);
@@ -103,7 +104,34 @@ WebmUtil::ScratchBuf::~ScratchBuf()
 {
 }
 
-int WebmUtil::ScratchBuf::Rewrite(size_t offset, const uint8* read_ptr,
+int WebmUtil::ScratchBuf::Fill(uint8 val, int32 length)
+{
+    for (int32 i = 0; i < length; ++i)
+    {
+        buf_.push_back(val);
+    }
+    return length;
+}
+
+int WebmUtil::ScratchBuf::Erase(uint32 offset, int32 length)
+{
+    // no erasing past the end!
+    assert(buf_.size() >= (offset + length));
+    // erase range using iterators
+    typedef std::vector<uint8>::iterator viter_t;
+    viter_t start_ptr = buf_.begin() + offset;
+    viter_t end_ptr = start_ptr + length;
+    buf_.erase(start_ptr, end_ptr);
+    // return the new size of the buffer
+    return buf_.size();
+}
+
+int WebmUtil::ScratchBuf::Erase(uint64 offset, int32 length)
+{
+    return Erase(static_cast<uint32>(offset), length);
+}
+
+int WebmUtil::ScratchBuf::Rewrite(uint32 offset, const uint8* read_ptr,
                                   int32 length)
 {
     assert(read_ptr);
@@ -119,6 +147,12 @@ int WebmUtil::ScratchBuf::Rewrite(size_t offset, const uint8* read_ptr,
         *write_ptr++ = *read_ptr++;
     }
     return num_bytes;
+}
+
+int WebmUtil::ScratchBuf::Rewrite(uint64 offset, const uint8* read_ptr,
+                                  int32 length)
+{
+    return Rewrite(static_cast<uint32>(offset), read_ptr, length);
 }
 
 void WebmUtil::ScratchBuf::Write(const uint8* read_ptr, int32 length)
@@ -246,28 +280,61 @@ WebmUtil::EbmlScratchBuf::~EbmlScratchBuf()
 
 void WebmUtil::EbmlScratchBuf::Serialize8UInt(uint64 val)
 {
-    SerializeAndByteSwapNum(buf_, &val, sizeof(uint64));
+    ByteSwapAndSerializeNum(buf_, &val, sizeof(uint64));
 }
 
 
 void WebmUtil::EbmlScratchBuf::Serialize4UInt(uint32 val)
 {
-    SerializeAndByteSwapNum(buf_, &val, sizeof(uint32));
+    ByteSwapAndSerializeNum(buf_, &val, sizeof(uint32));
 }
 
 
 void WebmUtil::EbmlScratchBuf::Serialize2UInt(uint16 val)
 {
-    SerializeAndByteSwapNum(buf_, &val, sizeof(uint16));
+    ByteSwapAndSerializeNum(buf_, &val, sizeof(uint16));
 }
 
 
 void WebmUtil::EbmlScratchBuf::Serialize1UInt(uint8 val)
 {
-    SerializeAndByteSwapNum(buf_, &val, sizeof(uint8));
+    ByteSwapAndSerializeNum(buf_, &val, sizeof(uint8));
 }
 
-int WebmUtil::EbmlScratchBuf::RewriteUInt(size_t offset, uint64 val,
+int WebmUtil::EbmlScratchBuf::RewriteID(uint32 offset, uint32 val, int32 size)
+{
+    assert(size > 0 && size <= 4);
+    assert(offset + size <= buf_.size());
+
+    switch (size)
+    {
+    case 1:
+        assert(val <= WebmUtil::kEbmlMaxID1);
+        break;
+    case 2:
+        assert(val <= WebmUtil::kEbmlMaxID2);
+        break;
+    case 3:
+        assert(val <= WebmUtil::kEbmlMaxID3);
+        break;
+    case 4:
+        assert(val <= WebmUtil::kEbmlMaxID4);
+        break;
+    default:
+        assert(0);
+    }
+
+    EbmlSerializeNumAtOffset(buf_, &val, size, offset);
+    return size;
+}
+
+int WebmUtil::EbmlScratchBuf::RewriteID(uint64 offset, uint32 val,
+                                        int32 length)
+{
+    return RewriteID(static_cast<uint32>(offset), val, length);
+}
+
+int WebmUtil::EbmlScratchBuf::RewriteUInt(uint32 offset, uint64 val,
                                           int32 size)
 {
     if (size > 0)
@@ -306,7 +373,7 @@ int WebmUtil::EbmlScratchBuf::RewriteUInt(size_t offset, uint64 val,
 int WebmUtil::EbmlScratchBuf::RewriteUInt(uint64 offset, uint64 val,
                                           int32 length)
 {
-    return RewriteUInt(static_cast<size_t>(offset), val, length);
+    return RewriteUInt(static_cast<uint32>(offset), val, length);
 }
 
 void WebmUtil::EbmlScratchBuf::Serialize4Float(float val)

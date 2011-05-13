@@ -261,12 +261,47 @@ TEST(ScratchBuf, RewriteTest)
 
     const uint8* test_read_ptr2 = reinterpret_cast<const uint8*>(expected);
     const uint64 len_before_rewrite = test_buf.GetBufferLength();
-    test_buf.Rewrite(0, test_read_ptr2, sizeof(wchar_t)*4);
+    const size_t rewrite_offset = 0;
+    test_buf.Rewrite(rewrite_offset, test_read_ptr2, sizeof(wchar_t)*4);
     ASSERT_EQ(len_before_rewrite, test_buf.GetBufferLength());
 
     // validate the contents post Rewrite
     ASSERT_TRUE(
         ValidateScratchBufWStr(&test_buf, &expected[0], arraysize(expected)));
+}
+
+TEST(ScratchBuf, EraseTest)
+{
+    using WebmUtil::ScratchBuf;
+    ScratchBuf test_buf;
+
+    // fill the buffer w/kEbmlVoid (0xEC)
+    const int32 fodder_length = 100;
+    test_buf.Fill(WebmUtil::kEbmlVoidID, fodder_length);
+
+    // rewrite bytes just prior to the section we're going to erase
+    const size_t rewrite_offset = 11;
+    const uint8 rewrite_data[4] = {0x83, 0x9f, 0x42, 0x86};
+    const int32 rewrite_length = 4;
+    test_buf.Rewrite(rewrite_offset, &rewrite_data[0], rewrite_length);
+
+    // erase some data
+    const size_t erase_offset = rewrite_offset + rewrite_length;
+    const int32 erase_length = 40;
+    test_buf.Erase(erase_offset, erase_length);
+
+    // sanity check: buffer length matches expectation
+    ASSERT_EQ((fodder_length - erase_length), test_buf.GetBufferLength());
+
+    // confirm the rewrite
+    const uint8* ptr_buf = test_buf.GetBufferPtr();
+    bool data_match = !::memcmp(ptr_buf + rewrite_offset, &rewrite_data[0],
+                                rewrite_length);
+    ASSERT_TRUE(data_match);
+
+    // confirm the data after the rewritten section
+    const uint8* ptr_orig_data = ptr_buf + rewrite_offset + rewrite_length;
+    ASSERT_EQ(WebmUtil::kEbmlVoidID, *ptr_orig_data);
 }
 
 TEST(EbmlScratchBuf, ValueTests)
@@ -369,7 +404,8 @@ TEST(EbmlScratchBuf, RewriteTest)
 
     const uint8* test_read_ptr2 = reinterpret_cast<const uint8*>(expected);
     const uint64 len_before_rewrite = test_buf.GetBufferLength();
-    test_buf.Rewrite(0, test_read_ptr2, sizeof(wchar_t)*4);
+    const size_t rewrite_offset = 0;
+    test_buf.Rewrite(rewrite_offset, test_read_ptr2, sizeof(wchar_t)*4);
     ASSERT_EQ(len_before_rewrite, test_buf.GetBufferLength());
 
     // validate the contents post Rewrite
@@ -474,4 +510,149 @@ TEST(EbmlScratchBuf, Rewrite8UIntTest)
     ::memcpy(&test_ui64, test_buf.GetBufferPtr(), sizeof(uint64));
     ASSERT_EQ(expected_ui64, test_ui64);
     test_buf.Reset();
+}
+
+TEST(EbmlScratchBuf, RewriteID1Test)
+{
+    const uint32 original_id = WebmUtil::kEbmlVoidID;
+    const uint32 expected_id = WebmUtil::kEbmlVoidID;
+    using WebmUtil::EbmlScratchBuf;
+    EbmlScratchBuf test_buf;
+    // write some 0's
+    const uint8 fodder = WebmUtil::kEbmlCodecIDID;
+    const int32 test_len = 32;
+    for (int32 i = 0; i < test_len; ++i)
+    {
+        test_buf.WriteID1(fodder);
+    }
+    // basic sanity check: the buf length is correct, right?
+    ASSERT_EQ(test_len, test_buf.GetBufferLength());
+
+    // pick an offset for the rewrite
+    const size_t offset = 10 * sizeof(uint8);
+
+    // grab the buffer pointer, and read the original value back
+    const uint8* ptr_buf = test_buf.GetBufferPtr();
+    const uint8 test_val1 = *(ptr_buf + offset);
+    ASSERT_EQ(fodder, test_val1);
+
+    // rewrite
+    test_buf.RewriteID(offset, original_id, sizeof(uint8));
+
+    // grab the buffer pointer, and read the value back
+    ptr_buf = test_buf.GetBufferPtr();
+    const uint8 test_val2 = *(ptr_buf + offset);
+    ASSERT_EQ(expected_id, test_val2);
+}
+
+TEST(EbmlScratchBuf, RewriteID2Test)
+{
+    const uint32 test_id = WebmUtil::kEbmlCodecPrivateID;
+    using WebmUtil::EbmlScratchBuf;
+    EbmlScratchBuf test_buf;
+    // write some 0's
+    const uint16 fodder = WebmUtil::kEbmlDocTypeID;
+    const int32 test_len = 32;
+    for (int32 i = 0; i < test_len / 2; ++i)
+    {
+        test_buf.WriteID2(fodder);
+    }
+    // basic sanity check: the buf length is correct, right?
+    ASSERT_EQ(test_len, test_buf.GetBufferLength());
+
+    // pick an offset for the rewrite
+    const size_t offset = 7 * sizeof(uint16);
+
+    // grab the buffer pointer from |test_buf|, and copy the original value
+    const uint8* ptr_buf = test_buf.GetBufferPtr();
+    uint16 test_val1 = 0;
+    ::memcpy(&test_val1, (ptr_buf + offset), sizeof(uint16));
+    test_val1 = byteswap16(test_val1);
+    ASSERT_EQ(fodder, test_val1);
+
+    // rewrite
+    test_buf.RewriteID(offset, test_id, sizeof(uint16));
+
+    // grab the buffer pointer, and read the value back
+    ptr_buf = test_buf.GetBufferPtr();
+    uint16 test_val2 = 0;
+    ::memcpy(&test_val2, (ptr_buf + offset), sizeof(uint16));
+    test_val2 = byteswap16(test_val2);
+
+    ASSERT_EQ(test_id, test_val2);
+}
+
+TEST(EbmlScratchBuf, RewriteID3Test)
+{
+    const uint32 test_id = WebmUtil::kEbmlTimeCodeScaleID;
+    using WebmUtil::EbmlScratchBuf;
+    EbmlScratchBuf test_buf;
+    // write some 0's
+    const uint32 fodder = WebmUtil::kEbmlVideoFrameRate;
+    const int32 test_len = 24 * 3; // 24 ui24 vals
+    const int32 test_uint24_count = 24;
+    for (int32 i = 0; i < test_uint24_count; ++i)
+    {
+        test_buf.WriteID3(fodder);
+    }
+    // basic sanity check: the buf length is correct, right?
+    ASSERT_EQ(test_len, test_buf.GetBufferLength());
+
+    // pick an offset for the rewrite
+    const size_t offset = 45; // 15th ui24
+
+    // grab the buffer pointer from |test_buf|, and copy the original value
+    const uint8* ptr_buf = test_buf.GetBufferPtr();
+    uint64 test_val1 = 0;
+    ::memcpy(&test_val1, (ptr_buf + offset), 3);
+    test_val1 = byteswap24(test_val1);
+    ASSERT_EQ(fodder, test_val1);
+
+    // rewrite
+    test_buf.RewriteID(offset, test_id, 3);
+
+    // grab the buffer pointer, and read the value back
+    ptr_buf = test_buf.GetBufferPtr();
+    uint64 test_val2 = 0;
+    ::memcpy(&test_val2, (ptr_buf + offset), 3);
+    test_val2 = byteswap24(test_val2);
+
+    ASSERT_EQ(test_id, test_val2);
+}
+
+TEST(EbmlScratchBuf, RewriteID4Test)
+{
+    const uint32 test_id = WebmUtil::kEbmlSeekHeadID;
+    using WebmUtil::EbmlScratchBuf;
+    EbmlScratchBuf test_buf;
+    // write some 0's
+    const uint32 fodder = WebmUtil::kEbmlCuesID;
+    const int32 test_len = 128;
+    for (int32 i = 0; i < 128 / 4; ++i)
+    {
+        test_buf.WriteID4(fodder);
+    }
+    // basic sanity check: the buf length is correct, right?
+    ASSERT_EQ(test_len, test_buf.GetBufferLength());
+
+    // pick an offset for the rewrite
+    const size_t offset = 21 * sizeof(uint32);
+
+    // grab the buffer pointer from |test_buf|, and copy the original value
+    const uint8* ptr_buf = test_buf.GetBufferPtr();
+    uint32 test_val1 = 0;
+    ::memcpy(&test_val1, (ptr_buf + offset), sizeof(uint32));
+    test_val1 = byteswap32(test_val1);
+    ASSERT_EQ(fodder, test_val1);
+
+    // rewrite
+    test_buf.RewriteID(offset, test_id, sizeof(uint32));
+
+    // grab the buffer pointer, and read the value back
+    ptr_buf = test_buf.GetBufferPtr();
+    uint32 test_val2 = 0;
+    ::memcpy(&test_val2, (ptr_buf + offset), sizeof(uint32));
+    test_val2 = byteswap32(test_val2);
+
+    ASSERT_EQ(test_id, test_val2);
 }

@@ -58,6 +58,14 @@ namespace WebmUtil
         kEbmlWritingAppID = 0x5741,
     };
 
+    enum EbmlLimits
+    {
+        kEbmlMaxID1 = 0xFE,
+        kEbmlMaxID2 = 0x7FFE,
+        kEbmlMaxID3 = 0x3FFFFE,
+        kEbmlMaxID4 = 0x1FFFFFFE,
+    };
+
     enum EbmlTrackType
     {
         kEbmlTrackTypeVideo = 1,

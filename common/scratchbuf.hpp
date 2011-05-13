@@ -24,7 +24,13 @@ public:
     ScratchBuf();
     virtual ~ScratchBuf();
 
-    int Rewrite(size_t offset, const uint8* ptr_data, int32 length);
+    int32 Fill(uint8 val, int32 length);
+
+    int32 Erase(uint32 offset, int32 length);
+    int32 Erase(uint64 offset, int32 length);
+
+    int32 Rewrite(uint32 offset, const uint8* ptr_data, int32 length);
+    int32 Rewrite(uint64 offset, const uint8* ptr_data, int32 length);
 
     void Write(const uint8* ptr_data, int32 length);
     void Write4Float(float val);
@@ -53,7 +59,7 @@ class EbmlScratchBuf : public ScratchBuf
 {
 public:
     EbmlScratchBuf();
-    ~EbmlScratchBuf();
+    virtual ~EbmlScratchBuf();
 
     void Serialize8UInt(uint64 val);
     void Serialize4Float(float val);
@@ -61,8 +67,10 @@ public:
     void Serialize2UInt(uint16 val);
     void Serialize1UInt(uint8 val);
 
-    int RewriteUInt(size_t offset, uint64 val, int32 length);
-    int RewriteUInt(uint64 offset, uint64 val, int32 length);
+    int32 RewriteID(uint32 offset, uint32 id, int32 length);
+    int32 RewriteID(uint64 offset, uint32 id, int32 length);
+    int32 RewriteUInt(uint32 offset, uint64 val, int32 length);
+    int32 RewriteUInt(uint64 offset, uint64 val, int32 length);
 
     virtual void Write8UInt(uint64 val);
     virtual void Write4UInt(uint32 val);
@@ -74,7 +82,6 @@ public:
     void WriteID3(uint32 id);
     void WriteID2(uint16 id);
     void WriteID1(uint8 id);
-
 private:
     DISALLOW_COPY_AND_ASSIGN(EbmlScratchBuf);
 };
