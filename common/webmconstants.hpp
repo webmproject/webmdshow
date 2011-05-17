@@ -19,6 +19,7 @@ namespace WebmUtil
         kEbmlBlockGroupID = 0xA0,
         kEbmlBlockDurationID = 0x9B,
         kEbmlChannelsID = 0x9F,
+        kEbmlClusterID = 0x1F43B675,
         kEbmlCodecIDID = 0x86,
         kEbmlCodecNameID = 0x258688,
         kEbmlCodecPrivateID = 0x63A2,
