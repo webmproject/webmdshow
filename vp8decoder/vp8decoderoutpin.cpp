@@ -158,14 +158,43 @@ HRESULT Outpin::Connect(
         if (hr != S_OK)
             return VFW_E_TYPE_NOT_ACCEPTED;
 
-        hr = pin->ReceiveConnection(this, pmt);
+        if (pmt->formattype == FORMAT_VideoInfo)
+        {
+            hr = pin->ReceiveConnection(this, pmt);
 
-        if (FAILED(hr))
-            return hr;
+            if (FAILED(hr))
+                return hr;
 
-        const AM_MEDIA_TYPE& mt = *pmt;
+            m_connection_mtv.Add(*pmt);
+        }
+        else  //partial media type
+        {
+            const ULONG n = m_preferred_mtv.Size();
+            LONG idx = -1;
 
-        m_connection_mtv.Add(mt);
+            for (ULONG i = 0; i < n; ++i)
+            {
+                const AM_MEDIA_TYPE& mt = m_preferred_mtv[i];
+
+                if (pmt->subtype == mt.subtype)
+                {
+                    idx = i;
+                    break;
+                }
+            }
+
+            if (idx < 0)  //weird
+                return VFW_E_TYPE_NOT_ACCEPTED;
+
+            const AM_MEDIA_TYPE& mt = m_preferred_mtv[idx];
+
+            hr = pin->ReceiveConnection(this, &mt);
+
+            if (FAILED(hr))
+                return hr;
+
+            m_connection_mtv.Add(mt);
+        }
     }
     else
     {
@@ -285,45 +314,98 @@ HRESULT Outpin::ReceiveConnection(
 }
 
 
-HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt)
+HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt_query)
 {
-    if (pmt == 0)
+    if (pmt_query == 0)
         return E_INVALIDARG;
 
-    const AM_MEDIA_TYPE& mt = *pmt;
+    const AM_MEDIA_TYPE& mt_query = *pmt_query;
 
-    if (mt.majortype != MEDIATYPE_Video)
+    if (mt_query.majortype != MEDIATYPE_Video)
         return S_FALSE;
 
-    if (mt.subtype == MEDIASUBTYPE_YV12)
+    if (mt_query.subtype == MEDIASUBTYPE_YV12)
         __noop;
-    else if (mt.subtype == WebmTypes::MEDIASUBTYPE_I420)
+    else if (mt_query.subtype == WebmTypes::MEDIASUBTYPE_I420)
         __noop;
     else
         return S_FALSE;
 
-    if (mt.formattype != FORMAT_VideoInfo)  //TODO: liberalize
+    Filter::Lock lock;
+
+    const HRESULT hr = lock.Seize(m_pFilter);
+
+    if (FAILED(hr))
         return S_FALSE;
 
-    if (mt.pbFormat == 0)
+    const Inpin& inpin = m_pFilter->m_inpin;
+
+    if (!bool(inpin.m_pPinConnection))
         return S_FALSE;
 
-    if (mt.cbFormat < sizeof(VIDEOINFOHEADER))
+    if (mt_query.formattype == FORMAT_None)
+        return S_OK;
+
+    if (mt_query.formattype == GUID_NULL)
+        return S_OK;
+
+    if (mt_query.formattype != FORMAT_VideoInfo)
         return S_FALSE;
 
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
-
-    if (bmih.biSize != sizeof(BITMAPINFOHEADER))  //TODO: liberalize
+    if (mt_query.pbFormat == 0)
         return S_FALSE;
 
-    if (bmih.biWidth <= 0)
+    if (mt_query.cbFormat < sizeof(VIDEOINFOHEADER))
         return S_FALSE;
 
-    //if (bmih.biHeight <= 0)
-    //    return S_FALSE;
+    const VIDEOINFOHEADER& vih_query = (VIDEOINFOHEADER&)(*mt_query.pbFormat);
+    const BITMAPINFOHEADER& bmih_query = vih_query.bmiHeader;
 
-    if (bmih.biCompression != mt.subtype.Data1)
+    if (bmih_query.biSize != sizeof(BITMAPINFOHEADER))  //TODO: liberalize
+        return S_FALSE;
+
+    if (bmih_query.biCompression != mt_query.subtype.Data1)
+        return S_FALSE;
+
+    const LONG stride_query = bmih_query.biWidth;
+
+    if (stride_query <= 0)
+        return S_FALSE;
+
+    if (stride_query % 2)
+        return S_FALSE;
+
+    const LONG height_query = labs(bmih_query.biHeight);  //yes, negative OK
+
+    const AM_MEDIA_TYPE& mt_in = inpin.m_connection_mtv[0];
+    assert(mt_in.formattype == FORMAT_VideoInfo);
+    assert(mt_in.pbFormat);
+    assert(mt_in.cbFormat >= sizeof(VIDEOINFOHEADER));
+
+    const VIDEOINFOHEADER& vih_in = (VIDEOINFOHEADER&)(*mt_in.pbFormat);
+    const BITMAPINFOHEADER& bmih_in = vih_in.bmiHeader;
+
+    const LONG width_in = bmih_in.biWidth;
+    assert(width_in >= 0);
+
+    const LONG height_in = bmih_in.biHeight;
+    assert(height_in >= 0);
+
+    if (stride_query < width_in)
+        return S_FALSE;
+
+    if (height_query != height_in)
+        return S_FALSE;
+
+    const RECT& rc_query = vih_query.rcSource;
+    const LONG width_query = rc_query.right - rc_query.left;
+
+    if (width_query == 0)
+    {
+        if (stride_query != width_in)
+            return S_FALSE;
+    }
+    else if (width_query != width_in)
         return S_FALSE;
 
     return S_OK;
@@ -803,6 +885,7 @@ void Outpin::SetDefaultMediaTypes()
 {
     m_preferred_mtv.Clear();
 
+#if 0
     AM_MEDIA_TYPE mt;
 
     mt.majortype = MEDIATYPE_Video;
@@ -819,7 +902,7 @@ void Outpin::SetDefaultMediaTypes()
 
     mt.subtype = WebmTypes::MEDIASUBTYPE_I420;
     m_preferred_mtv.Add(mt);
+#endif
 }
-
 
 }  //end namespace VP8DecoderLib
