@@ -127,6 +127,15 @@ const CLSID WebmTypes::CLSID_WebmVorbisDecoder =
 };
 
 
+const CLSID WebmTypes::CLSID_WebmVorbisEncoder =
+{ /* ED311107-5211-11DF-94AF-0026B977EEAA */
+    0xED311107,
+    0x5211,
+    0x11DF,
+    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
+};
+
+
 const CLSID WebmTypes::CLSID_WebmOggSource =
 { /* ED311104-5211-11DF-94AF-0026B977EEAA */
     0xED311104,

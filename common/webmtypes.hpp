@@ -19,6 +19,7 @@ namespace WebmTypes
     extern const CLSID CLSID_WebmSource;  //DirectShow
     extern const CLSID CLSID_WebmSplit;
     extern const CLSID CLSID_WebmVorbisDecoder;
+    extern const CLSID CLSID_WebmVorbisEncoder;
     extern const CLSID CLSID_WebmOggSource;
     extern const CLSID CLSID_WebmColorConversion;
 
