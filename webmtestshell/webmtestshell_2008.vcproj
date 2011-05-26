@@ -46,14 +46,14 @@
 				Optimization="0"
 				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
-				MinimalRebuild="true"
+				MinimalRebuild="false"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				WarnAsError="true"
 				Detect64BitPortabilityProblems="false"
-				DebugInformationFormat="4"
+				DebugInformationFormat="1"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -67,7 +67,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="strmiids.lib shlwapi.lib gtestd.lib gtest_maind.lib"
-				LinkIncremental="2"
+				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x86\debug"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -125,14 +125,14 @@
 				Optimization="0"
 				AdditionalIncludeDirectories="$(ProjectDir);$(SolutionDir)..\common;$(SolutionDir)..\third_party;$(SolutionDir)..\third_party\gtest\include"
 				PreprocessorDefinitions="WIN32;_DEBUG"
-				MinimalRebuild="true"
+				MinimalRebuild="false"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				WarnAsError="true"
 				Detect64BitPortabilityProblems="false"
-				DebugInformationFormat="3"
+				DebugInformationFormat="1"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -146,7 +146,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="strmiids.lib shlwapi.lib gtestd.lib gtest_maind.lib"
-				LinkIncremental="2"
+				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(SolutionDir)..\third_party\gtest\x64\debug"
 				GenerateDebugInformation="true"
 				SubSystem="1"
