@@ -123,7 +123,7 @@ int WebmUtil::ScratchBuf::Erase(uint32 offset, int32 length)
     viter_t end_ptr = start_ptr + length;
     buf_.erase(start_ptr, end_ptr);
     // return the new size of the buffer
-    return buf_.size();
+    return static_cast<int>(buf_.size());
 }
 
 int WebmUtil::ScratchBuf::Erase(uint64 offset, int32 length)
