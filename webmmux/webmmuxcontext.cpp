@@ -267,7 +267,7 @@ void Context::InitSegment()
         m_file.Serialize8UInt(0x01FFFFFFFFFFFFFFLL);
     }
     else
-        m_file.Serialize1UInt(0xF);
+        m_file.Serialize1UInt(0xFF);
 
     if (m_pVideo && !m_bLiveMux)
         InitFirstSeekHead();  //Meta Seek
