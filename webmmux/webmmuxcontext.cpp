@@ -1099,9 +1099,20 @@ void Context::CreateNewCluster(const StreamVideo::VideoFrame* pvf_stop)
         }
     }
 
+    // Write cluster header
     m_file.WriteID4(WebmUtil::kEbmlClusterID);
-    m_file.Serialize4UInt(0x1FFFFFFF);  // temp cluster size; rewritten below
-                                        // if |m_bLiveMux| is false
+    if (!m_bLiveMux)
+    {
+        // Use a 8-byte cluster header
+        m_file.Serialize4UInt(0x1FFFFFFF);  // temp cluster size; rewritten
+                                            // below if |m_bLiveMux| is false
+    }
+    else
+    {
+        // Use a 5-byte cluster header
+        m_file.Serialize1UInt(0xFF);
+    }
+
     m_file.WriteID1(WebmUtil::kEbmlTimeCodeID);
     m_file.Write1UInt(4);
     m_file.Serialize4UInt(c.m_timecode);
@@ -1276,10 +1287,20 @@ void Context::CreateNewClusterAudioOnly()
     c.m_pos = m_file.GetPosition();
     c.m_timecode = af_first_time;
 
-    // Write 7-byte cluster header
+    // Write cluster header
     m_file.WriteID4(WebmUtil::kEbmlClusterID);
-    m_file.WriteUInt(0x3FFFFF, 3);  // temp cluster size; rewritten below if
-                                    // |m_bLiveMux| is false
+    if (!m_bLiveMux)
+    {
+        // Use a 7-byte cluster header
+        m_file.SerializeUInt(0x3FFFFF, 3);  // temp cluster size; rewritten
+                                            // below if |m_bLiveMux| is false
+    }
+    else
+    {
+        // Use a 5-byte cluster header
+        m_file.Serialize1UInt(0xFF);
+    }
+
     m_file.WriteID1(WebmUtil::kEbmlTimeCodeID);
 
     const BYTE timecode_size = m_file.GetSerializeUIntSize(c.m_timecode);
