@@ -31,6 +31,7 @@ public:
     bool GetNoVideo() const;
     bool GetRequireAudio() const;
     bool GetNoAudio() const;
+    bool GetLive() const;
     int GetDeadline() const;
     int GetTargetBitrate() const;
     int GetMinQuantizer() const;
@@ -79,6 +80,7 @@ private:
     bool m_no_video;
     bool m_require_audio;
     bool m_no_audio;
+    bool m_live;
 
     bool m_script;
     bool m_verbose;

@@ -461,6 +461,21 @@ int App::CreateMuxerGraph(
 
             return 1;
         }
+
+        if (m_cmdline.GetLive())
+        {
+            hr = pWebmMux->SetMuxMode(kWebmMuxModeLive);
+            if (FAILED(hr))
+            {
+                wcout << "Unable to enable live mode.\n"
+                      << hrtext(hr)
+                      << L" (0x" << hex << hr << dec << L")"
+                      << endl;
+
+                return 1;
+            }
+
+        }
     }
 
     int nConnections = 0;

@@ -36,6 +36,7 @@ CmdLine::CmdLine() :
     m_no_video(false),
     m_require_audio(false),
     m_no_audio(false),
+    m_live(false),
     m_deadline(-1),
     m_target_bitrate(-1),
     m_min_quantizer(-1),
@@ -675,6 +676,18 @@ int CmdLine::ParseLongPost(
         }
 
         m_no_audio = true;
+        return 1;
+    }
+
+    if (_wcsnicmp(arg, L"live", len) == 0)
+    {
+        if (has_value)
+        {
+            wcout << "The live switch does not accept a value." << endl;
+            return -1;  //error
+        }
+
+        m_live = true;
         return 1;
     }
 
@@ -1514,6 +1527,11 @@ bool CmdLine::GetNoAudio() const
     return m_no_audio;
 }
 
+bool CmdLine::GetLive() const
+{
+    return m_live;
+}
+
 
 int CmdLine::GetDeadline() const
 {
@@ -1893,6 +1911,7 @@ void CmdLine::ListArgs() const
     wcout << L"no-video     : " << boolalpha << m_no_video << L'\n';
     wcout << L"require-audio: " << boolalpha << m_require_audio << L'\n';
     wcout << L"no-audio     : " << boolalpha << m_no_audio << L'\n';
+    wcout << L"live         : " << boolalpha << m_live << L'\n';
 
     if (m_deadline >= 0)
     {
