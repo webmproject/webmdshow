@@ -384,15 +384,15 @@ HRESULT StreamAudioVorbisOgg::FinalizeTrackCodecPrivate()
                                       sizeof(uint32));
 
     uint8 val = 2;  //number of headers - 1
-    rewrite_offset += buf.RewriteUInt(rewrite_offset, val, sizeof(uint8));
+    rewrite_offset += buf.Rewrite(rewrite_offset, &val, sizeof(uint8));
 
     // write ident length
     val = static_cast<uint8>(ident_len);
-    rewrite_offset += buf.RewriteUInt(rewrite_offset, val, sizeof(uint8));
+    rewrite_offset += buf.Rewrite(rewrite_offset, &val, sizeof(uint8));
 
     // write comment length
     val = static_cast<uint8>(comment_len);
-    rewrite_offset += buf.RewriteUInt(rewrite_offset, val, sizeof(uint8));
+    rewrite_offset += buf.Rewrite(rewrite_offset, &val, sizeof(uint8));
 
     // write ident data
     rewrite_offset += buf.Rewrite(rewrite_offset, &m_ident[0], ident_len);
@@ -403,42 +403,34 @@ HRESULT StreamAudioVorbisOgg::FinalizeTrackCodecPrivate()
     // write vorbis decoder setup data
     rewrite_offset += buf.Rewrite(rewrite_offset, &m_setup[0], setup_len);
 
-
-    // TODO(tomfinegan): we need to update the track element length at the same
-    //                   time we erase the extra reserved space; save this for
-    //                   later since I agree with the whole "Premature
-    //                   optimization is the root of all evil" argument.
-    //
-    // erase any unused space from that reserved in |WriteTrackCodecPrivate|
-    //if (buf.GetBufferLength() < kPRIVATE_DATA_BYTES_RESERVED)
-    //{
-    //    int32 num_bytes_to_erase =
-    //        kPRIVATE_DATA_BYTES_RESERVED - rewrite_offset;
-    //    buf.Erase(rewrite_offset, num_bytes_to_erase);
-    //}
-
     // Fill any remaining reserved space with a proper EBML Void element
-    if (buf.GetBufferLength() < kPRIVATE_DATA_BYTES_RESERVED)
+    const uint64 private_len = rewrite_offset - m_codec_private_data_pos;
+    if (private_len < kPRIVATE_DATA_BYTES_RESERVED)
     {
-        uint64 void_element_size =
-            kPRIVATE_DATA_BYTES_RESERVED - rewrite_offset;
+        uint64 void_len = kPRIVATE_DATA_BYTES_RESERVED - private_len;
 
         // assert that we have more than 3 bytes remaining-- I don't know how
         // parsers will handle a void element with a size of 0 and no contents
-        assert(void_element_size > 3); // 3 = kEbmlVoidID + uint16
+        assert(void_len > 3); // 3 = kEbmlVoidID + uint16
+
+        // subtract void element id (1) and element size (2)
+        void_len -= 3;
 
         rewrite_offset += buf.RewriteID(rewrite_offset, WebmUtil::kEbmlVoidID,
                                         sizeof(uint8));
-        rewrite_offset += buf.RewriteUInt(rewrite_offset, void_element_size,
+        rewrite_offset += buf.RewriteUInt(rewrite_offset, void_len,
                                           sizeof(uint16));
-        void_element_size -= 3;
         const uint8 fill_val = 0;
-        for (int i = 0; i < void_element_size; ++i)
+        for (int i = 0; i < void_len; ++i)
         {
             rewrite_offset += buf.Rewrite(rewrite_offset, &fill_val,
                                           sizeof(uint8));
         }
-        assert(rewrite_offset == kPRIVATE_DATA_BYTES_RESERVED);
+
+        const uint64 private_end =
+            kPRIVATE_DATA_BYTES_RESERVED + m_codec_private_data_pos;
+        assert(rewrite_offset == private_end);
+        private_end;
     }
 
     // Normal file writing can proceed; flush the data we've had Context
