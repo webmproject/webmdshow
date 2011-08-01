@@ -1114,8 +1114,23 @@ void Context::CreateNewCluster(const StreamVideo::VideoFrame* pvf_stop)
     }
 
     m_file.WriteID1(WebmUtil::kEbmlTimeCodeID);
-    m_file.Write1UInt(4);
-    m_file.Serialize4UInt(c.m_timecode);
+
+    BYTE timecode_size;
+
+    if (!m_bLiveMux)
+    {
+        timecode_size = m_file.GetSerializeUIntSize(c.m_timecode);
+        assert(timecode_size <= 8);
+    }
+    else
+    {
+        // To facilitate easy rewriting of timecodes, always write 8 byte
+        // timecodes in live mux mode.
+        timecode_size = 8;
+    }
+
+    m_file.Write1UInt(timecode_size);
+    m_file.SerializeUInt(c.m_timecode, timecode_size);
 
     const __int64 off = c.m_pos - m_segment_pos - 12;
     assert(off >= 0);
@@ -1303,8 +1318,19 @@ void Context::CreateNewClusterAudioOnly()
 
     m_file.WriteID1(WebmUtil::kEbmlTimeCodeID);
 
-    const BYTE timecode_size = m_file.GetSerializeUIntSize(c.m_timecode);
-    assert(timecode_size <= 8);
+    BYTE timecode_size;
+
+    if (!m_bLiveMux)
+    {
+        timecode_size = m_file.GetSerializeUIntSize(c.m_timecode);
+        assert(timecode_size <= 8);
+    }
+    else
+    {
+        // To facilitate easy rewriting of timecodes, always write 8 byte
+        // timecodes in live mux mode.
+        timecode_size = 8;
+    }
 
     m_file.Write1UInt(timecode_size);
     m_file.SerializeUInt(c.m_timecode, timecode_size);
