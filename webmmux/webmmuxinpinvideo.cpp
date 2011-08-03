@@ -140,7 +140,10 @@ HRESULT InpinVideo::GetAllocatorRequirementsVP80(
     //honor are allocator requirements, then the stream will stall.  We should
     //have a graceful way of handling these cases.
 
-    props.cBuffers = 3 * 30;
+  if (m_pFilter->m_ctx.GetLiveMuxMode())
+      props.cBuffers = 30 * 30;
+  else
+      props.cBuffers = 3 * 30;
 
     props.cbBuffer = 0;  //let upstream pin decide size
     props.cbAlign = 0;

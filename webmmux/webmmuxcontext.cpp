@@ -720,6 +720,16 @@ void Context::NotifyVideoFrame(
 
     if (pFrame->IsKey())
         rframes.push_back(pFrame);
+    else if (m_bLiveMux)
+    {
+        #if 0 //def _DEBUG
+        odbgstream os;
+        os << "["__FUNCTION__"] " << "rframes.size()=" << rframes.size()
+           << " vframes.size()=" << vframes.size()<< endl;
+        #endif
+        return;
+    }
+
     else
     {
         const StreamVideo::VideoFrame* const pvf0 = rframes.back();
