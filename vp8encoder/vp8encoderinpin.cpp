@@ -817,7 +817,14 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     {
         f |= VPX_EFLAG_FORCE_KF;
         m_pFilter->m_bForceKeyframe = false;
+    } 
+    else if (m_cfg.kf_mode == kKeyframeModeDisabled && 
+             m_cfg.kf_min_dist != 0 &&
+             m_cfg.kf_min_dist == m_cfg.kf_max_dist)
+    {
+
     }
+
 
     const Filter::Config::int32_t deadline_ = m_pFilter->m_cfg.deadline;
     const ULONG dl = (deadline_ >= 0) ? deadline_ : kDeadlineGoodQuality;
@@ -977,6 +984,11 @@ void Inpin::AppendFrame(const vpx_codec_cx_pkt_t* pkt)
 #endif
 
     const uint32_t bKey = pkt->data.frame.flags & VPX_FRAME_IS_KEY;
+#if 1 //def _DEBUG
+    odbgstream os;
+    os << "["__FUNCTION__"] " << "time=" << f.start / 10000000.0
+       << " bKey=" << bKey << endl;
+#endif
 
     f.key = bKey ? true : false;
 

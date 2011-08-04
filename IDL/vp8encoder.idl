@@ -8,6 +8,7 @@
 
 import "oaidl.idl";
 import "ocidl.idl";
+import "strmif.idl";
 
 [
     uuid(ED3110F4-5211-11DF-94AF-0026B977EEAA),
@@ -392,6 +393,16 @@ interface IVP8Encoder : IUnknown
     HRESULT SetARNRType([in] int Type);
     HRESULT GetARNRType([out] int* pType);
 
+    //Fixed keyframe interval.
+    //
+    //If keyframe generation at a fixed interval is desired, set keyframe mode
+    //to kKeyframeModeDisabled, and set the interval using this method.
+    //
+    //This is most useful when dealing with a variable frame rate video source
+    //when a consistent keyframe interval is desired for streaming purposes.
+
+    HRESULT SetFixedKeyframeInterval([in] REFERENCE_TIME interval);
+    HRESULT GetFixedKeyframeInterval([out] REFERENCE_TIME* pInterval);
 }
 
 
