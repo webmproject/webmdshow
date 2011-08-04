@@ -81,7 +81,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_outpin_video(this),
       m_outpin_preview(this),
       m_bDirty(false),
-      m_bForceKeyframe(false)
+      m_bForceKeyframe(false),
+      m_keyframe_interval(0)
 {
     m_pClassFactory->LockServer(TRUE);
 
@@ -1732,6 +1733,43 @@ HRESULT Filter::GetARNRType(int* p)
         return hr;
 
     *p = m_cfg.arnr_type;
+    return S_OK;
+}
+
+HRESULT Filter::SetFixedKeyframeInterval(REFERENCE_TIME interval)
+{
+    if (interval < 0)
+        return E_INVALIDARG;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_keyframe_interval = interval;
+    m_bDirty = true;
+
+    if (m_cfg.keyframe_mode != kKeyframeModeDisabled)
+        return S_FALSE;
+
+    return S_OK;
+}
+
+HRESULT Filter::GetFixedKeyframeInterval(REFERENCE_TIME* pInterval)
+{
+    if (pInterval == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *pInterval = m_keyframe_interval;
     return S_OK;
 }
 

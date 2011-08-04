@@ -34,7 +34,8 @@ Inpin::Inpin(Filter* p) :
     m_bFlush(false),
     m_bDiscontinuity(true),
     m_buf(0),
-    m_buflen(0)
+    m_buflen(0),
+    m_last_keyframe_time(0)
 {
     AM_MEDIA_TYPE mt;
 
@@ -818,6 +819,13 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         f |= VPX_EFLAG_FORCE_KF;
         m_pFilter->m_bForceKeyframe = false;
     }
+    else if (m_cfg.kf_mode == kKeyframeModeDisabled &&
+             m_pFilter->m_keyframe_interval > 0)
+    {
+        const __int64 reftime_since_last_kf = st - m_last_keyframe_time;
+        if (reftime_since_last_kf >= m_pFilter->m_keyframe_interval)
+            f |= VPX_EFLAG_FORCE_KF;
+    }
 
     const Filter::Config::int32_t deadline_ = m_pFilter->m_cfg.deadline;
     const ULONG dl = (deadline_ >= 0) ? deadline_ : kDeadlineGoodQuality;
@@ -977,8 +985,16 @@ void Inpin::AppendFrame(const vpx_codec_cx_pkt_t* pkt)
 #endif
 
     const uint32_t bKey = pkt->data.frame.flags & VPX_FRAME_IS_KEY;
+#if 0 //def _DEBUG
+    odbgstream os;
+    os << "["__FUNCTION__"] " << "time=" << f.start / 10000000.0
+       << " bKey=" << bKey << endl;
+#endif
 
     f.key = bKey ? true : false;
+
+    if (f.key)
+        m_last_keyframe_time = f.start;
 
     m_pending.push_back(f);
 

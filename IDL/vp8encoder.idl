@@ -8,6 +8,7 @@
 
 import "oaidl.idl";
 import "ocidl.idl";
+import "strmif.idl";
 
 [
     uuid(ED3110F4-5211-11DF-94AF-0026B977EEAA),
@@ -56,7 +57,7 @@ enum VP8PassMode
 
 [
    object,
-   uuid(ED3110FE-5211-11DF-94AF-0026B977EEAA),  //v0.9.9.0
+   uuid(ED3110FE-5211-11DF-94AF-0026B977EEAA),
    helpstring("VP8 Encoder Filter Interface")
 ]
 interface IVP8Encoder : IUnknown
@@ -392,6 +393,21 @@ interface IVP8Encoder : IUnknown
     HRESULT SetARNRType([in] int Type);
     HRESULT GetARNRType([out] int* pType);
 
+    //Fixed keyframe interval.
+    //
+    //If keyframe generation at a fixed interval is desired, set keyframe mode
+    //to kKeyframeModeDisabled, and set the interval using this method.
+    //
+    //This is most useful when dealing with a variable frame rate video source
+    //when a consistent keyframe interval is desired for streaming purposes.
+    //
+    //Return valules:
+    //- S_OK when successful.
+    //- S_FALSE if keyframe mode has not been set kKeyframeModeDisabled.
+    //- E_INVALIDARG for interval values less than zero.
+
+    HRESULT SetFixedKeyframeInterval([in] REFERENCE_TIME interval);
+    HRESULT GetFixedKeyframeInterval([out] REFERENCE_TIME* pInterval);
 }
 
 

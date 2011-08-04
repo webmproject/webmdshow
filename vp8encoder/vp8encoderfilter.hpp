@@ -158,6 +158,9 @@ public:
     HRESULT STDMETHODCALLTYPE SetARNRType(int);
     HRESULT STDMETHODCALLTYPE GetARNRType(int*);
 
+    HRESULT STDMETHODCALLTYPE SetFixedKeyframeInterval(REFERENCE_TIME);
+    HRESULT STDMETHODCALLTYPE GetFixedKeyframeInterval(REFERENCE_TIME*);
+
     //IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
@@ -250,6 +253,7 @@ public:
 
     Config m_cfg;
     bool m_bForceKeyframe;
+    REFERENCE_TIME m_keyframe_interval;
     VP8PassMode GetPassMode() const;
 
 private:

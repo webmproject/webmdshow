@@ -118,6 +118,8 @@ private:
     BYTE* m_buf;
     size_t m_buflen;
 
+    REFERENCE_TIME m_last_keyframe_time;
+
     BYTE* ConvertYUY2ToYV12(const BYTE*, ULONG, ULONG);
 
 };
