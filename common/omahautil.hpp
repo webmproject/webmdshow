@@ -9,7 +9,8 @@
 #ifndef __WEBMDSHOW_COMMON_OMAHAUTIL_HPP__
 #define __WEBMDSHOW_COMMON_OMAHAUTIL_HPP__
 
-#include <comdef.h>
+//#include <comdef.h>
+#include <objbase.h>
 
 namespace WebmUtil
 {
