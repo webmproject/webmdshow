@@ -394,21 +394,21 @@ void VideoStream::OnPopulateSample(
         const Cluster* const pNextCluster = pNextEntry->GetCluster();
 
         stop_ns = pNextBlock->GetTime(pNextCluster);
-        assert(stop_ns > start_ns);
+        assert(stop_ns >= start_ns);
         //assert((stop_ns % 100) == 0);
     }
 
     __int64 start_reftime = (start_ns - base_ns) / 100;
 
     const __int64 block_stop_reftime = (stop_ns - base_ns) / 100;
-    assert(block_stop_reftime > start_reftime);
+    assert(block_stop_reftime >= start_reftime);
 
     const __int64 block_duration = block_stop_reftime - start_reftime;
-    assert(block_duration > 0);
+    assert(block_duration >= 0);
 
     __int64 frame_duration = block_duration / nFrames;  //reftime units
 
-    if (frame_duration <= 0)  //weird: block duration is very small
+    if ((nFrames > 1) && (frame_duration <= 0))  //weird: small block duration
         frame_duration = 1;
 
     BOOL bDiscontinuity = m_bDiscontinuity ? TRUE : FALSE;
