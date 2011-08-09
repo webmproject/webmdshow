@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;;$(SolutionDir)..\third_party"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;WEBMMFVORBISDEC_EXPORTS"
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
