@@ -28,7 +28,7 @@ install_dir_array=(x86/debug x64/debug x86/release x64/release)
 # libvpx stuff
 libvpx_dir="libvpx.git"
 libvpx_remote="git://review.webmproject.org/libvpx"
-libvpx_git_target="bali"
+libvpx_git_target="cayuga"
 libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
 
 # TODO(tomfinegan): add proper command line parsing
@@ -163,7 +163,6 @@ ${target_dir}/${install_dir_array[$lib_index]}/
 }
 
 function clone_libvpx_and_checkout_tag() {
-  set -x
   local git_quiet="-q"
   local clone_dir="$1"
   if [[ -z "$clone_dir" ]]; then
@@ -178,8 +177,8 @@ function clone_libvpx_and_checkout_tag() {
     die "clone_libvpx_and_checkout_tag: no git_checkout_target specified \
         [arg3 empty]"
   fi
-  # create a temp directory and clone into a child of the temp dir
-  local tmp_path=$(mktemp -d)
+  # Just clone into .; the libvpx directory will be deleted later. 
+  local tmp_path=.
   if [[ ! -d "${tmp_path}" ]]; then
     die "clone_libvpx_and_checkout_tag: temp dir creation failed \
          [tmp_path does not exist]"
@@ -200,8 +199,6 @@ function clone_libvpx_and_checkout_tag() {
   sync # flush git output from stdout (this doesn't work... perhaps I'm
        # "doing it wrong")
   echo "${tmp_path}/${clone_dir}"
-  exit 1
-  set +x
 }
 
 function build_libvpx() {
@@ -295,6 +292,7 @@ fi
 
 # libvpx stuff
 if [[ -z "${disable_libvpx_build}" ]]; then
+  set -e
   libvpx_full_path=$(clone_libvpx_and_checkout_tag "${libvpx_dir}" \
 "${libvpx_remote}" "${libvpx_git_target}")
   # Since git refuses to obey -q under some circumstances at clone/checkout 
@@ -303,5 +301,6 @@ if [[ -z "${disable_libvpx_build}" ]]; then
                    awk 'BEGIN {FS="[ \n]"};{print $NF}')
   build_libvpx "${libvpx_full_path}"
   install_libvpx_files "${libvpx_full_path}"
+  rm -rf "${libvpx_full_path}"
 fi
 
