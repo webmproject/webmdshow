@@ -161,6 +161,12 @@ public:
     HRESULT STDMETHODCALLTYPE SetFixedKeyframeInterval(REFERENCE_TIME);
     HRESULT STDMETHODCALLTYPE GetFixedKeyframeInterval(REFERENCE_TIME*);
 
+    HRESULT STDMETHODCALLTYPE SetCPUUsed(int);
+    HRESULT STDMETHODCALLTYPE GetCPUUsed(int*);
+
+    HRESULT STDMETHODCALLTYPE SetStaticThreshold(int);
+    HRESULT STDMETHODCALLTYPE GetStaticThreshold(int*);
+
     //IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
@@ -247,6 +253,8 @@ public:
         int32_t arnr_max_frames;
         int32_t arnr_strength;
         int32_t arnr_type;
+        int32_t cpu_used;
+        int32_t static_threshold;
 
         void Init();
     };

@@ -57,7 +57,7 @@ enum VP8PassMode
 
 [
    object,
-   uuid(ED3110FE-5211-11DF-94AF-0026B977EEAA),
+   uuid(ED311150-5211-11DF-94AF-0026B977EEAA),
    helpstring("VP8 Encoder Filter Interface")
 ]
 interface IVP8Encoder : IUnknown
@@ -401,13 +401,42 @@ interface IVP8Encoder : IUnknown
     //This is most useful when dealing with a variable frame rate video source
     //when a consistent keyframe interval is desired for streaming purposes.
     //
-    //Return valules:
+    //Return values:
     //- S_OK when successful.
     //- S_FALSE if keyframe mode has not been set kKeyframeModeDisabled.
     //- E_INVALIDARG for interval values less than zero.
 
-    HRESULT SetFixedKeyframeInterval([in] REFERENCE_TIME interval);
+    HRESULT SetFixedKeyframeInterval([in] REFERENCE_TIME Interval);
     HRESULT GetFixedKeyframeInterval([out] REFERENCE_TIME* pInterval);
+
+    //CPU used -- encoder complexity control.
+    //
+    //Changes in this value influences, among others, the encoder's selection
+    //of motion estimation methods. Values greater than 0 will increase
+    //encoder speed at the expense of quality. See libvpx documentation of
+    //the VP8E_SET_CPUUSED option for further information.
+    //
+    //Value range is [-16,16]. Values outside the range are ignored. The
+    //default value for configuration of libvpx used within webmdshow is 0.
+    //
+    //Return values:
+    //- S_OK when successful.
+    HRESULT SetCPUUsed([in] int CPUUsed);
+    HRESULT GetCPUUsed([out] int* pCPUUsed);
+
+    //Static macroblock threshold.
+    //
+    //Sets the threshold for macroblocks to be treated as static by libvpx.
+    //When active it allows the encoder to skip blocks that it deems static
+    //based on the provided threshold.  Values > 1000 not advisable, and any
+    //value greater than 0 can cause encoding artifacts due to skipped blocks.
+    //
+    //Values less than 0 are ignored.
+    //
+    //Return values:
+    //- S_OK when successful.
+    HRESULT SetStaticThreshold([in] int StaticThreshold);
+    HRESULT GetStaticThreshold([out] int* pStaticThreshold);
 }
 
 

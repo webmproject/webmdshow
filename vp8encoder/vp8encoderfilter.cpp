@@ -146,6 +146,8 @@ void Filter::Config::Init()
     arnr_max_frames = -1;
     arnr_strength = -1;
     arnr_type = -1;
+    cpu_used = -17;
+    static_threshold = -1;
 }
 
 
@@ -1772,6 +1774,69 @@ HRESULT Filter::GetFixedKeyframeInterval(REFERENCE_TIME* pInterval)
     *pInterval = m_keyframe_interval;
     return S_OK;
 }
+
+HRESULT Filter::SetCPUUsed(int cpuUsed)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_cfg.cpu_used = cpuUsed;
+    m_bDirty = true;
+
+    return S_OK;
+}
+
+HRESULT Filter::GetCPUUsed(int* pCPUUsed)
+{
+    if (pCPUUsed == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *pCPUUsed = m_cfg.cpu_used;
+    return S_OK;
+}
+
+HRESULT Filter::SetStaticThreshold(int threshold)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_cfg.static_threshold = threshold;
+    m_bDirty = true;
+
+    return S_OK;
+}
+
+HRESULT Filter::GetStaticThreshold(int* pThreshold)
+{
+    if (pThreshold == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *pThreshold = m_cfg.static_threshold;
+    return S_OK;
+}
+
 
 HRESULT Filter::IsDirty()
 {

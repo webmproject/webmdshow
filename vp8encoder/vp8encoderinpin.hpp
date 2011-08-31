@@ -114,6 +114,8 @@ private:
     vpx_codec_err_t SetARNRMaxFrames();
     vpx_codec_err_t SetARNRStrength();
     vpx_codec_err_t SetARNRType();
+    vpx_codec_err_t SetCPUUsed();
+    vpx_codec_err_t SetStaticThreshold();
 
     BYTE* m_buf;
     size_t m_buflen;

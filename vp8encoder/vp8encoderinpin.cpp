@@ -1198,6 +1198,28 @@ HRESULT Inpin::Start()
         return E_FAIL;
     }
 
+    err = SetCPUUsed();
+
+    if (err != VPX_CODEC_OK)
+    {
+        const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
+        err;
+        assert(err == VPX_CODEC_OK);
+
+        return E_FAIL;
+    }
+
+    err = SetStaticThreshold();
+
+    if (err != VPX_CODEC_OK)
+    {
+        const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
+        err;
+        assert(err == VPX_CODEC_OK);
+
+        return E_FAIL;
+    }
+
     return S_OK;
 }
 
@@ -1435,6 +1457,28 @@ vpx_codec_err_t Inpin::SetARNRType()
 
     return vpx_codec_control(
         &m_ctx, VP8E_SET_ARNR_TYPE, src.arnr_type);
+}
+
+vpx_codec_err_t Inpin::SetCPUUsed()
+{
+    const Filter::Config& src = m_pFilter->m_cfg;
+
+    if (src.cpu_used < -16 || src.cpu_used > 16)
+        return VPX_CODEC_OK;
+
+    return vpx_codec_control(
+        &m_ctx, VP8E_SET_CPUUSED, src.cpu_used);
+}
+
+vpx_codec_err_t Inpin::SetStaticThreshold()
+{
+    const Filter::Config& src = m_pFilter->m_cfg;
+
+    if (src.static_threshold < 0)
+        return VPX_CODEC_OK;
+
+    return vpx_codec_control(
+        &m_ctx, VP8E_SET_STATIC_THRESHOLD, src.static_threshold);
 }
 
 BYTE* Inpin::ConvertYUY2ToYV12(

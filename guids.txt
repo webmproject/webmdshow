@@ -177,13 +177,13 @@ INTERFACENAME = { /* ED3110EF-5211-11DF-94AF-0026B977EEAA */
 //  };
 
 
-//VP8 encoder interface (as of 2011/08/04)
-INTERFACENAME = { /* ED3110FF-5211-11DF-94AF-0026B977EEAA */
-    0xED3110FF,
-    0x5211,
-    0x11DF,
-    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
-  };
+//VP8 encoder interface (deprecated 2011/08/30)
+//INTERFACENAME = { /* ED3110FF-5211-11DF-94AF-0026B977EEAA */
+//    0xED3110FF,
+//    0x5211,
+//    0x11DF,
+//    {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
+//  };
 
 
 
@@ -716,6 +716,8 @@ INTERFACENAME = { /* ED31114F-5211-11DF-94AF-0026B977EEAA */
     0x11DF,
     {0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA}
   };
+
+// DShow VP8 Encoder interface as of 2011/08/30
 INTERFACENAME = { /* ED311150-5211-11DF-94AF-0026B977EEAA */
     0xED311150,
     0x5211,
