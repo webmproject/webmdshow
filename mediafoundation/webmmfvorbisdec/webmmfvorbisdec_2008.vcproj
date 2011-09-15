@@ -124,7 +124,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;;&quot;$(SolutionDir)..\third_party&quot;"
 				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;_USRDLL;NOMINMAX"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -199,7 +199,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;;&quot;$(SolutionDir)..\third_party&quot;"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -275,7 +275,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\common&quot;;&quot;$(SolutionDir)..\third_party\libogg&quot;;&quot;$(SolutionDir)..\third_party\libvorbis&quot;;&quot;$(SolutionDir)webmmftests&quot;;&quot;$(SolutionDir)..\third_party&quot;"
 				PreprocessorDefinitions="WIN64;_WINDOWS;_USRDLL;NOMINMAX"
 				WarningLevel="4"
 			/>
