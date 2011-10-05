@@ -167,6 +167,9 @@ public:
     HRESULT STDMETHODCALLTYPE SetStaticThreshold(int);
     HRESULT STDMETHODCALLTYPE GetStaticThreshold(int*);
 
+    HRESULT STDMETHODCALLTYPE SetDecimate(int);
+    HRESULT STDMETHODCALLTYPE GetDecimate(int*);
+
     //IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
@@ -262,6 +265,7 @@ public:
     Config m_cfg;
     bool m_bForceKeyframe;
     REFERENCE_TIME m_keyframe_interval;
+    int m_decimate;
     VP8PassMode GetPassMode() const;
 
 private:
