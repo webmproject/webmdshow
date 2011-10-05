@@ -84,6 +84,7 @@ public:
 
     const BITMAPINFOHEADER& GetBMIH() const;
     __int64 GetAvgTimePerFrame() const;
+    void Pin::SetAvgTimePerFrame(__int64 AvgTimePerFrame);
 
 protected:
     //virtual HRESULT GetName(PIN_INFO&) const = 0;

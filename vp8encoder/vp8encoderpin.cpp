@@ -250,5 +250,28 @@ __int64 Pin::GetAvgTimePerFrame() const
     return vih.AvgTimePerFrame;
 }
 
+void Pin::SetAvgTimePerFrame(__int64 AvgTimePerFrame)
+{
+    assert(m_connection_mtv.Size() == 1);
+
+    AM_MEDIA_TYPE& mt = m_connection_mtv[0];
+    assert(mt.pbFormat);
+
+    if (mt.formattype == FORMAT_VideoInfo)
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
+
+        VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+        vih.AvgTimePerFrame = AvgTimePerFrame;
+    }
+    else
+    {
+        assert(mt.formattype == FORMAT_VideoInfo2);
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
+
+        VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+        vih.AvgTimePerFrame = AvgTimePerFrame;
+    }
+}
 
 }  //end namespace VP8EncoderLib
