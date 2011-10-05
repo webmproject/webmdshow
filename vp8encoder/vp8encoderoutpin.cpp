@@ -270,6 +270,12 @@ void Outpin::OnInpinConnect()
     mt.lSampleSize = 0;
     mt.pUnk = 0;
 
+    // Decimation alters the output frame rate. Use input frame rate only if
+    // decimation is disabled.
+    const REFERENCE_TIME avg_time_per_frame =
+        (m_pFilter->m_decimate > 1) ?
+            inpin.GetAvgTimePerFrame() * m_pFilter->m_decimate :
+            inpin.GetAvgTimePerFrame();
     {
         VIDEOINFOHEADER vih;
         BITMAPINFOHEADER& bmih = vih.bmiHeader;
@@ -282,7 +288,7 @@ void Outpin::OnInpinConnect()
         SetRectEmpty(&vih.rcTarget);  //TODO
         vih.dwBitRate = 0;
         vih.dwBitErrorRate = 0;
-        vih.AvgTimePerFrame = inpin.GetAvgTimePerFrame();
+        vih.AvgTimePerFrame = avg_time_per_frame;
 
         bmih.biSize = sizeof bmih;
         bmih.biWidth = ww;
@@ -312,7 +318,7 @@ void Outpin::OnInpinConnect()
         SetRectEmpty(&vih.rcTarget);  //TODO
         vih.dwBitRate = 0;
         vih.dwBitErrorRate = 0;
-        vih.AvgTimePerFrame = inpin.GetAvgTimePerFrame();
+        vih.AvgTimePerFrame = avg_time_per_frame;
         vih.dwInterlaceFlags = 0;
         vih.dwCopyProtectFlags = 0;
         vih.dwPictAspectRatioX = w;  //TODO
@@ -418,6 +424,36 @@ HRESULT Outpin::InitAllocator(
     m_pAllocator = pAllocator;
 
     return S_OK;  //success
+}
+
+HRESULT Outpin::SetAvgTimePerFrame(__int64 AvgTimePerFrame)
+{
+    if (m_pPinConnection)
+        return VFW_E_ALREADY_CONNECTED;
+
+    for (int i = 0; i < m_preferred_mtv.Size(); ++i)
+    {
+        AM_MEDIA_TYPE& mt = m_preferred_mtv[i];
+        assert(mt.pbFormat);
+
+        if (mt.formattype == FORMAT_VideoInfo)
+        {
+            assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
+
+            VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+            vih.AvgTimePerFrame = AvgTimePerFrame;
+        }
+        else
+        {
+            assert(mt.formattype == FORMAT_VideoInfo2);
+            assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
+
+            VIDEOINFOHEADER2& vih = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+            vih.AvgTimePerFrame = AvgTimePerFrame;
+        }
+    }
+
+    return S_OK;
 }
 
 

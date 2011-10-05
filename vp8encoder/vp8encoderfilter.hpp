@@ -167,6 +167,9 @@ public:
     HRESULT STDMETHODCALLTYPE SetStaticThreshold(int);
     HRESULT STDMETHODCALLTYPE GetStaticThreshold(int*);
 
+    HRESULT STDMETHODCALLTYPE SetDecimate(int);
+    HRESULT STDMETHODCALLTYPE GetDecimate(int*);
+
     //IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
@@ -218,12 +221,7 @@ public:
 
         int32_t deadline;  //TODO: does this really belong here?
 
-        //g_usage
         int32_t threads;
-        //g_profile
-        //g_w
-        //g_h
-        //g_timebase
         int32_t error_resilient;
         int32_t lag_in_frames;
         int32_t dropframe_thresh;
@@ -262,6 +260,7 @@ public:
     Config m_cfg;
     bool m_bForceKeyframe;
     REFERENCE_TIME m_keyframe_interval;
+    int m_decimate;
     VP8PassMode GetPassMode() const;
 
 private:

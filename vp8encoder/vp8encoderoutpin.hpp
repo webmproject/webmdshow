@@ -66,6 +66,8 @@ public:
     virtual void OnInpinConnect();
     HRESULT OnInpinDisconnect();
 
+    HRESULT SetAvgTimePerFrame(__int64 AvgTimePerFrame);
+
 protected:
     virtual void SetDefaultMediaTypes() = 0;
     virtual HRESULT PostConnect(IPin*) = 0;
