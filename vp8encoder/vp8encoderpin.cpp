@@ -250,5 +250,4 @@ __int64 Pin::GetAvgTimePerFrame() const
     return vih.AvgTimePerFrame;
 }
 
-
 }  //end namespace VP8EncoderLib

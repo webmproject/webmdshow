@@ -115,6 +115,7 @@ HRESULT OutpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
         return S_FALSE;
 
     const BITMAPINFOHEADER* pbmih;
+    REFERENCE_TIME out_avg_time_per_frame = 0;
 
     if (mt.formattype == FORMAT_VideoInfo)
     {
@@ -125,6 +126,7 @@ HRESULT OutpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
         const BITMAPINFOHEADER& bmih = vih.bmiHeader;
 
         pbmih = &bmih;
+        out_avg_time_per_frame = vih.AvgTimePerFrame;
     }
     else if (mt.formattype == FORMAT_VideoInfo2)
     {
@@ -135,6 +137,7 @@ HRESULT OutpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
         const BITMAPINFOHEADER& bmih = vih.bmiHeader;
 
         pbmih = &bmih;
+        out_avg_time_per_frame = vih.AvgTimePerFrame;
     }
     else
         return S_FALSE;
@@ -156,6 +159,25 @@ HRESULT OutpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
 
     if (bmih.biCompression != mt.subtype.Data1)
         return S_FALSE;
+
+    if (m_pFilter->m_decimate > 1)
+    {
+        Filter::Lock lock;
+
+        const HRESULT hr = lock.Seize(m_pFilter);
+
+        if (FAILED(hr))
+            return hr;
+
+        const REFERENCE_TIME in_avg_time_per_frame =
+            m_pFilter->m_inpin.GetAvgTimePerFrame();
+
+        const REFERENCE_TIME decimated_time_per_Frame =
+            m_pFilter->m_decimate * in_avg_time_per_frame;
+
+        if (decimated_time_per_Frame != out_avg_time_per_frame)
+            return S_FALSE;
+    }
 
     return S_OK;
 }
