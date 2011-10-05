@@ -35,7 +35,9 @@ Inpin::Inpin(Filter* p) :
     m_bDiscontinuity(true),
     m_buf(0),
     m_buflen(0),
-    m_last_keyframe_time(0)
+    m_last_keyframe_time(0),
+    m_frames_received(0),
+    m_decimate_start_time(0)
 {
     AM_MEDIA_TYPE mt;
 
@@ -619,6 +621,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (m_bFlush)
         return S_FALSE;
 
+    __int64 st, sp;
+
     const BITMAPINFOHEADER& bmih = GetBMIH();
 
     const LONG w = bmih.biWidth;
@@ -690,6 +694,43 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
             return E_FAIL;
     }
 
+    hr = pInSample->GetTime(&st, &sp);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pFilter->m_decimate > 1)
+    {
+        ++m_frames_received;
+        // Encode every |m_pFilter->m_decimate| frames.
+        const int num_since_drop = m_frames_received % m_pFilter->m_decimate;
+        if (num_since_drop == 0)
+        {
+            // |num_since_drop| of 0 means it's time to encode a frame. Results
+            // in encode of 1st frame and every |m_pFilter->m_decimate|'th
+            // frame.
+            // Adjust the start time for this sample. Decimation discards
+            // frames, and sample start times must be corrected.
+            st = m_decimate_start_time;
+        }
+        else
+        {
+            if (m_frames_received == 1)
+            {
+                // Handle non-zero stream start time.
+                m_decimate_start_time = st;
+            }
+            if (num_since_drop == 1)
+            {
+                // Don't assume a constant input frame rate. Update
+                // |m_decimate_start_time| on the first frame dropped of each
+                // sequence of discarded frames.
+                m_decimate_start_time = st;
+            }
+            return S_OK;
+        }
+    }
+
     vpx_image_t img_;
     vpx_image_t* const img = vpx_img_wrap(&img_, fmt, w, h, 1, imgbuf);
     assert(img);
@@ -706,13 +747,6 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     if (!bool(outpin.m_pPinConnection))
         return S_OK;
-
-    __int64 st, sp;
-
-    hr = pInSample->GetTime(&st, &sp);
-
-    if (FAILED(hr))
-        return hr;
 
     if (st < 0)  //?
     {
@@ -804,7 +838,13 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         m_start_reftime = st;
     }
 
-    const __int64 duration_ = GetAvgTimePerFrame();
+    __int64 duration_ = 0;
+
+    if (m_pFilter->m_decimate < 2)
+      duration_ = GetAvgTimePerFrame();
+    else
+      duration_ = m_pFilter->m_decimate * GetAvgTimePerFrame();
+
     assert(duration_ > 0);
 
     const unsigned long d = static_cast<unsigned long>(duration_);

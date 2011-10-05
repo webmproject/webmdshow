@@ -82,7 +82,8 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
       m_outpin_preview(this),
       m_bDirty(false),
       m_bForceKeyframe(false),
-      m_keyframe_interval(0)
+      m_keyframe_interval(0),
+      m_decimate(0)
 {
     m_pClassFactory->LockServer(TRUE);
 
@@ -1834,6 +1835,62 @@ HRESULT Filter::GetStaticThreshold(int* pThreshold)
         return hr;
 
     *pThreshold = m_cfg.static_threshold;
+    return S_OK;
+}
+
+HRESULT Filter::SetDecimate(int decimate)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_state != State_Stopped) 
+        return VFW_E_NOT_STOPPED;
+
+    if (!m_inpin.m_pPinConnection)
+        return VFW_E_NOT_CONNECTED;
+
+    if (m_outpin_video.m_pPinConnection || m_outpin_preview.m_pPinConnection)
+        return VFW_E_ALREADY_CONNECTED;
+
+    if (decimate < 2)
+        decimate = 1;
+
+    const REFERENCE_TIME avg_time_per_frame = 
+        m_inpin.GetAvgTimePerFrame() * decimate;
+
+    hr = m_outpin_video.SetAvgTimePerFrame(avg_time_per_frame);
+
+    if (FAILED(hr))
+        return hr;
+
+    hr = m_outpin_preview.SetAvgTimePerFrame(avg_time_per_frame);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_decimate = decimate;
+    m_bDirty = true;
+
+    return hr;
+}
+
+HRESULT Filter::GetDecimate(int* pDecimate)
+{
+    if (pDecimate == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *pDecimate = m_decimate;
     return S_OK;
 }
 
