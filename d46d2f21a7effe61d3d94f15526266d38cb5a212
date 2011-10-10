@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAFn//1IU\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 8
+      },
+      "lineNbr": 713,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2011-10-10T17:24:22Z",
+      "side": 1,
+      "message": "I\u0027m having trouble wrapping my head around this.  Why does the timestamp of frame you\u0027re about to encode need to be adjusted?",
+      "revId": "d46d2f21a7effe61d3d94f15526266d38cb5a212",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAFn//1Ic\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 8
+      },
+      "lineNbr": 717,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2011-10-10T17:24:22Z",
+      "side": 1,
+      "message": "Was there a particular reason you didn\u0027t just say:\n\nelse if (frame_rcvd \u003d\u003d 1 || num_since_drop \u003d\u003d 1)\n{\n   dec_st_time \u003d st;\n}\n\n?",
+      "revId": "d46d2f21a7effe61d3d94f15526266d38cb5a212",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAFn//1JE\u003d",
+        "filename": "vp8encoder/vp8encoderoutpinpreview.cpp",
+        "patchSetId": 8
+      },
+      "lineNbr": 145,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2011-10-10T17:24:22Z",
+      "side": 1,
+      "message": "See my comments in the OutpinVideo class.",
+      "revId": "d46d2f21a7effe61d3d94f15526266d38cb5a212",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAFn//1JI\u003d",
+        "filename": "vp8encoder/vp8encoderoutpinvideo.cpp",
+        "patchSetId": 8
+      },
+      "lineNbr": 163,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2011-10-10T17:24:22Z",
+      "side": 1,
+      "message": "I don\u0027t think you want to bother with this test here, avg_time_per_frame is sort of informational anyway.  The only thing you care about in QueryAccept for an output pin is the dimensions of the output video frame and its compression format.  The other members of VIH don\u0027t really matter.\n\nI recommend you revert the changes to this one file.",
+      "revId": "d46d2f21a7effe61d3d94f15526266d38cb5a212",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
