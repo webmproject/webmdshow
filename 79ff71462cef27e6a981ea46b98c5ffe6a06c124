@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAFn//0Z4\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 726,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2011-10-11T17:15:52Z",
+      "side": 1,
+      "message": "I don\u0027t understand why you don\u0027t do just this:\n\nif (!m_frames_received % m_pFilter-\u003em_decimate) {\n    // Drop every decimate frame.\n    return S_OK;\n  }\n\nThe code above won\u0027t change timestamps, which I think is cleaner.",
+      "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
