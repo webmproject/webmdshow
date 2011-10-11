@@ -52,6 +52,41 @@
       "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAFn//0T0\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 726,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2011-10-11T19:17:52Z",
+      "side": 1,
+      "message": "We of course you must change the stop time of the frame (which determines the value of the frame duration), but why do you think you need to change the start time?\n\nTo keep things simple you might need to set the stop time of the output frame to NULL (so that the output frame does not have a stop time at all).",
+      "parentUuid": "AAAAFn//0Y0\u003d",
+      "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAFn//0To\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 842,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2011-10-11T19:17:52Z",
+      "side": 1,
+      "message": "Alternatively, you could say:\n\n__int64 duration_ \u003d GetAvgTimePerFrame();\n\nif (decimate \u003e\u003d 2)\n  duration_ *\u003d decimate;",
+      "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
     }
   ]
 }
