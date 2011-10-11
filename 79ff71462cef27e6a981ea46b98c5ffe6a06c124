@@ -34,6 +34,24 @@
       "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAFn//0Y0\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 726,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2011-10-11T19:00:26Z",
+      "side": 1,
+      "message": "The reason I did things this way is that I\u0027m concerned a downstream filter might care about frame duration. I don\u0027t think the WebM muxer does, but others might.\n\nTo expand on that: I think it\u0027s possible that use of the simpler decimation method with a variable input frame rate could result in a sample_time(N) that\u0027s less than sample_time(N-1) + sample_duration(N-1)...\n\nSince we only really care about WebM I can change the code to do things the simpler way, but keeping timestamps as accurate as possible seemed like the correct thing to do when I was writing the code.\n\n\u003e I agree with FG. Why are you trying to manipulate the framerate?\n\nDecimation discards frames-- the main use case here is to take 1080p/720p 60 frames/second input, and encode it at 30 frames/second.  Outputting frames at 30/second with frames that have times and durations for 60 frame/second content would be incorrect.",
+      "parentUuid": "AAAAFn//0Z4\u003d",
+      "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
     }
   ]
 }
