@@ -35,7 +35,9 @@ Inpin::Inpin(Filter* p) :
     m_bDiscontinuity(true),
     m_buf(0),
     m_buflen(0),
-    m_last_keyframe_time(0)
+    m_last_keyframe_time(0),
+    m_frames_received(0),
+    m_decimate_start_time(0)
 {
     AM_MEDIA_TYPE mt;
 
@@ -690,6 +692,21 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
             return E_FAIL;
     }
 
+    __int64 st, sp;
+
+    hr = pInSample->GetTime(&st, &sp);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (m_pFilter->m_decimate > 1)
+    {
+        ++m_frames_received;
+
+        if ((m_frames_received % m_pFilter->m_decimate) == 0)
+            return S_OK;
+    }
+
     vpx_image_t img_;
     vpx_image_t* const img = vpx_img_wrap(&img_, fmt, w, h, 1, imgbuf);
     assert(img);
@@ -706,13 +723,6 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     if (!bool(outpin.m_pPinConnection))
         return S_OK;
-
-    __int64 st, sp;
-
-    hr = pInSample->GetTime(&st, &sp);
-
-    if (FAILED(hr))
-        return hr;
 
     if (st < 0)  //?
     {
@@ -804,7 +814,10 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         m_start_reftime = st;
     }
 
-    const __int64 duration_ = GetAvgTimePerFrame();
+    __int64 duration_ = GetAvgTimePerFrame();
+    if (m_pFilter->m_decimate > 1)
+      duration_ *= m_pFilter->m_decimate;
+
     assert(duration_ > 0);
 
     const unsigned long d = static_cast<unsigned long>(duration_);
@@ -958,6 +971,7 @@ void Inpin::AppendFrame(const vpx_codec_cx_pkt_t* pkt)
     IVP8Sample::Frame f;
 
     const HRESULT hr = m_pFilter->m_outpin_video.GetFrame(f);
+    hr;
     assert(SUCCEEDED(hr));
     assert(f.buf);
 
@@ -965,6 +979,7 @@ void Inpin::AppendFrame(const vpx_codec_cx_pkt_t* pkt)
     const long len = static_cast<long>(len_);
 
     const long size = f.buflen - f.off;
+    size;
     assert(size >= len);
 
     BYTE* tgt = f.buf + f.off;
