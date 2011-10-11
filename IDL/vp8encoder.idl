@@ -57,7 +57,7 @@ enum VP8PassMode
 
 [
    object,
-   uuid(ED311150-5211-11DF-94AF-0026B977EEAA),
+   uuid(ED311151-5211-11DF-94AF-0026B977EEAA),
    helpstring("VP8 Encoder Filter Interface")
 ]
 interface IVP8Encoder : IUnknown
@@ -437,6 +437,27 @@ interface IVP8Encoder : IUnknown
     //- S_OK when successful.
     HRESULT SetStaticThreshold([in] int StaticThreshold);
     HRESULT GetStaticThreshold([out] int* pStaticThreshold);
+
+    //Decimate.
+    //
+    //Reduces frame rate of input video by discarding video frames based on
+    //Decimate value. For Decimate value N, and N >= 2, the VP8 encoder filter
+    //encodes only every Nth frame.
+    //
+    //Decimate values <= 1 disable decimation.
+    //
+    //To change the decimation setting:
+    //- The filter graph state must be State_Stopped.
+    //- The input pin must be connected.
+    //- The output pin must be disconnected.
+    //
+    //Return values:
+    //- S_OK when successful.
+    //- VFW_E_NOT_STOPPED when graph is not stopped.
+    //- VFW_E_NOT_CONNECTED when input pin is not connected.
+    //- VFW_E_ALREADY_CONNECTED when output pin is connected.
+    HRESULT SetDecimate([in] int Decimate);
+    HRESULT GetDecimate([out] int* pDecimate);
 }
 
 

@@ -121,6 +121,8 @@ private:
     size_t m_buflen;
 
     REFERENCE_TIME m_last_keyframe_time;
+    __int64 m_frames_received;
+    __int64 m_decimate_start_time;
 
     BYTE* ConvertYUY2ToYV12(const BYTE*, ULONG, ULONG);
 
