@@ -73,6 +73,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAFn//0Sw\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 726,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2011-10-11T19:42:10Z",
+      "side": 1,
+      "message": "Matt and I talked about it more. We think the best would be to change the stop time of the samples to 0 if decimate is \u003e 1. If not decimating than just use the stop time that is in the media sample.  This way it will be up to the muxer to figure out what the start and stop times of the frames are. You will just need to test that the muxer can handle this mode.",
+      "parentUuid": "AAAAFn//0T0\u003d",
+      "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAFn//0To\u003d",
         "filename": "vp8encoder/vp8encoderinpin.cpp",
         "patchSetId": 9
