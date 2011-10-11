@@ -91,6 +91,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAFn//0Ak\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 726,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2011-10-11T23:24:29Z",
+      "side": 1,
+      "message": "I\u0027m changing it to the initial simple implementation Frank asked about. We can\u0027t pass a duration of 0 to libvpx, so to keep things simple I\u0027ll just use AvgTimePerFrame * decimate when decimate is \u003e 1.\n\nWe can revisit this later if needed-- the source device (in the use case this is intended for) should provide a constant frame rate.",
+      "parentUuid": "AAAAFn//0Sw\u003d",
+      "revId": "79ff71462cef27e6a981ea46b98c5ffe6a06c124",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAFn//0To\u003d",
         "filename": "vp8encoder/vp8encoderinpin.cpp",
         "patchSetId": 9
