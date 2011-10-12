@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAFn//z4M\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 10
+      },
+      "lineNbr": 707,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2011-10-12T01:47:21Z",
+      "side": 1,
+      "message": "Sorry this should be:\n\nif (m_pFilter-\u003em_decimate \u003e 1)\n{\n  if (m_frames_received++ % m_pFilter-\u003em_decimate) \n    return S_OK;\n}\n\nIf decimate is 3 you want to process every 3rd frame not every 2 out of 3.",
+      "revId": "94fac8b63745bd35d196030e04044365a8cef1af",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
