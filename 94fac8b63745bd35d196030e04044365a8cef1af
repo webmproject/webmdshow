@@ -16,6 +16,24 @@
       "revId": "94fac8b63745bd35d196030e04044365a8cef1af",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAFn//z38\u003d",
+        "filename": "vp8encoder/vp8encoderinpin.cpp",
+        "patchSetId": 10
+      },
+      "lineNbr": 707,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2011-10-12T03:12:07Z",
+      "side": 1,
+      "message": "Oops, you\u0027re right. I shouldn\u0027t blindly copy/paste things...",
+      "parentUuid": "AAAAFn//z4M\u003d",
+      "revId": "94fac8b63745bd35d196030e04044365a8cef1af",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
     }
   ]
 }
