@@ -68,7 +68,8 @@ CmdLine::CmdLine() :
     m_arnr_maxframes(-1),
     m_arnr_strength(-1),
     m_arnr_type(-1),
-    m_ogg_to_webm(-1)
+    m_ogg_to_webm(-1),
+    m_cpu_used(-17)
 {
 }
 
@@ -1460,6 +1461,11 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
+    status = ParseOpt(i, arg, len, L"cpu-used", m_cpu_used, -16, 16);
+
+    if (status)
+        return status;
+
     wcout << "Unknown switch: " << *i
           << "\nUse /help or --help to get usage info."
           << endl;
@@ -1713,6 +1719,11 @@ int CmdLine::GetOggToWebm() const
     return m_ogg_to_webm;
 }
 
+int CmdLine::GetCPUUsed() const
+{
+    return m_cpu_used;
+}
+
 void CmdLine::PrintVersion() const
 {
     wcout << "makewebm ";
@@ -1796,6 +1807,8 @@ void CmdLine::PrintUsage() const
           << L"max number of frames to use on filter\n"
           << L"  --arnr-strength                 strength of filter\n"
           << L"  --arnr-type                     type of filter\n"
+          << L"  --live                          live mode WebM output\n"
+          << L"  --cpu-used                      encoder speed\n"
           << L"  -l, --list                      "
           << L"print switch values, but do not run app\n"
           << L"  -v, --verbose                   "
@@ -2123,6 +2136,9 @@ void CmdLine::ListArgs() const
 
     if (m_arnr_type >= 0)
         wcout << L"arnr-type: " << m_arnr_type << L'\n';
+
+    if (m_cpu_used >= -16)
+        wcout << L"cpu-used: " << m_cpu_used << L'\n';
 
     wcout << endl;
 }

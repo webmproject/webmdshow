@@ -3057,6 +3057,21 @@ HRESULT App::SetVP8Options(
         }
     }
 
+    const int cpu_used = m_cmdline.GetCPUUsed();
+    if (cpu_used >= -16)
+    {
+        const HRESULT hr = pVP8->SetCPUUsed(cpu_used);
+        if (FAILED(hr))
+        {
+            wcout << "Unable to set VP8 encoder CPU used.\n"
+                  << hrtext(hr)
+                  << L" (0x" << hex << hr << dec << L")"
+                  << endl;
+
+            return hr;
+        }
+    }
+
     return S_OK;
 }
 
