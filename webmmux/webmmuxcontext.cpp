@@ -261,16 +261,16 @@ void Context::InitSegment()
 {
     m_file.WriteID4(WebmUtil::kEbmlSegmentID);  //Segment ID
 
-    if (m_bLiveMux == false)
+    if (m_bLiveMux)
+        m_file.Serialize1UInt(0xFF);
+    else
     {
         m_segment_pos = m_file.GetPosition() - 4;
         m_file.Serialize8UInt(0x01FFFFFFFFFFFFFFLL);
-    }
-    else
-        m_file.Serialize1UInt(0xFF);
 
-    if (m_pVideo && !m_bLiveMux)
-        InitFirstSeekHead();  //Meta Seek
+        if (m_pVideo)
+            InitSeekHead();  //Meta Seek
+    }
 
     InitInfo();      //Segment Info
     WriteTrack();
@@ -279,15 +279,13 @@ void Context::InitSegment()
 
 void Context::FinalSegment()
 {
-    m_cues_pos = m_file.GetPosition();  //end of clusters
-
-    if (m_pVideo && !m_bLiveMux)
-        WriteCues();
-
-    m_clusters.clear();
-
     if (!m_bLiveMux)
     {
+        m_cues_pos = m_file.GetPosition();  //end of clusters
+
+        if (m_pVideo)
+            WriteCues();
+
         const __int64 maxpos = m_file.GetPosition();
         m_file.SetSize(maxpos);
 
@@ -301,31 +299,30 @@ void Context::FinalSegment()
         id;
 
         m_file.Write8UInt(size);  //total size of the segment
+
+        if (m_pVideo)
+            FinalSeekHead();
+
+        FinalInfo();
     }
 
-    if (m_pVideo && !m_bLiveMux)
-        FinalFirstSeekHead();
-
-    FinalInfo();
+    m_clusters.clear();
 }
 
 
 void Context::FinalInfo()
 {
-    if (!m_bLiveMux)
-    {
-        m_file.SetPosition(m_duration_pos);
+    m_file.SetPosition(m_duration_pos);
 
-        m_file.WriteID2(WebmUtil::kEbmlDurationID); // Duration ID
-        m_file.Write1UInt(4);                       // payload size
+    m_file.WriteID2(WebmUtil::kEbmlDurationID); // Duration ID
+    m_file.Write1UInt(4);                       // payload size
 
-        const float duration = static_cast<float>(m_max_timecode);
-        m_file.Serialize4Float(duration);
-    }
+    const float duration = static_cast<float>(m_max_timecode);
+    m_file.Serialize4Float(duration);
 }
 
 
-void Context::InitFirstSeekHead()
+void Context::InitSeekHead()
 {
     m_seekhead_pos = m_file.GetPosition();
 
@@ -334,43 +331,73 @@ void Context::InitFirstSeekHead()
     // Total payload for a seek entry is 7 + 11 = 18 bytes.
     // The Seek entry is 2 + 1 + 18 = 21 bytes.
 
-    // (first seek head)
-    // SegmentInfo (1/3)
-    // Track (2/3)
-    // (clusters)
-    // Cues (3/3)
+    // What we write here:
+    // (1) SegmentInfo
+    // (2) Track
+    // (3) Cues
+    //
+    // Possible extra entries, by other tools:
+    // (4) XMP
+    // (5) MKV tags
+    // (6) another post-clusters SeekHead
+    //
+    // So just allocate space for 10 entries; that's 10*21 bytes for
+    // the payload that carries SeekHead entries.
+    //
+    // We also write a void element, inside the SeekHead element, because
+    // we're writing fewer entries than we have budgeted for.  A Void element
+    // has a 1-byte ID and a 2-byte size field, so that's 3 additional bytes
+    // of payload for the SeekHead.
+    //
+    // The SeekHead ID is 4 bytes, with a 2-byte size field.  So that's:
+    //   6      (4-byte ID + 2-byte size) +
+    //   10*21  (max 10 seek entries) +
+    //   3      (overhead for Void element, for unused payload)
+    // The total payload size during finalization will be 10*21 + 3 bytes.
+    //
+    // However, we only write the SeekHead ID when we finalize the container,
+    // after the muxing is complete.  We write a Void element during
+    // initialization:
+    //   3      (1-byte ID + 2-byte size) +
+    //   3      (padding, to account for difference between ID sizes)
+    //   10*21  (as above)
+    //   3      (as above)
+    // The total payload size during initialization is 3 + 10*21 + 3 bytes.
 
-    const BYTE size = (4-1) + (3*21);  // (SeekHead ID - Void ID) + payload
+    const USHORT init_size = 3 + 10*21 + 3;
 
     m_file.WriteID1(WebmUtil::kEbmlVoidID);
-    m_file.Write1UInt(size);
-    m_file.SetPosition(size, STREAM_SEEK_CUR);
+    m_file.Write2UInt(init_size);
+    m_file.SetPosition(init_size, STREAM_SEEK_CUR);
 }
 
 
 
-void Context::FinalFirstSeekHead()
+void Context::FinalSeekHead()
 {
-    if (!m_bLiveMux)
-    {
-        const LONGLONG start_pos = m_file.SetPosition(m_seekhead_pos);
-        const BYTE payload_size = 3*21;
+    const LONGLONG start_pos = m_file.SetPosition(m_seekhead_pos);
+    const USHORT final_size = 10*21 + 3;  //see notes above
 
-        m_file.WriteID4(WebmUtil::kEbmlSeekHeadID);
-        m_file.Write1UInt(payload_size);
+    m_file.WriteID4(WebmUtil::kEbmlSeekHeadID);
+    m_file.Write2UInt(final_size);
 
-        WriteSeekEntry(WebmUtil::kEbmlSegmentInfoID, m_info_pos);
-        WriteSeekEntry(WebmUtil::kEbmlTracksID, m_track_pos);
-        WriteSeekEntry(WebmUtil::kEbmlCuesID, m_cues_pos);
+    WriteSeekEntry(WebmUtil::kEbmlSegmentInfoID, m_info_pos);
+    WriteSeekEntry(WebmUtil::kEbmlTracksID, m_track_pos);
+    WriteSeekEntry(WebmUtil::kEbmlCuesID, m_cues_pos);
 
-        assert((m_file.GetPosition() - start_pos) == (4 + 1 + payload_size));
-    }
+    const USHORT void_size = 7*21;  //because we only wrote 3 actual entries
+
+    m_file.WriteID1(WebmUtil::kEbmlVoidID);
+    m_file.Write2UInt(void_size);
+    m_file.SetPosition(void_size, STREAM_SEEK_CUR);
+
+    assert((m_file.GetPosition() - start_pos) == (4 + 2 + final_size));
 }
 
 
 void Context::WriteSeekEntry(ULONG id, __int64 pos_)
 {
-    assert(m_bLiveMux == false);
+    assert(!m_bLiveMux);
 
     //The SeekID is 2 + 1 + 4 = 7 bytes.
     //The SeekPos is 2 + 1 + 8 = 11 bytes.

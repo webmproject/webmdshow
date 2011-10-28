@@ -69,8 +69,8 @@ private:
    void InitSegment();
    void FinalSegment();
 
-   void InitFirstSeekHead();
-   void FinalFirstSeekHead();
+   void InitSeekHead();
+   void FinalSeekHead();
    void WriteSeekEntry(ULONG, __int64);
 
    void InitInfo();
