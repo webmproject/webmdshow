@@ -16,6 +16,7 @@
 #include <amvideo.h>
 #include <dvdmedia.h>
 #include <uuids.h>
+#include <limits>
 #ifdef _DEBUG
 #include "odbgstream.hpp"
 using std::endl;
@@ -371,20 +372,7 @@ void VideoStream::OnPopulateSample(
         if ((duration_ns >= 0) && (duration_ns > start_ns))
             stop_ns = duration_ns;
         else
-        {
-            typedef mkvparser::VideoTrack VT;
-            const VT* const pVT = static_cast<const VT*>(m_pTrack);
-
-            double frame_rate = pVT->GetFrameRate();
-
-            if (frame_rate <= 0)
-                frame_rate = 10;  //100ms
-
-            const double ns = 1000000000.0 / frame_rate;
-            const LONGLONG ns_per_frame = static_cast<LONGLONG>(ns);
-
-            stop_ns = start_ns + LONGLONG(nFrames) * ns_per_frame;
-        }
+            stop_ns = start_ns + 1000000;  //add 1ms
     }
     else
     {
