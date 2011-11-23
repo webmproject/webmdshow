@@ -268,7 +268,8 @@ HRESULT Outpin::Connect(
     //if (h % 16)
     //    h = 16 * ((h + 15) / 16);
 
-    const long cbBuffer = w*h + 2*((w+1)/2 * (h+1)/2);
+    //const long cbBuffer = w*h + 2*((w+1)/2 * (h+1)/2);
+    const long cbBuffer = 2*w * h;
 
     if (props.cbBuffer < cbBuffer)
         props.cbBuffer = cbBuffer;
@@ -327,6 +328,14 @@ HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt_query)
     if (mt_query.subtype == MEDIASUBTYPE_YV12)
         __noop;
     else if (mt_query.subtype == WebmTypes::MEDIASUBTYPE_I420)
+        __noop;
+    else if (mt_query.subtype == MEDIASUBTYPE_UYVY)
+        __noop;
+    else if (mt_query.subtype == MEDIASUBTYPE_YVYU)
+        __noop;
+    else if (mt_query.subtype == MEDIASUBTYPE_YUY2)
+        __noop;
+    else if (mt_query.subtype == MEDIASUBTYPE_YUYV)
         __noop;
     else
         return S_FALSE;
@@ -817,7 +826,7 @@ void Outpin::OnInpinConnect(const AM_MEDIA_TYPE& mtIn)
     BITMAPINFOHEADER& bmih = vih.bmiHeader;
 
     mt.majortype = MEDIATYPE_Video;
-    mt.subtype = MEDIASUBTYPE_YV12;
+    //mt.subtype = MEDIASUBTYPE_YV12;
     mt.bFixedSizeSamples = TRUE;
     mt.bTemporalCompression = FALSE;
     mt.lSampleSize = 0;
@@ -842,20 +851,53 @@ void Outpin::OnInpinConnect(const AM_MEDIA_TYPE& mtIn)
     bmih.biWidth = w;
     bmih.biHeight = h;
     bmih.biPlanes = 1;  //because Microsoft says so
-    bmih.biBitCount = 12;  //?
-    bmih.biCompression = mt.subtype.Data1;
-    bmih.biSizeImage = w*h + 2*((w+1)/2 * (h+1)/2);
+    //bmih.biBitCount = 12;  //?
+    //bmih.biCompression = mt.subtype.Data1;
+    //bmih.biSizeImage = w*h + 2*((w+1)/2 * (h+1)/2);
     bmih.biXPelsPerMeter = 0;
     bmih.biYPelsPerMeter = 0;
     bmih.biClrUsed = 0;
     bmih.biClrImportant = 0;
 
+#if 1
+    bmih.biBitCount = 12;  //?
+    bmih.biSizeImage = w*h + 2*((w+1)/2 * (h+1)/2);
+
+    mt.subtype = MEDIASUBTYPE_YV12;
+    bmih.biCompression = mt.subtype.Data1;
     m_preferred_mtv.Add(mt);
 
     mt.subtype = WebmTypes::MEDIASUBTYPE_I420;
     bmih.biCompression = mt.subtype.Data1;  //"I420"
-
     m_preferred_mtv.Add(mt);
+#endif
+
+    bmih.biSizeImage = 2*w * h;
+    bmih.biBitCount = 16;
+
+#if 1
+    mt.subtype = MEDIASUBTYPE_UYVY;
+    bmih.biCompression = mt.subtype.Data1;
+    m_preferred_mtv.Add(mt);
+#endif
+
+#if 1
+    mt.subtype = MEDIASUBTYPE_YUY2;
+    bmih.biCompression = mt.subtype.Data1;
+    m_preferred_mtv.Add(mt);
+#endif
+
+#if 1
+    mt.subtype = MEDIASUBTYPE_YUYV;
+    bmih.biCompression = mt.subtype.Data1;
+    m_preferred_mtv.Add(mt);
+#endif
+
+#if 1
+    mt.subtype = MEDIASUBTYPE_YVYU;
+    bmih.biCompression = mt.subtype.Data1;
+    m_preferred_mtv.Add(mt);
+#endif
 }
 
 

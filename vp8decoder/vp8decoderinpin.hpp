@@ -10,6 +10,7 @@
 #include "vp8decoderpin.hpp"
 #include "graphutil.hpp"
 #include "vpx/vpx_decoder.h"
+#include <amvideo.h>
 
 namespace VP8DecoderLib
 {
@@ -94,6 +95,16 @@ private:
     vpx_codec_ctx_t m_ctx;
 
     HRESULT PopulateSample(IMediaSample*, const vpx_image_t*);
+
+    static void CopyToPlanar(
+        const vpx_image_t*,
+        IMediaSample*,
+        const AM_MEDIA_TYPE&);
+
+    static void CopyToPacked(
+        const vpx_image_t*,
+        IMediaSample*,
+        const AM_MEDIA_TYPE&);
 
 };
 
