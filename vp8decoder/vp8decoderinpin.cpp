@@ -16,7 +16,6 @@
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <cassert>
-#include <amvideo.h>
 #include <evcode.h>
 #ifdef _DEBUG
 #include <iomanip>
@@ -565,6 +564,112 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
     assert(mt.pbFormat);
 
+    if (mt.subtype == MEDIASUBTYPE_YV12)
+        CopyToPlanar(f, pOutSample, mt);
+
+    else if (mt.subtype == WebmTypes::MEDIASUBTYPE_I420)
+        CopyToPlanar(f, pOutSample, mt);
+
+    else if (mt.subtype == MEDIASUBTYPE_UYVY)
+        CopyToPacked(f, pOutSample, mt);
+
+    else if (mt.subtype == MEDIASUBTYPE_YUY2)
+        CopyToPacked(f, pOutSample, mt);
+
+    else if (mt.subtype == MEDIASUBTYPE_YUYV)
+        CopyToPacked(f, pOutSample, mt);  //yes
+
+    else if (mt.subtype == MEDIASUBTYPE_YVYU)
+        CopyToPacked(f, pOutSample, mt);
+
+    else
+        return E_FAIL;
+
+    __int64 st, sp;
+
+    hr = pInSample->GetTime(&st, &sp);
+
+    if (FAILED(hr))
+    {
+        hr = pOutSample->SetTime(0, 0);
+        assert(SUCCEEDED(hr));
+    }
+    else if (hr == S_OK)
+    {
+        hr = pOutSample->SetTime(&st, &sp);
+        assert(SUCCEEDED(hr));
+    }
+    else
+    {
+        hr = pOutSample->SetTime(&st, 0);
+        assert(SUCCEEDED(hr));
+    }
+
+    hr = pOutSample->SetSyncPoint(TRUE);
+    assert(SUCCEEDED(hr));
+
+    hr = pOutSample->SetPreroll(FALSE);
+    assert(SUCCEEDED(hr));
+
+    hr = pInSample->IsDiscontinuity();
+    hr = pOutSample->SetDiscontinuity(hr == S_OK);
+
+    hr = pOutSample->SetMediaTime(0, 0);
+
+#if 0
+    //LONGLONG st, sp;
+    hr = pOutSample->GetTime(&st, &sp);
+    assert(SUCCEEDED(hr));
+
+    odbgstream os;
+    os << "V: " << fixed << setprecision(3) << (double(st)/10000000.0) << endl;
+#endif
+
+    lock.Release();
+
+    return outpin.m_pInputPin->Receive(pOutSample);
+}
+
+
+HRESULT Inpin::ReceiveMultiple(
+    IMediaSample** pSamples,
+    long n,    //in
+    long* pm)  //out
+{
+    if (pm == 0)
+        return E_POINTER;
+
+    long& m = *pm;    //out
+    m = 0;
+
+    if (n <= 0)
+        return S_OK;  //weird
+
+    if (pSamples == 0)
+        return E_INVALIDARG;
+
+    for (long i = 0; i < n; ++i)
+    {
+        IMediaSample* const pSample = pSamples[i];
+        assert(pSample);
+
+        const HRESULT hr = Receive(pSample);
+
+        if (hr != S_OK)
+            return hr;
+
+        ++m;
+    }
+
+    return S_OK;
+}
+
+
+void Inpin::CopyToPlanar(
+    const vpx_image_t* f,
+    IMediaSample* pOutSample,
+    const AM_MEDIA_TYPE& mt)
+{
     const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
     const BITMAPINFOHEADER& bmih = vih.bmiHeader;
 
@@ -578,7 +683,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     BYTE* pOutBuf;
 
-    hr = pOutSample->GetPointer(&pOutBuf);
+    HRESULT hr = pOutSample->GetPointer(&pOutBuf);
     assert(SUCCEEDED(hr));
     assert(pOutBuf);
 
@@ -653,89 +758,171 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
         }
     }
 
-    __int64 st, sp;
+    const ptrdiff_t lenOut_ = pOut - pOutBuf;
+    const long lenOut = static_cast<long>(lenOut_);
 
-    hr = pInSample->GetTime(&st, &sp);
+    hr = pOutSample->SetActualDataLength(lenOut);
+    assert(SUCCEEDED(hr));
+}
 
-    if (FAILED(hr))
+
+void Inpin::CopyToPacked(
+    const vpx_image_t* f,
+    IMediaSample* pOutSample,
+    const AM_MEDIA_TYPE& mt)
+{
+    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
+    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+
+    const RECT& rc = vih.rcSource;
+
+    const LONG wwOut = rc.right - rc.left;
+    assert(wwOut >= 0);
+
+    const LONG wOut = (wwOut > 0) ? wwOut : bmih.biWidth;
+    assert(wOut > 0);
+
+    const LONG hhOut = rc.bottom - rc.top;
+    assert(hhOut >= 0);
+
+    const LONG hOut = (hhOut > 0) ? hhOut : labs(bmih.biHeight);
+
+    const BYTE* pInY_base = f->planes[PLANE_Y];
+    assert(pInY_base);
+
+    const int strideInY = f->stride[PLANE_Y];
+
+    const BYTE* pInV_base = f->planes[PLANE_V];
+    assert(pInV_base);
+
+    const int strideInV = f->stride[PLANE_V];
+
+    const BYTE* pInU_base = f->planes[PLANE_U];
+    assert(pInU_base);
+
+    const int strideInU = f->stride[PLANE_U];
+
+    const unsigned int wIn = f->d_w;
+    assert(LONG(wIn) == wOut);
+
+    const unsigned int hIn = f->d_h;
+    assert(LONG(hIn) == hOut);
+
+    BYTE* pOutBuf;
+
+    HRESULT hr = pOutSample->GetPointer(&pOutBuf);
+    assert(SUCCEEDED(hr));
+    assert(pOutBuf);
+
+    const LONG strideOut_ = 2*wIn;
+    LONG strideOut;
+
+    if (bmih.biWidth < strideOut_)
+        strideOut = strideOut_;
+    else
+        strideOut = bmih.biWidth;
+
+    const LONG uv_width = wIn / 2;
+    const LONG uv_height = hIn / 2;
+
+    int u_off, v_off, y_off;
+
+    if (mt.subtype == MEDIASUBTYPE_UYVY)
     {
-        hr = pOutSample->SetTime(0, 0);
-        assert(SUCCEEDED(hr));
+        u_off = 0;
+        v_off = 2;
+        y_off = 1;
     }
-    else if (hr == S_OK)
+    else if ((mt.subtype == MEDIASUBTYPE_YUY2) ||
+             (mt.subtype == MEDIASUBTYPE_YUYV))
     {
-        hr = pOutSample->SetTime(&st, &sp);
-        assert(SUCCEEDED(hr));
+        u_off = 1;
+        v_off = 3;
+        y_off = 0;
     }
     else
     {
-        hr = pOutSample->SetTime(&st, 0);
-        assert(SUCCEEDED(hr));
+        assert(mt.subtype == MEDIASUBTYPE_YVYU);
+
+        u_off = 3;
+        v_off = 1;
+        y_off = 0;
     }
 
-    hr = pOutSample->SetSyncPoint(TRUE);
-    assert(SUCCEEDED(hr));
+    BYTE* pOut = pOutBuf;
 
-    hr = pOutSample->SetPreroll(FALSE);
-    assert(SUCCEEDED(hr));
+    for (LONG hdx = 0; hdx < uv_height; ++hdx)
+    {
+        BYTE* const pOut0 = pOut;
+        pOut += strideOut;
+
+        BYTE* const pOut1 = pOut;
+        pOut += strideOut;
+
+        BYTE* pOutU0 = pOut0 + u_off;
+        BYTE* pOutU1 = pOut1 + u_off;
+
+        BYTE* pOutV0 = pOut0 + v_off;
+        BYTE* pOutV1 = pOut1 + v_off;
+
+        BYTE* pOutY0 = pOut0 + y_off;
+        BYTE* pOutY1 = pOut1 + y_off;
+
+        const BYTE* pInU = pInU_base;
+        pInU_base += strideInU;
+
+        const BYTE* pInV = pInV_base;
+        pInV_base += strideInV;
+
+        const BYTE* pInY0 = pInY_base;
+        pInY_base += strideInY;
+
+        const BYTE* pInY1 = pInY_base;
+        pInY_base += strideInY;
+
+        for (LONG wdx = 0; wdx < uv_width; ++wdx)
+        {
+            *pOutU0 = *pInU;
+            *pOutU1 = *pInU;
+
+            pOutU0 += 4;
+            pOutU1 += 4;
+
+            ++pInU;
+
+            *pOutV0 = *pInV;
+            *pOutV1 = *pInV;
+
+            pOutV0 += 4;
+            pOutV1 += 4;
+
+            ++pInV;
+
+            *pOutY0 = *pInY0;
+            *pOutY1 = *pInY1;
+
+            pOutY0 += 2;
+            pOutY1 += 2;
+
+            ++pInY0;
+            ++pInY1;
+
+            *pOutY0 = *pInY0;
+            *pOutY1 = *pInY1;
+
+            pOutY0 += 2;
+            pOutY1 += 2;
+
+            ++pInY0;
+            ++pInY1;
+        }
+    }
 
     const ptrdiff_t lenOut_ = pOut - pOutBuf;
     const long lenOut = static_cast<long>(lenOut_);
 
     hr = pOutSample->SetActualDataLength(lenOut);
     assert(SUCCEEDED(hr));
-
-    hr = pInSample->IsDiscontinuity();
-    hr = pOutSample->SetDiscontinuity(hr == S_OK);
-
-    hr = pOutSample->SetMediaTime(0, 0);
-
-#if 0
-    //LONGLONG st, sp;
-    hr = pOutSample->GetTime(&st, &sp);
-    assert(SUCCEEDED(hr));
-
-    odbgstream os;
-    os << "V: " << fixed << setprecision(3) << (double(st)/10000000.0) << endl;
-#endif
-
-    lock.Release();
-
-    return outpin.m_pInputPin->Receive(pOutSample);
-}
-
-
-HRESULT Inpin::ReceiveMultiple(
-    IMediaSample** pSamples,
-    long n,    //in
-    long* pm)  //out
-{
-    if (pm == 0)
-        return E_POINTER;
-
-    long& m = *pm;    //out
-    m = 0;
-
-    if (n <= 0)
-        return S_OK;  //weird
-
-    if (pSamples == 0)
-        return E_INVALIDARG;
-
-    for (long i = 0; i < n; ++i)
-    {
-        IMediaSample* const pSample = pSamples[i];
-        assert(pSample);
-
-        const HRESULT hr = Receive(pSample);
-
-        if (hr != S_OK)
-            return hr;
-
-        ++m;
-    }
-
-    return S_OK;
 }
 
 
