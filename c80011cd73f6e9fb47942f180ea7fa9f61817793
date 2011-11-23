@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAGX//3oQ\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 580,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2011-11-23T19:14:42Z",
+      "side": 1,
+      "message": "update or remove comment",
+      "revId": "c80011cd73f6e9fb47942f180ea7fa9f61817793",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
