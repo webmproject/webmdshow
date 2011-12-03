@@ -23,6 +23,7 @@ class Filter : public IBaseFilter,
                public IMediaSeeking,
                public IAMFilterMiscFlags,
                public IWebmMux,
+               public IWebmXMP,
                public CLockable
 {
     friend HRESULT CreateInstance(
@@ -106,6 +107,12 @@ public:
 
     HRESULT STDMETHODCALLTYPE SetMuxMode(WebmMuxMode);
     HRESULT STDMETHODCALLTYPE GetMuxMode(WebmMuxMode*);
+
+    //IWebmXMP
+
+    HRESULT STDMETHODCALLTYPE SetXMP(LONG, const CHAR*);
+    HRESULT STDMETHODCALLTYPE GetXMP(LONG*, CHAR**);
+    HRESULT STDMETHODCALLTYPE GetXMP2(LONG*, CHAR*, LONG);
 
 private:
 

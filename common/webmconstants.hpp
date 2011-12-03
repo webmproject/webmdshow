@@ -56,6 +56,7 @@ namespace WebmUtil
         kEbmlVideoFrameRate = 0x2383E3,
         kEbmlVoidID = 0xEC,
         kEbmlWritingAppID = 0x5741,
+        kEbmlXMPID = 0x12584D50
     };
 
     enum EbmlLimits

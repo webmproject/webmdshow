@@ -17,7 +17,7 @@ public:
     MemFile();
     ~MemFile();
 
-    HRESULT Open(const wchar_t*);
+    HRESULT Open(const wchar_t*, bool bDeleteOnClose);
     HRESULT Close();
     bool IsOpen() const;
 

@@ -1466,6 +1466,34 @@ int CmdLine::ParseLongPost(
     if (status)
         return status;
 
+    if (_wcsnicmp(arg, L"xmp", len) == 0)
+    {
+        if (has_value)
+        {
+            const wchar_t* const f = arg + len + 1;
+
+            if (wcslen(f) == 0)
+            {
+                wcout << L"XMP filename value is empty." << endl;
+                return -1;  //error
+            }
+
+            m_xmp = f;
+            return 1;  //consumed one command-line arg
+        }
+
+        const wchar_t* const f = *++i;
+
+        if ((f == 0) || IsSwitch(f)) //no value specified
+        {
+            wcout << L"XMP filename value is empty." << endl;
+            return -1;  //error
+        }
+
+        m_xmp = f;
+        return 2;  //consumed two command-line args
+    }
+
     wcout << "Unknown switch: " << *i
           << "\nUse /help or --help to get usage info."
           << endl;
@@ -1724,6 +1752,14 @@ int CmdLine::GetCPUUsed() const
     return m_cpu_used;
 }
 
+const wchar_t* CmdLine::GetXMP() const
+{
+    if (m_xmp.empty())
+        return 0;
+
+    return m_xmp.c_str();
+}
+
 void CmdLine::PrintVersion() const
 {
     wcout << "makewebm ";
@@ -1809,6 +1845,7 @@ void CmdLine::PrintUsage() const
           << L"  --arnr-type                     type of filter\n"
           << L"  --live                          live mode WebM output\n"
           << L"  --cpu-used                      encoder speed\n"
+          << L"  --xmp                           embed XMP side-car file\n"
           << L"  -l, --list                      "
           << L"print switch values, but do not run app\n"
           << L"  -v, --verbose                   "
@@ -2139,6 +2176,9 @@ void CmdLine::ListArgs() const
 
     if (m_cpu_used >= -16)
         wcout << L"cpu-used: " << m_cpu_used << L'\n';
+
+    if (!m_xmp.empty())
+        wcout << L"xmp: " << m_xmp << L'\n';
 
     wcout << endl;
 }

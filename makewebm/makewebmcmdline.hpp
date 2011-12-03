@@ -65,6 +65,7 @@ public:
     const wchar_t* GetSaveGraphFile() const;
     int GetOggToWebm() const;
     int GetCPUUsed() const;
+    const wchar_t* GetXMP() const;
 
     static std::wstring GetPath(const wchar_t*);
 
@@ -117,6 +118,7 @@ private:
     int m_arnr_type;
     int m_ogg_to_webm;
     int m_cpu_used;
+    std::wstring m_xmp;
 
     std::wstring m_save_graph_file_str;
     const wchar_t* m_save_graph_file_ptr;

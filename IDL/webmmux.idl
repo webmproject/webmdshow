@@ -37,6 +37,20 @@ interface IWebmMux : IUnknown
     HRESULT GetMuxMode([out] enum WebmMuxMode*);
 }
 
+
+[
+    object,
+    uuid(ED311108-5211-11DF-94AF-0026B977EEAA),
+    helpstring("WebM Muxer XMP Interface")
+]
+interface IWebmXMP : IUnknown
+{
+    HRESULT SetXMP([in] LONG xmplen, [in] const CHAR* xmpbuf);
+    HRESULT GetXMP([out] LONG* xmplen, [out] CHAR** xmpbuf);
+    HRESULT GetXMP2([out] LONG* xmplen, [out] CHAR* xmpbuf, [in] LONG buflen);
+}
+
+
 [
    uuid(ED3110F0-5211-11DF-94AF-0026B977EEAA),
    helpstring("WebM Muxer Filter Class")
@@ -44,6 +58,7 @@ interface IWebmMux : IUnknown
 coclass WebmMux
 {
    [default] interface IWebmMux;
+   interface IWebmXMP;
 }
 
 }  //end library WebmMuxerLib

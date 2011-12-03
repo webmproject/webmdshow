@@ -42,7 +42,12 @@ Context::Context() :
    m_timecode_scale(1000000),  //TODO
    m_info_pos(0),
    m_seekhead_pos(0),
-   m_segment_pos(0)
+   m_segment_pos(0),
+   m_xmpsize(0)   //logical size
+#if 0
+   m_xmplen(0),    //physical len of buffer
+   m_xmpbuf(0)     //buffer
+#endif
 {
     //Seed the random number generator, which is needed
     //for creation of unique TrackUIDs.
@@ -55,9 +60,13 @@ Context::Context() :
 
 Context::~Context()
 {
-   assert(m_pVideo == 0);
-   assert(m_pAudio == 0);
-   assert(m_file.GetStream() == 0);
+    assert(m_pVideo == 0);
+    assert(m_pAudio == 0);
+    assert(m_file.GetStream() == 0);
+
+#if 0
+    CoTaskMemFree(m_xmpbuf);
+#endif
 }
 
 
@@ -268,12 +277,14 @@ void Context::InitSegment()
         m_segment_pos = m_file.GetPosition() - 4;
         m_file.Serialize8UInt(0x01FFFFFFFFFFFFFFLL);
 
-        if (m_pVideo)
-            InitSeekHead();  //Meta Seek
+        InitSeekHead();  //Meta Seek
     }
 
     InitInfo();      //Segment Info
     WriteTrack();
+
+    //if writexmp before clusters then
+    //WriteXMP();
 }
 
 
@@ -285,6 +296,8 @@ void Context::FinalSegment()
 
         if (m_pVideo)
             WriteCues();
+
+        WriteXMP();
 
         const __int64 maxpos = m_file.GetPosition();
         m_file.SetSize(maxpos);
@@ -300,8 +313,7 @@ void Context::FinalSegment()
 
         m_file.Write8UInt(size);  //total size of the segment
 
-        if (m_pVideo)
-            FinalSeekHead();
+        FinalSeekHead();
 
         FinalInfo();
     }
@@ -324,6 +336,8 @@ void Context::FinalInfo()
 
 void Context::InitSeekHead()
 {
+    assert(!m_bLiveMux);
+
     m_seekhead_pos = m_file.GetPosition();
 
     // The SeekID is 2 + 1 + 4 = 7 bytes.
@@ -372,9 +386,10 @@ void Context::InitSeekHead()
 }
 
 
-
 void Context::FinalSeekHead()
 {
+    assert(!m_bLiveMux);
+
     const LONGLONG start_pos = m_file.SetPosition(m_seekhead_pos);
     const USHORT final_size = 10*21 + 3;  //see notes above
 
@@ -385,7 +400,12 @@ void Context::FinalSeekHead()
     WriteSeekEntry(WebmUtil::kEbmlTracksID, m_track_pos);
     WriteSeekEntry(WebmUtil::kEbmlCuesID, m_cues_pos);
 
-    const USHORT void_size = 7*21;  //because we only wrote 3 actual entries
+    const bool bXMP = (m_xmpsize != 0);
+
+    if (bXMP)
+        WriteSeekEntry(WebmUtil::kEbmlXMPID, m_xmp_pos);
+
+    const USHORT void_size = (bXMP ? 6 : 7) * 21;
 
     m_file.WriteID1(WebmUtil::kEbmlVoidID);
     m_file.Write2UInt(void_size);
@@ -543,6 +563,41 @@ void Context::WriteTrack()
         m_buf.Reset();
     }
 
+}
+
+
+void Context::WriteXMP()
+{
+    assert(!m_bLiveMux);
+
+    if (m_xmpsize == 0)  //means "do not write an XMP element"
+        return;          //nothing to do
+
+    m_xmp_pos = m_file.GetPosition();
+
+    m_file.WriteID4(WebmUtil::kEbmlXMPID);
+
+    if (m_xmpsize < 0)  //means "write empty XMP element"
+    {
+        m_file.Write1UInt(0);
+        return;
+    }
+
+#if 0
+    assert(m_xmplen >= m_xmpsize);
+    assert(m_xmpbuf);
+
+    m_file.Write4UInt(m_xmpsize);
+    m_file.Write(m_xmpbuf, m_xmpsize);
+#else
+    const xmpbuf_t::size_type xmplen = m_xmpbuf.length();
+    assert(xmplen == xmpbuf_t::size_type(m_xmpsize));
+
+    const CHAR* const xmpbuf = m_xmpbuf.data();
+
+    m_file.Write4UInt(xmplen);
+    m_file.Write(xmpbuf, xmplen);
+#endif
 }
 
 

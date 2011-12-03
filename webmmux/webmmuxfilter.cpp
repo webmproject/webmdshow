@@ -149,6 +149,10 @@ HRESULT Filter::nondelegating_t::QueryInterface(
     {
         pUnk = static_cast<IWebmMux*>(m_pFilter);
     }
+    else if (iid == __uuidof(IWebmXMP))
+    {
+        pUnk = static_cast<IWebmXMP*>(m_pFilter);
+    }
     else
     {
 #if 0
@@ -1341,6 +1345,107 @@ HRESULT Filter::GetMuxMode(WebmMuxMode* pMuxMode)
         *pMuxMode = kWebmMuxModeLive;
     else
         *pMuxMode = kWebmMuxModeDefault;
+
+    return S_OK;
+}
+
+
+HRESULT Filter::SetXMP(LONG size, const CHAR* buf)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    m_ctx.m_xmpsize = size;
+
+    if (size <= 0)
+        m_ctx.m_xmpbuf.clear();
+    else
+        m_ctx.m_xmpbuf.assign(buf, size);
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetXMP(LONG* psize, CHAR** pbuf)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (pbuf)
+        *pbuf = 0;
+
+    if (psize == 0)
+        return E_POINTER;
+
+    const LONG size = m_ctx.m_xmpsize;
+
+    *psize = size;
+
+    if (size <= 0)
+        return S_OK;
+
+    if (pbuf == 0)  //query for XMP size only
+        return S_OK;
+
+    const Context::xmpbuf_t& xmpbuf = m_ctx.m_xmpbuf;
+    const Context::xmpbuf_t::size_type len = xmpbuf.length();
+
+    if (LONG(len) != size)
+        return E_FAIL;
+
+    CHAR*& buf = *pbuf;
+
+    buf = (CHAR*)CoTaskMemAlloc(len);
+
+    if (buf == 0)
+        return E_OUTOFMEMORY;
+
+    xmpbuf._Copy_s(buf, len, size);
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetXMP2(LONG* psize, CHAR* buf, LONG len)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (psize == 0)
+        return E_POINTER;
+
+    const LONG size = m_ctx.m_xmpsize;
+
+    *psize = size;
+
+    if (size <= 0)
+        return S_OK;
+
+    if (buf == 0)  //query for XMP size only
+        return S_OK;
+
+    if (len < size)
+        return E_OUTOFMEMORY;  //?
+
+    const Context::xmpbuf_t& xmpbuf = m_ctx.m_xmpbuf;
+    const Context::xmpbuf_t::size_type xmplen = xmpbuf.length();
+
+    if (LONG(xmplen) != size)
+        return E_FAIL;
+
+    xmpbuf._Copy_s(buf, len, size);
 
     return S_OK;
 }

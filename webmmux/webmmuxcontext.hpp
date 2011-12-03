@@ -23,20 +23,29 @@ class Context
 
 public:
 
-   EbmlIO::File m_file;
-   WebmUtil::EbmlScratchBuf m_buf;
-   std::wstring m_writing_app;
+    EbmlIO::File m_file;
+    WebmUtil::EbmlScratchBuf m_buf;
+    std::wstring m_writing_app;
 
-   Context();
-   ~Context();
+    LONG m_xmpsize;  //of MKV element
+#if 0
+    LONG m_xmplen;   //of XMP buffer
+    CHAR* m_xmpbuf;
+#else
+    typedef std::basic_string<CHAR> xmpbuf_t;
+    xmpbuf_t m_xmpbuf;
+#endif
 
-   void SetVideoStream(StreamVideo*);
+    Context();
+    ~Context();
 
-   //TODO: this needs to liberalized to handle multiple audio streams.
-   void SetAudioStream(StreamAudio*);
+    void SetVideoStream(StreamVideo*);
 
-   void Open(IStream*);
-   void Close();
+    //TODO: this needs to liberalized to handle multiple audio streams.
+    void SetAudioStream(StreamAudio*);
+
+    void Open(IStream*);
+    void Close();
 
     void NotifyVideoFrame(StreamVideo*, StreamVideo::VideoFrame*);
     int NotifyVideoEOS(StreamVideo*);
@@ -73,6 +82,8 @@ private:
    void FinalSeekHead();
    void WriteSeekEntry(ULONG, __int64);
 
+   void WriteXMP();
+
    void InitInfo();
    void FinalInfo();
 
@@ -84,6 +95,7 @@ private:
    __int64 m_track_pos;
    __int64 m_cues_pos;
    __int64 m_duration_pos;
+   __int64 m_xmp_pos;
    const ULONG m_timecode_scale;  //TODO: video vs. audio
    ULONG m_max_timecode;  //unscaled
 

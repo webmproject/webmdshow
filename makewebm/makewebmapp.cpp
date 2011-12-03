@@ -10,6 +10,7 @@
 #include <cassert>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 #include <uuids.h>
 #include <evcode.h>
 #include "hrtext.hpp"
@@ -478,6 +479,66 @@ int App::CreateMuxerGraph(
         }
     }
 
+    if (const wchar_t* xmp_file = m_cmdline.GetXMP())
+    {
+        _COM_SMARTPTR_TYPEDEF(IWebmXMP, __uuidof(IWebmXMP));
+
+        const IWebmXMPPtr pXMP(pMux);
+
+        if (!bool(pXMP))
+        {
+            wcout << "WebmMux filter instance does not support"
+                  << " IWebmXMP interface."
+                  << endl;
+
+            return 1;
+        }
+
+        MemFile f;
+
+        hr = f.Open(xmp_file, false);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to open XMP side-car file: \""
+                  << xmp_file
+                  << "\""
+                  << endl;
+
+            return 1;
+        }
+
+        const BYTE* p;
+        LONGLONG n;
+
+        hr = f.GetView(p, n);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable to get view of XMP side-car file: \""
+                  << xmp_file
+                  << "\""
+                  << endl;
+
+            return 1;
+        }
+
+        assert(n >= 0);
+        assert(n <= LONG_MAX);
+        assert(p);
+
+        const LONG len = static_cast<LONG>(n);
+        const char* const buf = reinterpret_cast<const char*>(p);
+
+        hr = pXMP->SetXMP(len, buf);
+
+        if (FAILED(hr))
+        {
+            wcout << "Unable set XMP." << endl;
+            return 1;
+        }
+    }
+
     int nConnections = 0;
 
     if (pDemuxOutpinVideo)
@@ -556,7 +617,7 @@ int App::CreateMuxerGraph(
                 const wchar_t* const stats_filename =
                     m_stats_filename.c_str();
 
-                hr = m_stats_file.Open(stats_filename);
+                hr = m_stats_file.Open(stats_filename, true);
 
                 if (FAILED(hr))
                 {

@@ -28,7 +28,7 @@ MemFile::~MemFile()
 }
 
 
-HRESULT MemFile::Open(const wchar_t* strFileName)
+HRESULT MemFile::Open(const wchar_t* strFileName, bool bDeleteOnClose)
 {
     if (strFileName == 0)
         return E_INVALIDARG;
@@ -45,7 +45,7 @@ HRESULT MemFile::Open(const wchar_t* strFileName)
                 0,  //no sharing
                 0,  //security attributes
                 OPEN_EXISTING,
-                FILE_FLAG_DELETE_ON_CLOSE,
+                bDeleteOnClose ? FILE_FLAG_DELETE_ON_CLOSE : 0,
                 0);
 
     if (m_hFile == INVALID_HANDLE_VALUE)
