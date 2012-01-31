@@ -37,7 +37,103 @@ AudioStream* AudioStream::CreateInstance(const AudioTrack* pTrack)
     else
         return 0;  //can't create a stream from this track
 
-    //TODO: vet settings, etc
+    const __int64 channels = pTrack->GetChannels();
+
+    if (channels <= 0)
+        return 0;  //bad track header
+
+    if (channels > 2)
+        return 0;  //TODO: handle this case
+
+    const double rate = pTrack->GetSamplingRate();
+
+    if (rate <= 0)
+        return 0;  //bad track header
+
+    double intrate;
+    const double fracrate = modf(rate, &intrate);
+
+    if (fracrate != 0)
+        return 0;  //bad track header
+
+    size_t cp_size;
+
+    const BYTE* const cp = pTrack->GetCodecPrivate(cp_size);
+
+    if ((cp == 0) || (cp_size == 0))
+        return 0;  //bad track header
+
+    const BYTE* const begin = &cp[0];
+    const BYTE* const end = begin + cp_size;
+
+    const BYTE* p = begin;
+
+    if (p >= end)
+        return 0;
+
+    const BYTE n = *p++;
+
+    if (n != 2)
+        return 0;
+
+    if (p >= end)
+        return 0;
+
+    const ULONG id_len = *p++;
+
+    if (id_len != 30)
+        return 0;
+
+    if (p >= end)
+        return 0;
+
+    ULONG comment_len = 0;
+
+    for (;;)
+    {
+        const BYTE b = *p++;
+
+        if (p >= end)
+            return 0;
+
+        comment_len += b;
+
+        if (b < 255)
+            break;
+    }
+
+    if (comment_len < 7)
+        return 0;
+
+    //p points to first header
+
+    const BYTE* const id_hdr = p;
+
+    if (memcmp(id_hdr, "\x01vorbis", 7) != 0)
+        return 0;
+
+    const BYTE* const comment_hdr = id_hdr + id_len;
+
+    if (memcmp(comment_hdr, "\x03vorbis", 7) != 0)
+        return 0;
+
+    const BYTE* const setup_hdr = comment_hdr + comment_len;
+
+    if (setup_hdr >= end)
+        return 0;
+
+    const ptrdiff_t setup_len_ = end - setup_hdr;
+
+    if (setup_len_ <= 0)
+        return 0;
+
+    const DWORD setup_len = static_cast<DWORD>(setup_len_);
+
+    if (setup_len < 7)
+        return 0;
+
+    if (memcmp(setup_hdr, "\x05vorbis", 7) != 0)
+        return 0;
 
     AudioStream* const s = new (std::nothrow) AudioStream(pTrack);
     assert(s);  //TODO
