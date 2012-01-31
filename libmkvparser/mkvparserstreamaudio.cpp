@@ -37,7 +37,171 @@ AudioStream* AudioStream::CreateInstance(const AudioTrack* pTrack)
     else
         return 0;  //can't create a stream from this track
 
-    //TODO: vet settings, etc
+    const __int64 channels = pTrack->GetChannels();
+
+    if (channels <= 0)
+        return 0;  //bad track header
+
+    //TODO:
+    //In principle, Vorbis can have multiple audio channels.
+    //We do handle this case in the Media Foundation components,
+    //so we should handle it here in the DirectShow filters too.
+    //END TODO.
+
+    if (channels > 2)  //TODO: handle this case
+        return 0;
+
+    const double rate = pTrack->GetSamplingRate();
+
+    if (rate <= 0)
+        return 0;  //bad track header
+
+    double intrate;
+    const double fracrate = modf(rate, &intrate);
+
+    if (fracrate != 0)
+        return 0;  //bad track header
+
+    //For Vorbis audio, the CodecPrivate part of the WebM track
+    //header contains the 3 Vorbis headers: the identification header,
+    //the comments header, and the setup header.  They are all packed
+    //together as the payload of the CodecPrivate element, using
+    //Vorbis-style lacing.
+
+    size_t cp_size;
+
+    const BYTE* const cp = pTrack->GetCodecPrivate(cp_size);
+
+    if ((cp == 0) || (cp_size == 0))
+        return 0;  //bad track header
+
+    const BYTE* const begin = &cp[0];
+    const BYTE* const end = begin + cp_size;
+
+    const BYTE* p = begin;  //to walk the payload buffer
+
+    if (p >= end)
+        return 0;
+
+    //The first byte in the stream is the number of headers
+    //present.  For Vorbis there must be 3 headers.  This is
+    //Vorbis-style lacing so the count is biased (it can never
+    //have 0 as the value), so 2 is the (biased) count we must
+    //have in order for this track header to be considered valid.
+
+    const BYTE n = *p++;
+
+    if (n != 2)  //biased count value
+        return 0;
+
+    if (p >= end)
+        return 0;
+
+    //Immediately following the (biased) header count value is
+    //the lengths of the individual headers that follow.  The
+    //physical number of lengths present is exactly equal to the
+    //biased count value (here, 2). The length of the last header
+    //is inferred from the difference between the total length
+    //of the buffer and the sum of the lengths of the other headers.
+    //(So the logical number of lengths present does equal the unbiased
+    //count value; here, 3 headers total.)
+
+    //The header lengths are represented in the stream as the
+    //sum of a sequence of bytes; the sequence terminates for
+    //a particular length value when the byte has a value less
+    //then 255.  If the byte value is 255, then this implies that
+    //the header length is at least 255 bytes long and so more bytes
+    //of the sequence follow.  Note that it is valid for a byte in
+    //the sequence to have 0 as its value; this just means that
+    //the length happened to be an exact multiple of 255.
+
+    //The length of the identification header is defined to be
+    //exactly 30 bytes, so its length is represented in the stream
+    //using 1 byte only.
+
+    const ULONG id_len = *p++;
+
+    if (id_len != 30)
+        return 0;
+
+    if (p >= end)
+        return 0;
+
+    //The comment header holds the Ogg metadata for an audio track,
+    //and so in principle it can be any length. Here that means that
+    //the length can be represented in the stream using a sequence
+    //comprising multiple bytes, so to determine the length we must
+    //loop until we find a byte whose value is less than 255.
+
+    ULONG comment_len = 0;
+
+    for (;;)
+    {
+        const BYTE b = *p++;
+
+        if (p >= end)
+            return 0;
+
+        comment_len += b;
+
+        if (b < 255)
+            break;
+    }
+
+    //Each vorbis header begins with a byte having a distinguished
+    //value that specifies what kind of header this is, followed
+    //by the string "vorbis".  Therefore each well-formed header
+    //must be at least 7 bytes long.
+
+    if (comment_len < 7)
+        return 0;
+
+    //We have consumed the sequence of bytes used to represent
+    //the lengths of the individual headers.  What remains in
+    //the stream are the actual headers.  Here we don't particularly
+    //care much about the actual header payload (we defer such
+    //matters to the Vorbis decoder), but we do interrogate the
+    //first 7 bytes of each header to confirm that the headers
+    //have their correct Vorbis header-kind indicators.
+
+    //p points the first header (the ident header)
+
+    const BYTE* const id_hdr = p;
+
+    //The Vorbis ident header has 1 as its kind indicator.
+
+    if (memcmp(id_hdr, "\x01vorbis", 7) != 0)
+        return 0;
+
+    const BYTE* const comment_hdr = id_hdr + id_len;
+
+    //The Vorbis comment header has 3 as its kind indicator.
+
+    if (memcmp(comment_hdr, "\x03vorbis", 7) != 0)
+        return 0;
+
+    const BYTE* const setup_hdr = comment_hdr + comment_len;
+
+    if (setup_hdr >= end)
+        return 0;
+
+    const ptrdiff_t setup_len_ = end - setup_hdr;
+
+    if (setup_len_ <= 0)
+        return 0;
+
+    const DWORD setup_len = static_cast<DWORD>(setup_len_);
+
+    if (setup_len < 7)
+        return 0;
+
+    //The Vorbis setup header has 5 as its kind indicator.
+
+    if (memcmp(setup_hdr, "\x05vorbis", 7) != 0)
+        return 0;
+
+    //We are satisfied that the CodecPrivate value is well-formed,
+    //and so we now create the audio stream for this pin.
 
     AudioStream* const s = new (std::nothrow) AudioStream(pTrack);
     assert(s);  //TODO
