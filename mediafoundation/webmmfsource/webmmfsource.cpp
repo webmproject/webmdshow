@@ -1949,6 +1949,7 @@ HRESULT WebmMfSource::CreateStream(
 {
     assert(pSD);
     assert(pTrack);
+    assert(pTrack->GetNumber() > 0);
 
     const LONGLONG type = pTrack->GetType();
     WebmMfStream* pStream;
@@ -1985,7 +1986,7 @@ HRESULT WebmMfSource::CreateStream(
 
     HRESULT hr = pSD->GetStreamIdentifier(&id);
     assert(SUCCEEDED(hr));
-    assert(id == pTrack->GetNumber());
+    assert(id == DWORD(pTrack->GetNumber()));
 
     const status_t status = m_streams.insert(std::make_pair(id, pStream));
     assert(status.second);  //new insertion
@@ -2058,7 +2059,8 @@ LONGLONG WebmMfSource::GetCurrTime(IMFPresentationDescriptor* pDesc) const
 
         const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
         assert(pTrack);
-        assert(pTrack->GetNumber() == id);
+        assert(pTrack->GetNumber() > 0);
+        assert(DWORD(pTrack->GetNumber()) == id);
 
         const iter_t iter = already_selected.find(id);
 
@@ -3725,7 +3727,8 @@ LONGLONG WebmMfSource::Command::GetClusterPos(LONGLONG time_ns) const
 
         const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
         assert(pTrack);
-        assert(pTrack->GetNumber() == id);
+        assert(pTrack->GetNumber() > 0);
+        assert(DWORD(pTrack->GetNumber()) == id);
 
         if (pTrack->GetType() != 1)  //not video
             continue;
@@ -3999,7 +4002,8 @@ void WebmMfSource::Command::OnStartNoSeek() const
 
         const Track* const pTrack = pTracks->GetTrackByNumber(id);
         assert(pTrack);
-        assert(pTrack->GetNumber() == id);
+        assert(pTrack->GetNumber() > 0);
+        assert(DWORD(pTrack->GetNumber()) == id);
 
         const iter_t iter = m_pSource->m_streams.find(id);
 
@@ -4336,7 +4340,8 @@ void WebmMfSource::Command::OnStartInitStreams(
 
         const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
         assert(pTrack);
-        assert(pTrack->GetNumber() == id);
+        assert(pTrack->GetNumber() > 0);
+        assert(DWORD(pTrack->GetNumber()) == id);
 
         const iter_t iter = streams.find(id);
 
@@ -4542,7 +4547,8 @@ void WebmMfSource::Command::OnRestart() const //unpause
 
         const mkvparser::Track* const pTrack = pTracks->GetTrackByNumber(id);
         assert(pTrack);
-        assert(pTrack->GetNumber() == id);
+        assert(pTrack->GetNumber() > 0);
+        assert(DWORD(pTrack->GetNumber()) == id);
 
         const iter_t iter = streams.find(id);
 

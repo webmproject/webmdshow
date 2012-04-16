@@ -133,7 +133,8 @@ basic_dbgstreambuf<elem_t, traits_t>::overflow(int_type c_)
 
 #if _MSC_VER >= 1400
         const size_t size_in_bytes = newlen * sizeof(elem_t);
-        traits_t::_Copy_s(newbuf, size_in_bytes, pbase(), pos);
+        const size_t pos_ = static_cast<size_t>(pos);
+        traits_t::_Copy_s(newbuf, size_in_bytes, pbase(), pos_);
 #else
         traits_t::copy(newbuf, pbase(), pos);
 #endif
@@ -174,8 +175,10 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
     if (n <= plen())
     {
 #if _MSC_VER >= 1400
-        const size_t size_in_bytes = plen() * sizeof(elem_t);
-        traits_t::_Copy_s(pptr(), size_in_bytes, str, n);
+        const size_t plen_ = static_cast<size_t>(plen());
+        const size_t size_in_bytes = plen_ * sizeof(elem_t);
+        const size_t nn = static_cast<size_t>(n);
+        traits_t::_Copy_s(pptr(), size_in_bytes, str, nn);
 #else
         traits_t::copy(pptr(), str, n);
 #endif
@@ -188,12 +191,14 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
 
     const std::streamsize pos = ppos();
     const std::streamsize newlen = pos + n;
+    const size_t newlen_ = static_cast<size_t>(newlen);
 
-    if (elem_t* const newbuf = new (std::nothrow) elem_t[newlen + 1])
+    if (elem_t* const newbuf = new (std::nothrow) elem_t[newlen_ + 1])
     {
 #if _MSC_VER >= 1400
-        size_t size_in_bytes = newlen * sizeof(elem_t);
-        traits_t::_Copy_s(newbuf, size_in_bytes, pbase(), pos);
+        size_t size_in_bytes = newlen_ * sizeof(elem_t);
+        const size_t pos_ = static_cast<size_t>(pos);
+        traits_t::_Copy_s(newbuf, size_in_bytes, pbase(), pos_);
 #else
         traits_t::copy(newbuf, pbase(), pos);
 #endif
@@ -204,8 +209,10 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
         m_buf = newbuf;
 
 #if _MSC_VER >= 1400
-        size_in_bytes = plen() * sizeof(elem_t);
-        traits_t::_Copy_s(pptr(), size_in_bytes, str, n);
+        const size_t plen_ = static_cast<size_t>(plen());
+        size_in_bytes = plen_ * sizeof(elem_t);
+        const size_t nn = static_cast<size_t>(n);
+        traits_t::_Copy_s(pptr(), size_in_bytes, str, nn);
 #else
         traits_t::copy(pptr(), str, n);
 #endif
@@ -238,8 +245,9 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
     if (std::streamsize len = plen())
     {
 #if _MSC_VER >= 1400
-        const size_t size_in_bytes = len * sizeof(elem_t);
-        traits_t::_Copy_s(pptr(), size_in_bytes, str, len);
+        const size_t len_ = static_cast<size_t>(len);
+        const size_t size_in_bytes = len_ * sizeof(elem_t);
+        traits_t::_Copy_s(pptr(), size_in_bytes, str, len_);
 #else
         traits_t::copy(pptr(), str, len);
 #endif
@@ -254,7 +262,7 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
     const std::streamsize oldlen = static_cast<std::streamsize>(oldlen_);
 
 #if _MSC_VER >= 1400
-    const size_t size_in_bytes = oldlen * sizeof(elem_t);
+    const size_t size_in_bytes = oldlen_ * sizeof(elem_t);
 #endif
 
     for (;;)
@@ -264,7 +272,8 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
         if (nn <= oldlen)
         {
 #if _MSC_VER >= 1400
-            traits_t::_Copy_s(pbase(), size_in_bytes, str, nn);
+            const size_t nnn = static_cast<size_t>(nn);
+            traits_t::_Copy_s(pbase(), size_in_bytes, str, nnn);
 #else
             traits_t::copy(pbase(), str, nn);
 #endif
@@ -276,7 +285,7 @@ inline std::streamsize basic_dbgstreambuf<elem_t, traits_t>::xsputn(
         }
 
 #if _MSC_VER >= 1400
-        traits_t::_Copy_s(pbase(), size_in_bytes, str, oldlen);
+        traits_t::_Copy_s(pbase(), size_in_bytes, str, oldlen_);
 #else
         traits_t::copy(pbase(), str, oldlen);
 #endif

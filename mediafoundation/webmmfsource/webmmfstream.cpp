@@ -501,12 +501,29 @@ HRESULT WebmMfStream::Restart()
     if (m_bSelected <= 0)
         return S_FALSE;
 
-#if 0 //def _DEBUG
+#ifdef _DEBUG
     wodbgstream os;
     os << L"WebmMfStream::Restart; track.type="
        << m_pTrack->GetType()
+       << L"; bEOS="
+       << std::boolalpha
+       << m_bEOS
        << endl;
 #endif
+
+    //There was a problem as of Win8 / IE10, in which a pause / restart
+    //sequence had occurred just after EOS had been announced for a
+    //stream (because we had seeked to the very end of the presentation).
+    //The EOP occurred as usual, but EOS was not sent again for that
+    //stream, because it had already been announced (just before the
+    //pause).  However, the expectation by the pipeline (at least in IE10)
+    //is that a restart re-initializes the stream, the same as for a
+    //normal start.
+    //
+    //So we now clear the EOS flag during restart, which forces EOS to
+    //be sent (again), even after a restart.
+
+    m_bEOS = false;
 
     PROPVARIANT var;
     PropVariantInit(&var);
@@ -710,10 +727,27 @@ HRESULT WebmMfStream::GetCurrTime(LONGLONG& time_ns) const
 
 HRESULT WebmMfStream::SetEOS()
 {
+#ifdef _DEBUG
+    odbgstream os;
+    os << "WebmMfStream::SetEOS: pTrack->type="
+       << m_pTrack->GetType()
+       << "; bEOS="
+       << std::boolalpha
+       << m_bEOS
+       << endl;
+#endif
+
     if (m_bEOS)
         return S_FALSE;
 
     m_bEOS = true;
+
+#ifdef _DEBUG
+    os << "WebmMfStream::SetEOS: pTrack->type="
+       << m_pTrack->GetType()
+       << "; reporting EOS"
+       << endl;
+#endif
 
     const HRESULT hr = m_pEvents->QueueEventParamVar(
                         MEEndOfStream,
