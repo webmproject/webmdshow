@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Common Files">
+      <UniqueIdentifier>{137854a7-56de-465b-85ee-231ac1fcfeab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libwebm">
+      <UniqueIdentifier>{02fe0811-3ea8-46af-b5f5-0b55791472d4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\cfactory.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\clockable.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\comreg.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\iidstr.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\omahautil.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\registry.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\versionhandling.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\vorbistypes.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\webmtypes.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\libwebm\mkvparser.hpp">
+      <Filter>libwebm</Filter>
+    </ClInclude>
+    <ClInclude Include="mkvreader.hpp">
+      <Filter>libwebm</Filter>
+    </ClInclude>
+    <ClInclude Include="webmmfbytestreamhandler.hpp" />
+    <ClInclude Include="webmmfsource.hpp" />
+    <ClInclude Include="webmmfstream.hpp" />
+    <ClInclude Include="webmmfstreamaudio.hpp" />
+    <ClInclude Include="webmmfstreamvideo.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="webmmfsource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\common\cfactory.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\clockable.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\comreg.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\iidstr.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\omahautil.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\versionhandling.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\vorbistypes.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\webmtypes.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libwebm\mkvparser.cpp">
+      <Filter>libwebm</Filter>
+    </ClCompile>
+    <ClCompile Include="mkvreader.cpp">
+      <Filter>libwebm</Filter>
+    </ClCompile>
+    <ClCompile Include="dllentry.cpp" />
+    <ClCompile Include="webmmfbytestreamhandler.cpp" />
+    <ClCompile Include="webmmfsource.cpp" />
+    <ClCompile Include="webmmfstream.cpp" />
+    <ClCompile Include="webmmfstreamaudio.cpp" />
+    <ClCompile Include="webmmfstreamvideo.cpp" />
+  </ItemGroup>
+</Project>

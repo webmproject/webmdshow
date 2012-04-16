@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="resources">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{b0e7c57b-af89-4066-87f9-1e6fe981ce06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party">
+      <UniqueIdentifier>{d3fae79c-4519-435f-82d4-c4dac627cd12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\ogg">
+      <UniqueIdentifier>{eba820a4-7ecd-479f-9547-f97a54f02ee9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\vorbis">
+      <UniqueIdentifier>{dc5f8a05-8867-4210-b5e7-331ba60396ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="webmmftests">
+      <UniqueIdentifier>{a31fdffc-a7f0-4ceb-8010-c8e1b131f59a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\cfactory.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\clockable.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\comreg.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\memutil.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\memutilfwd.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\vorbisdecoder.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\vorbistypes.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\webmtypes.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\third_party\libogg\ogg\ogg.h">
+      <Filter>third_party\ogg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\third_party\libogg\ogg\os_types.h">
+      <Filter>third_party\ogg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\third_party\libvorbis\vorbis\codec.h">
+      <Filter>third_party\vorbis</Filter>
+    </ClInclude>
+    <ClInclude Include="..\webmmftests\wfxrawwriter.hpp">
+      <Filter>webmmftests</Filter>
+    </ClInclude>
+    <ClInclude Include="webmmfvorbisdec.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="webmmfvorbisdec.rc">
+      <Filter>resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\common\cfactory.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\clockable.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\comreg.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\vorbisdecoder.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\vorbistypes.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\webmtypes.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\webmmftests\wfxrawwriter.cpp">
+      <Filter>webmmftests</Filter>
+    </ClCompile>
+    <ClCompile Include="dllentry.cpp" />
+    <ClCompile Include="webmmfvorbisdec.cpp" />
+  </ItemGroup>
+</Project>
