@@ -10,16 +10,18 @@
 # 3. (Optional) run mintty.exe once Cygwin.bat finishes.
 #    - this provides a fully functional terminal
 
+set -e
 
 # TODO(tomfinegan): update script to support IDEs other than vs2008
+# TODO(tomfinegan): this script needs some clean up (style nastiness, mainly).
 
 # xiph config vars
 # TODO(tomfinegan): rename some of these vars to distinguish them from
 #                   the libvpx vars
 build_config_array=(debug\|win32 debug\|x64 release\|win32 release\|x64)
 libvorbis_url=\
-"http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.2.tar.gz"
-libogg_url="http://downloads.xiph.org/releases/ogg/libogg-1.2.2.tar.gz"
+"http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.3.tar.gz"
+libogg_url="http://downloads.xiph.org/releases/ogg/libogg-1.3.0.tar.gz"
 patches_dir="patches"
 # note: the order of the following two arrays must match
 devenv_outdir_array=(win32/debug x64/debug win32/release x64/release)
@@ -27,8 +29,8 @@ install_dir_array=(x86/debug x64/debug x86/release x64/release)
 
 # libvpx stuff
 libvpx_dir="libvpx.git"
-libvpx_remote="git://review.webmproject.org/libvpx"
-libvpx_git_target="cayuga"
+libvpx_remote="http://git.chromium.org/webm/libvpx.git"
+libvpx_git_target="eider"
 libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
 
 # TODO(tomfinegan): add proper command line parsing
@@ -51,68 +53,75 @@ function die() {
   exit 1
 }
 
-function wget_and_untar() {
-  local url="$1"
+function download_and_untar() {
+  local readonly url="$1"
   if [[ -z "$url" ]]; then
-    die "wget_and_untar: no url specified [arg1 empty]"
+    die "${FUNCNAME[0]}: no url specified [arg1 empty]"
   fi
-  local oldIFS="${IFS}"
-  IFS=/
-  local outfile_url_array
-  read -ra outfile_url_array <<< "${url}"
-  #echo "outfile_url_array=${outfile_url_array[@]}"
-  IFS="${oldIFS}"
-  local last_array_element=${#outfile_url_array[@]}-1
-  local outfile="${outfile_url_array[${last_array_element}]}"
-  wget "${url}"
+  local readonly outfile=$(basename ${url})
+
+  # Try using wget or curl to grab the archive.
+  # TODO(tomfinegan): eat stderr when which fails.
+  if [[ -n $(which wget) ]]; then
+    wget ${url}
+  elif [[ -n $(which curl) ]]; then
+    curl ${url} -O
+  else
+    die "${FUNCNAME[0]}: either wget or curl must be in \$PATH"
+  fi
   if [[ ! -e "${outfile}" ]]; then
-    die "wget_and_untar: download failed [argurl]"
+    die "${FUNCNAME[0]}: download failed [argurl]"
   fi
-  local outfiles=$(tar xvzf "${outfile}")
+  local readonly outfiles=$(tar xvzf "${outfile}")
 
   # echo output dir
   #  - there's probably a better way to do this, but here's to fast and ugly!
-  echo "${outfiles}" | tr \[:space:\] \\n | head -n1
+  echo "${outfiles}" | tr '[:space:]' '\n' | head -n1
 }
 
 function build_xiph_lib() {
-  local libdir="$1"
+  local readonly libdir="$1"
   if [[ -z "$libdir" ]]; then
-    die "build_xiph_lib: no libdir specified [arg1 empty]"
+    die "${FUNCNAME[0]}: no libdir specified [arg1 empty]"
   fi
-  local solution="$2"
+  local readonly solution="$2"
   if [[ -z "$solution" ]]; then
-    die "build_xiph_lib: no solution specified [arg2 empty]"
+    die "${FUNCNAME[0]}: no solution specified [arg2 empty]"
   fi
-  local project="$3"
+  local readonly project="$3"
   if [[ -z "$project" ]]; then
-    die "build_xiph_lib: no project specified [arg3 empty]"
+    die "${FUNCNAME[0]}: no project specified [arg3 empty]"
   fi
   # need vs2008 in your path for this bit
   for config in ${build_config_array[@]}; do
     devenv.com ${libdir}win32/VS2008/${solution}.sln -Project ${project} \
--Rebuild "${config}"
+        -Rebuild "${config}"
   done
 }
 
 function fix_xiph_project() {
-  local projdir="$1"
+  local readonly projdir="$1"
   if [[ -z "$projdir" ]]; then
-    die "fix_xiph_project: no projdir specified [arg1 empty]"
+    die "${FUNCNAME[0]}: no projdir specified [arg1 empty]"
   fi
-  local project="$2"
+  local readonly project="$2"
   if [[ -z "$project" ]]; then
-    die "fix_xiph_project: no project specified [arg2 empty]"
+    die "${FUNCNAME[0]}: no project specified [arg2 empty]"
   fi
-  sed -i -e "s/RuntimeLibrary=\"3\"/RuntimeLibrary=\"1\"/g" \
--e "s/RuntimeLibrary=\"2\"/RuntimeLibrary=\"0\"/g" \
-${projdir}/${project}.vcproj
-  # TODO(tomfinegan): extract libogg version from libogg URL
+  local readonly vcproj="${projdir}/${project}.vcproj"
+  if [[ ! -e "${vcproj}" ]]; then
+    die "${FUNCNAME[0]}: project file (${vcproj}) does not exist"
+  fi
+  sed -i \
+    -e "s/RuntimeLibrary=\"3\"/RuntimeLibrary=\"1\"/g" \
+    -e "s/RuntimeLibrary=\"2\"/RuntimeLibrary=\"0\"/g" \
+    -e "s/DebugInformationFormat=\"4\"/DebugInformationFormat=\"3\"/g" \
+    -e "s/DebugInformationFormat=\"0\"/DebugInformationFormat=\"3\"/g" \
+    ${vcproj}
+  local readonly ogg_dir=$(basename ${libogg_url} .tar.gz)
   if [[ "${project}" == "libvorbis_static" ]]; then
-    # TODO(tomfinegan): fix the hard coded ogg version
-    sed -i -e \
-"s/libogg\\\\inc/libogg-1\.2\.2\\\\inc/g" \
-${projdir}/${project}.vcproj
+    # Fix the ogg include path in the vorbis project.
+    sed -i -e "s/libogg\([\\]\+inc\)/${ogg_dir}\1/" ${vcproj}
   fi
 }
 
@@ -146,18 +155,16 @@ function install_xiph_files() {
   # and the new libs
   for (( lib_index=0; lib_index < ${#install_dir_array[@]}; lib_index++ )); do
     cp ${src_dir}/win32/VS2008/${devenv_outdir_array[$lib_index]}/${project}.lib \
-${target_dir}/${install_dir_array[$lib_index]}/
-    # copy pdb files for debug builds
-    if [[ -n $(echo ${install_dir_array[$lib_index]} | grep debug) ]]; then
-      local pdb_path_ogg=\
-"${src_dir}/win32/VS2008/${devenv_outdir_array[$lib_index]}/vc90.pdb"
-      if [[ -e "${pdb_path_ogg}" ]]; then
-        cp "${pdb_path_ogg}" ${target_dir}/${install_dir_array[$lib_index]}/
-      else
-        pdb_path_vorbis=\
-"${src_dir}/win32/VS2008/libvorbis/${devenv_outdir_array[$lib_index]}/vc90.pdb"
-        cp "${pdb_path_vorbis}" ${target_dir}/${install_dir_array[$lib_index]}/
-      fi
+        ${target_dir}/${install_dir_array[$lib_index]}/
+    # copy pdb files.
+    local pdb_ogg="${src_dir}/win32/VS2008/"
+    pdb_ogg="${pdb_ogg}${devenv_outdir_array[$lib_index]}/vc90.pdb"
+    if [[ -e "${pdb_ogg}" ]]; then
+      cp "${pdb_ogg}" ${target_dir}/${install_dir_array[$lib_index]}/
+    else
+      local pdb_vorbis="${src_dir}/win32/VS2008/libvorbis/"
+      pdb_vorbis="${pdb_vorbis}${devenv_outdir_array[$lib_index]}/vc90.pdb"
+      cp "${pdb_vorbis}" ${target_dir}/${install_dir_array[$lib_index]}/
     fi
   done
 }
@@ -267,9 +274,9 @@ function install_libvpx_files() {
 # Xiph stuff
 if [[ -z "${disable_xiph_builds}" ]]; then
   # download/extract libogg and libvorbis distributions
-  libogg_dir=$(wget_and_untar "${libogg_url}")
+  libogg_dir=$(download_and_untar "${libogg_url}")
   #echo "libogg_dir=$libogg_dir"
-  libvorbis_dir=$(wget_and_untar "${libvorbis_url}")
+  libvorbis_dir=$(download_and_untar "${libvorbis_url}")
   #echo "libvorbis_dir=$libvorbis_dir"
   # Patch up the xiph projects w/a couple of fixes
   # 1. use static run times
@@ -285,9 +292,9 @@ if [[ -z "${disable_xiph_builds}" ]]; then
     build_xiph_lib "${libvorbis_dir}" vorbis_static libvorbis_static
     install_xiph_files libvorbis_static "${libvorbis_dir}" libvorbis vorbis
   fi
-  # TODO(tomfinegan): add libtremor?
-  # clean up and remove a couple of unnecessary files
-  rm -rf "${libogg_dir}" "${libvorbis_dir}" *.tar.gz libvorbis/vorbis/vorbis*.h
+  # clean up and remove an unnecessary file.
+  rm -rf "${libogg_dir}" "${libvorbis_dir}" *.tar.gz \
+      libvorbis/vorbis/vorbisfile.h
 fi
 
 # libvpx stuff
