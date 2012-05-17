@@ -120,8 +120,9 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)third_party\libvorbis;$(SolutionDir)third_party\libogg"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMVORBISENCODER_EXPORTS"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -138,7 +139,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="strmiids.lib libogg_static.lib libvorbis_static.lib"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="&quot;$(SolutionDir)third_party\libvorbis\x86\release&quot;;&quot;$(SolutionDir)third_party\libogg\x86\release&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
