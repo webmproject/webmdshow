@@ -1,0 +1,106 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAKn//h9c\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2012-05-17T23:25:54Z",
+      "side": 1,
+      "message": "-O",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//h9A\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2012-05-17T23:25:54Z",
+      "side": 1,
+      "message": "s/download_and_untar/${FUNCNAME[0]}/",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//h84\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 78,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2012-05-17T23:25:54Z",
+      "side": 1,
+      "message": "tr params can be single quoted to avoid the escaping",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//h8c\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2012-05-17T23:25:54Z",
+      "side": 1,
+      "message": "bring -e down to the next line for layout and give -i an arg (-i \u0027\u0027) works better on osx",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//h8g\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2012-05-17T23:25:54Z",
+      "side": 1,
+      "message": "continued lines can be 2 space indent\nyou could capture the \\inc to reduce the escaping (use \\1 in the replacement)",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//h8A\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 157,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2012-05-17T23:25:54Z",
+      "side": 1,
+      "message": "if you wanted to avoid this you could append the string then \u0027declare -r\u0027 if you wanted it readonly",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
