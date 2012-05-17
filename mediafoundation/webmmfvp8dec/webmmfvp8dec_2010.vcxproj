@@ -153,6 +153,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)..\common;$(SolutionDir)..\third_party\libvpx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_WINDOWS;_USRDLL;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies>mfuuid.lib;evr_vista.lib;mfplat_vista.lib;vpxmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
