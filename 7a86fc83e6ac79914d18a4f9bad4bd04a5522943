@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAKn//hgI\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2012-05-18T18:08:57Z",
+      "side": 1,
+      "message": "Done. Also removed the unnecessary outfile.",
+      "parentUuid": "AAAAKn//h9c\u003d",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAKn//h9A\u003d",
         "filename": "third_party/update_libs.sh",
         "patchSetId": 1
@@ -30,6 +48,24 @@
       "writtenOn": "2012-05-17T23:25:54Z",
       "side": 1,
       "message": "s/download_and_untar/${FUNCNAME[0]}/",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//hf0\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2012-05-18T18:08:57Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAKn//h9A\u003d",
       "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -53,6 +89,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAKn//hfI\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 78,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2012-05-18T18:08:57Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAKn//h84\u003d",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAKn//h8c\u003d",
         "filename": "third_party/update_libs.sh",
         "patchSetId": 1
@@ -64,6 +118,24 @@
       "writtenOn": "2012-05-17T23:25:54Z",
       "side": 1,
       "message": "bring -e down to the next line for layout and give -i an arg (-i \u0027\u0027) works better on osx",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//heo\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2012-05-18T18:08:57Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAKn//h8c\u003d",
       "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -87,6 +159,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAKn//hXU\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2012-05-18T18:08:57Z",
+      "side": 1,
+      "message": "Capture added... hopefully [\\\\]\\+inc doesn\u0027t end up being too fragile. :)\n\nTurned into a one liner.",
+      "parentUuid": "AAAAKn//h8g\u003d",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAKn//h8A\u003d",
         "filename": "third_party/update_libs.sh",
         "patchSetId": 1
@@ -98,6 +188,24 @@
       "writtenOn": "2012-05-17T23:25:54Z",
       "side": 1,
       "message": "if you wanted to avoid this you could append the string then \u0027declare -r\u0027 if you wanted it readonly",
+      "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAKn//heI\u003d",
+        "filename": "third_party/update_libs.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 157,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2012-05-18T18:08:57Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAKn//h8A\u003d",
       "revId": "7a86fc83e6ac79914d18a4f9bad4bd04a5522943",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
