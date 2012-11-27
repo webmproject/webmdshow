@@ -47,6 +47,7 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
+				BrowseInformation="0"
 				WarningLevel="4"
 				DebugInformationFormat="1"
 			/>
@@ -95,8 +96,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)..\dll\$(SolutionName)\$(ProjectName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)..\obj\$(SolutionName)\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -121,12 +122,12 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="$(SolutionDir)common;$(SolutionDir)third_party\libvorbis;$(SolutionDir)third_party\libogg"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMVORBISENCODER_EXPORTS"
+				PreprocessorDefinitions="WIN32;_WINDOWS;_USRDLL"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				WarningLevel="3"
-				DebugInformationFormat="3"
+				WarningLevel="4"
+				DebugInformationFormat="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -140,10 +141,13 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="strmiids.lib libogg_static.lib libvorbis_static.lib"
+				OutputFile="$(SolutionDir)..\dll\webmdshow\$(ConfigurationName)\$(RootNameSpace).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)third_party\libvorbis\x86\release&quot;;&quot;$(SolutionDir)third_party\libogg\x86\release&quot;"
-				GenerateDebugInformation="true"
-				SubSystem="2"
+				GenerateManifest="false"
+				ModuleDefinitionFile="webmvorbisencoder.def"
+				GenerateDebugInformation="false"
+				SubSystem="0"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				TargetMachine="1"
