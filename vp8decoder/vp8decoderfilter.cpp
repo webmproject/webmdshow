@@ -74,7 +74,7 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
     : m_pClassFactory(pClassFactory),
       m_nondelegating(this),
       m_pOuter(pOuter ? pOuter : &m_nondelegating),
-      m_state(State_Stopped),
+      m_state(kStateStopped),
       m_clock(0),
       m_inpin(this),
       m_outpin(this)
@@ -231,14 +231,19 @@ HRESULT Filter::Stop()
 
     switch (m_state)
     {
-        case State_Paused:
-        case State_Running:
-            m_state = State_Stopped;
+        case kStatePaused:
+        case kStatePausedWaitingForKeyframe:
+        case kStateRunning:
+        case kStateRunningWaitingForKeyframe:
+            m_state = kStateStopped;
             OnStop();    //decommit outpin's allocator
             break;
 
-        case State_Stopped:
+        case kStateStopped:
+            break;
+
         default:
+            assert(false);
             break;
     }
 
@@ -263,17 +268,28 @@ HRESULT Filter::Pause()
 
     switch (m_state)
     {
-        case State_Stopped:
+        case kStateStopped:
             OnStart();  //commit outpin's allocator
+            m_state = kStatePausedWaitingForKeyframe;
             break;
 
-        case State_Running:
-        case State_Paused:
+        case kStateRunning:
+            m_state = kStatePaused;
+            break;
+
+        case kStateRunningWaitingForKeyframe:
+            m_state = kStatePausedWaitingForKeyframe;
+            break;
+
+        case kStatePausedWaitingForKeyframe:
+        case kStatePaused:
+            break;
+
         default:
+            assert(false);
             break;
     }
 
-    m_state = State_Paused;
     return S_OK;
 }
 
@@ -292,19 +308,29 @@ HRESULT Filter::Run(REFERENCE_TIME start)
 
     switch (m_state)
     {
-        case State_Stopped:
+        case kStateStopped:
             OnStart();
+            m_state = kStateRunningWaitingForKeyframe;
             break;
 
-        case State_Paused:
-        case State_Running:
+        case kStatePausedWaitingForKeyframe:
+            m_state = kStateRunningWaitingForKeyframe;
+            break;
+
+        case kStatePaused:
+            m_state = kStateRunning;
+            break;
+
+        case kStateRunningWaitingForKeyframe:
+        case kStateRunning:
+            break;
+
         default:
+            assert(false);
             break;
     }
 
     m_start = start;
-    m_state = State_Running;
-
     return S_OK;
 }
 
@@ -323,7 +349,7 @@ HRESULT Filter::GetState(
     if (FAILED(hr))
         return hr;
 
-    *p = m_state;
+    *p = GetStateLocked();
     return S_OK;
 }
 
@@ -655,6 +681,68 @@ void Filter::OnStop()
 {
     m_outpin.Stop();
     m_inpin.Stop();
+}
+
+
+FILTER_STATE Filter::GetStateLocked() const
+{
+    switch (m_state)
+    {
+        case kStateStopped:
+            return State_Stopped;
+
+        case kStateRunning:
+        case kStateRunningWaitingForKeyframe:
+            return State_Running;
+
+        case kStatePaused:
+        case kStatePausedWaitingForKeyframe:
+            return State_Paused;
+
+        default:
+          assert(false);
+          return State_Stopped;
+    }
+}
+
+
+HRESULT Filter::OnDecodeFailureLocked()
+{
+    switch (m_state)
+    {
+        case kStateRunning:
+            m_state = kStateRunningWaitingForKeyframe;
+            break;
+
+        case kStatePaused:
+            m_state = kStatePausedWaitingForKeyframe;
+            break;
+
+        default:
+            break;
+    }
+
+    return S_OK;  // continue accepting frames
+}
+
+
+void Filter::OnDecodeSuccessLocked(bool is_key)
+{
+    switch (m_state)
+    {
+        case kStateRunningWaitingForKeyframe:
+            if (is_key)
+                m_state = kStateRunning;
+            break;
+
+        case kStatePausedWaitingForKeyframe:
+            if (is_key)
+                m_state = kStatePaused;
+            break;
+
+        default:
+            break;
+    }
 }
 
 

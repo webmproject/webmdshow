@@ -140,7 +140,7 @@ HRESULT Outpin::Connect(
     if (FAILED(hr))
         return hr;
 
-    if (m_pFilter->m_state != State_Stopped)
+    if (m_pFilter->GetStateLocked() != State_Stopped)
         return VFW_E_NOT_STOPPED;
 
     if (bool(m_pPinConnection))

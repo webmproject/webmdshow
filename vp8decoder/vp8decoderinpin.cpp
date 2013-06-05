@@ -163,7 +163,7 @@ HRESULT Inpin::ReceiveConnection(
     if (FAILED(hr))
         return hr;
 
-    if (m_pFilter->m_state != State_Stopped)
+    if (m_pFilter->GetStateLocked() != State_Stopped)
         return VFW_E_NOT_STOPPED;
 
     if (bool(m_pPinConnection))
@@ -472,7 +472,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (!bool(outpin.m_pAllocator))  //should never happen
         return VFW_E_NO_ALLOCATOR;
 
-    if (m_pFilter->m_state == State_Stopped)
+    if (m_pFilter->GetStateLocked() == State_Stopped)
         return VFW_E_NOT_RUNNING;
 
     if (m_bEndOfStream)
@@ -493,22 +493,11 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     const vpx_codec_err_t err = vpx_codec_decode(&m_ctx, buf, len, 0, 0);
 
     if (err != VPX_CODEC_OK)
-    {
-        GraphUtil::IMediaEventSinkPtr pSink(m_pFilter->m_info.pGraph);
+        return m_pFilter->OnDecodeFailureLocked();
 
-        if (bool(pSink))
-        {
-            lock.Release();
+    hr = pInSample->IsSyncPoint();
 
-            hr = pSink->Notify(
-                    EC_STREAM_ERROR_STOPPED,
-                    VFW_E_SAMPLE_REJECTED,
-                    err);
-        }
-
-        m_bEndOfStream = true;  //clear this when we stop and then start again
-        return S_FALSE;
-    }
+    m_pFilter->OnDecodeSuccessLocked(hr == S_OK);
 
     if (pInSample->IsPreroll() == S_OK)
         return S_OK;
@@ -529,7 +518,7 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     if (FAILED(hr))
         return hr;
 
-    if (m_pFilter->m_state == State_Stopped)
+    if (m_pFilter->GetStateLocked() == State_Stopped)
         return VFW_E_NOT_RUNNING;
 
     if (!bool(outpin.m_pPinConnection))  //should never happen

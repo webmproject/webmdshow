@@ -68,6 +68,10 @@ public:
 
     //local classes and methods
 
+    FILTER_STATE GetStateLocked() const;
+    HRESULT OnDecodeFailureLocked();
+    void OnDecodeSuccessLocked(bool is_key);
+
 private:
     class CNondelegating : public IUnknown
     {
@@ -96,7 +100,20 @@ private:
 
 public:
     FILTER_INFO m_info;
-    FILTER_STATE m_state;
+
+private:
+    enum State
+    {
+        kStateStopped,
+        kStatePausedWaitingForKeyframe,
+        kStatePaused,
+        kStateRunning,
+        kStateRunningWaitingForKeyframe
+    };
+
+    State m_state;
+
+public:
     Inpin m_inpin;
     Outpin m_outpin;
 
