@@ -1379,7 +1379,6 @@ HRESULT WebmMfVorbisDec::ValidateOutputFormat(IMFMediaType *pmt)
     assert(SUCCEEDED(status));
 
     UINT32 vorbis_rate = m_vorbis_decoder.GetVorbisRate();
-    assert(output_rate == vorbis_rate);
 
     if (output_rate != vorbis_rate)
         return MF_E_INVALIDMEDIATYPE;
