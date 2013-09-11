@@ -67,8 +67,8 @@ WebmMfVorbisDec::WebmMfVorbisDec(IClassFactory* pClassFactory) :
     m_decode_start_time(-1),
     m_total_samples_decoded(0),
     m_mediatime_decoded(-1),
-    m_mediatime_recvd(-1),
-    m_min_output_threshold(1000000LL), // .1 second
+    //m_mediatime_recvd(-1),
+    //m_min_output_threshold(1000000LL), // .1 second
     m_drain(false),
     m_post_process_samples(false),
     m_scratch(NULL, 0)
@@ -234,7 +234,10 @@ HRESULT WebmMfVorbisDec::GetOutputStreamInfo(DWORD dwOutputStreamID,
     hr = m_output_mediatype->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND,
                                        &samples_per_sec);
     // 1/4 second of samples * block align
-    info.cbSize = m_block_align * ((samples_per_sec + 3) / 4);
+    //info.cbSize = m_block_align * ((samples_per_sec + 3) / 4);
+    // Allocate space for 1 second of samples, to ensure our buffer size is
+    // greater than what the source filter pushes downstream.
+    info.cbSize = m_block_align * samples_per_sec;
     info.cbAlignment = 0;
 
     assert((info.cbSize % m_block_align) == 0);
@@ -1191,7 +1194,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
 
         // DEBUG
         m_mediatime_decoded = 0;
-        m_mediatime_recvd = 0;
+        //m_mediatime_recvd = 0;
 
         m_start_time = m_decode_start_time;
 
@@ -1199,15 +1202,15 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
         //       << REFTIMETOSECONDS(m_decode_start_time));
     }
 
-    LONGLONG input_duration = 0;
-    hr = p_mf_input_sample->GetSampleDuration(&input_duration);
-    if (FAILED(hr) && MF_E_NO_SAMPLE_DURATION != hr)
-    {
-        //DBGLOG("no duration on input sample!");
-        assert(SUCCEEDED(hr));
-    }
+    //LONGLONG input_duration = 0;
+    //hr = p_mf_input_sample->GetSampleDuration(&input_duration);
+    //if (FAILED(hr) && MF_E_NO_SAMPLE_DURATION != hr)
+    //{
+    //    //DBGLOG("no duration on input sample!");
+    //    assert(SUCCEEDED(hr));
+    //}
 
-    m_mediatime_recvd += input_duration;
+    //m_mediatime_recvd += input_duration;
 
     // media sample data has been passed to libvorbis; pop/release
     m_mf_input_samples.pop_front();
@@ -1228,6 +1231,7 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     UINT32 samples_available;
     CHK(hr, m_vorbis_decoder.GetOutputSamplesAvailable(&samples_available));
 
+#if 0
     bool need_more_input =
         SamplesToMediaTime(samples_available) < m_min_output_threshold;
 
@@ -1240,6 +1244,10 @@ HRESULT WebmMfVorbisDec::ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
     {
         return MF_E_TRANSFORM_NEED_MORE_INPUT;
     }
+#else
+    if (samples_available == 0)
+        return MF_E_TRANSFORM_NEED_MORE_INPUT;
+#endif
 
     // Ensure we never try to process more samples than will fit in our output
     // buffer -- abuse |buffer_capacity_samples| to cap |samples_to_process| if
