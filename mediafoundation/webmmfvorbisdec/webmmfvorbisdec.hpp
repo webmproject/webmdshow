@@ -165,8 +165,6 @@ private:
     // another.
     WebmUtil::auto_array<unsigned char> m_scratch;
 
-    // when |m_drain| is true |m_min_output_threshold| is ignored, and we pass
-    // all available samples downstream
     bool m_drain;
     // When |m_post_process_samples| is true the filter will need to process
     // the output from the decoder because the input format does not match
@@ -184,14 +182,10 @@ private:
     typedef std::list<IMFSample*> mf_input_samples_t;
     mf_input_samples_t m_mf_input_samples;
 
-    // minimum buffered uncompressed audio time that must be accumulated
-    // before |ProcessOutput| will return samples to the caller
-    const REFERENCE_TIME m_min_output_threshold;
     REFERENCE_TIME m_decode_start_time;
     REFERENCE_TIME m_start_time;
     // DEBUG
     REFERENCE_TIME m_mediatime_decoded;
-    REFERENCE_TIME m_mediatime_recvd;
 
     UINT32 m_block_align;
     UINT64 m_total_samples_decoded;
