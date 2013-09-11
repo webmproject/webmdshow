@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdH//+fo\u003d",
+        "filename": "mediafoundation/webmmfvorbisdec/webmmfvorbisdec.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 237,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2013-09-11T22:19:40Z",
+      "side": 1,
+      "message": "Remove the 2 lines above.",
+      "revId": "b787d00ba3552c4ee37faea75d5ffaddfcff3cec",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdH//+fk\u003d",
+        "filename": "mediafoundation/webmmfvorbisdec/webmmfvorbisdec.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1213,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2013-09-11T22:19:40Z",
+      "side": 1,
+      "message": "Just delete this and the other commented m_mediatime_recvd a few lines up.",
+      "revId": "b787d00ba3552c4ee37faea75d5ffaddfcff3cec",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdH//+fg\u003d",
+        "filename": "mediafoundation/webmmfvorbisdec/webmmfvorbisdec.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1250,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2013-09-11T22:19:40Z",
+      "side": 1,
+      "message": "Remove all but the enabled code.",
+      "revId": "b787d00ba3552c4ee37faea75d5ffaddfcff3cec",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdH//+fw\u003d",
+        "filename": "mediafoundation/webmmfvorbisdec/webmmfvorbisdec.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2013-09-11T22:19:40Z",
+      "side": 1,
+      "message": "Let\u0027s just remove the unused members. I believe this one is a vestigial piece of the sample code on which it was based.",
+      "revId": "b787d00ba3552c4ee37faea75d5ffaddfcff3cec",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdH//+fs\u003d",
+        "filename": "mediafoundation/webmmfvorbisdec/webmmfvorbisdec.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 194,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2013-09-11T22:19:40Z",
+      "side": 1,
+      "message": "This was for debugging only, and since it can\u0027t be trusted, might as well get rid of it entirely.",
+      "revId": "b787d00ba3552c4ee37faea75d5ffaddfcff3cec",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
