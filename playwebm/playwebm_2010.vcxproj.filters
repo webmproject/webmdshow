@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Common Files">
+      <UniqueIdentifier>{e928b659-4078-495e-aefe-215e685dcf35}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="playwebm.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\graphutil.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\mediatypeutil.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\versionhandling.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\webmtypes.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="playwebmapp.hpp" />
+    <ClInclude Include="playwebmcmdline.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\common\graphutil.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\mediatypeutil.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\versionhandling.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\webmtypes.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="playwebmapp.cpp" />
+    <ClCompile Include="playwebmcmdline.cpp" />
+    <ClCompile Include="playwebmmain.cpp" />
+  </ItemGroup>
+</Project>

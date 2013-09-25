@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="inc">
+      <UniqueIdentifier>{dd922fdc-22bd-41f6-824c-84c573872947}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{8bf11701-7fbe-41d5-b94d-f017feb8a3bf}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="on2_codec\on2_image.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="on2_blit\ccstr.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="on2_blit\x86\colorconv_inlineasm.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="on2_blit\colorconversions.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="on2_blit\lutbl.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="on2_ports\x86.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="on2_blit\lutbl.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="on2_blit\x86\on2_blit_x86.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="on2_blit\rgb24toyv12.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="on2_blit\x86\rgb24toyv12_mmx_inline.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="on2_blit\x86\rgb24toyv12_xmm_inline.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="on2_blit\rgb32toyv12.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="on2_blit\x86\rgb32toyv12_mmx_inline.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="on2_blit\x86\rgb32toyv12_xmm_inline.c">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

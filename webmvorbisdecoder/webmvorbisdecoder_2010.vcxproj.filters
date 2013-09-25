@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Common Files">
+      <UniqueIdentifier>{503ff90d-3431-4ce9-8114-83475a5857ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Vorbis Files">
+      <UniqueIdentifier>{b1499dd7-5216-4854-a123-e870055f92f1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\cenumpins.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\cfactory.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\clockable.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\cmediasample.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\cmediatypes.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\cmemallocator.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\comreg.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\mediatypeutil.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\vorbistypes.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\webmtypes.hpp">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\libvorbis\vorbis\codec.h">
+      <Filter>Vorbis Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\libogg\ogg\ogg.h">
+      <Filter>Vorbis Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\libogg\ogg\os_types.h">
+      <Filter>Vorbis Files</Filter>
+    </ClInclude>
+    <ClInclude Include="webmvorbisdecoderfilter.hpp" />
+    <ClInclude Include="webmvorbisdecoderinpin.hpp" />
+    <ClInclude Include="webmvorbisdecoderoutpin.hpp" />
+    <ClInclude Include="webmvorbisdecoderpin.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="webmvorbisdecoder.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\common\cenumpins.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\cfactory.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\clockable.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\cmediasample.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\cmediatypes.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\cmemallocator.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\comreg.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\mediatypeutil.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\vorbistypes.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\webmtypes.cpp">
+      <Filter>Common Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dllentry.cpp" />
+    <ClCompile Include="webmvorbisdecoderfilter.cpp" />
+    <ClCompile Include="webmvorbisdecoderinpin.cpp" />
+    <ClCompile Include="webmvorbisdecoderoutpin.cpp" />
+    <ClCompile Include="webmvorbisdecoderpin.cpp" />
+  </ItemGroup>
+</Project>
