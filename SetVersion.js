@@ -396,6 +396,10 @@ MJH.Main = function() {
     process("webmmux");
     process("webmsource");
     process("webmsplit");
+    process("webmcc");
+    process("webmvorbisencoder");
+    process("webmvorbisdecoder");
+    process("webmoggsource");
 };
 
 

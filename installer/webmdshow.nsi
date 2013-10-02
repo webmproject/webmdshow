@@ -76,6 +76,10 @@ Section "Install" SecInstall
   StrCpy $webmsource_dll "webmsource.dll"
   Var /GLOBAL webmsplit_dll
   StrCpy $webmsplit_dll "webmsplit.dll"
+  Var /GLOBAL webmcc_dll
+  StrCpy $webmcc_dll "webmcc.dll"
+  Var /GLOBAL webmvorbisdecoder_dll
+  StrCpy $webmvorbisdecoder_dll "webmvorbisdecoder.dll"
 
   ; Tell NSIS to include the filter DLL files-- via wildcard because the File
   ; instruction doesn't support use of variables!
@@ -97,6 +101,8 @@ Section "Install" SecInstall
   RegDLL "$OUTDIR\$webmmux_dll"
   RegDLL "$OUTDIR\$webmsource_dll"
   RegDLL "$OUTDIR\$webmsplit_dll"
+  RegDLL "$OUTDIR\$webmcc_dll"
+  RegDLL "$OUTDIR\$webmvorbisdecoder_dll"
 
   IfErrors RegError Success
 
@@ -114,6 +120,8 @@ Section "Install" SecInstall
   DetailPrint "webmmux_dll: $webmmux_dll"
   DetailPrint "webmsource_dll: $webmsource_dll"
   DetailPrint "webmsplit_dll: $webmsplit_dll"
+  DetailPrint "webmcc_dll: $webmcc_dll"
+  DetailPrint "webmvorbisdecoder_dll: $webmvorbisdecoder_dll"
 
   Success:
 
@@ -130,12 +138,16 @@ Section "Uninstall" SecUninstall
   StrCpy $webmmux_dll "webmmux.dll"
   StrCpy $webmsource_dll "webmsource.dll"
   StrCpy $webmsplit_dll "webmsplit.dll"
+  StrCpy $webmcc_dll "webmcc.dll"
+  StrCpy $webmvorbisdecoder_dll "webmvorbisdecoder.dll"
 
   UnRegDLL "$INSTDIR\$vp8decoder_dll"
   UnRegDLL "$INSTDIR\$vp8encoder_dll"
   UnRegDLL "$INSTDIR\$webmmux_dll"
   UnRegDLL "$INSTDIR\$webmsource_dll"
   UnRegDLL "$INSTDIR\$webmsplit_dll"
+  UnRegDLL "$INSTDIR\$webmcc_dll"
+  UnRegDLL "$INSTDIR\$webmvorbisdecoder_dll"
 
   RMDir /r /REBOOTOK $INSTDIR
 

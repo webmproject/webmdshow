@@ -112,5 +112,11 @@
     <ClInclude Include="webmoggsourcefilter.hpp" />
     <ClInclude Include="webmoggsourceoutpin.hpp" />
     <ClInclude Include="webmoggsourcepin.hpp" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="webmoggsource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

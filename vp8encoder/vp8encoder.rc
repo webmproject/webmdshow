@@ -12,13 +12,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -51,8 +49,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,9,12,0
- PRODUCTVERSION 0,9,12,0
+ FILEVERSION 1,0,1,0
+ PRODUCTVERSION 1,0,1,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -69,12 +67,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Google"
             VALUE "FileDescription", "WebM VP8 Encoder Filter"
-            VALUE "FileVersion", "0, 9, 12, 0"
+            VALUE "FileVersion", "1, 0, 1, 0"
             VALUE "InternalName", "vp8encoder"
-            VALUE "LegalCopyright", "Copyright (C) 2010"
+            VALUE "LegalCopyright", "Copyright (C) 2013"
             VALUE "OriginalFilename", "vp8encoder.dll"
             VALUE "ProductName", "WebM VP8 Encoder Filter"
-            VALUE "ProductVersion", "0, 9, 12, 0"
+            VALUE "ProductVersion", "1, 0, 1, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -151,7 +149,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_PROPPAGE_VP8ENCODER, DIALOG
     BEGIN
@@ -163,7 +161,7 @@ BEGIN
 END
 #endif    // APSTUDIO_INVOKED
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

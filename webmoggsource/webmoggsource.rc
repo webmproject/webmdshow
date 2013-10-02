@@ -8,7 +8,6 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "afxres.h"
-
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -32,7 +31,7 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""afxres.h""\r\n"
+    "#include ""afxres.h\0"
     "\0"
 END
 
@@ -67,12 +66,13 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "FileDescription", "WebM Vorbis Decoder"
+            VALUE "CompanyName", "Google"
+            VALUE "FileDescription", "WebM Ogg Source Filter"
             VALUE "FileVersion", "1, 0, 1, 0"
-            VALUE "InternalName", "webmvorbisdecoder"
+            VALUE "InternalName", "webmoggsource"
             VALUE "LegalCopyright", "Copyright (C) 2013"
-            VALUE "OriginalFilename", "webmvorbisdecoder.dll"
-            VALUE "ProductName", "Webm Vorbis Decoder"
+            VALUE "OriginalFilename", "webmoggsource.dll"
+            VALUE "ProductName", "WebM Ogg Source Filter"
             VALUE "ProductVersion", "1, 0, 1, 0"
         END
     END

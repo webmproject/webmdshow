@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -120,6 +120,7 @@
     <ClInclude Include="..\common\graphutil.hpp" />
     <ClInclude Include="..\common\mediatypeutil.hpp" />
     <ClInclude Include="..\common\webmtypes.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="webmccfilter.hpp" />
     <ClInclude Include="webmccinpin.hpp" />
     <ClInclude Include="webmccoutpin.hpp" />
@@ -130,6 +131,9 @@
       <Project>{f4d58d10-0a22-4c8f-a961-844acbe97c9b}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="webmcc.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
