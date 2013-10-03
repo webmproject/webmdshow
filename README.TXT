@@ -1,5 +1,5 @@
 WebM Project DirectShow Filters
-v0.9.10.0 - 2010/08/09
+v1.0.1.0 - 2013/10/02
 http://www.webmproject.org/
 mailto:matthewjheaney@google.com
 
@@ -109,26 +109,18 @@ Description of Microsoft DirectShow and the WebM DirectShow Filters
    audio stream.  The WebM VP8DECODER filter (vp8decoder.dll) decodes the
    VP8 video stream, which should be all you need for video rendering.
 
-   To render the audio stream, you'll need a filter that can decode Vorbis
-   audio.  I usually just use the FFDShow filter, which is included in the
-   Windows Essentials Codec Pack:
-
-      http://www.mediacodec.org/
-
    The WEBMMUX filter (webmmux.dll) creates ("multiplexes") WebM files.  It
    accepts a VP8-encoded video input stream and a Vorbis-encoded audio input
    stream.  The VP8ENCODER filter (vp8encoder.dll) is used to encode the video,
    and is connected directly to the WEBMUX filter.
 
-   You'll need a filter to compress the audio stream to Vorbis.  You can
-   try the filters available from Xiph.org:
+   The WEBMVORBISDECODER filter (webmvorbisdecoder.dll) decodes the Vorbis
+   audio track in the WebM file.
+
+   You can also try the filters available here:
 
       http://xiph.org/dshow/
-
-   It might be useful to have all the filters (both video and audio) necessary
-   for Webm muxing and demuxing together in one downloadable package. If you
-   think that this would be of interest to the WebM Project community, please
-   file a bug report at the link listed above.
+      http://www.mediacodec.org/
 
 
 Playing WebM Files on Windows using DirectShow
