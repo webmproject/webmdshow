@@ -508,7 +508,7 @@ void AudioStream::OnPopulateSample(
     //assert((start_ns % 100) == 0);
 
     const LONGLONG base_ns = m_base_time_ns;
-    assert(base_ns >= 0);
+    //assert(base_ns >= 0);
     assert(start_ns >= base_ns);
 
     Segment* const pSegment = m_pTrack->m_pSegment;

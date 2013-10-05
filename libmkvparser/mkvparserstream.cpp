@@ -457,6 +457,7 @@ HRESULT Stream::InitCurr()
     assert(!pBase->EOS());
 
     m_base_time_ns = pBase->GetFirstTime();
+    //assert(m_base_time_ns >= 0);
 
 #ifdef _DEBUG
     if (!m_pCurr->EOS())
@@ -581,10 +582,15 @@ HRESULT Stream::PopulateSamples(const samples_t& samples)
     assert(pCurrCluster);
 
     const __int64 start_ns = pCurrBlock->GetTime(pCurrCluster);
-    assert(start_ns >= 0);
+
+    if (start_ns < 0)
+    {
+        SetCurr(pNext);  //throw curr block away
+        return 2;  //no samples, but not EOS either
+    }
 
     const LONGLONG base_ns = m_base_time_ns;
-    assert(base_ns >= 0);
+    //assert(base_ns >= 0);
 
     if (start_ns < base_ns)
     {

@@ -347,7 +347,7 @@ void VideoStream::OnPopulateSample(
     assert(samples.size() == samples_t::size_type(nFrames));
 
     const LONGLONG base_ns = m_base_time_ns;
-    assert(base_ns >= 0);
+    //assert(base_ns >= 0);
 
     Segment* const pSegment = m_pTrack->m_pSegment;
     IMkvReader* const pFile = pSegment->m_pReader;
