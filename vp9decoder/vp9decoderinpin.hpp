@@ -1,4 +1,4 @@
-// Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+// Copyright (c) 2013 The WebM project authors. All Rights Reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -7,12 +7,12 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "vp8decoderpin.hpp"
+#include "vp9decoderpin.hpp"
 #include "graphutil.hpp"
 #include "vpx/vpx_decoder.h"
 #include <amvideo.h>
 
-namespace VP8DecoderLib
+namespace VP9DecoderLib
 {
 
 class Inpin : public Pin, public IMemInputPin
@@ -81,19 +81,18 @@ public:
     HRESULT Start();  //from stopped to running/paused
     void Stop();      //from running/paused to stopped
 
+#if 0  // TODO: does VP9 support this?
+    HRESULT OnApplyPostProcessing();
+#endif
+
 protected:
     HRESULT GetName(PIN_INFO&) const;
     HRESULT OnDisconnect();
-
-public:
-    HRESULT OnApplyPostProcessing();
 
 private:
     bool m_bEndOfStream;
     bool m_bFlush;
     vpx_codec_ctx_t m_ctx;
-
-    HRESULT PopulateSample(IMediaSample*, const vpx_image_t*);
 
     static void CopyToPlanar(
         const vpx_image_t*,
@@ -107,5 +106,4 @@ private:
 
 };
 
-
-}  //end namespace VP8DecoderLib
+}  //end namespace VP9DecoderLib

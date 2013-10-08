@@ -36,6 +36,15 @@ const GUID WebmTypes::MEDIASUBTYPE_VP80 =
     { 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 }
 };
 
+// 30395056-0000-0010-8000-00AA00389B71 'VP90'
+const GUID WebmTypes::MEDIASUBTYPE_VP90 =
+{
+    0x30395056,
+    0x0000,
+    0x0010,
+    { 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 }
+};
+
 // 30323449-0000-0010-8000-00AA00389B71 'I420'
 const GUID WebmTypes::MEDIASUBTYPE_I420 =
 {

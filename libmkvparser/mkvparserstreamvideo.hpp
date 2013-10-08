@@ -35,7 +35,7 @@ protected:
 
     void OnPopulateSample(const BlockEntry*, const samples_t&) const;
 
-    void GetVp8MediaTypes(CMediaTypes&) const;
+    void GetVpxMediaTypes(const GUID& subtype, CMediaTypes&) const;
     void GetVfwMediaTypes(CMediaTypes&) const;
 
 };

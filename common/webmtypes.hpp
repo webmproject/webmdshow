@@ -12,6 +12,7 @@ namespace WebmTypes
 {
     extern const GUID MEDIASUBTYPE_WEBM;
     extern const GUID MEDIASUBTYPE_VP80;
+    extern const GUID MEDIASUBTYPE_VP90;
     extern const GUID MEDIASUBTYPE_I420;
     extern const GUID MEDIASUBTYPE_VP8_STATS;
 

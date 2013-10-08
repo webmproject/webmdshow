@@ -23,6 +23,7 @@ using std::endl;
 #endif
 
 static const char* const s_CodecId_VP8 = "V_VP8";
+static const char* const s_CodecId_VP9 = "V_VP9";
 static const char* const s_CodecId_ON2VP8 = "V_ON2VP8";
 static const char* const s_CodecId_VFW = "V_MS/VFW/FOURCC";
 
@@ -38,6 +39,8 @@ VideoStream* VideoStream::CreateInstance(const VideoTrack* pTrack)
     assert(id);  //TODO
 
     if (_stricmp(id, s_CodecId_VP8) == 0)
+        __noop;
+    else if (_stricmp(id, s_CodecId_VP9) == 0)
         __noop;
     else if (_stricmp(id, s_CodecId_ON2VP8) == 0)
         __noop;
@@ -83,14 +86,20 @@ void VideoStream::GetMediaTypes(CMediaTypes& mtv) const
     if ((_stricmp(id, s_CodecId_VP8) == 0) ||
         (_stricmp(id, s_CodecId_ON2VP8) == 0))
     {
-        GetVp8MediaTypes(mtv);
+        GetVpxMediaTypes(WebmTypes::MEDIASUBTYPE_VP80, mtv);
+    }
+    else if (_stricmp(id, s_CodecId_VP9) == 0)
+    {
+        GetVpxMediaTypes(WebmTypes::MEDIASUBTYPE_VP90, mtv);
     }
     else if (_stricmp(id, s_CodecId_VFW) == 0)
+    {
         GetVfwMediaTypes(mtv);
+    }
 }
 
 
-void VideoStream::GetVp8MediaTypes(CMediaTypes& mtv) const
+void VideoStream::GetVpxMediaTypes(const GUID& subtype, CMediaTypes& mtv) const
 {
     AM_MEDIA_TYPE mt;
 
@@ -98,7 +107,7 @@ void VideoStream::GetVp8MediaTypes(CMediaTypes& mtv) const
     BITMAPINFOHEADER& bmih = vih.bmiHeader;
 
     mt.majortype = MEDIATYPE_Video;
-    mt.subtype = WebmTypes::MEDIASUBTYPE_VP80;
+    mt.subtype = subtype;
     mt.bFixedSizeSamples = FALSE;
     mt.bTemporalCompression = TRUE;
     mt.lSampleSize = 0;
@@ -231,6 +240,14 @@ HRESULT VideoStream::QueryAccept(const AM_MEDIA_TYPE* pmt) const
         return S_OK;
     }
 
+    if (_stricmp(id, s_CodecId_VP9) == 0)
+    {
+        if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP90)
+            return S_FALSE;
+
+        return S_OK;
+    }
+
     if (_stricmp(id, s_CodecId_VFW) == 0)
     {
         if (!GraphUtil::FourCCGUID::IsFourCC(mt.subtype))
@@ -254,15 +271,16 @@ HRESULT VideoStream::QueryAccept(const AM_MEDIA_TYPE* pmt) const
 
         //TODO: more vetting here
 
-        const DWORD fcc = mt.subtype.Data1;  //"VP80"
+        const DWORD fcc = mt.subtype.Data1;  //"VP80" or "VP90"
 
         if (fcc != bmih.biCompression)
             return S_FALSE;
 
-        //NOTE: technically we don't need this check,
-        //but for now WebM only officially supports VP80.
-        //
-        if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP80)
+        if (mt.subtype == WebmTypes::MEDIASUBTYPE_VP80)
+            __noop;
+        else if (mt.subtype == WebmTypes::MEDIASUBTYPE_VP90)
+            __noop;
+        else
             return S_FALSE;
 
         return S_OK;
