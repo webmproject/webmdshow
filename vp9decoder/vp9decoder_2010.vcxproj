@@ -89,6 +89,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;VP9DECODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)common;$(SolutionDir)IDL;$(SolutionDir)third_party\libvpx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
@@ -98,7 +99,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>vp9decoder.def</ModuleDefinitionFile>
-      <AdditionalDependencies>strmiids.lib;vpxmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;vpxmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <OutputDirectory>%(RootDir)%(Directory)</OutputDirectory>

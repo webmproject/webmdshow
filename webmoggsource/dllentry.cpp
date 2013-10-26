@@ -86,7 +86,7 @@ STDAPI DllUnregisterServer()
 
     //assert(SUCCEEDED(hr));
 
-#if 1
+#if 0
     hr = ComReg::UnRegisterCustomFileType(
             L".ogg",
             WebmTypes::CLSID_WebmOggSource);
@@ -133,7 +133,7 @@ STDAPI DllRegisterServer()
 
     assert(SUCCEEDED(hr));
 
-#if 1
+#if 0  //TODO: add this to installer
     hr = ComReg::RegisterCustomFileType(
             L".ogg",
             WebmTypes::CLSID_WebmOggSource,
@@ -161,6 +161,8 @@ STDAPI DllRegisterServer()
     pin.strConnectsToPin = 0;     //obsolete
     pin.nMediaTypes = 0;
     pin.lpMediaType = 0;
+
+    //TODO: advertise the output format types
 #else
     enum { cPins = 2 };
     REGFILTERPINS pins[cPins];

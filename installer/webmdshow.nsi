@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2010 The WebM project authors. All Rights Reserved.
+; Copyright (c) 2013 The WebM project authors. All Rights Reserved.
 ;
 ; Use of this source code is governed by a BSD-style license and patent
 ; grant that can be found in the LICENSE file in the root of the source
@@ -70,6 +70,8 @@ Section "Install" SecInstall
   StrCpy $vp8decoder_dll "vp8decoder.dll"
   Var /GLOBAL vp8encoder_dll
   StrCpy $vp8encoder_dll "vp8encoder.dll"
+  Var /GLOBAL vp9decoder_dll
+  StrCpy $vp9decoder_dll "vp9decoder.dll"
   Var /GLOBAL webmmux_dll
   StrCpy $webmmux_dll "webmmux.dll"
   Var /GLOBAL webmsource_dll
@@ -80,6 +82,8 @@ Section "Install" SecInstall
   StrCpy $webmcc_dll "webmcc.dll"
   Var /GLOBAL webmvorbisdecoder_dll
   StrCpy $webmvorbisdecoder_dll "webmvorbisdecoder.dll"
+  Var /GLOBAL webmvorbisencoder_dll
+  StrCpy $webmvorbisencoder_dll "webmvorbisencoder.dll"
 
   ; Tell NSIS to include the filter DLL files-- via wildcard because the File
   ; instruction doesn't support use of variables!
@@ -98,11 +102,13 @@ Section "Install" SecInstall
   ClearErrors
   RegDLL "$OUTDIR\$vp8decoder_dll"
   RegDLL "$OUTDIR\$vp8encoder_dll"
+  RegDLL "$OUTDIR\$vp9decoder_dll"
   RegDLL "$OUTDIR\$webmmux_dll"
   RegDLL "$OUTDIR\$webmsource_dll"
   RegDLL "$OUTDIR\$webmsplit_dll"
   RegDLL "$OUTDIR\$webmcc_dll"
   RegDLL "$OUTDIR\$webmvorbisdecoder_dll"
+  RegDLL "$OUTDIR\$webmvorbisencoder_dll"
 
   IfErrors RegError Success
 
@@ -117,11 +123,13 @@ Section "Install" SecInstall
   DetailPrint "OUTDIR: $OUTDIR"
   DetailPrint "vp8decoder_dll: $vp8decoder_dll"
   DetailPrint "vp8encoder_dll: $vp8encoder_dll"
+  DetailPrint "vp9decoder_dll: $vp9decoder_dll"
   DetailPrint "webmmux_dll: $webmmux_dll"
   DetailPrint "webmsource_dll: $webmsource_dll"
   DetailPrint "webmsplit_dll: $webmsplit_dll"
   DetailPrint "webmcc_dll: $webmcc_dll"
   DetailPrint "webmvorbisdecoder_dll: $webmvorbisdecoder_dll"
+  DetailPrint "webmvorbisencoder_dll: $webmvorbisencoder_dll"
 
   Success:
 
@@ -135,19 +143,23 @@ Section "Uninstall" SecUninstall
   ; Note: declarations are global, values are not...
   StrCpy $vp8decoder_dll "vp8decoder.dll"
   StrCpy $vp8encoder_dll "vp8encoder.dll"
+  StrCpy $vp9decoder_dll "vp9decoder.dll"
   StrCpy $webmmux_dll "webmmux.dll"
   StrCpy $webmsource_dll "webmsource.dll"
   StrCpy $webmsplit_dll "webmsplit.dll"
   StrCpy $webmcc_dll "webmcc.dll"
   StrCpy $webmvorbisdecoder_dll "webmvorbisdecoder.dll"
+  StrCpy $webmvorbisencoder_dll "webmvorbisencoder.dll"
 
   UnRegDLL "$INSTDIR\$vp8decoder_dll"
   UnRegDLL "$INSTDIR\$vp8encoder_dll"
+  UnRegDLL "$INSTDIR\$vp9decoder_dll"
   UnRegDLL "$INSTDIR\$webmmux_dll"
   UnRegDLL "$INSTDIR\$webmsource_dll"
   UnRegDLL "$INSTDIR\$webmsplit_dll"
   UnRegDLL "$INSTDIR\$webmcc_dll"
   UnRegDLL "$INSTDIR\$webmvorbisdecoder_dll"
+  UnRegDLL "$INSTDIR\$webmvorbisencoder_dll"
 
   RMDir /r /REBOOTOK $INSTDIR
 

@@ -393,6 +393,7 @@ MJH.Main = function() {
     process("playwebm");
     process("vp8decoder");
     process("vp8encoder");
+    process("vp9decoder");
     process("webmmux");
     process("webmsource");
     process("webmsplit");

@@ -1,13 +1,13 @@
 WebM Project DirectShow Filters
-v1.0.1.0 - 2013/10/02
+v1.0.2.0 - 2013/10/25
 http://www.webmproject.org/
 mailto:matthewjheaney@google.com
 
 
 Summary
-   The WebmM Project DirectShow Filters package ("webmdshow") allows you
-   to encode and decode VP8 video, and write and read WebM files, all using
-   Microsoft DirectShow.
+   The WebM Project DirectShow Filters package ("webmdshow") allows you to
+   encode and decode VP8 video (and decode VP9 video), encode and decode
+   Vorbis audio, and write and read WebM files, all using Microsoft DirectShow.
 
 
 Preliminaries
@@ -105,22 +105,25 @@ Description of Microsoft DirectShow and the WebM DirectShow Filters
    latter by the Windows shell.)
 
    The source filter exposes as many output pins as there are streams in the
-   WebM file.  This will typically be one VP8 video stream and one Vorbis
-   audio stream.  The WebM VP8DECODER filter (vp8decoder.dll) decodes the
-   VP8 video stream, which should be all you need for video rendering.
+   WebM file.  This will typically be one VP8 video stream (or possibly one VP9
+   video stream) and one Vorbis audio stream.  The WebM VP8DECODER filter
+   (vp8decoder.dll) decodes the VP8 video stream, which should be all you need
+   for video rendering.  The WebM VORBISDECODER filter (webmvorbisdecoder.dll)
+   decodes the Vorbis audio stream.
 
    The WEBMMUX filter (webmmux.dll) creates ("multiplexes") WebM files.  It
    accepts a VP8-encoded video input stream and a Vorbis-encoded audio input
    stream.  The VP8ENCODER filter (vp8encoder.dll) is used to encode the video,
    and is connected directly to the WEBMUX filter.
 
-   The WEBMVORBISDECODER filter (webmvorbisdecoder.dll) decodes the Vorbis
-   audio track in the WebM file.
+   The WEBMVORBISDECODER filter (webmvorbisdecoder.dll) decodes the Vorbis audio
+   track in the WebM file, and the WEBMVORBISENCODER (webmvorbisencoder.dll)
+   encodes Vorbis audio.
 
    You can also try the filters available here:
 
-      http://xiph.org/dshow/
       http://www.mediacodec.org/
+      http://xiph.org/dshow/
 
 
 Playing WebM Files on Windows using DirectShow
@@ -300,14 +303,14 @@ VP8 Encoder Filter Notes
 
    The VP8 encoder filter (as with the VP8 encoder library) only accepts
    YUV formats as input.  If you have a file or capture device with
-   RGB as output, you'll need a separate filter to convert from RGB to YUV.
-   The ffdshow filter will do such a conversion, but it might be disabled
+   RGB as output, you'll need the WEBMCC filter to convert from RGB to YUV.
+   (The ffdshow filter will also do such a conversion, but it might be disabled
    by default.  To enable it, open the Properties page for the ffdshow
    Video Decoder filter, and under the Codecs menu, find the Raw video item.
    Change the Decoder option so that it's not "disabled" (the values
    "all RGB" or "all supported" both seem to work), and then an instance
    of that filter will be created automatically when RGB-to-YUV conversion
-   is required.
+   is required.)
 
    The VP8 encoder also has a property page, so if you're using GraphEdit
    or similar you can modify encoder settings that way.  It works as follows.

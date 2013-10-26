@@ -50,8 +50,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,1,0
- PRODUCTVERSION 1,0,1,0
+ FILEVERSION 1,0,2,0
+ PRODUCTVERSION 1,0,2,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -68,12 +68,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Google"
             VALUE "FileDescription", "WebM Color Conversion Filter"
-            VALUE "FileVersion", "1, 0, 1, 0"
+            VALUE "FileVersion", "1, 0, 2, 0"
             VALUE "InternalName", "webmcc"
             VALUE "LegalCopyright", "Copyright (C) 2013"
             VALUE "OriginalFilename", "webmcc.dll"
             VALUE "ProductName", "WebM Color Conversion Filter"
-            VALUE "ProductVersion", "1, 0, 1, 0"
+            VALUE "ProductVersion", "1, 0, 2, 0"
         END
     END
     BLOCK "VarFileInfo"

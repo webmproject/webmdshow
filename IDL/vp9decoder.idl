@@ -1,0 +1,38 @@
+// Copyright (c) 2013 The WebM project authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS.  All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+    uuid(ED311108-5211-11DF-94AF-0026B977EEAA),
+    helpstring("VP9 Decoder Filter Type Library"),
+    version(1.0)
+]
+library VP9DecoderLib
+{
+
+[
+   object,
+   uuid(ED311109-5211-11DF-94AF-0026B977EEAA),
+   helpstring("VP9 Decoder Post-Processing Interface")
+]
+interface IVP9PostProcessing : IUnknown
+{
+}
+
+[
+   uuid(ED31110A-5211-11DF-94AF-0026B977EEAA),
+   helpstring("VP9 Decoder Filter Class")
+]
+coclass VP9Decoder
+{
+   [default] interface IVP9PostProcessing;
+}
+
+}  //end library VP9DecoderLib
