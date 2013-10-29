@@ -325,7 +325,9 @@ HRESULT Outpin::QueryAccept(const AM_MEDIA_TYPE* pmt_query)
     if (mt_query.majortype != MEDIATYPE_Video)
         return S_FALSE;
 
-    if (mt_query.subtype == MEDIASUBTYPE_YV12)
+    if (mt_query.subtype == MEDIASUBTYPE_NV12)
+        __noop;
+    else if (mt_query.subtype == MEDIASUBTYPE_YV12)
         __noop;
     else if (mt_query.subtype == WebmTypes::MEDIASUBTYPE_I420)
         __noop;
@@ -862,6 +864,10 @@ void Outpin::OnInpinConnect(const AM_MEDIA_TYPE& mtIn)
 #if 1
     bmih.biBitCount = 12;  //?
     bmih.biSizeImage = w*h + 2*((w+1)/2 * (h+1)/2);
+
+    mt.subtype = MEDIASUBTYPE_NV12;
+    bmih.biCompression = mt.subtype.Data1;
+    m_preferred_mtv.Add(mt);
 
     mt.subtype = MEDIASUBTYPE_YV12;
     bmih.biCompression = mt.subtype.Data1;

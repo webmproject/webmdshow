@@ -553,7 +553,10 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
     assert(mt.pbFormat);
 
-    if (mt.subtype == MEDIASUBTYPE_YV12)
+    if (mt.subtype == MEDIASUBTYPE_NV12)
+        CopyToPlanar(f, pOutSample, mt);
+
+    else if (mt.subtype == MEDIASUBTYPE_YV12)
         CopyToPlanar(f, pOutSample, mt);
 
     else if (mt.subtype == WebmTypes::MEDIASUBTYPE_I420)
@@ -691,8 +694,6 @@ void Inpin::CopyToPlanar(
         pOut += strideOut;
     }
 
-    strideOut /= 2;
-
     wIn = (wIn + 1) / 2;
     hIn = (hIn + 1) / 2;
 
@@ -706,8 +707,31 @@ void Inpin::CopyToPlanar(
 
     const int strideInU = f->stride[PLANE_U];
 
-    if (mt.subtype == MEDIASUBTYPE_YV12)
+    if (mt.subtype == MEDIASUBTYPE_NV12)
     {
+        //UV
+
+        for (unsigned int y = 0; y < hIn; ++y)
+        {
+            const BYTE* u = pInU;
+            const BYTE* v = pInV;
+            BYTE* uv = pOut;
+
+            for (unsigned int idx = 0; idx < wIn; ++idx)
+            {
+                *uv++ = *u++;
+                *uv++ = *v++;
+            }
+
+            pInU += strideInU;
+            pInV += strideInV;
+            pOut += strideOut;
+        }
+    }
+    else if (mt.subtype == MEDIASUBTYPE_YV12)
+    {
+        strideOut /= 2;
+
         //V
 
         for (unsigned int y = 0; y < hIn; ++y)
@@ -728,6 +752,8 @@ void Inpin::CopyToPlanar(
     }
     else
     {
+        strideOut /= 2;
+
         //U
 
         for (unsigned int y = 0; y < hIn; ++y)

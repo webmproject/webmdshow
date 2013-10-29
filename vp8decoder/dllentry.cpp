@@ -167,9 +167,10 @@ STDAPI DllRegisterServer()
 
     REGFILTERPINS& outpin = pins[1];
 
-    enum { nOutpinMediaTypes = 6 };
+    enum { nOutpinMediaTypes = 7 };
     const REGPINTYPES outpinMediaTypes[nOutpinMediaTypes] =
     {
+        { &MEDIATYPE_Video, &MEDIASUBTYPE_NV12 },
         { &MEDIATYPE_Video, &MEDIASUBTYPE_YV12 },
         { &MEDIATYPE_Video, &WebmTypes::MEDIASUBTYPE_I420 },
         { &MEDIATYPE_Video, &MEDIASUBTYPE_UYVY },
