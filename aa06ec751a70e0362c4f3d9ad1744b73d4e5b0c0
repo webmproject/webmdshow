@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdX///Hs\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 713,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2013-10-30T23:39:35Z",
+      "side": 1,
+      "message": "nit: Add a comment here that the chroma isn\u0027t actually planar. Function name seems misleading w/o it.",
+      "revId": "aa06ec751a70e0362c4f3d9ad1744b73d4e5b0c0",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdX///Ho\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 754,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2013-10-30T23:39:35Z",
+      "side": 1,
+      "message": "nit: comment that this is I420?",
+      "revId": "aa06ec751a70e0362c4f3d9ad1744b73d4e5b0c0",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
