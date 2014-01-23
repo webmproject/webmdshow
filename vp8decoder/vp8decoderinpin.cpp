@@ -14,6 +14,7 @@
 #include "graphutil.hpp"
 #include "webmtypes.hpp"
 #include <vfwmsgs.h>
+#include <dvdmedia.h>
 #include <uuids.h>
 #include <cassert>
 #include <evcode.h>
@@ -549,30 +550,59 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     }
 
     const AM_MEDIA_TYPE& mt = outpin.m_connection_mtv[0];
-    assert(mt.formattype == FORMAT_VideoInfo);
-    assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
-    assert(mt.pbFormat);
+
+    const BITMAPINFOHEADER* bmih_ptr;
+    const RECT* rc_ptr;
+
+    if (mt.formattype == FORMAT_VideoInfo)
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER));
+        assert(mt.pbFormat);
+
+        const VIDEOINFOHEADER& vih_out = (VIDEOINFOHEADER&)(*mt.pbFormat);
+        const RECT& rc_out = vih_out.rcSource;
+        const BITMAPINFOHEADER& bmih_out = vih_out.bmiHeader;
+
+        bmih_ptr = &bmih_out;
+        rc_ptr = &rc_out;
+    }
+    else if (mt.formattype == FORMAT_VideoInfo2)
+    {
+        assert(mt.cbFormat >= sizeof(VIDEOINFOHEADER2));
+        assert(mt.pbFormat);
+
+        const VIDEOINFOHEADER2& vih2_out = (VIDEOINFOHEADER2&)(*mt.pbFormat);
+        const RECT& rc_out = vih2_out.rcSource;
+        const BITMAPINFOHEADER& bmih_out = vih2_out.bmiHeader;
+
+        bmih_ptr = &bmih_out;
+        rc_ptr = &rc_out;
+    }
+    else
+    {
+        return E_FAIL;
+    }
 
     if (mt.subtype == MEDIASUBTYPE_NV12)
-        CopyToPlanar(f, pOutSample, mt);
+        CopyToPlanar(f, pOutSample, mt.subtype, *bmih_ptr);
 
     else if (mt.subtype == MEDIASUBTYPE_YV12)
-        CopyToPlanar(f, pOutSample, mt);
+        CopyToPlanar(f, pOutSample, mt.subtype, *bmih_ptr);
 
     else if (mt.subtype == WebmTypes::MEDIASUBTYPE_I420)
-        CopyToPlanar(f, pOutSample, mt);
+        CopyToPlanar(f, pOutSample, mt.subtype, *bmih_ptr);
 
     else if (mt.subtype == MEDIASUBTYPE_UYVY)
-        CopyToPacked(f, pOutSample, mt);
+        CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
 
     else if (mt.subtype == MEDIASUBTYPE_YUY2)
-        CopyToPacked(f, pOutSample, mt);
+        CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
 
     else if (mt.subtype == MEDIASUBTYPE_YUYV)
-        CopyToPacked(f, pOutSample, mt);
+        CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
 
     else if (mt.subtype == MEDIASUBTYPE_YVYU)
-        CopyToPacked(f, pOutSample, mt);
+        CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
 
     else
         return E_FAIL;
@@ -660,18 +690,16 @@ HRESULT Inpin::ReceiveMultiple(
 void Inpin::CopyToPlanar(
     const vpx_image_t* f,
     IMediaSample* pOutSample,
-    const AM_MEDIA_TYPE& mt)
+    const GUID& subtype_out,
+    const BITMAPINFOHEADER& bmih_out)
 {
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
-
     //Y
 
     const BYTE* pInY = f->planes[PLANE_Y];
     assert(pInY);
 
-    unsigned int wIn = f->d_w;
-    unsigned int hIn = f->d_h;
+    unsigned int width_in = f->d_w;
+    unsigned int height_in = f->d_h;
 
     BYTE* pOutBuf;
 
@@ -683,19 +711,19 @@ void Inpin::CopyToPlanar(
 
     const int strideInY = f->stride[PLANE_Y];
 
-    LONG strideOut = bmih.biWidth;
+    LONG strideOut = bmih_out.biWidth;
     assert(strideOut);
     assert((strideOut % 2) == 0);  //?
 
-    for (unsigned int y = 0; y < hIn; ++y)
+    for (unsigned int y = 0; y < height_in; ++y)
     {
-        memcpy(pOut, pInY, wIn);
+        memcpy(pOut, pInY, width_in);
         pInY += strideInY;
         pOut += strideOut;
     }
 
-    wIn = (wIn + 1) / 2;
-    hIn = (hIn + 1) / 2;
+    width_in = (width_in + 1) / 2;
+    height_in = (height_in + 1) / 2;
 
     const BYTE* pInV = f->planes[PLANE_V];
     assert(pInV);
@@ -707,20 +735,20 @@ void Inpin::CopyToPlanar(
 
     const int strideInU = f->stride[PLANE_U];
 
-    if (mt.subtype == MEDIASUBTYPE_NV12)
+    if (subtype_out == MEDIASUBTYPE_NV12)
     {
         //Note that while NV12 is considered a planar format,
         //the chroma plane packs the UV samples.
 
         //UV
 
-        for (unsigned int y = 0; y < hIn; ++y)
+        for (unsigned int y = 0; y < height_in; ++y)
         {
             const BYTE* u = pInU;
             const BYTE* v = pInV;
             BYTE* uv = pOut;
 
-            for (unsigned int idx = 0; idx < wIn; ++idx)
+            for (unsigned int idx = 0; idx < width_in; ++idx)
             {
                 *uv++ = *u++;
                 *uv++ = *v++;
@@ -731,47 +759,47 @@ void Inpin::CopyToPlanar(
             pOut += strideOut;
         }
     }
-    else if (mt.subtype == MEDIASUBTYPE_YV12)
+    else if (subtype_out == MEDIASUBTYPE_YV12)
     {
         strideOut /= 2;
 
         //V
 
-        for (unsigned int y = 0; y < hIn; ++y)
+        for (unsigned int y = 0; y < height_in; ++y)
         {
-            memcpy(pOut, pInV, wIn);
+            memcpy(pOut, pInV, width_in);
             pInV += strideInV;
             pOut += strideOut;
         }
 
         //U
 
-        for (unsigned int y = 0; y < hIn; ++y)
+        for (unsigned int y = 0; y < height_in; ++y)
         {
-            memcpy(pOut, pInU, wIn);
+            memcpy(pOut, pInU, width_in);
             pInU += strideInU;
             pOut += strideOut;
         }
     }
     else
     {
-        assert(mt.subtype == WebmTypes::MEDIASUBTYPE_I420);
+        assert(subtype_out == WebmTypes::MEDIASUBTYPE_I420);
         strideOut /= 2;
 
         //U
 
-        for (unsigned int y = 0; y < hIn; ++y)
+        for (unsigned int y = 0; y < height_in; ++y)
         {
-            memcpy(pOut, pInU, wIn);
+            memcpy(pOut, pInU, width_in);
             pInU += strideInU;
             pOut += strideOut;
         }
 
         //V
 
-        for (unsigned int y = 0; y < hIn; ++y)
+        for (unsigned int y = 0; y < height_in; ++y)
         {
-            memcpy(pOut, pInV, wIn);
+            memcpy(pOut, pInV, width_in);
             pInV += strideInV;
             pOut += strideOut;
         }
@@ -788,23 +816,22 @@ void Inpin::CopyToPlanar(
 void Inpin::CopyToPacked(
     const vpx_image_t* f,
     IMediaSample* pOutSample,
-    const AM_MEDIA_TYPE& mt)
+    const GUID& subtype_out,
+    const RECT& rc_out,
+    const BITMAPINFOHEADER& bmih_out)
 {
-    const VIDEOINFOHEADER& vih = (VIDEOINFOHEADER&)(*mt.pbFormat);
-    const BITMAPINFOHEADER& bmih = vih.bmiHeader;
+    const LONG rect_width_out = rc_out.right - rc_out.left;
+    assert(rect_width_out >= 0);
 
-    const RECT& rc = vih.rcSource;
+    const LONG width_out = (rect_width_out > 0) ? rect_width_out
+                                                : bmih_out.biWidth;
+    assert(width_out > 0);
 
-    const LONG wwOut = rc.right - rc.left;
-    assert(wwOut >= 0);
+    const LONG rect_height_out = rc_out.bottom - rc_out.top;
+    assert(rect_height_out >= 0);
 
-    const LONG wOut = (wwOut > 0) ? wwOut : bmih.biWidth;
-    assert(wOut > 0);
-
-    const LONG hhOut = rc.bottom - rc.top;
-    assert(hhOut >= 0);
-
-    const LONG hOut = (hhOut > 0) ? hhOut : labs(bmih.biHeight);
+    const LONG height_out = (rect_height_out > 0) ? rect_height_out
+                                                  : labs(bmih_out.biHeight);
 
     const BYTE* pInY_base = f->planes[PLANE_Y];
     assert(pInY_base);
@@ -821,11 +848,11 @@ void Inpin::CopyToPacked(
 
     const int strideInU = f->stride[PLANE_U];
 
-    const unsigned int wIn = f->d_w;
-    assert(LONG(wIn) == wOut);
+    const unsigned int width_in = f->d_w;
+    assert(LONG(width_in) == width_out);
 
-    const unsigned int hIn = f->d_h;
-    assert(LONG(hIn) == hOut);
+    const unsigned int height_in = f->d_h;
+    assert(LONG(height_in) == height_out);
 
     BYTE* pOutBuf;
 
@@ -833,27 +860,27 @@ void Inpin::CopyToPacked(
     assert(SUCCEEDED(hr));
     assert(pOutBuf);
 
-    const LONG strideOut_ = 2*wIn;
+    const LONG strideOut_ = 2 * width_in;
     LONG strideOut;
 
-    if (bmih.biWidth < strideOut_)
+    if (bmih_out.biWidth < strideOut_)
         strideOut = strideOut_;
     else
-        strideOut = bmih.biWidth;
+        strideOut = bmih_out.biWidth;
 
-    const LONG uv_width = wIn / 2;
-    const LONG uv_height = hIn / 2;
+    const LONG uv_width = width_in / 2;
+    const LONG uv_height = height_in / 2;
 
     int u_off, v_off, y_off;
 
-    if (mt.subtype == MEDIASUBTYPE_UYVY)
+    if (subtype_out == MEDIASUBTYPE_UYVY)
     {
         u_off = 0;
         v_off = 2;
         y_off = 1;
     }
-    else if ((mt.subtype == MEDIASUBTYPE_YUY2) ||
-             (mt.subtype == MEDIASUBTYPE_YUYV))
+    else if ((subtype_out == MEDIASUBTYPE_YUY2) ||
+             (subtype_out == MEDIASUBTYPE_YUYV))
     {
         u_off = 1;
         v_off = 3;
@@ -861,7 +888,7 @@ void Inpin::CopyToPacked(
     }
     else
     {
-        assert(mt.subtype == MEDIASUBTYPE_YVYU);
+        assert(subtype_out == MEDIASUBTYPE_YVYU);
 
         u_off = 3;
         v_off = 1;

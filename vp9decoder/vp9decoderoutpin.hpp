@@ -115,6 +115,45 @@ protected:
 private:
     void SetDefaultMediaTypes();
 
+    static HRESULT QueryAcceptVideoInfo(
+      const AM_MEDIA_TYPE& mt_in,
+      const AM_MEDIA_TYPE& mt_out);
+
+    static HRESULT QueryAcceptVideoInfo2(
+      const AM_MEDIA_TYPE& mt_in,
+      const AM_MEDIA_TYPE& mt_out);
+
+    static bool VetBMIH(
+      const VIDEOINFOHEADER& vih_in,
+      const GUID& subtype_out,
+      const RECT& rc_out,
+      const BITMAPINFOHEADER& bmih_out);
+
+    void GetConnectionDimensions(LONG& w, LONG& h) const;
+
+    void AddPreferred(const GUID& subtype,
+                      REFERENCE_TIME AvgTimePerFrame,
+                      LONG width,
+                      LONG height,
+                      DWORD dwBitCount,
+                      DWORD dwSizeImage);
+
+    static void AddVIH(CMediaTypes&,
+                       const GUID& subtype,
+                       REFERENCE_TIME AvgTimePerFrame,
+                       LONG width,
+                       LONG height,
+                       DWORD dwBitCount,
+                       DWORD dwSizeImage);
+
+    static void AddVIH2(CMediaTypes&,
+                        const GUID& subtype,
+                        REFERENCE_TIME AvgTimePerFrame,
+                        LONG width,
+                        LONG height,
+                        DWORD dwBitCount,
+                        DWORD dwSizeImage);
+
 };
 
 }  //end namespace VP9DecoderLib

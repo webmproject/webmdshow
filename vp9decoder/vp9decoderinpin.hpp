@@ -95,14 +95,17 @@ private:
     vpx_codec_ctx_t m_ctx;
 
     static void CopyToPlanar(
-        const vpx_image_t*,
-        IMediaSample*,
-        const AM_MEDIA_TYPE&);
+        const vpx_image_t* image,
+        IMediaSample* sample,
+        const GUID& subtype_out,
+        const BITMAPINFOHEADER& bmih_out);
 
     static void CopyToPacked(
-        const vpx_image_t*,
-        IMediaSample*,
-        const AM_MEDIA_TYPE&);
+        const vpx_image_t* image,
+        IMediaSample* sample,
+        const GUID& subtype_out,
+        const RECT& rc_out,
+        const BITMAPINFOHEADER& bmih_out);
 
 };
 
