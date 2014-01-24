@@ -1,0 +1,344 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//7Yc\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Do we really need the comment about VIDEOINFOHEADER2? Is it the only thing we use from dvdmedia.h? Would prefer to omit the comment.\n\nAlso, include order: Do we even care in here? Does fixing the order in here break the build? (probably better to ignore this latter bit and save it for a new CL)",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7YQ\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 571,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Remove this assert, add an else, and return an error?\n\nOr maybe a check that mt.formattype is VideoInfo or VideoInfo2 earlier on in the function, and fail there.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Vc\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 820,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "s/wwOut/out_rect_width/ ?\n\nMainly because I have to read the code to determine the purpose of wwOut.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7VU\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 826,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Ditto/out_rect_height ?",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Qc\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Please add variable names here and in CopyToPacked.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7QY\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Ditto on the type comments.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7QM\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 359,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Should probably drop the \u0027_\u0027: this and the VideoInfo2 variant should match the convention in the rest of the file.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7QI\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 366,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Return errors in case of NDEBUG?",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7QE\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 376,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Ehh... c-style casts bad.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7QA\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 409,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Are these needed?",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7P8\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 422,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Ditto.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7P4\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 477,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Brackets around all blocks when on block has them.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7P0\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 910,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "spaces around \u0027*\u0027",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Pw\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 965,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Early returns for asserts? (at least pbFormat?)",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Ps\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1007,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Wrap these.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Po\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1035,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "TODO what? :)",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Pk\u003d",
+        "filename": "vp8decoder/vp8decoderoutpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1044,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "-1, snark!",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Pg\u003d",
+        "filename": "vp9decoder/vp9decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Ditto/type.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7Pc\u003d",
+        "filename": "vp9decoder/vp9decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 560,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "fail on NULL pbFormat?",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//7PY\u003d",
+        "filename": "vp9decoder/vp9decoderinpin.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 817,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-01-24T06:47:05Z",
+      "side": 1,
+      "message": "Ditto naming.",
+      "revId": "4254a73fe6a2a917ecc4bbce0ba424b5c7016495",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
