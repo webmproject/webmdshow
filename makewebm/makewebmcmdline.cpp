@@ -53,6 +53,7 @@ CmdLine::CmdLine() :
     m_thread_count(-1),
     m_error_resilient(-1),
     m_end_usage(-1),
+    m_encoder_kind(-1),
     m_lag_in_frames(-1),
     m_token_partitions(-1),
     m_two_pass(-1),
@@ -71,6 +72,124 @@ CmdLine::CmdLine() :
     m_ogg_to_webm(-1),
     m_cpu_used(-17)
 {
+}
+
+
+void CmdLine::PrintUsage() const
+{
+    wcout << L"usage: makewebm <opts> <args>\n";
+
+    wcout << L"  -i, --input                     input filename\n"
+          << L"  --audio-input                   audio input filename\n"
+          << L"  -o, --output                    output filename\n"
+          << L"  --deadline                      "
+          << L"max time for frame encode (in microseconds)\n"
+          << L"  --decoder-buffer-size           "
+          << L"buffer size (in milliseconds)\n"
+          << L"  --decoder-buffer-initial-size   "
+          << L"before playback (in milliseconds)\n"
+          << L"  --decoder-buffer-optimal-size   "
+          << L"desired size (in milliseconds)\n"
+          << L"  --dropframe-threshold           temporal resampling\n"
+          << L"  --end-usage                     {\"VBR\"|\"CBR\"}\n"
+          << L"  --error-resilient               "
+          << L"defend against lossy or noisy links\n"
+          << L"  --encoder                       {\"VP8\"|\"VP9\"}\n"
+          << L"  --keyframe-frequency            "
+          << L"time (in sec) between keyframes\n"
+          << L"  --keyframe-mode                 {\"disabled\"|\"auto\"}\n"
+          << L"  --keyframe-min-interval         "
+          << L"min distance between keyframes\n"
+          << L"  --keyframe-max-interval         "
+          << L"max distable between keyframes\n"
+          << L"  --lag-in-frames                 "
+          << L"consume frames before producing\n"
+          << L"  --min-quantizer                 "
+          << L"min (best quality) quantizer\n"
+          << L"  --max-quantizer                 "
+          << L"max (worst quality) quantizer\n"
+          << L"  --no-video                      "
+          << L"do not render video (if present)\n"
+          << L"  --require-audio                 "
+          << L"quit if no audio encoder available\n"
+          << L"  --no-audio                      "
+          << L"do not render audio (if present)\n"
+          << L"  --resize-allowed                spatial resampling\n"
+          << L"  --resize-up-threshold           "
+          << L"spatial resampling up threshold\n"
+          << L"  --resize-down-threshold         "
+          << L"spatial resampling down threshold\n"
+          << L"  --script-mode                   "
+          << L"print progress in script-friendly way\n"
+          << L"  --save-graph                    "
+          << L"save graph as GraphEdit storage file (*.grf)\n"
+          << L"  --target-bitrate                "
+          << L"target bandwidth (in kilobits/second)\n"
+          << L"  --thread-count                  "
+          << L"number of threads to use for VP8 encoding\n"
+          << L"  --token-partitions              number of sub-streams\n"
+          << L"  --two-pass                      two-pass encoding\n"
+          << L"  --two-pass-vbr-bias-pct         CBR/VBR bias\n"
+          << L"  --two-pass-vbr-minsection-pct   minimum bitrate\n"
+          << L"  --two-pass-vbr-maxsection-pct   maximum bitrate\n"
+          << L"  --undershoot-pct                "
+          << L"percent of target bitrate for easier frames\n"
+          << L"  --overshoot-pct                 "
+          << L"percent of target bitrate for harder frames\n"
+          << L"  --auto-alt-ref                  "
+          << L"encoder may create alternate reference frames\n"
+          << L"  --arnr-maxframes                "
+          << L"max number of frames to use on filter\n"
+          << L"  --arnr-strength                 strength of filter\n"
+          << L"  --arnr-type                     type of filter\n"
+          << L"  --live                          live mode WebM output\n"
+          << L"  --cpu-used                      encoder speed\n"
+          << L"  -l, --list                      "
+          << L"print switch values, but do not run app\n"
+          << L"  -v, --verbose                   "
+          << L"print verbose list or usage info\n"
+          << L"  -V, --version                   print version information\n"
+          << L"  -?, -h, --help                  print usage\n"
+          << L"  -??, -hh, --?                   print verbose usage\n";
+
+    if (!m_verbose)
+    {
+        wcout << endl;
+        return;
+    }
+
+    wcout << L'\n'
+          << L"The order of appearance of switches and arguments\n"
+          << L"on the command line does not matter.\n"
+          << L'\n'
+          << L"Long-form switches may be abbreviated, and are "
+          << L"case-insensitive.\n"
+          << L"They may also be specified using Windows-style syntax, "
+          << L"using a\n"
+          << L"forward slash for the switch.\n";
+
+    wcout << L'\n'
+          << L"The input filename must be specified, as either a switch\n"
+          << L"value or as a command-line argument.\n"
+          << L'\n'
+          << L"The output filename may be specified as either a switch\n"
+          << L"value or command-line argument, but it may also be omitted.\n"
+          << L"If omitted, its value is synthesized from the input "
+          << L"filename.\n";
+
+    wcout << L'\n'
+          << L"The deadline value specifies the maximum amount of time\n"
+          << L"(in microseconds) allowed for VP8 encoding of a video frame.\n"
+          << L"The following distinguished values are also defined:\n"
+          << L"  0 (or \"best\", or \"infinite\") means take as long as\n"
+          << L"    necessary to achieve best quality\n"
+          << L"  1 (or \"realtime\") means real-time encoding\n"
+          << L"  1000000 (or \"good\") means good quality (the default)\n";
+
+    wcout << '\n'
+          << "TODO: MORE PARAMS TO BE DESCRIBED HERE\n";
+
+    wcout << endl;
 }
 
 
@@ -1033,6 +1152,58 @@ int CmdLine::ParseLongPost(
         return n;
     }
 
+    if (_wcsnicmp(arg, L"encoder", len) == 0)
+    {
+        int n;
+        const wchar_t* value;
+        size_t value_length;
+
+        if (has_value)
+        {
+            value = arg + len + 1;
+            value_length = wcslen(value);
+
+            if (value_length == 0)
+            {
+                wcout << "No value specified for encoder switch." << endl;
+                return -1;  // error
+            }
+
+            n = 1;
+        }
+        else
+        {
+            value = *++i;
+
+            if (value == 0)
+            {
+                wcout << "No value specified for encoder switch." << endl;
+                return -1;  //error
+            }
+
+            value_length = wcslen(value);
+            n = 2;
+        }
+
+        if ((_wcsnicmp(value, L"vp8", value_length) == 0) ||
+            (_wcsnicmp(value, L"8", value_length) == 0))
+        {
+            m_encoder_kind = kVP8Encoder;
+        }
+        else if ((_wcsnicmp(value, L"vp9", value_length) == 0) ||
+                 (_wcsnicmp(value, L"9", value_length) == 0))
+        {
+            m_encoder_kind = kVP9Encoder;
+        }
+        else
+        {
+            wcout << "Bad value specified for encoder switch." << endl;
+            return -1;  //error
+        }
+
+        return n;
+    }
+
     if (_wcsnicmp(arg, L"error-resilient", len) == 0)
     {
         int n;
@@ -1659,6 +1830,12 @@ int CmdLine::GetEndUsage() const
 }
 
 
+int CmdLine::GetEncoderKind() const
+{
+    return m_encoder_kind;
+}
+
+
 int CmdLine::GetLagInFrames() const
 {
     return m_lag_in_frames;
@@ -1736,123 +1913,6 @@ void CmdLine::PrintVersion() const
     assert(fname);
 
     VersionHandling::GetVersion(fname, wcout);
-
-    wcout << endl;
-}
-
-
-void CmdLine::PrintUsage() const
-{
-    wcout << L"usage: makewebm <opts> <args>\n";
-
-    wcout << L"  -i, --input                     input filename\n"
-          << L"  --audio-input                   audio input filename\n"
-          << L"  -o, --output                    output filename\n"
-          << L"  --deadline                      "
-          << L"max time for frame encode (in microseconds)\n"
-          << L"  --decoder-buffer-size           "
-          << L"buffer size (in milliseconds)\n"
-          << L"  --decoder-buffer-initial-size   "
-          << L"before playback (in milliseconds)\n"
-          << L"  --decoder-buffer-optimal-size   "
-          << L"desired size (in milliseconds)\n"
-          << L"  --dropframe-threshold           temporal resampling\n"
-          << L"  --end-usage                     {\"VBR\"|\"CBR\"}\n"
-          << L"  --error-resilient               "
-          << L"defend against lossy or noisy links\n"
-          << L"  --keyframe-frequency            "
-          << L"time (in sec) between keyframes\n"
-          << L"  --keyframe-mode                 {\"disabled\"|\"auto\"}\n"
-          << L"  --keyframe-min-interval         "
-          << L"min distance between keyframes\n"
-          << L"  --keyframe-max-interval         "
-          << L"max distable between keyframes\n"
-          << L"  --lag-in-frames                 "
-          << L"consume frames before producing\n"
-          << L"  --min-quantizer                 "
-          << L"min (best quality) quantizer\n"
-          << L"  --max-quantizer                 "
-          << L"max (worst quality) quantizer\n"
-          << L"  --no-video                      "
-          << L"do not render video (if present)\n"
-          << L"  --require-audio                 "
-          << L"quit if no audio encoder available\n"
-          << L"  --no-audio                      "
-          << L"do not render audio (if present)\n"
-          << L"  --resize-allowed                spatial resampling\n"
-          << L"  --resize-up-threshold           "
-          << L"spatial resampling up threshold\n"
-          << L"  --resize-down-threshold         "
-          << L"spatial resampling down threshold\n"
-          << L"  --script-mode                   "
-          << L"print progress in script-friendly way\n"
-          << L"  --save-graph                    "
-          << L"save graph as GraphEdit storage file (*.grf)\n"
-          << L"  --target-bitrate                "
-          << L"target bandwidth (in kilobits/second)\n"
-          << L"  --thread-count                  "
-          << L"number of threads to use for VP8 encoding\n"
-          << L"  --token-partitions              number of sub-streams\n"
-          << L"  --two-pass                      two-pass encoding\n"
-          << L"  --two-pass-vbr-bias-pct         CBR/VBR bias\n"
-          << L"  --two-pass-vbr-minsection-pct   minimum bitrate\n"
-          << L"  --two-pass-vbr-maxsection-pct   maximum bitrate\n"
-          << L"  --undershoot-pct                "
-          << L"percent of target bitrate for easier frames\n"
-          << L"  --overshoot-pct                 "
-          << L"percent of target bitrate for harder frames\n"
-          << L"  --auto-alt-ref                  "
-          << L"encoder may create alternate reference frames\n"
-          << L"  --arnr-maxframes                "
-          << L"max number of frames to use on filter\n"
-          << L"  --arnr-strength                 strength of filter\n"
-          << L"  --arnr-type                     type of filter\n"
-          << L"  --live                          live mode WebM output\n"
-          << L"  --cpu-used                      encoder speed\n"
-          << L"  -l, --list                      "
-          << L"print switch values, but do not run app\n"
-          << L"  -v, --verbose                   "
-          << L"print verbose list or usage info\n"
-          << L"  -V, --version                   print version information\n"
-          << L"  -?, -h, --help                  print usage\n"
-          << L"  -??, -hh, --?                   print verbose usage\n";
-
-    if (!m_verbose)
-    {
-        wcout << endl;
-        return;
-    }
-
-    wcout << L'\n'
-          << L"The order of appearance of switches and arguments\n"
-          << L"on the command line does not matter.\n"
-          << L'\n'
-          << L"Long-form switches may be abbreviated, and are "
-          << L"case-insensitive.\n"
-          << L"They may also be specified using Windows-style syntax, "
-          << L"using a\n"
-          << L"forward slash for the switch.\n";
-
-    wcout << L'\n'
-          << L"The input filename must be specified, as either a switch\n"
-          << L"value or as a command-line argument.\n"
-          << L'\n'
-          << L"The output filename may be specified as either a switch\n"
-          << L"value or command-line argument, but it may also be omitted.\n"
-          << L"If omitted, its value is synthesized from the input "
-          << L"filename.\n";
-
-    wcout << L'\n'
-          << L"The deadline value specifies the maximum amount of time\n"
-          << L"(in microseconds) allowed for VP8 encoding of a video frame.\n"
-          << L"The following distinguished values are also defined:\n"
-          << L"  0 (or \"best\", or \"infinite\") means take as long as\n"
-          << L"    necessary to achieve best quality\n"
-          << L"  1 (or \"realtime\") means real-time encoding\n"
-          << L"  1000000 (or \"good\") means good quality (the default)\n";
-
-    wcout << '\n'
-          << "TODO: MORE PARAMS TO BE DESCRIBED HERE\n";
 
     wcout << endl;
 }
@@ -1972,7 +2032,7 @@ void CmdLine::ListArgs() const
               << m_decoder_buffer_optimal_size;
 
         if (m_decoder_buffer_optimal_size == 0)
-            wcout << " (use encoder default)";
+            wcout << L" (use encoder default)";
 
         wcout << L'\n';
     }
@@ -1985,11 +2045,30 @@ void CmdLine::ListArgs() const
         {
             case kEndUsageVBR:
             default:
-                wcout << "VBR";
+                wcout << L"VBR";
                 break;
 
             case kEndUsageCBR:
-                wcout << "CBR";
+                wcout << L"CBR";
+                break;
+        }
+
+        wcout << L'\n';
+    }
+
+    if (m_encoder_kind >= 0)
+    {
+        wcout << L"encoder: ";
+
+        switch (m_encoder_kind)
+        {
+            case kVP8Encoder:
+            default:
+                wcout << L"VP8";
+                break;
+
+            case kVP9Encoder:
+                wcout << L"VP9";
                 break;
         }
 

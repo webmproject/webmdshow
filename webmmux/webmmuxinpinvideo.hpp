@@ -35,11 +35,11 @@ protected:
 
     HANDLE GetOtherHandle() const;
 
-    HRESULT QueryAcceptVP80(const AM_MEDIA_TYPE&) const;
+    HRESULT QueryAcceptVPx(const AM_MEDIA_TYPE&) const;
     HRESULT VetBitmapInfoHeader(const BITMAPINFOHEADER&) const;
-    HRESULT GetAllocatorRequirementsVP80(ALLOCATOR_PROPERTIES&) const;
+    HRESULT GetAllocatorRequirementsVPx(ALLOCATOR_PROPERTIES&) const;
 
-    static StreamVideo* CreateStreamVP80(Context&, const AM_MEDIA_TYPE&);
+    static StreamVideo* CreateStreamVPx(Context&, const AM_MEDIA_TYPE&);
 
 };
 

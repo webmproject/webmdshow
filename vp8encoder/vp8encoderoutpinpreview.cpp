@@ -33,7 +33,6 @@ namespace VP8EncoderLib
 OutpinPreview::OutpinPreview(Filter* pFilter) :
     Outpin(pFilter, L"preview")
 {
-    SetDefaultMediaTypes();
 }
 
 

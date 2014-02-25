@@ -65,6 +65,7 @@ public:
     const wchar_t* GetSaveGraphFile() const;
     int GetOggToWebm() const;
     int GetCPUUsed() const;
+    int GetEncoderKind() const;
 
     static std::wstring GetPath(const wchar_t*);
 
@@ -105,6 +106,7 @@ private:
     int m_resize_down_thresh;
     int m_error_resilient;
     int m_end_usage;
+    int m_encoder_kind;
     int m_lag_in_frames;
     int m_token_partitions;
     int m_two_pass;

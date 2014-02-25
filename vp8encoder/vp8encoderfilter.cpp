@@ -95,6 +95,9 @@ Filter::Filter(IClassFactory* pClassFactory, IUnknown* pOuter)
 
     m_cfg.Init();
 
+    m_outpin_video.SetDefaultMediaTypes();
+    m_outpin_preview.SetDefaultMediaTypes();
+
 #ifdef _DEBUG
     odbgstream os;
     os << "vp8enc::filter::ctor" << endl;
@@ -116,6 +119,7 @@ Filter::~Filter()
 
 void Filter::Config::Init()
 {
+    encoder_kind = 0;  //TODO(matthewjheaney): resolve whether we need -1 here
     deadline = -1;
     threads = -1;
     error_resilient = -1;
@@ -187,6 +191,10 @@ HRESULT Filter::CNondelegating::QueryInterface(
     else if (iid == __uuidof(IPersistStream))
     {
         pUnk = static_cast<IPersistStream*>(m_pFilter);
+    }
+    else if (iid == __uuidof(IVPXEncoder))
+    {
+        pUnk = static_cast<IVPXEncoder*>(m_pFilter);
     }
     else if (iid == __uuidof(IVP8Encoder))
     {
@@ -1878,6 +1886,7 @@ HRESULT Filter::SetDecimate(int decimate)
     return hr;
 }
 
+
 HRESULT Filter::GetDecimate(int* pDecimate)
 {
     if (pDecimate == 0)
@@ -1891,6 +1900,55 @@ HRESULT Filter::GetDecimate(int* pDecimate)
         return hr;
 
     *pDecimate = m_decimate;
+    return S_OK;
+}
+
+
+HRESULT Filter::SetEncoderKind(VPXEncoderKind encoder_kind)
+{
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    if (encoder_kind == m_cfg.encoder_kind)  // idempotent
+        return S_FALSE;      // means "success, but no change"
+
+    if (m_state != State_Stopped)
+        return VFW_E_NOT_STOPPED;
+
+    if (bool(m_inpin.m_pPinConnection) ||
+        bool(m_outpin_video.m_pPinConnection) ||
+        bool (m_outpin_preview.m_pPinConnection))
+    {
+        return VFW_E_ALREADY_CONNECTED;
+    }
+
+    m_cfg.encoder_kind = encoder_kind;
+    m_bDirty = true;
+
+    m_outpin_video.SetDefaultMediaTypes();
+    m_outpin_preview.SetDefaultMediaTypes();
+
+    return S_OK;
+}
+
+
+HRESULT Filter::GetEncoderKind(VPXEncoderKind* pEncoderKind)
+{
+    if (pEncoderKind == 0)
+        return E_POINTER;
+
+    Lock lock;
+
+    HRESULT hr = lock.Seize(this);
+
+    if (FAILED(hr))
+        return hr;
+
+    *pEncoderKind = static_cast<VPXEncoderKind>(m_cfg.encoder_kind);
     return S_OK;
 }
 
@@ -1923,6 +1981,13 @@ HRESULT Filter::Load(IStream* pStream)
     if (m_state != State_Stopped)
         return VFW_E_NOT_STOPPED;
 
+    if (bool(m_inpin.m_pPinConnection) ||
+        bool(m_outpin_video.m_pPinConnection) ||
+        bool(m_outpin_preview.m_pPinConnection))
+    {
+        return VFW_E_ALREADY_CONNECTED;
+    }
+
     unsigned __int32 size;
     ULONG cbRead;
 
@@ -1952,6 +2017,9 @@ HRESULT Filter::Load(IStream* pStream)
     m_cfg.pass_mode = -1;
     m_cfg.two_pass_stats_buf = 0;
     m_cfg.two_pass_stats_buflen = -1;
+
+    m_outpin_video.SetDefaultMediaTypes();
+    m_outpin_preview.SetDefaultMediaTypes();
 
     return S_OK;
 }

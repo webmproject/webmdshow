@@ -19,7 +19,7 @@ namespace VP8EncoderLib
 {
 
 class Filter : public IBaseFilter,
-               public IVP8Encoder,
+               public IVPXEncoder,
                public IPersistStream,
                public ISpecifyPropertyPages,
                public CLockable
@@ -170,6 +170,11 @@ public:
     HRESULT STDMETHODCALLTYPE SetDecimate(int);
     HRESULT STDMETHODCALLTYPE GetDecimate(int*);
 
+    //IVP8Encoder2
+
+    HRESULT STDMETHODCALLTYPE SetEncoderKind(VPXEncoderKind);
+    HRESULT STDMETHODCALLTYPE GetEncoderKind(VPXEncoderKind*);
+
     //IPersistStream
 
     HRESULT STDMETHODCALLTYPE IsDirty();
@@ -219,8 +224,8 @@ public:
     {
         typedef __int32 int32_t;
 
-        int32_t deadline;  //TODO: does this really belong here?
-
+        int32_t encoder_kind;
+        int32_t deadline;
         int32_t threads;
         int32_t error_resilient;
         int32_t lag_in_frames;

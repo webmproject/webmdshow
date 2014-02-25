@@ -149,11 +149,12 @@ STDAPI DllRegisterServer()
     inpin_v.clsConnectsToFilter = 0;  //obsolete
     inpin_v.strConnectsToPin = 0;     //obsolete
 
-    enum { kVideoTypes = 1 };
+    enum { kVideoTypes = 2 };
 
     const REGPINTYPES inpintypes_v[kVideoTypes] =
     {
-        { &MEDIATYPE_Video, &WebmTypes::MEDIASUBTYPE_VP80 }
+        { &MEDIATYPE_Video, &WebmTypes::MEDIASUBTYPE_VP80 },
+        { &MEDIATYPE_Video, &WebmTypes::MEDIASUBTYPE_VP90 }
     };
 
     inpin_v.nMediaTypes = kVideoTypes;

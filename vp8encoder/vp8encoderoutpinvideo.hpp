@@ -82,10 +82,10 @@ public:
     HRESULT GetFrame(IVP8Sample::Frame&);
     HRESULT OnSetPassMode(VP8PassMode);
     void WriteStats(const vpx_codec_cx_pkt_t*);
+    void SetDefaultMediaTypes();
 
 protected:
     HRESULT OnDisconnect();
-    void SetDefaultMediaTypes();
     void SetFirstPassMediaTypes();
 
     virtual HRESULT PostConnect(IPin*);

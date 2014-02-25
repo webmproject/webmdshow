@@ -1124,11 +1124,23 @@ HRESULT Inpin::Start()
     assert(h > 0);
     assert((h % 2) == 0);  //TODO
 
-    vpx_codec_iface_t& vp8 = vpx_codec_vp8_cx_algo;
+    vpx_codec_iface_t* codec;
+
+    switch (m_pFilter->m_cfg.encoder_kind)
+    {
+        case kVP8Encoder:
+        default:
+          codec = &vpx_codec_vp8_cx_algo;
+          break;
+
+        case kVP9Encoder:
+          codec = &vpx_codec_vp9_cx_algo;
+          break;
+    }
 
     vpx_codec_enc_cfg_t& tgt = m_cfg;
 
-    vpx_codec_err_t err = vpx_codec_enc_config_default(&vp8, &tgt, 0);
+    vpx_codec_err_t err = vpx_codec_enc_config_default(codec, &tgt, 0);
 
     if (err != VPX_CODEC_OK)
         return E_FAIL;
@@ -1144,7 +1156,7 @@ HRESULT Inpin::Start()
 
     SetConfig();
 
-    err = vpx_codec_enc_init(&m_ctx, &vp8, &tgt, 0);
+    err = vpx_codec_enc_init(&m_ctx, codec, &tgt, 0);
 
     if (err != VPX_CODEC_OK)
     {

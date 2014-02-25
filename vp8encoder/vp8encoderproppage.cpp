@@ -67,7 +67,7 @@ PropPage::PropPage(IClassFactory* pClassFactory) :
     m_pClassFactory(pClassFactory),
     m_cRef(1),  //see PropPageCreateInstance
     m_pSite(0),
-    m_pVP8(0),
+    m_pVPX(0),
     m_hWnd(0),
     m_bDirty(false)
 {
@@ -88,7 +88,7 @@ PropPage::~PropPage()
 #endif
 
     assert(m_pSite == 0);
-    assert(m_pVP8 == 0);
+    assert(m_pVPX == 0);
     assert(m_hWnd == 0);
 
     m_pClassFactory->LockServer(FALSE);
@@ -169,7 +169,7 @@ HRESULT PropPage::Activate(HWND hWndParent, LPCRECT prc, BOOL /* fModal */ )
     os << "activate" << endl;
 #endif
 
-    if (m_pVP8 == 0)  //SetObjects hasn't been called yet
+    if (m_pVPX == 0)  //SetObjects hasn't been called yet
         return E_UNEXPECTED;
 
     if (m_hWnd)
@@ -190,12 +190,19 @@ HRESULT PropPage::Activate(HWND hWndParent, LPCRECT prc, BOOL /* fModal */ )
 
     InitializeEndUsage(hWnd);
     InitializeKeyframeMode(hWnd);
+    InitializeEncoderKind(hWnd);
     Initialize(hWnd);
 
     m_hWnd = hWnd;
 
     Move(prc);
     return Show(SW_SHOWNORMAL);
+}
+
+
+void PropPage::ErrorMessage(const wchar_t* msg) const
+{
+    MessageBox(m_hWnd, msg, L"Error", MB_OK);
 }
 
 
@@ -231,6 +238,19 @@ void PropPage::InitializeKeyframeMode(HWND hWnd)
 }
 
 
+void PropPage::InitializeEncoderKind(HWND hWnd)
+{
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_ENCODER_KIND);
+    assert(hCtrl);
+
+    int idx = ComboBox_AddString(hCtrl, L"VP8");
+    assert(idx == 0);
+
+    idx = ComboBox_AddString(hCtrl, L"VP9");
+    assert(idx == 1);
+}
+
+
 void PropPage::Initialize(HWND hWnd)
 {
     GetDeadline(hWnd);
@@ -254,6 +274,7 @@ void PropPage::Initialize(HWND hWnd)
     GetKeyframeMode(hWnd);
     GetKeyframeMinInterval(hWnd);
     GetKeyframeMaxInterval(hWnd);
+    GetEncoderKind(hWnd);
 }
 
 
@@ -359,16 +380,16 @@ HRESULT PropPage::SetObjects(ULONG n, IUnknown** ppUnk)
 {
     if (n == 0)
     {
-        if (m_pVP8)
+        if (m_pVPX)
         {
-            m_pVP8->Release();
-            m_pVP8 = 0;
+            m_pVPX->Release();
+            m_pVPX = 0;
         }
 
         return S_OK;
     }
 
-    if (m_pVP8)
+    if (m_pVPX)
         return E_UNEXPECTED;
 
     if (ppUnk == 0)
@@ -383,11 +404,11 @@ HRESULT PropPage::SetObjects(ULONG n, IUnknown** ppUnk)
         if (pUnk == 0)
             return E_INVALIDARG;
 
-        const HRESULT hr = pUnk->QueryInterface(&m_pVP8);
+        const HRESULT hr = pUnk->QueryInterface(&m_pVPX);
 
         if (SUCCEEDED(hr))
         {
-            assert(m_pVP8);
+            assert(m_pVPX);
 
             //TODO: some init here will probably be req'd
             return S_OK;
@@ -460,7 +481,7 @@ HRESULT PropPage::Apply()
     os << "apply" << endl;
 #endif
 
-    if (m_pVP8 == 0)
+    if (m_pVPX == 0)
         return E_UNEXPECTED;
 
     if (m_pSite == 0)
@@ -490,14 +511,15 @@ HRESULT PropPage::Apply()
     SetKeyframeMode();
     SetKeyframeMinInterval();
     SetKeyframeMaxInterval();
+    SetEncoderKind();
 
     m_bDirty = false;
 
-    const HRESULT hr = m_pVP8->ApplySettings();
+    const HRESULT hr = m_pVPX->ApplySettings();
 
     if (FAILED(hr))
     {
-        MessageBox(m_hWnd, L"ApplySettings failed.", L"Error", MB_OK);
+        ErrorMessage(L"ApplySettings failed.");
         return S_OK;  //?
     }
 
@@ -692,6 +714,7 @@ HRESULT PropPage::Clear()
     ComboBox_SetCurSel(GetDlgItem(hWnd, IDC_KEYFRAME_MODE), 0);
     SetText(hWnd, IDC_KEYFRAME_MIN_INTERVAL);
     SetText(hWnd, IDC_KEYFRAME_MAX_INTERVAL);
+    ComboBox_SetCurSel(GetDlgItem(hWnd, IDC_ENCODER_KIND), 0);  //VP8
 
     m_hWnd = hWnd;
     m_bDirty = false;
@@ -722,18 +745,13 @@ HRESULT PropPage::Reload()
 
 HRESULT PropPage::Reset()
 {
-    assert(m_pVP8);
+    assert(m_pVPX);
 
-    HRESULT hr = m_pVP8->ResetSettings();
+    HRESULT hr = m_pVPX->ResetSettings();
 
     if (FAILED(hr))
     {
-        MessageBox(
-            m_hWnd,
-            L"Unable to reset settings.",
-            L"Error",
-            MB_OK);
-
+        ErrorMessage(L"Unable to reset settings.");
         return hr;
     }
 
@@ -858,7 +876,7 @@ HRESULT PropPage::SetIntValue(
         msg += name;
         msg += L" value from edit control.";
 
-        MessageBox(m_hWnd, msg.c_str(), L"Error", MB_OK);
+        ErrorMessage(msg.c_str());
         return S_FALSE;
     }
 
@@ -877,12 +895,7 @@ HRESULT PropPage::SetIntValue(
         msg += name;
         msg += L" value.";
 
-        MessageBox(
-            m_hWnd,
-            msg.c_str(),
-            L"Error",
-            MB_OK | MB_ICONEXCLAMATION);
-
+        ErrorMessage(msg.c_str());
         return S_FALSE;
     }
 
@@ -890,9 +903,9 @@ HRESULT PropPage::SetIntValue(
     if (val < 0)  //treat as nonce values
         return S_OK;
 
-    assert(m_pVP8);
+    assert(m_pVPX);
 
-    HRESULT hr = (m_pVP8->*SetValue)(val);
+    HRESULT hr = (m_pVPX->*SetValue)(val);
 
     if (FAILED(hr))
     {
@@ -900,7 +913,7 @@ HRESULT PropPage::SetIntValue(
         msg += name;
         msg += L" value on filter.";
 
-        MessageBox(m_hWnd, msg.c_str(), L"Error", MB_OK);
+        ErrorMessage(msg.c_str());
         return S_FALSE;
     }
 
@@ -916,9 +929,9 @@ HRESULT PropPage::GetIntValue(
 {
     int val;
 
-    assert(m_pVP8);
+    assert(m_pVPX);
 
-    HRESULT hr = (m_pVP8->*GetValue)(&val);
+    HRESULT hr = (m_pVPX->*GetValue)(&val);
 
     if (FAILED(hr))
     {
@@ -926,12 +939,7 @@ HRESULT PropPage::GetIntValue(
         text += name;
         text += L" value from filter.";
 
-        MessageBox(
-            m_hWnd,
-            text.c_str(),
-            L"Error",
-            MB_OK);
-
+        ErrorMessage(text.c_str());
         return hr;
     }
 
@@ -949,12 +957,7 @@ HRESULT PropPage::GetIntValue(
     text += name;
     text += L" edit control.";
 
-    MessageBox(
-        hWnd,
-        text.c_str(),
-        L"Error",
-        MB_OK);
-
+    ErrorMessage(text.c_str());
     return E_FAIL;
 }
 
@@ -1096,17 +1099,12 @@ HRESULT PropPage::GetEndUsage(HWND hWnd)
 {
     VP8EndUsage val;
 
-    assert(m_pVP8);
-    HRESULT hr = m_pVP8->GetEndUsage(&val);
+    assert(m_pVPX);
+    HRESULT hr = m_pVPX->GetEndUsage(&val);
 
     if (FAILED(hr))
     {
-        MessageBox(
-            m_hWnd,
-            L"Unable to get end usage value from filter.",
-            L"Error",
-            MB_OK);
-
+        ErrorMessage(L"Unable to get end usage value from filter.");
         return hr;
     }
 
@@ -1136,12 +1134,7 @@ HRESULT PropPage::GetEndUsage(HWND hWnd)
     if (result >= 0)
         return S_OK;
 
-    MessageBox(
-        hWnd,
-        L"Unable to set value for end usage combo box.",
-        L"Error",
-        MB_OK);
-
+    ErrorMessage(L"Unable to set value for end usage combo box.");
     return S_OK;
 }
 
@@ -1174,18 +1167,13 @@ HRESULT PropPage::SetEndUsage()
             break;
     }
 
-    assert(m_pVP8);
+    assert(m_pVPX);
 
-    HRESULT hr = m_pVP8->SetEndUsage(val);
+    HRESULT hr = m_pVPX->SetEndUsage(val);
 
     if (FAILED(hr))
     {
-        MessageBox(
-            m_hWnd,
-            L"Unable to set end usage value on filter.",
-            L"Error",
-            MB_OK);
-
+        ErrorMessage(L"Unable to set end usage value on filter.");
         return S_FALSE;
     }
 
@@ -1387,17 +1375,12 @@ HRESULT PropPage::GetKeyframeMode(HWND hWnd)
 {
     VP8KeyframeMode val;
 
-    assert(m_pVP8);
-    HRESULT hr = m_pVP8->GetKeyframeMode(&val);
+    assert(m_pVPX);
+    HRESULT hr = m_pVPX->GetKeyframeMode(&val);
 
     if (FAILED(hr))
     {
-        MessageBox(
-            m_hWnd,
-            L"Unable to get keyframe mode value from filter.",
-            L"Error",
-            MB_OK);
-
+        ErrorMessage(L"Unable to get keyframe mode value from filter.");
         return hr;
     }
 
@@ -1427,12 +1410,7 @@ HRESULT PropPage::GetKeyframeMode(HWND hWnd)
     if (result >= 0)
         return S_OK;
 
-    MessageBox(
-        hWnd,
-        L"Unable to set value for keyframe mode combo box.",
-        L"Error",
-        MB_OK);
-
+    ErrorMessage(L"Unable to set value for keyframe mode combo box.");
     return S_OK;
 }
 
@@ -1465,17 +1443,12 @@ HRESULT PropPage::SetKeyframeMode()
             break;
     }
 
-    assert(m_pVP8);
-    HRESULT hr = m_pVP8->SetKeyframeMode(val);
+    assert(m_pVPX);
+    HRESULT hr = m_pVPX->SetKeyframeMode(val);
 
     if (FAILED(hr))
     {
-        MessageBox(
-            m_hWnd,
-            L"Unable to set keyframe mode on filter.",
-            L"Error",
-            MB_OK);
-
+        ErrorMessage(L"Unable to set keyframe mode on filter.");
         return S_FALSE;
     }
 
@@ -1520,5 +1493,81 @@ HRESULT PropPage::SetKeyframeMaxInterval()
             L"keyframe max interval");
 }
 
+
+HRESULT PropPage::GetEncoderKind(HWND hWnd)
+{
+    VPXEncoderKind val;
+
+    assert(m_pVPX);
+    HRESULT hr = m_pVPX->GetEncoderKind(&val);
+
+    if (FAILED(hr))
+    {
+        ErrorMessage(L"Unable to get encoder kind value from filter.");
+        return hr;
+    }
+
+    int idx;
+
+    switch (val)
+    {
+        case kVP8Encoder:
+        default:
+            idx = 0;
+            break;
+
+        case kVP9Encoder:
+            idx = 1;
+            break;
+    }
+
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_ENCODER_KIND);
+    assert(hCtrl);
+
+    const int result = ComboBox_SetCurSel(hCtrl, idx);
+
+    if (result >= 0)
+        return S_OK;
+
+    ErrorMessage(L"Unable to set value for encoder kind combo box.");
+    return S_OK;
+}
+
+
+HRESULT PropPage::SetEncoderKind()
+{
+    const HWND hCtrl = GetDlgItem(m_hWnd, IDC_ENCODER_KIND);
+    assert(hCtrl);
+
+    const int idx = ComboBox_GetCurSel(hCtrl);
+    assert(idx >= 0);
+    assert(idx <= 1);
+
+    VPXEncoderKind val;
+
+    switch (idx)
+    {
+        case 0:
+        default:
+            val = kVP8Encoder;
+            break;
+
+        case 1:
+            val = kVP9Encoder;
+            break;
+    }
+
+    assert(m_pVPX);
+
+    HRESULT hr = m_pVPX->SetEncoderKind(val);
+
+    if (FAILED(hr))
+    {
+        ErrorMessage(L"Unable to set encoder kind value on filter.");
+        return S_FALSE;
+    }
+
+    return S_OK;
+}
 
 }  //end namespace VP8EncoderLib

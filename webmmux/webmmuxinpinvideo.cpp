@@ -35,6 +35,9 @@ InpinVideo::InpinVideo(Filter* p) :
 
     mt.subtype = WebmTypes::MEDIASUBTYPE_VP80;
     m_preferred_mtv.Add(mt);
+
+    mt.subtype = WebmTypes::MEDIASUBTYPE_VP90;
+    m_preferred_mtv.Add(mt);
 }
 
 
@@ -53,8 +56,11 @@ HRESULT InpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (mt.majortype != MEDIATYPE_Video)
         return S_FALSE;
 
-    if (mt.subtype == WebmTypes::MEDIASUBTYPE_VP80)
-        return QueryAcceptVP80(mt);
+    if ((mt.subtype == WebmTypes::MEDIASUBTYPE_VP80) ||
+        (mt.subtype == WebmTypes::MEDIASUBTYPE_VP90))
+    {
+        return QueryAcceptVPx(mt);
+    }
 
     //TODO: more vetting here
 
@@ -63,7 +69,7 @@ HRESULT InpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
 
 
 
-HRESULT InpinVideo::QueryAcceptVP80(const AM_MEDIA_TYPE& mt) const
+HRESULT InpinVideo::QueryAcceptVPx(const AM_MEDIA_TYPE& mt) const
 {
     if (mt.pbFormat == 0)
         return S_FALSE;
@@ -121,15 +127,18 @@ HRESULT InpinVideo::GetAllocatorRequirements(ALLOCATOR_PROPERTIES* p)
 
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
 
-    if (mt.subtype == WebmTypes::MEDIASUBTYPE_VP80)
-        return GetAllocatorRequirementsVP80(props);
+    if ((mt.subtype == WebmTypes::MEDIASUBTYPE_VP80) ||
+        (mt.subtype == WebmTypes::MEDIASUBTYPE_VP90))
+    {
+        return GetAllocatorRequirementsVPx(props);
+    }
 
     assert(false);
     return E_FAIL;
 }
 
 
-HRESULT InpinVideo::GetAllocatorRequirementsVP80(
+HRESULT InpinVideo::GetAllocatorRequirementsVPx(
     ALLOCATOR_PROPERTIES& props) const
 {
     //We hold onto samples, so at least as many samples in the as we expect
@@ -165,8 +174,11 @@ HRESULT InpinVideo::OnInit()
     Context& ctx = m_pFilter->m_ctx;
     StreamVideo* pStream;
 
-    if (mt.subtype == WebmTypes::MEDIASUBTYPE_VP80)
-        pStream = CreateStreamVP80(ctx, mt);
+    if ((mt.subtype == WebmTypes::MEDIASUBTYPE_VP80) ||
+        (mt.subtype == WebmTypes::MEDIASUBTYPE_VP90))
+    {
+        pStream = CreateStreamVPx(ctx, mt);
+    }
     else
     {
         assert(false);
@@ -183,7 +195,7 @@ HRESULT InpinVideo::OnInit()
 
 
 StreamVideo*
-InpinVideo::CreateStreamVP80(Context& ctx, const AM_MEDIA_TYPE& mt)
+InpinVideo::CreateStreamVPx(Context& ctx, const AM_MEDIA_TYPE& mt)
 {
     return new (std::nothrow) StreamVideoVPx(ctx, mt);
 }

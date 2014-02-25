@@ -485,9 +485,12 @@ int App::CreateMuxerGraph(
         const IPinPtr pMuxInpinVideo(FindInpinVideo(pMux));
         assert(bool(pMuxInpinVideo));
 
-        if (IsVP8(pDemuxOutpinVideo))
+        if (IsVPX(pDemuxOutpinVideo))
         {
             assert(!bTwoPass);
+
+            //TODO(matthewjheaney): liberalize this, to allow clients
+            //to do a re-code of VPx using different encoding config.
 
             hr = m_pGraph->ConnectDirect(
                     pDemuxOutpinVideo,
@@ -521,7 +524,7 @@ int App::CreateMuxerGraph(
 
                 if (FAILED(hr))
                 {
-                    wcout << "Unable to create VP8 encoder filter instance.\n"
+                    wcout << "Unable to create VPX encoder filter instance.\n"
 
                           << hrtext(hr)
                           << L" (0x" << hex << hr << dec << L")"
@@ -544,7 +547,7 @@ int App::CreateMuxerGraph(
 
                 if (FAILED(hr))
                 {
-                    wcout << "Unable to set VP8 encoder pass mode"
+                    wcout << "Unable to set VPX encoder pass mode"
                           << " (last pass).\n"
                           << hrtext(hr)
                           << L" (0x" << hex << hr << dec << L")"
@@ -584,6 +587,27 @@ int App::CreateMuxerGraph(
                 hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
                 assert(SUCCEEDED(hr));
 
+                if (m_cmdline.GetEncoderKind() == kVP9Encoder)
+                {
+                    _COM_SMARTPTR_TYPEDEF(IVPXEncoder, __uuidof(IVPXEncoder));
+
+                    const IVPXEncoderPtr pVPX(pCompressor);
+
+                    if (!bool(pVPX))
+                    {
+                        wcout << L"Encoder filter instance does support VP9.\n";
+                        return 1;
+                    }
+
+                    hr = pVPX->SetEncoderKind(kVP9Encoder);
+
+                    if (FAILED(hr))
+                    {
+                        wcout << L"Unable to set encoder kind to VP9.\n";
+                        return 1;
+                    }
+                }
+
                 IPinPtr pVP8Inpin;
 
                 hr = pCompressor->FindPin(L"input", &pVP8Inpin);
@@ -595,7 +619,7 @@ int App::CreateMuxerGraph(
                 if (FAILED(hr))
                 {
                     wcout << "Unable to connect demux outpin to"
-                          << " VP8 encoder filter inpin.\n"
+                          << " VPX encoder filter inpin.\n"
                           << hrtext(hr)
                           << L" (0x" << hex << hr << dec << L")"
                           << endl;
@@ -607,7 +631,7 @@ int App::CreateMuxerGraph(
 
                 if (FAILED(hr))
                 {
-                    wcout << "Unable to set VP8 encoder pass mode"
+                    wcout << "Unable to set VPX encoder pass mode"
                           << " (one pass).\n"
                           << hrtext(hr)
                           << L" (0x" << hex << hr << dec << L")"
@@ -639,7 +663,7 @@ int App::CreateMuxerGraph(
 
             if (FAILED(hr))
             {
-                wcout << "Unable to connect VP8 encoder outpin"
+                wcout << "Unable to connect VPX encoder outpin"
                       << " to muxer video inpin.\n"
                       << hrtext(hr)
                       << L" (0x" << hex << hr << dec << L")"
@@ -764,9 +788,12 @@ int App::CreateFirstPassGraph(
 
     //const bool bVerbose = m_cmdline.GetVerbose();
 
-    if (IsVP8(pDemuxOutpinVideo))
+    if (IsVPX(pDemuxOutpinVideo))
     {
-        wcout << "Video demux stream is already VP8"
+        //TODO(matthewjheaney): we should probably handle this case,
+        //so that they can do a re-encode with different parameters.
+
+        wcout << "Video demux stream is already VPx"
               << " -- two-pass not supported.\n";
 
         return 1;
@@ -778,7 +805,7 @@ int App::CreateFirstPassGraph(
 
     if (FAILED(hr))
     {
-        wcout << "Unable to create VP8 encoder filter instance.\n"
+        wcout << "Unable to create VPX encoder filter instance.\n"
 
               << hrtext(hr)
               << L" (0x" << hex << hr << dec << L")"
@@ -792,6 +819,27 @@ int App::CreateFirstPassGraph(
     hr = m_pGraph->AddFilter(pCompressor, L"vp8enc");
     assert(SUCCEEDED(hr));
 
+    if (m_cmdline.GetEncoderKind() == kVP9Encoder)
+    {
+        _COM_SMARTPTR_TYPEDEF(IVPXEncoder, __uuidof(IVPXEncoder));
+
+        const IVPXEncoderPtr pVPX(pCompressor);
+
+        if (!bool(pVPX))
+        {
+            wcout << L"Encoder filter instance does support VP9.\n";
+            return 1;
+        }
+
+        hr = pVPX->SetEncoderKind(kVP9Encoder);
+
+        if (FAILED(hr))
+        {
+            wcout << L"Unable to set encoder kind to VP9.\n";
+            return 1;
+        }
+    }
+
     IPinPtr pVP8Inpin;
 
     hr = pCompressor->FindPin(L"input", &pVP8Inpin);
@@ -803,7 +851,7 @@ int App::CreateFirstPassGraph(
     if (FAILED(hr))
     {
         wcout << "Unable to connect demux outpin to"
-              << " VP8 encoder filter inpin.\n"
+              << " VPX encoder filter inpin.\n"
               << hrtext(hr)
               << L" (0x" << hex << hr << dec << L")"
               << endl;
@@ -820,7 +868,7 @@ int App::CreateFirstPassGraph(
 
     if (FAILED(hr))
     {
-        wcout << "Unable to set VP8 encoder pass mode (first pass).\n"
+        wcout << "Unable to set VPX encoder pass mode (first pass).\n"
               << hrtext(hr)
               << L" (0x" << hex << hr << dec << L")"
               << endl;
@@ -894,7 +942,7 @@ int App::CreateFirstPassGraph(
 
     if (FAILED(hr))
     {
-        wcout << "Unable to connect VP8 encoder outpin to file writer inpin"
+        wcout << "Unable to connect VPX encoder outpin to file writer inpin"
               << " (for two-pass stats).\n"
               << hrtext(hr)
               << L" (0x" << hex << hr << dec << L")"
@@ -1806,7 +1854,7 @@ App::EnumDemuxFilters(
 }
 
 
-bool App::IsVP8(IPin* pPin)
+bool App::IsVPX(IPin* pPin)
 {
     assert(pPin);
 
@@ -1835,10 +1883,11 @@ bool App::IsVP8(IPin* pPin)
         if (major != MEDIATYPE_Video)
             continue;
 
-        if (minor != WebmTypes::MEDIASUBTYPE_VP80)
-            continue;
+        if (minor == WebmTypes::MEDIASUBTYPE_VP80)
+            return true;
 
-        return true;
+        if (minor == WebmTypes::MEDIASUBTYPE_VP90)
+            return true;
     }
 }
 

@@ -67,9 +67,9 @@ public:
     HRESULT OnInpinDisconnect();
 
     HRESULT SetAvgTimePerFrame(__int64 AvgTimePerFrame);
+    virtual void SetDefaultMediaTypes() = 0;
 
 protected:
-    virtual void SetDefaultMediaTypes() = 0;
     virtual HRESULT PostConnect(IPin*) = 0;
     HRESULT InitAllocator(IMemInputPin*, IMemAllocator*);
     virtual void GetSubtype(GUID&) const = 0;

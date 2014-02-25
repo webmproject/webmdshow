@@ -10,6 +10,7 @@
 #include "webmconstants.hpp"
 #include "webmmuxcontext.hpp"
 #include "webmmuxstreamvideovpx.hpp"
+#include "webmtypes.hpp"
 #include <climits>
 #include <cassert>
 #include <vfwmsgs.h>
@@ -130,7 +131,14 @@ void StreamVideoVPx::WriteTrackCodecID()
     WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
     buf.WriteID1(WebmUtil::kEbmlCodecIDID);
-    buf.Write1String("V_VP8");
+
+    if (m_mt.subtype == WebmTypes::MEDIASUBTYPE_VP80)
+        buf.Write1String("V_VP8");
+    else
+    {
+        assert(m_mt.subtype == WebmTypes::MEDIASUBTYPE_VP90);
+        buf.Write1String("V_VP9");
+    }
 }
 
 
@@ -139,7 +147,14 @@ void StreamVideoVPx::WriteTrackCodecName()
     WebmUtil::EbmlScratchBuf& buf = m_context.m_buf;
 
     buf.WriteID3(WebmUtil::kEbmlCodecNameID);
-    buf.Write1UTF8(L"VP8");
+
+    if (m_mt.subtype == WebmTypes::MEDIASUBTYPE_VP80)
+        buf.Write1UTF8(L"VP8");
+    else
+    {
+        assert(m_mt.subtype == WebmTypes::MEDIASUBTYPE_VP90);
+        buf.Write1UTF8(L"VP9");
+    }
 }
 
 
