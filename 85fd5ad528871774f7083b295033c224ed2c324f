@@ -1,0 +1,293 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//1qk\u003d",
+        "filename": "IDL/vp8encoder.idl",
+        "patchSetId": 1
+      },
+      "lineNbr": 58,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "I really wish we had named everything VPXExampleType... too late now for the old ones, but how about this one and the new stuff using VPX?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1qQ\u003d",
+        "filename": "IDL/vp8encoder.idl",
+        "patchSetId": 1
+      },
+      "lineNbr": 473,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "VPX Encoder Multi-codec Interface\n?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1qc\u003d",
+        "filename": "IDL/vp8encoder.idl",
+        "patchSetId": 1
+      },
+      "lineNbr": 475,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "IVPXEncoder/see above?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1qM\u003d",
+        "filename": "guids.txt",
+        "patchSetId": 1
+      },
+      "lineNbr": 742,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "Ditto/naming.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1qI\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 527,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "Brevity is the soul of wit: VPx? :)\n\nAlso addresses the line being too long.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1qE\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 547,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "This was backwards, and I don\u0027t think it\u0027s true any longer. 2-pass was the only mode that worked, and I think 1-pass works (sort of, data rate control/quality might be unacceptable).",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1pw\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 593,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "GetEncoder() sounds like it\u0027s doing something more interesting than returning the value of an enum.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1ps\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1866,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "Subjective/personal preference: VPX everywhere possible.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1pk\u003d",
+        "filename": "makewebm/makewebmcmdline.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1037,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "\"codec\" is probably a better name (vpxenc, the libvpx examples that support specifying a codec, and ffmpeg all use codec for the arg)\n\nAnd, maybe for a clean up CL on a slow day: string constants for the arg names?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1pY\u003d",
+        "filename": "makewebm/makewebmcmdline.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1822,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "I think this file would be easier to review if the usage info came before the rest of the file :)",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1p4\u003d",
+        "filename": "makewebm/makewebmcmdline.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "GetEncoderKind?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1p8\u003d",
+        "filename": "makewebm/makewebmcmdline.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 109,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "m_encoder_kind?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1p0\u003d",
+        "filename": "vp8encoder/vp8encoderfilter.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1929,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "Could collapse these into a single check.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1pU\u003d",
+        "filename": "vp8encoder/vp8encoderfilter.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1993,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "Ditto/collapse.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1pQ\u003d",
+        "filename": "vp8encoder/vp8encoderfilter.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 227,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "Being a bit pedantic: I would prefer encoder_kind. It\u0027s only slightly ambiguous, and then only because multiple inheritance blurs what kind means. Naming this struct EncoderConfig would also disambiguate things, but I think that\u0027s just going to be a lot of noise for not a lot of gain.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1pM\u003d",
+        "filename": "vp8encoder/vp8encoderoutpinvideo.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 115,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "Prefer braces within all conditionals once one of them has them.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1ow\u003d",
+        "filename": "vp8encoder/vp8encoderproppage.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1554,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-02-25T01:40:24Z",
+      "side": 1,
+      "message": "A util function for showing errors might limit code duplication a bit in here.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
