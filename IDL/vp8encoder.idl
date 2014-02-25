@@ -55,6 +55,13 @@ enum VP8PassMode
 };
 
 
+enum VP8EncoderKind
+{
+    kVP8Encoder,
+    kVP9Encoder
+};
+
+
 [
    object,
    uuid(ED311151-5211-11DF-94AF-0026B977EEAA),
@@ -460,6 +467,17 @@ interface IVP8Encoder : IUnknown
     HRESULT GetDecimate([out] int* pDecimate);
 }
 
+[
+   object,
+   uuid(ED311152-5211-11DF-94AF-0026B977EEAA),
+   helpstring("VP8 Encoder 2 Filter Interface")
+]
+interface IVP8Encoder2 : IVP8Encoder
+{
+    HRESULT SetEncoderKind([in] enum VP8EncoderKind kind);
+    HRESULT GetEncoderKind([out] enum VP8EncoderKind* pKind);
+}
+
 
 [
    uuid(ED3110F5-5211-11DF-94AF-0026B977EEAA),
@@ -468,6 +486,7 @@ interface IVP8Encoder : IUnknown
 coclass VP8Encoder
 {
    [default] interface IVP8Encoder;
+   interface IVP8Encoder2;
 }
 
 }  //end library VP8EncoderLib

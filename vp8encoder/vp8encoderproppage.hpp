@@ -49,7 +49,7 @@ private:
     LONG m_cRef;
     IPropertyPageSite* m_pSite;
     bool m_bDirty;
-    IVP8Encoder* m_pVP8;
+    IVP8Encoder2* m_pVP8;
     HWND m_hWnd;
 
     static INT_PTR CALLBACK DialogProc(HWND, UINT, WPARAM, LPARAM);
@@ -59,7 +59,7 @@ private:
     static DWORD SetText(HWND, int);
     DWORD GetText(int, std::wstring&) const;
 
-    typedef HRESULT (STDMETHODCALLTYPE IVP8Encoder::* pfnGetValue)(int*);
+    typedef HRESULT (STDMETHODCALLTYPE IVP8Encoder2::* pfnGetValue)(int*);
 
     HRESULT GetIntValue(
                 HWND,
@@ -67,7 +67,7 @@ private:
                 int code,
                 const wchar_t*);
 
-    typedef HRESULT (STDMETHODCALLTYPE IVP8Encoder::* pfnSetValue)(int);
+    typedef HRESULT (STDMETHODCALLTYPE IVP8Encoder2::* pfnSetValue)(int);
 
     HRESULT SetIntValue(
                 pfnSetValue,
@@ -137,9 +137,13 @@ private:
     HRESULT GetKeyframeMaxInterval(HWND);
     HRESULT SetKeyframeMaxInterval();
 
+    HRESULT GetEncoderKind(HWND);
+    HRESULT SetEncoderKind();
+
     void Initialize(HWND);
     void InitializeEndUsage(HWND);
     void InitializeKeyframeMode(HWND);
+    void InitializeEncoderKind(HWND);
 
     HRESULT Clear();
     HRESULT Reload();

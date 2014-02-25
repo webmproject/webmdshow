@@ -35,7 +35,6 @@ namespace VP8EncoderLib
 OutpinVideo::OutpinVideo(Filter* pFilter) :
     Outpin(pFilter, L"output")
 {
-    SetDefaultMediaTypes();
 }
 
 
@@ -108,7 +107,12 @@ HRESULT OutpinVideo::QueryAccept(const AM_MEDIA_TYPE* pmt)
     if (mt.majortype != MEDIATYPE_Video)
         return S_FALSE;
 
-    if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP80)
+    if (m_pFilter->m_cfg.kind == kVP9Encoder)
+    {
+        if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP90)
+            return S_FALSE;
+    }
+    else if (mt.subtype != WebmTypes::MEDIASUBTYPE_VP80)
         return S_FALSE;
 
     if (mt.pbFormat == 0)
@@ -699,6 +703,9 @@ std::wstring OutpinVideo::GetName() const
     if (pmt->subtype == WebmTypes::MEDIASUBTYPE_VP8_STATS)
         return L"STATS";
 
+    if (pmt->subtype == WebmTypes::MEDIASUBTYPE_VP90)
+        return L"VP90";
+
     return L"VP80";
 }
 
@@ -717,7 +724,7 @@ void OutpinVideo::SetDefaultMediaTypes()
     AM_MEDIA_TYPE mt;
 
     mt.majortype = MEDIATYPE_Video;
-    mt.subtype = WebmTypes::MEDIASUBTYPE_VP80;
+    GetSubtype(mt.subtype);
     mt.bFixedSizeSamples = FALSE;
     mt.bTemporalCompression = TRUE;
     mt.lSampleSize = 0;
@@ -865,7 +872,17 @@ HRESULT OutpinVideo::PostConnectStats(IPin* p)
 
 void OutpinVideo::GetSubtype(GUID& subtype) const
 {
-    subtype = WebmTypes::MEDIASUBTYPE_VP80;
+    switch (m_pFilter->m_cfg.kind)
+    {
+        case kVP8Encoder:
+        default:
+            subtype = WebmTypes::MEDIASUBTYPE_VP80;
+            break;
+
+        case kVP9Encoder:
+            subtype = WebmTypes::MEDIASUBTYPE_VP90;
+            break;
+    }
 }
 
 

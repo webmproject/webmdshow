@@ -53,6 +53,7 @@ CmdLine::CmdLine() :
     m_thread_count(-1),
     m_error_resilient(-1),
     m_end_usage(-1),
+    m_encoder(-1),
     m_lag_in_frames(-1),
     m_token_partitions(-1),
     m_two_pass(-1),
@@ -1033,6 +1034,58 @@ int CmdLine::ParseLongPost(
         return n;
     }
 
+    if (_wcsnicmp(arg, L"encoder", len) == 0)
+    {
+        int n;
+        const wchar_t* value;
+        size_t value_length;
+
+        if (has_value)
+        {
+            value = arg + len + 1;
+            value_length = wcslen(value);
+
+            if (value_length == 0)
+            {
+                wcout << "No value specified for encoder switch." << endl;
+                return -1;  // error
+            }
+
+            n = 1;
+        }
+        else
+        {
+            value = *++i;
+
+            if (value == 0)
+            {
+                wcout << "No value specified for encoder switch." << endl;
+                return -1;  //error
+            }
+
+            value_length = wcslen(value);
+            n = 2;
+        }
+
+        if ((_wcsnicmp(value, L"vp8", value_length) == 0) ||
+            (_wcsnicmp(value, L"8", value_length) == 0))
+        {
+            m_encoder = kVP8Encoder;
+        }
+        else if ((_wcsnicmp(value, L"vp9", value_length) == 0) ||
+                 (_wcsnicmp(value, L"9", value_length) == 0))
+        {
+            m_encoder = kVP9Encoder;
+        }
+        else
+        {
+            wcout << "Bad value specified for encoder switch." << endl;
+            return -1;  //error
+        }
+
+        return n;
+    }
+
     if (_wcsnicmp(arg, L"error-resilient", len) == 0)
     {
         int n;
@@ -1659,6 +1712,12 @@ int CmdLine::GetEndUsage() const
 }
 
 
+int CmdLine::GetEncoder() const
+{
+    return m_encoder;
+}
+
+
 int CmdLine::GetLagInFrames() const
 {
     return m_lag_in_frames;
@@ -1760,6 +1819,7 @@ void CmdLine::PrintUsage() const
           << L"  --end-usage                     {\"VBR\"|\"CBR\"}\n"
           << L"  --error-resilient               "
           << L"defend against lossy or noisy links\n"
+          << L"  --encoder                       {\"VP8\"|\"VP9\"}\n"
           << L"  --keyframe-frequency            "
           << L"time (in sec) between keyframes\n"
           << L"  --keyframe-mode                 {\"disabled\"|\"auto\"}\n"
@@ -1972,7 +2032,7 @@ void CmdLine::ListArgs() const
               << m_decoder_buffer_optimal_size;
 
         if (m_decoder_buffer_optimal_size == 0)
-            wcout << " (use encoder default)";
+            wcout << L" (use encoder default)";
 
         wcout << L'\n';
     }
@@ -1985,11 +2045,30 @@ void CmdLine::ListArgs() const
         {
             case kEndUsageVBR:
             default:
-                wcout << "VBR";
+                wcout << L"VBR";
                 break;
 
             case kEndUsageCBR:
-                wcout << "CBR";
+                wcout << L"CBR";
+                break;
+        }
+
+        wcout << L'\n';
+    }
+
+    if (m_encoder >= 0)
+    {
+        wcout << L"encoder: ";
+
+        switch (m_encoder)
+        {
+            case kVP8Encoder:
+            default:
+                wcout << L"VP8";
+                break;
+
+            case kVP9Encoder:
+                wcout << L"VP9";
                 break;
         }
 

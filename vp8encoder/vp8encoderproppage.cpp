@@ -190,6 +190,7 @@ HRESULT PropPage::Activate(HWND hWndParent, LPCRECT prc, BOOL /* fModal */ )
 
     InitializeEndUsage(hWnd);
     InitializeKeyframeMode(hWnd);
+    InitializeEncoderKind(hWnd);
     Initialize(hWnd);
 
     m_hWnd = hWnd;
@@ -231,6 +232,19 @@ void PropPage::InitializeKeyframeMode(HWND hWnd)
 }
 
 
+void PropPage::InitializeEncoderKind(HWND hWnd)
+{
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_ENCODER_KIND);
+    assert(hCtrl);
+
+    int idx = ComboBox_AddString(hCtrl, L"VP8");
+    assert(idx == 0);
+
+    idx = ComboBox_AddString(hCtrl, L"VP9");
+    assert(idx == 1);
+}
+
+
 void PropPage::Initialize(HWND hWnd)
 {
     GetDeadline(hWnd);
@@ -254,6 +268,7 @@ void PropPage::Initialize(HWND hWnd)
     GetKeyframeMode(hWnd);
     GetKeyframeMinInterval(hWnd);
     GetKeyframeMaxInterval(hWnd);
+    GetEncoderKind(hWnd);
 }
 
 
@@ -490,6 +505,7 @@ HRESULT PropPage::Apply()
     SetKeyframeMode();
     SetKeyframeMinInterval();
     SetKeyframeMaxInterval();
+    SetEncoderKind();
 
     m_bDirty = false;
 
@@ -692,6 +708,7 @@ HRESULT PropPage::Clear()
     ComboBox_SetCurSel(GetDlgItem(hWnd, IDC_KEYFRAME_MODE), 0);
     SetText(hWnd, IDC_KEYFRAME_MIN_INTERVAL);
     SetText(hWnd, IDC_KEYFRAME_MAX_INTERVAL);
+    ComboBox_SetCurSel(GetDlgItem(hWnd, IDC_ENCODER_KIND), 0);  //VP8
 
     m_hWnd = hWnd;
     m_bDirty = false;
@@ -1520,5 +1537,96 @@ HRESULT PropPage::SetKeyframeMaxInterval()
             L"keyframe max interval");
 }
 
+
+HRESULT PropPage::GetEncoderKind(HWND hWnd)
+{
+    VP8EncoderKind val;
+
+    assert(m_pVP8);
+    HRESULT hr = m_pVP8->GetEncoderKind(&val);
+
+    if (FAILED(hr))
+    {
+        MessageBox(
+            m_hWnd,
+            L"Unable to get encoder kind value from filter.",
+            L"Error",
+            MB_OK);
+
+        return hr;
+    }
+
+    int idx;
+
+    switch (val)
+    {
+        case kVP8Encoder:
+        default:
+            idx = 0;
+            break;
+
+        case kVP9Encoder:
+            idx = 1;
+            break;
+    }
+
+    const HWND hCtrl = GetDlgItem(hWnd, IDC_ENCODER_KIND);
+    assert(hCtrl);
+
+    const int result = ComboBox_SetCurSel(hCtrl, idx);
+
+    if (result >= 0)
+        return S_OK;
+
+    MessageBox(
+        hWnd,
+        L"Unable to set value for encoder kind combo box.",
+        L"Error",
+        MB_OK);
+
+    return S_OK;
+}
+
+
+HRESULT PropPage::SetEncoderKind()
+{
+    const HWND hCtrl = GetDlgItem(m_hWnd, IDC_ENCODER_KIND);
+    assert(hCtrl);
+
+    const int idx = ComboBox_GetCurSel(hCtrl);
+    assert(idx >= 0);
+    assert(idx <= 1);
+
+    VP8EncoderKind val;
+
+    switch (idx)
+    {
+        case 0:
+        default:
+            val = kVP8Encoder;
+            break;
+
+        case 1:
+            val = kVP9Encoder;
+            break;
+    }
+
+    assert(m_pVP8);
+
+    HRESULT hr = m_pVP8->SetEncoderKind(val);
+
+    if (FAILED(hr))
+    {
+        MessageBox(
+            m_hWnd,
+            L"Unable to set encoder kind value on filter.",
+            L"Error",
+            MB_OK);
+
+        return S_FALSE;
+    }
+
+    return S_OK;
+}
 
 }  //end namespace VP8EncoderLib

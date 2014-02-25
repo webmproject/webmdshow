@@ -49,7 +49,7 @@ private:
 
     int RunGraph(IMediaSeeking* pSeek);
 
-    static bool IsVP8(IPin*);
+    static bool IsVPx(IPin*);
     static GUID GetSubtype(IPin*);
 
     GraphUtil::IBaseFilterPtr AddDemuxFilter(

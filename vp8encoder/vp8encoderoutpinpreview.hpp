@@ -40,9 +40,9 @@ public:
     //local functions
 
     void Render(CLockable::Lock&, const vpx_image_t*);
+    void SetDefaultMediaTypes();
 
 protected:
-    void SetDefaultMediaTypes();
     virtual HRESULT PostConnect(IPin*);
     void GetSubtype(GUID&) const;
 
