@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1HU\u003d",
+        "filename": "IDL/vp8encoder.idl",
+        "patchSetId": 1
+      },
+      "lineNbr": 58,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "We can name this particular type VPXEncoderKind.  Right about the others, though.",
+      "parentUuid": "AAAAdn//1qk\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1qQ\u003d",
         "filename": "IDL/vp8encoder.idl",
         "patchSetId": 1
@@ -30,6 +48,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "VPX Encoder Multi-codec Interface\n?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1HE\u003d",
+        "filename": "IDL/vp8encoder.idl",
+        "patchSetId": 1
+      },
+      "lineNbr": 473,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1qQ\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -53,6 +89,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1HA\u003d",
+        "filename": "IDL/vp8encoder.idl",
+        "patchSetId": 1
+      },
+      "lineNbr": 475,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1qc\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1qM\u003d",
         "filename": "guids.txt",
         "patchSetId": 1
@@ -64,6 +118,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "Ditto/naming.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1G0\u003d",
+        "filename": "guids.txt",
+        "patchSetId": 1
+      },
+      "lineNbr": 742,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1qM\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -87,6 +159,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1FI\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 527,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1qI\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1qE\u003d",
         "filename": "makewebm/makewebmapp.cpp",
         "patchSetId": 1
@@ -98,6 +188,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "This was backwards, and I don\u0027t think it\u0027s true any longer. 2-pass was the only mode that worked, and I think 1-pass works (sort of, data rate control/quality might be unacceptable).",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1E8\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 547,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1qE\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -121,6 +229,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1Es\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 593,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Changed name to GetEncoderKind().",
+      "parentUuid": "AAAAdn//1pw\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1ps\u003d",
         "filename": "makewebm/makewebmapp.cpp",
         "patchSetId": 1
@@ -132,6 +258,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "Subjective/personal preference: VPX everywhere possible.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1Ek\u003d",
+        "filename": "makewebm/makewebmapp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1866,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1ps\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -155,6 +299,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1EU\u003d",
+        "filename": "makewebm/makewebmcmdline.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1037,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "This name (and others) correspond to the methods in the IDL interface.  That was the motivation, anyway.",
+      "parentUuid": "AAAAdn//1pk\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1pY\u003d",
         "filename": "makewebm/makewebmcmdline.cpp",
         "patchSetId": 1
@@ -166,6 +328,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "I think this file would be easier to review if the usage info came before the rest of the file :)",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1EA\u003d",
+        "filename": "makewebm/makewebmcmdline.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1822,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1pY\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -189,6 +369,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1D8\u003d",
+        "filename": "makewebm/makewebmcmdline.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1p4\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1p8\u003d",
         "filename": "makewebm/makewebmcmdline.hpp",
         "patchSetId": 1
@@ -200,6 +398,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "m_encoder_kind?",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1D4\u003d",
+        "filename": "makewebm/makewebmcmdline.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 109,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1p8\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -223,6 +439,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1DM\u003d",
+        "filename": "vp8encoder/vp8encoderfilter.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1929,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1p0\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1pU\u003d",
         "filename": "vp8encoder/vp8encoderfilter.cpp",
         "patchSetId": 1
@@ -234,6 +468,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "Ditto/collapse.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//1DI\u003d",
+        "filename": "vp8encoder/vp8encoderfilter.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1993,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1pU\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -257,6 +509,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1DE\u003d",
+        "filename": "vp8encoder/vp8encoderfilter.hpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 227,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1pQ\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1pM\u003d",
         "filename": "vp8encoder/vp8encoderoutpinvideo.cpp",
         "patchSetId": 1
@@ -274,6 +544,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//1C0\u003d",
+        "filename": "vp8encoder/vp8encoderoutpinvideo.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 115,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1pM\u003d",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//1ow\u003d",
         "filename": "vp8encoder/vp8encoderproppage.cpp",
         "patchSetId": 1
@@ -285,6 +573,24 @@
       "writtenOn": "2014-02-25T01:40:24Z",
       "side": 1,
       "message": "A util function for showing errors might limit code duplication a bit in here.",
+      "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//01E\u003d",
+        "filename": "vp8encoder/vp8encoderproppage.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1554,
+      "author": {
+        "id": 1002833
+      },
+      "writtenOn": "2014-02-27T23:48:26Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//1ow\u003d",
       "revId": "85fd5ad528871774f7083b295033c224ed2c324f",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
