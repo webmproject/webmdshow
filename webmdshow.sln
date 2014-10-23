@@ -23,15 +23,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "makewebm", "makewebm\makewe
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "playwebm", "playwebm\playwebm.vcxproj", "{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisdecoder_2010", "webmvorbisdecoder\webmvorbisdecoder_2010.vcxproj", "{0E132E1D-37A1-4301-AE60-61BCB71724E9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisdecoder", "webmvorbisdecoder\webmvorbisdecoder.vcxproj", "{0E132E1D-37A1-4301-AE60-61BCB71724E9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmoggsource_2010", "webmoggsource\webmoggsource_2010.vcxproj", "{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmoggsource", "webmoggsource\webmoggsource.vcxproj", "{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmcc", "webmcc\webmcc.vcxproj", "{19116917-FB35-44C1-8BC3-A77D4864B112}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcc", "libcc\libcc.vcxproj", "{F4D58D10-0A22-4C8F-A961-844ACBE97C9B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisencoder_2010", "webmvorbisencoder\webmvorbisencoder_2010.vcxproj", "{A26FB677-45A9-42C2-9942-5E96CCED3F0A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisencoder", "webmvorbisencoder\webmvorbisencoder.vcxproj", "{A26FB677-45A9-42C2-9942-5E96CCED3F0A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vp9decoder", "vp9decoder\vp9decoder.vcxproj", "{BC8E93B9-9062-4BC4-A351-3408604B8409}"
 EndProject
