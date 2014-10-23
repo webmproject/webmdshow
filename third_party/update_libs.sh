@@ -28,8 +28,8 @@ install_dir_array=(x86/debug x64/debug x86/release x64/release)
 # libvpx stuff
 libvpx_dir="libvpx.git"
 libvpx_remote="http://git.chromium.org/webm/libvpx.git"
-libvpx_git_target="eider"
-libvpx_target_array=(x86-win32-vs9 x86_64-win64-vs9)
+libvpx_git_target="HEAD"
+libvpx_target_array=(x86-win32-vs12 x86_64-win64-vs12)
 
 # TODO(tomfinegan): add proper command line parsing
 if [[ "$1" == "--novpx" ]]; then
