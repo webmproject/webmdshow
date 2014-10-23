@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -11,8 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{19116917-FB35-44C1-8BC3-A77D4864B112}</ProjectGuid>
-    <RootNamespace>webmcc</RootNamespace>
+    <ProjectGuid>{915A925A-8B03-43EC-A370-B604381E7D95}</ProjectGuid>
+    <RootNamespace>webmsplit</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -20,10 +20,12 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -44,14 +46,15 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)..\dll\webmdshow\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)..\obj\$(SolutionName)\$(ProjectName)\$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</GenerateManifest>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(RootNamespace)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(RootNamespace)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)common;$(SolutionDir)libcc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)common;$(SolutionDir)libmkvparser;$(SolutionDir)..\libwebm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;_WIN32_WINNT=0x0400;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -63,34 +66,38 @@
     <Link>
       <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <ModuleDefinitionFile>webmcc.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>webmsplit.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>NotSet</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <Optimization>MaxSpeed</Optimization>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(SolutionDir)common;$(SolutionDir)libcc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMCC_2008_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <AdditionalIncludeDirectories>$(SolutionDir)common;$(SolutionDir)libmkvparser;$(SolutionDir)..\libwebm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;_WIN32_WINNT=0x0400;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
     </ClCompile>
     <Link>
       <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
+      <ModuleDefinitionFile>webmsplit.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <ModuleDefinitionFile>webmcc.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -103,12 +110,14 @@
     <ClCompile Include="..\common\comreg.cpp" />
     <ClCompile Include="..\common\graphutil.cpp" />
     <ClCompile Include="..\common\mediatypeutil.cpp" />
+    <ClCompile Include="..\common\vorbistypes.cpp" />
     <ClCompile Include="..\common\webmtypes.cpp" />
     <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmccfilter.cpp" />
-    <ClCompile Include="webmccinpin.cpp" />
-    <ClCompile Include="webmccoutpin.cpp" />
-    <ClCompile Include="webmccpin.cpp" />
+    <ClCompile Include="mkvreader.cpp" />
+    <ClCompile Include="webmsplitfilter.cpp" />
+    <ClCompile Include="webmsplitinpin.cpp" />
+    <ClCompile Include="webmsplitoutpin.cpp" />
+    <ClCompile Include="webmsplitpin.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\cenumpins.hpp" />
@@ -120,21 +129,23 @@
     <ClInclude Include="..\common\comreg.hpp" />
     <ClInclude Include="..\common\graphutil.hpp" />
     <ClInclude Include="..\common\mediatypeutil.hpp" />
+    <ClInclude Include="..\common\vorbistypes.hpp" />
     <ClInclude Include="..\common\webmtypes.hpp" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="webmccfilter.hpp" />
-    <ClInclude Include="webmccinpin.hpp" />
-    <ClInclude Include="webmccoutpin.hpp" />
-    <ClInclude Include="webmccpin.hpp" />
+    <ClInclude Include="mkvreader.hpp" />
+    <ClInclude Include="webmsplitfilter.hpp" />
+    <ClInclude Include="webmsplitinpin.hpp" />
+    <ClInclude Include="webmsplitoutpin.hpp" />
+    <ClInclude Include="webmsplitpin.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\libcc\libcc_2010.vcxproj">
-      <Project>{f4d58d10-0a22-4c8f-a961-844acbe97c9b}</Project>
+    <ResourceCompile Include="webmsplit.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\libmkvparser\libmkvparser.vcxproj">
+      <Project>{71a257dd-0721-406f-9e32-283c46592285}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="webmcc.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
