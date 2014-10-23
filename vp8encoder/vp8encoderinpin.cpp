@@ -635,20 +635,20 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
     len;
     assert(len >= 0);
 
-    img_fmt_t fmt;
+    vpx_img_fmt_t fmt;
 
     const AM_MEDIA_TYPE& mt = m_connection_mtv[0];
 
     if (mt.subtype == MEDIASUBTYPE_YV12)
-        fmt = IMG_FMT_YV12;
+        fmt = VPX_IMG_FMT_YV12;
 
     else if (mt.subtype == WebmTypes::MEDIASUBTYPE_I420)
-        fmt = IMG_FMT_I420;
+        fmt = VPX_IMG_FMT_I420;
 
     else if ((mt.subtype == MEDIASUBTYPE_YUY2) ||
              (mt.subtype == MEDIASUBTYPE_YUYV))
     {
-        fmt = IMG_FMT_YUY2;
+        fmt = VPX_IMG_FMT_YUY2;
     }
     else
     {
@@ -666,8 +666,8 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
     switch (fmt)
     {
-        case IMG_FMT_YV12:
-        case IMG_FMT_I420:
+        case VPX_IMG_FMT_YV12:
+        case VPX_IMG_FMT_I420:
         {
             assert(len == (w*h + 2*((w+1)/2)*((h+1)/2)));
 
@@ -676,11 +676,11 @@ HRESULT Inpin::Receive(IMediaSample* pInSample)
 
             break;
         }
-        case IMG_FMT_YUY2:
+        case VPX_IMG_FMT_YUY2:
         {
             assert(len == ((2*w) * h));
 
-            fmt = IMG_FMT_YV12;
+            fmt = VPX_IMG_FMT_YV12;
 
             imgbuf = ConvertYUY2ToYV12(inbuf, w, h);
             assert(imgbuf);

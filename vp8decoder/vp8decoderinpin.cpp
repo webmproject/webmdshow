@@ -695,7 +695,7 @@ void Inpin::CopyToPlanar(
 {
     //Y
 
-    const BYTE* pInY = f->planes[PLANE_Y];
+    const BYTE* pInY = f->planes[VPX_PLANE_Y];
     assert(pInY);
 
     unsigned int width_in = f->d_w;
@@ -709,7 +709,7 @@ void Inpin::CopyToPlanar(
 
     BYTE* pOut = pOutBuf;
 
-    const int strideInY = f->stride[PLANE_Y];
+    const int strideInY = f->stride[VPX_PLANE_Y];
 
     LONG strideOut = bmih_out.biWidth;
     assert(strideOut);
@@ -725,15 +725,15 @@ void Inpin::CopyToPlanar(
     width_in = (width_in + 1) / 2;
     height_in = (height_in + 1) / 2;
 
-    const BYTE* pInV = f->planes[PLANE_V];
+    const BYTE* pInV = f->planes[VPX_PLANE_V];
     assert(pInV);
 
-    const int strideInV = f->stride[PLANE_V];
+    const int strideInV = f->stride[VPX_PLANE_V];
 
-    const BYTE* pInU = f->planes[PLANE_U];
+    const BYTE* pInU = f->planes[VPX_PLANE_U];
     assert(pInU);
 
-    const int strideInU = f->stride[PLANE_U];
+    const int strideInU = f->stride[VPX_PLANE_U];
 
     if (subtype_out == MEDIASUBTYPE_NV12)
     {
@@ -833,20 +833,20 @@ void Inpin::CopyToPacked(
     const LONG height_out = (rect_height_out > 0) ? rect_height_out
                                                   : labs(bmih_out.biHeight);
 
-    const BYTE* pInY_base = f->planes[PLANE_Y];
+    const BYTE* pInY_base = f->planes[VPX_PLANE_Y];
     assert(pInY_base);
 
-    const int strideInY = f->stride[PLANE_Y];
+    const int strideInY = f->stride[VPX_PLANE_Y];
 
-    const BYTE* pInV_base = f->planes[PLANE_V];
+    const BYTE* pInV_base = f->planes[VPX_PLANE_V];
     assert(pInV_base);
 
-    const int strideInV = f->stride[PLANE_V];
+    const int strideInV = f->stride[VPX_PLANE_V];
 
-    const BYTE* pInU_base = f->planes[PLANE_U];
+    const BYTE* pInU_base = f->planes[VPX_PLANE_U];
     assert(pInU_base);
 
-    const int strideInU = f->stride[PLANE_U];
+    const int strideInU = f->stride[VPX_PLANE_U];
 
     const unsigned int width_in = f->d_w;
     assert(LONG(width_in) == width_out);

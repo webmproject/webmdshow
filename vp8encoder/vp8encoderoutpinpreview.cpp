@@ -250,7 +250,7 @@ void OutpinPreview::Render(
 
     //Y
 
-    const BYTE* pInY = img->planes[PLANE_Y];
+    const BYTE* pInY = img->planes[VPX_PLANE_Y];
     assert(pInY);
 
     BYTE* pOutBuf;
@@ -261,7 +261,7 @@ void OutpinPreview::Render(
 
     BYTE* pOut = pOutBuf;
 
-    const int strideInY = img->stride[PLANE_Y];
+    const int strideInY = img->stride[VPX_PLANE_Y];
 
     for (unsigned int y = 0; y < hIn; ++y)
     {
@@ -275,15 +275,15 @@ void OutpinPreview::Render(
     wIn = (wIn + 1) / 2;
     hIn = (hIn + 1) / 2;
 
-    const BYTE* pInV = img->planes[PLANE_V];
+    const BYTE* pInV = img->planes[VPX_PLANE_V];
     assert(pInV);
 
-    const int strideInV = img->stride[PLANE_V];
+    const int strideInV = img->stride[VPX_PLANE_V];
 
-    const BYTE* pInU = img->planes[PLANE_U];
+    const BYTE* pInU = img->planes[VPX_PLANE_U];
     assert(pInU);
 
-    const int strideInU = img->stride[PLANE_U];
+    const int strideInU = img->stride[VPX_PLANE_U];
 
     //V
 
