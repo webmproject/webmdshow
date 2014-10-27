@@ -783,7 +783,7 @@ HRESULT Filter::Open()
     else
         return VFW_E_INVALID_FILE_FORMAT;
 
-    if (h.m_docTypeVersion > 2)
+    if (h.m_docTypeVersion < 1)
         return VFW_E_INVALID_FILE_FORMAT;
 
     if (h.m_docTypeReadVersion > 2)
