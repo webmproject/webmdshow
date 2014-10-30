@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//RcY\u003d",
+        "filename": "release.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 96,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-10-30T18:42:00Z",
+      "side": 1,
+      "message": "this format makes it dependent on mingw env or a tailored cygwin",
+      "revId": "245be39fdd9da37ee766c73c3b2aca829868b417",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Rcc\u003d",
+        "filename": "release.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 103,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-10-30T18:42:00Z",
+      "side": 1,
+      "message": "indent is off",
+      "revId": "245be39fdd9da37ee766c73c3b2aca829868b417",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Rcg\u003d",
+        "filename": "release.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 108,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-10-30T18:42:00Z",
+      "side": 1,
+      "message": "you could just require this be in the path",
+      "revId": "245be39fdd9da37ee766c73c3b2aca829868b417",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
