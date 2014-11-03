@@ -33,6 +33,24 @@
       "revId": "f61a799c37633c65d1ea30ff6ab49f4f835e1dc3",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//RQU\u003d",
+        "filename": "release.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 225,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-03T21:49:58Z",
+      "side": 1,
+      "message": "sigh... wtf did I do? I couldn\u0027t get normal 7 zip to run without showing the GUI when I was messing around to see if I could use it directly (without grabbing 7za, which is separate).\n\nOh well, I\u0027ll put it in my TODO list to switch.",
+      "parentUuid": "AAAAdn//RQg\u003d",
+      "revId": "f61a799c37633c65d1ea30ff6ab49f4f835e1dc3",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
     }
   ]
 }
