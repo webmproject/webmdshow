@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//RQo\u003d",
+        "filename": "release.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 86,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-11-03T20:13:19Z",
+      "side": 1,
+      "message": "it\u0027s windows so probably not a big deal to use local",
+      "revId": "f61a799c37633c65d1ea30ff6ab49f4f835e1dc3",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//RQg\u003d",
+        "filename": "release.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 225,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-11-03T20:13:19Z",
+      "side": 1,
+      "message": "I just use \u00277z.exe a xxx.zip dir\u0027 with webp, probably doesn\u0027t make a difference",
+      "revId": "f61a799c37633c65d1ea30ff6ab49f4f835e1dc3",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
