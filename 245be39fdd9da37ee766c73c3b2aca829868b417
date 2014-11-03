@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//RRk\u003d",
+        "filename": "release.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 96,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-03T20:00:47Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//RcY\u003d",
+      "revId": "245be39fdd9da37ee766c73c3b2aca829868b417",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//Rcc\u003d",
         "filename": "release.sh",
         "patchSetId": 2
@@ -36,6 +54,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//RRg\u003d",
+        "filename": "release.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 103,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-03T20:00:47Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//Rcc\u003d",
+      "revId": "245be39fdd9da37ee766c73c3b2aca829868b417",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//Rcg\u003d",
         "filename": "release.sh",
         "patchSetId": 2
@@ -47,6 +83,24 @@
       "writtenOn": "2014-10-30T18:42:00Z",
       "side": 1,
       "message": "you could just require this be in the path",
+      "revId": "245be39fdd9da37ee766c73c3b2aca829868b417",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//RRc\u003d",
+        "filename": "release.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 108,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-03T20:00:47Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//Rcg\u003d",
       "revId": "245be39fdd9da37ee766c73c3b2aca829868b417",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
