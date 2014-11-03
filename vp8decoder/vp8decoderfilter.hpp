@@ -21,28 +21,20 @@ class Filter : public IBaseFilter,
                public IVP8PostProcessing,
                public CLockable
 {
-    friend HRESULT CreateInstance(
-            IClassFactory*,
-            IUnknown*,
-            const IID&,
-            void**);
-
-    Filter(IClassFactory*, IUnknown*);
-    virtual ~Filter();
-
-    Filter(const Filter&);
-    Filter& operator=(const Filter&);
-
-public:
+  public:
+    struct Config
+    {
+        int flags;
+        int deblock;
+        int noise;
+    };
 
     //IUnknown
-
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
 
     //IBaseFilter
-
     HRESULT STDMETHODCALLTYPE GetClassID(CLSID*);
     HRESULT STDMETHODCALLTYPE Stop();
     HRESULT STDMETHODCALLTYPE Pause();
@@ -57,7 +49,6 @@ public:
     HRESULT STDMETHODCALLTYPE QueryVendorInfo(LPWSTR*);
 
     //IVP8PostProcessing
-
     HRESULT STDMETHODCALLTYPE SetFlags(int);
     HRESULT STDMETHODCALLTYPE SetDeblockingLevel(int);
     HRESULT STDMETHODCALLTYPE SetNoiseLevel(int);
@@ -67,19 +58,29 @@ public:
     HRESULT STDMETHODCALLTYPE ApplyPostProcessing();
 
     //local classes and methods
-
     FILTER_STATE GetStateLocked() const;
     HRESULT OnDecodeFailureLocked();
     void OnDecodeSuccessLocked(bool is_key);
 
-private:
+    FILTER_INFO m_info;
+    Inpin m_inpin;
+    Outpin m_outpin;
+
+    Config m_cfg;
+
+  private:
+    enum State
+    {
+        kStateStopped,
+        kStatePausedWaitingForKeyframe,
+        kStatePaused,
+        kStateRunning,
+        kStateRunningWaitingForKeyframe
+    };
+
     class CNondelegating : public IUnknown
     {
-        CNondelegating(const CNondelegating&);
-        CNondelegating& operator=(const CNondelegating&);
-
-    public:
-
+      public:
         Filter* const m_pFilter;
         LONG m_cRef;
 
@@ -90,47 +91,29 @@ private:
         ULONG STDMETHODCALLTYPE AddRef();
         ULONG STDMETHODCALLTYPE Release();
 
+      private:
+        CNondelegating(const CNondelegating&);
+        CNondelegating& operator=(const CNondelegating&);
     };
+
+    Filter(IClassFactory*, IUnknown*);
+    virtual ~Filter();
+    Filter(const Filter&);
+    Filter& operator=(const Filter&);
+    void OnStop();
+    void OnStart();
+
+    friend HRESULT CreateInstance(IClassFactory*,
+                                  IUnknown*,
+                                  const IID&,
+                                  void**);
 
     IClassFactory* const m_pClassFactory;
     CNondelegating m_nondelegating;
     IUnknown* const m_pOuter;  //decl must follow m_nondelegating
     REFERENCE_TIME m_start;
     IReferenceClock* m_clock;
-
-public:
-    FILTER_INFO m_info;
-
-private:
-    enum State
-    {
-        kStateStopped,
-        kStatePausedWaitingForKeyframe,
-        kStatePaused,
-        kStateRunning,
-        kStateRunningWaitingForKeyframe
-    };
-
     State m_state;
-
-public:
-    Inpin m_inpin;
-    Outpin m_outpin;
-
-    struct Config
-    {
-        int flags;
-        int deblock;
-        int noise;
-    };
-
-    Config m_cfg;
-
-private:
-    void OnStop();
-    void OnStart();
-
 };
-
 
 }  //end namespace VP8DecoderLib
