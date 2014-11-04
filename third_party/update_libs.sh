@@ -219,7 +219,7 @@ function build_libvpx() {
     mkdir -p "${config}"
     cd "${config}"
     ../configure --target=${config} --disable-examples --enable-static-msvcrt \
---disable-install-docs
+--disable-install-docs --disable-unit-tests --enable-libyuv
     make clean
     make
     # "installs" the includes within INSTALL/include/vpx, which are copied
