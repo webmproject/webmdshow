@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//Q5E\u003d",
+        "filename": "third_party/update_xiph_libs.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-11-06T10:26:03Z",
+      "side": 1,
+      "message": "these are looking common, any shared place they could eventually go?",
+      "revId": "88afb51f92a1c6d73237f1acf90ea534f00d55fa",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Q4k\u003d",
+        "filename": "third_party/update_xiph_libs.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 87,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-11-06T10:26:03Z",
+      "side": 1,
+      "message": "--version would work too",
+      "revId": "88afb51f92a1c6d73237f1acf90ea534f00d55fa",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Q40\u003d",
+        "filename": "third_party/update_xiph_libs.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 203,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-11-06T10:26:03Z",
+      "side": 1,
+      "message": "you should be consistent and use \u0027[[ ]]\u0027 if this is going to remain a bash file",
+      "revId": "88afb51f92a1c6d73237f1acf90ea534f00d55fa",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
