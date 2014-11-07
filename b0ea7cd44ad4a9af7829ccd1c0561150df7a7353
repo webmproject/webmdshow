@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//Qto\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.hpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2014-11-07T02:37:26Z",
+      "side": 1,
+      "message": "Should this go in the ext section down?",
+      "revId": "b0ea7cd44ad4a9af7829ccd1c0561150df7a7353",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Qtk\u003d",
+        "filename": "vp8decoder/vp8decoderinpin.hpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 59,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2014-11-07T02:37:26Z",
+      "side": 1,
+      "message": "Should probably move these later to the end of the class.",
+      "revId": "b0ea7cd44ad4a9af7829ccd1c0561150df7a7353",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
