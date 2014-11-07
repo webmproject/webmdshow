@@ -36,6 +36,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//Qrc\u003d",
+        "filename": "third_party/update_xiph_libs.sh",
+        "patchSetId": 8
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-07T18:42:44Z",
+      "side": 1,
+      "message": "seems best to have the util name in the wrapper function, but a little weird...",
+      "parentUuid": "AAAAdn//Qsw\u003d",
+      "revId": "ae5e153928fc26d52c65293a7ab3649011e8b9cf",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//Qss\u003d",
         "filename": "third_party/update_xiph_libs.sh",
         "patchSetId": 8
@@ -53,6 +71,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//QrM\u003d",
+        "filename": "third_party/update_xiph_libs.sh",
+        "patchSetId": 8
+      },
+      "lineNbr": 70,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-07T18:42:44Z",
+      "side": 1,
+      "message": "ambivalent here... I like that the result of pick_* is obvious with  assignment being right in the main body of the script, but I\u0027m not sure use of the result variable in the actual function  doing the work is completely straightforward.\n\nOtoh, setting the variable here and using it in the util function seems just about the same as far as grokking the code goes. Leaving it as-is.",
+      "parentUuid": "AAAAdn//Qss\u003d",
+      "revId": "ae5e153928fc26d52c65293a7ab3649011e8b9cf",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//Qso\u003d",
         "filename": "third_party/update_xiph_libs.sh",
         "patchSetId": 8
@@ -64,6 +100,24 @@
       "writtenOn": "2014-11-07T09:21:02Z",
       "side": 1,
       "message": "probably a bit too verbose but you could ${VERBOSE:+-v} if you wanted",
+      "revId": "ae5e153928fc26d52c65293a7ab3649011e8b9cf",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//QrI\u003d",
+        "filename": "third_party/update_xiph_libs.sh",
+        "patchSetId": 8
+      },
+      "lineNbr": 139,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-07T18:42:44Z",
+      "side": 1,
+      "message": "yeah, too noisy I think.",
+      "parentUuid": "AAAAdn//Qso\u003d",
       "revId": "ae5e153928fc26d52c65293a7ab3649011e8b9cf",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
