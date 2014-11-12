@@ -5,132 +5,111 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
+#ifndef WEBMDSHOW_VP8DECODER_VP8DECODERFILTER_HPP_
+#define WEBMDSHOW_VP8DECODER_VP8DECODERFILTER_HPP_
 
-#pragma once
 #include <strmif.h>
+
 #include <string>
+
+#include "clockable.hpp"
+#include "vp8decoderidl.h"
 #include "vp8decoderinpin.hpp"
 #include "vp8decoderoutpin.hpp"
-#include "vp8decoderidl.h"
-#include "clockable.hpp"
 
-namespace VP8DecoderLib
-{
+namespace VP8DecoderLib {
 
-class Filter : public IBaseFilter,
-               public IVP8PostProcessing,
-               public CLockable
-{
-    friend HRESULT CreateInstance(
-            IClassFactory*,
-            IUnknown*,
-            const IID&,
-            void**);
+class Filter : public IBaseFilter, public IVP8PostProcessing, public CLockable {
+ public:
+  struct Config {
+    int flags;
+    int deblock;
+    int noise;
+  };
 
-    Filter(IClassFactory*, IUnknown*);
-    virtual ~Filter();
+  // IUnknown
+  HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
+  ULONG STDMETHODCALLTYPE AddRef();
+  ULONG STDMETHODCALLTYPE Release();
 
-    Filter(const Filter&);
-    Filter& operator=(const Filter&);
+  // IBaseFilter
+  HRESULT STDMETHODCALLTYPE GetClassID(CLSID*);
+  HRESULT STDMETHODCALLTYPE Stop();
+  HRESULT STDMETHODCALLTYPE Pause();
+  HRESULT STDMETHODCALLTYPE Run(REFERENCE_TIME);
+  HRESULT STDMETHODCALLTYPE GetState(DWORD, FILTER_STATE*);
+  HRESULT STDMETHODCALLTYPE SetSyncSource(IReferenceClock*);
+  HRESULT STDMETHODCALLTYPE GetSyncSource(IReferenceClock**);
+  HRESULT STDMETHODCALLTYPE EnumPins(IEnumPins**);
+  HRESULT STDMETHODCALLTYPE FindPin(LPCWSTR, IPin**);
+  HRESULT STDMETHODCALLTYPE QueryFilterInfo(FILTER_INFO*);
+  HRESULT STDMETHODCALLTYPE JoinFilterGraph(IFilterGraph*, LPCWSTR);
+  HRESULT STDMETHODCALLTYPE QueryVendorInfo(LPWSTR*);
 
-public:
+  // IVP8PostProcessing
+  HRESULT STDMETHODCALLTYPE SetFlags(int);
+  HRESULT STDMETHODCALLTYPE SetDeblockingLevel(int);
+  HRESULT STDMETHODCALLTYPE SetNoiseLevel(int);
+  HRESULT STDMETHODCALLTYPE GetFlags(int*);
+  HRESULT STDMETHODCALLTYPE GetDeblockingLevel(int*);
+  HRESULT STDMETHODCALLTYPE GetNoiseLevel(int*);
+  HRESULT STDMETHODCALLTYPE ApplyPostProcessing();
 
-    //IUnknown
+  // local classes and methods
+  FILTER_STATE GetStateLocked() const;
+  HRESULT OnDecodeFailureLocked();
+  void OnDecodeSuccessLocked(bool is_key);
+
+  // public members
+  FILTER_INFO m_info;
+  Inpin m_inpin;
+  Outpin m_outpin;
+  Config m_cfg;
+
+ private:
+  class CNondelegating : public IUnknown {
+   public:
+    explicit CNondelegating(Filter* f) : m_pFilter(f), m_cRef(0) {}
+    virtual ~CNondelegating() {}
 
     HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
 
-    //IBaseFilter
+    Filter* const m_pFilter;
+    LONG m_cRef;
 
-    HRESULT STDMETHODCALLTYPE GetClassID(CLSID*);
-    HRESULT STDMETHODCALLTYPE Stop();
-    HRESULT STDMETHODCALLTYPE Pause();
-    HRESULT STDMETHODCALLTYPE Run(REFERENCE_TIME);
-    HRESULT STDMETHODCALLTYPE GetState(DWORD, FILTER_STATE*);
-    HRESULT STDMETHODCALLTYPE SetSyncSource(IReferenceClock*);
-    HRESULT STDMETHODCALLTYPE GetSyncSource(IReferenceClock**);
-    HRESULT STDMETHODCALLTYPE EnumPins(IEnumPins**);
-    HRESULT STDMETHODCALLTYPE FindPin(LPCWSTR, IPin**);
-    HRESULT STDMETHODCALLTYPE QueryFilterInfo(FILTER_INFO*);
-    HRESULT STDMETHODCALLTYPE JoinFilterGraph(IFilterGraph*, LPCWSTR);
-    HRESULT STDMETHODCALLTYPE QueryVendorInfo(LPWSTR*);
+   private:
+    CNondelegating(const CNondelegating&);
+    CNondelegating& operator=(const CNondelegating&);
+  };
 
-    //IVP8PostProcessing
+  enum State {
+    kStateStopped,
+    kStatePausedWaitingForKeyframe,
+    kStatePaused,
+    kStateRunning,
+    kStateRunningWaitingForKeyframe
+  };
 
-    HRESULT STDMETHODCALLTYPE SetFlags(int);
-    HRESULT STDMETHODCALLTYPE SetDeblockingLevel(int);
-    HRESULT STDMETHODCALLTYPE SetNoiseLevel(int);
-    HRESULT STDMETHODCALLTYPE GetFlags(int*);
-    HRESULT STDMETHODCALLTYPE GetDeblockingLevel(int*);
-    HRESULT STDMETHODCALLTYPE GetNoiseLevel(int*);
-    HRESULT STDMETHODCALLTYPE ApplyPostProcessing();
+  friend HRESULT CreateInstance(IClassFactory*, IUnknown*, const IID&, void**);
 
-    //local classes and methods
+  void OnStop();
+  void OnStart();
 
-    FILTER_STATE GetStateLocked() const;
-    HRESULT OnDecodeFailureLocked();
-    void OnDecodeSuccessLocked(bool is_key);
+  Filter(IClassFactory*, IUnknown*);
+  virtual ~Filter();
+  Filter(const Filter&);
+  Filter& operator=(const Filter&);
 
-private:
-    class CNondelegating : public IUnknown
-    {
-        CNondelegating(const CNondelegating&);
-        CNondelegating& operator=(const CNondelegating&);
-
-    public:
-
-        Filter* const m_pFilter;
-        LONG m_cRef;
-
-        explicit CNondelegating(Filter*);
-        virtual ~CNondelegating();
-
-        HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
-        ULONG STDMETHODCALLTYPE AddRef();
-        ULONG STDMETHODCALLTYPE Release();
-
-    };
-
-    IClassFactory* const m_pClassFactory;
-    CNondelegating m_nondelegating;
-    IUnknown* const m_pOuter;  //decl must follow m_nondelegating
-    REFERENCE_TIME m_start;
-    IReferenceClock* m_clock;
-
-public:
-    FILTER_INFO m_info;
-
-private:
-    enum State
-    {
-        kStateStopped,
-        kStatePausedWaitingForKeyframe,
-        kStatePaused,
-        kStateRunning,
-        kStateRunningWaitingForKeyframe
-    };
-
-    State m_state;
-
-public:
-    Inpin m_inpin;
-    Outpin m_outpin;
-
-    struct Config
-    {
-        int flags;
-        int deblock;
-        int noise;
-    };
-
-    Config m_cfg;
-
-private:
-    void OnStop();
-    void OnStart();
-
+  IClassFactory* const m_pClassFactory;
+  CNondelegating m_nondelegating;
+  IUnknown* const m_pOuter;  // decl must follow m_nondelegating
+  REFERENCE_TIME m_start;
+  IReferenceClock* m_clock;
+  State m_state;
 };
 
+}  // namespace VP8DecoderLib
 
-}  //end namespace VP8DecoderLib
+#endif  // WEBMDSHOW_VP8DECODER_VP8DECODERFILTER_HPP_
