@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfsource_2010", "webmmfsource\webmmfsource_2010.vcxproj", "{9A43AE3B-13E0-4871-B08C-C20E5D72A323}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfsource", "webmmfsource\webmmfsource.vcxproj", "{9A43AE3B-13E0-4871-B08C-C20E5D72A323}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfvp8dec_2010", "webmmfvp8dec\webmmfvp8dec_2010.vcxproj", "{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfvp8dec", "webmmfvp8dec\webmmfvp8dec.vcxproj", "{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfvorbisdec_2010", "webmmfvorbisdec\webmmfvorbisdec_2010.vcxproj", "{560D4BFA-63B9-468E-8845-7705DE2FBDDF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmfvorbisdec", "webmmfvorbisdec\webmmfvorbisdec.vcxproj", "{560D4BFA-63B9-468E-8845-7705DE2FBDDF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

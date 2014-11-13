@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{560D4BFA-63B9-468E-8845-7705DE2FBDDF}</ProjectGuid>
-    <RootNamespace>webmmfvorbisdec</RootNamespace>
+    <ProjectGuid>{288D8052-555F-4AED-8FB2-CA2EB34D5CBE}</ProjectGuid>
+    <RootNamespace>webmmfvp8dec</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -28,19 +28,22 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -70,20 +73,21 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)..\..\dll\webmmf\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</GenerateManifest>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)..\..\dll\webmmf\$(Platform)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)..\..\obj\$(SolutionName)\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateManifest>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">webmmfvorbisdec$(PlatformArchitecture)</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">webmmfvorbisdec$(PlatformArchitecture)</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">webmmfvorbisdec$(PlatformArchitecture)</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">webmmfvorbisdec$(PlatformArchitecture)</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">webmmfvp8dec$(PlatformArchitecture)</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">webmmfvp8dec$(PlatformArchitecture)</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">webmmfvp8dec$(PlatformArchitecture)</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">webmmfvp8dec$(PlatformArchitecture)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\common;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)webmmftests;$(SolutionDir)..\third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;WEBMMFVORBISDEC_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\common; $(SolutionDir)..\third_party\libvpx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -94,22 +98,19 @@
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>mfuuid.lib;mfplat.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mfuuid.lib;evr_vista.lib;mfplat_vista.lib;vpxmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetFileName)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libogg\x86\debug;$(SolutionDir)..\third_party\libvorbis\x86\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <ModuleDefinitionFile>webmmfvorbisdec.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libvpx\x86\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>webmmfvp8dec.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>NotSet</SubSystem>
-      <LinkTimeCodeGeneration>
-      </LinkTimeCodeGeneration>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\common;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)webmmftests;$(SolutionDir)..\third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\common; $(SolutionDir)..\third_party\libvpx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_DEBUG;_WINDOWS;_USRDLL;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -117,10 +118,10 @@
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>mfuuid.lib;mfplat.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mfuuid.lib;evr_vista.lib;mfplat_vista.lib;vpxmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetFileName)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libogg\x64\debug;$(SolutionDir)..\third_party\libvorbis\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <ModuleDefinitionFile>webmmfvorbisdec.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libvpx\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>webmmfvp8dec.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
@@ -129,10 +130,10 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\common;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)webmmftests;$(SolutionDir)..\third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\common;$(SolutionDir)..\third_party\libvpx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
@@ -140,10 +141,10 @@
       </DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>mfuuid.lib;mfplat.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mfuuid.lib;evr_vista.lib;mfplat_vista.lib;vpxmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetFileName)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libogg\x86\release;$(SolutionDir)..\third_party\libvorbis\x86\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <ModuleDefinitionFile>webmmfvorbisdec.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libvpx\x86\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>webmmfvp8dec.def</ModuleDefinitionFile>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>NotSet</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -153,16 +154,16 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\common;$(SolutionDir)..\third_party\libogg;$(SolutionDir)..\third_party\libvorbis;$(SolutionDir)webmmftests;$(SolutionDir)..\third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\common;$(SolutionDir)..\third_party\libvpx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;_WINDOWS;_USRDLL;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>mfuuid.lib;mfplat.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mfuuid.lib;evr_vista.lib;mfplat_vista.lib;vpxmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetFileName)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libogg\x64\release;$(SolutionDir)..\third_party\libvorbis\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <ModuleDefinitionFile>webmmfvorbisdec.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\third_party\libvpx\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>webmmfvp8dec.def</ModuleDefinitionFile>
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
@@ -171,30 +172,21 @@
     <ClInclude Include="..\..\common\cfactory.hpp" />
     <ClInclude Include="..\..\common\clockable.hpp" />
     <ClInclude Include="..\..\common\comreg.hpp" />
-    <ClInclude Include="..\..\common\memutil.hpp" />
-    <ClInclude Include="..\..\common\memutilfwd.hpp" />
-    <ClInclude Include="..\..\common\vorbisdecoder.hpp" />
-    <ClInclude Include="..\..\common\vorbistypes.hpp" />
+    <ClInclude Include="..\..\common\iidstr.hpp" />
     <ClInclude Include="..\..\common\webmtypes.hpp" />
-    <ClInclude Include="..\..\third_party\libogg\ogg\ogg.h" />
-    <ClInclude Include="..\..\third_party\libogg\ogg\os_types.h" />
-    <ClInclude Include="..\..\third_party\libvorbis\vorbis\codec.h" />
-    <ClInclude Include="..\webmmftests\wfxrawwriter.hpp" />
-    <ClInclude Include="webmmfvorbisdec.hpp" />
+    <ClInclude Include="webmmfvp8dec.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="webmmfvorbisdec.rc" />
+    <ResourceCompile Include="webmmfvp8dec.rc" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\common\cfactory.cpp" />
     <ClCompile Include="..\..\common\clockable.cpp" />
     <ClCompile Include="..\..\common\comreg.cpp" />
-    <ClCompile Include="..\..\common\vorbisdecoder.cpp" />
-    <ClCompile Include="..\..\common\vorbistypes.cpp" />
+    <ClCompile Include="..\..\common\iidstr.cpp" />
     <ClCompile Include="..\..\common\webmtypes.cpp" />
-    <ClCompile Include="..\webmmftests\wfxrawwriter.cpp" />
     <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmmfvorbisdec.cpp" />
+    <ClCompile Include="webmmfvp8dec.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
