@@ -6,12 +6,13 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include <cassert>
 #include <amvideo.h>
 #include <dvdmedia.h>
 #include <strmif.h>
 #include <uuids.h>
 #include <vfwmsgs.h>
+
+#include <cassert>
 
 #include "cmediasample.hpp"
 #include "mediatypeutil.hpp"
