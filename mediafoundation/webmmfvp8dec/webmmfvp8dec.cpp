@@ -1516,7 +1516,7 @@ HRESULT WebmMfVp8Dec::GetFrame(
 
     //Y
 
-    const BYTE* pInY = f->planes[PLANE_Y];
+    const BYTE* pInY = f->planes[VPX_PLANE_Y];
     assert(pInY);
 
     unsigned int wIn = f->d_w;
@@ -1524,7 +1524,7 @@ HRESULT WebmMfVp8Dec::GetFrame(
 
     BYTE* pOut = pOutBuf;
 
-    const int strideInY = f->stride[PLANE_Y];
+    const int strideInY = f->stride[VPX_PLANE_Y];
 
     for (unsigned int y = 0; y < hIn; ++y)
     {
@@ -1533,15 +1533,15 @@ HRESULT WebmMfVp8Dec::GetFrame(
         pOut += strideOut;
     }
 
-    const BYTE* pInV = f->planes[PLANE_V];
+    const BYTE* pInV = f->planes[VPX_PLANE_V];
     assert(pInV);
 
-    const int strideInV = f->stride[PLANE_V];
+    const int strideInV = f->stride[VPX_PLANE_V];
 
-    const BYTE* pInU = f->planes[PLANE_U];
+    const BYTE* pInU = f->planes[VPX_PLANE_U];
     assert(pInU);
 
-    const int strideInU = f->stride[PLANE_U];
+    const int strideInU = f->stride[VPX_PLANE_U];
 
     wIn = (wIn + 1) / 2;
     hIn = (hIn + 1) / 2;
