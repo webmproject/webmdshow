@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//QKA\u003d",
+        "filename": "vp9decoder/dllentry.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-13T22:24:43Z",
+      "side": 1,
+      "message": "I probably shouldn\u0027t have added these checks and returns, but I really just can\u0027t take committing this brokenness as-is... :/",
+      "revId": "dcd80d91745bf237c7f6b0877a117606fe777e32",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
