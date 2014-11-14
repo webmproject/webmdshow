@@ -7,8 +7,11 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "tenumxxx.hpp"
+#include <strmif.h>
+
 #include <vector>
+
+#include "tenumxxx.hpp"
 
 class CEnumPins : public TEnumXXX<IEnumPins, IPin*>
 {
