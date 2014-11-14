@@ -5,108 +5,70 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
+#ifndef WEBMDSHOW_VP9DECODER_VP9DECODERINPIN_HPP_
+#define WEBMDSHOW_VP9DECODER_VP9DECODERINPIN_HPP_
 
-#pragma once
-#include "vp9decoderpin.hpp"
-#include "graphutil.hpp"
-#include "vpx/vpx_decoder.h"
 #include <amvideo.h>
 
-namespace VP9DecoderLib
-{
+#include "vpx/vpx_decoder.h"
 
-class Inpin : public Pin, public IMemInputPin
-{
-    Inpin(const Inpin&);
-    Inpin& operator=(const Inpin&);
+#include "graphutil.hpp"
+#include "vp9decoderpin.hpp"
 
-public:
-    explicit Inpin(Filter*);
+namespace VP9DecoderLib {
 
-    //IUnknown interface:
+class Inpin : public Pin, public IMemInputPin {
+ public:
+  explicit Inpin(Filter*);
 
-    HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
-    ULONG STDMETHODCALLTYPE AddRef();
-    ULONG STDMETHODCALLTYPE Release();
+  // IUnknown interface:
+  HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
+  ULONG STDMETHODCALLTYPE AddRef();
+  ULONG STDMETHODCALLTYPE Release();
 
-    //IPin interface:
+  // IPin interface:
+  HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
+  HRESULT STDMETHODCALLTYPE Connect(IPin*, const AM_MEDIA_TYPE*);
+  HRESULT STDMETHODCALLTYPE ReceiveConnection(IPin*, const AM_MEDIA_TYPE*);
+  HRESULT STDMETHODCALLTYPE QueryInternalConnections(IPin**, ULONG*);
+  HRESULT STDMETHODCALLTYPE EndOfStream();
+  HRESULT STDMETHODCALLTYPE BeginFlush();
+  HRESULT STDMETHODCALLTYPE EndFlush();
+  HRESULT STDMETHODCALLTYPE NewSegment(REFERENCE_TIME, REFERENCE_TIME, double);
 
-    HRESULT STDMETHODCALLTYPE QueryAccept(const AM_MEDIA_TYPE*);
+  // IMemInputPin
+  HRESULT STDMETHODCALLTYPE GetAllocator(IMemAllocator**);
+  HRESULT STDMETHODCALLTYPE NotifyAllocator(IMemAllocator*, BOOL);
+  HRESULT STDMETHODCALLTYPE GetAllocatorRequirements(ALLOCATOR_PROPERTIES*);
+  HRESULT STDMETHODCALLTYPE Receive(IMediaSample*);
+  HRESULT STDMETHODCALLTYPE ReceiveMultiple(IMediaSample**, long, long*);
+  HRESULT STDMETHODCALLTYPE ReceiveCanBlock();
 
-    HRESULT STDMETHODCALLTYPE Connect(IPin*, const AM_MEDIA_TYPE*);
+  // local functions
+  HRESULT Start();  // from stopped to running/paused
+  void Stop();  // from running/paused to stopped
 
-    //HRESULT STDMETHODCALLTYPE Disconnect();
+ protected:
+  HRESULT GetName(PIN_INFO&) const;
+  HRESULT OnDisconnect();
 
-    HRESULT STDMETHODCALLTYPE ReceiveConnection(
-        IPin*,
-        const AM_MEDIA_TYPE*);
+ private:
+  static void CopyToPlanar(const vpx_image_t* image, IMediaSample* sample,
+                           const GUID& subtype_out,
+                           const BITMAPINFOHEADER& bmih_out);
 
-    HRESULT STDMETHODCALLTYPE QueryInternalConnections(
-        IPin**,
-        ULONG*);
+  static void CopyToPacked(const vpx_image_t* image, IMediaSample* sample,
+                           const GUID& subtype_out, const RECT& rc_out,
+                           const BITMAPINFOHEADER& bmih_out);
 
-    HRESULT STDMETHODCALLTYPE EndOfStream();
+  Inpin(const Inpin&);
+  Inpin& operator=(const Inpin&);
 
-    HRESULT STDMETHODCALLTYPE BeginFlush();
-
-    HRESULT STDMETHODCALLTYPE EndFlush();
-
-    HRESULT STDMETHODCALLTYPE NewSegment(
-        REFERENCE_TIME,
-        REFERENCE_TIME,
-        double);
-
-    //IMemInputPin
-
-    HRESULT STDMETHODCALLTYPE GetAllocator(
-        IMemAllocator**);
-
-    HRESULT STDMETHODCALLTYPE NotifyAllocator(
-        IMemAllocator*,
-        BOOL);
-
-    HRESULT STDMETHODCALLTYPE GetAllocatorRequirements(ALLOCATOR_PROPERTIES*);
-
-    HRESULT STDMETHODCALLTYPE Receive(IMediaSample*);
-
-    HRESULT STDMETHODCALLTYPE ReceiveMultiple(
-        IMediaSample**,
-        long,
-        long*);
-
-    HRESULT STDMETHODCALLTYPE ReceiveCanBlock();
-
-    //local functions
-
-    HRESULT Start();  //from stopped to running/paused
-    void Stop();      //from running/paused to stopped
-
-#if 0  // TODO: does VP9 support this?
-    HRESULT OnApplyPostProcessing();
-#endif
-
-protected:
-    HRESULT GetName(PIN_INFO&) const;
-    HRESULT OnDisconnect();
-
-private:
-    bool m_bEndOfStream;
-    bool m_bFlush;
-    vpx_codec_ctx_t m_ctx;
-
-    static void CopyToPlanar(
-        const vpx_image_t* image,
-        IMediaSample* sample,
-        const GUID& subtype_out,
-        const BITMAPINFOHEADER& bmih_out);
-
-    static void CopyToPacked(
-        const vpx_image_t* image,
-        IMediaSample* sample,
-        const GUID& subtype_out,
-        const RECT& rc_out,
-        const BITMAPINFOHEADER& bmih_out);
-
+  bool m_bEndOfStream;
+  bool m_bFlush;
+  vpx_codec_ctx_t m_ctx;
 };
 
-}  //end namespace VP9DecoderLib
+}  // namespace VP9DecoderLib
+
+#endif  // WEBMDSHOW_VP9DECODER_VP9DECODERINPIN_HPP_
