@@ -5,8 +5,8 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
-#ifndef WEBDSHOW_VP9DECODER_VP9DECODEROUTPIN_HPP_
-#define WEBDSHOW_VP9DECODER_VP9DECODEROUTPIN_HPP_
+#ifndef WEBMDSHOW_VP9DECODER_VP9DECODEROUTPIN_HPP_
+#define WEBMDSHOW_VP9DECODER_VP9DECODEROUTPIN_HPP_
 
 #include <amvideo.h>
 #include <comdef.h>
