@@ -13,105 +13,105 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cpp">
+    <ClCompile Include="..\common\cenumpins.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cfactory.cpp">
+    <ClCompile Include="..\common\cfactory.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\clockable.cpp">
+    <ClCompile Include="..\common\clockable.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cmediasample.cpp">
+    <ClCompile Include="..\common\cmediasample.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cmediatypes.cpp">
+    <ClCompile Include="..\common\cmediatypes.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cmemallocator.cpp">
+    <ClCompile Include="..\common\cmemallocator.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\comreg.cpp">
+    <ClCompile Include="..\common\comreg.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\graphutil.cpp">
+    <ClCompile Include="..\common\graphutil.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cpp">
+    <ClCompile Include="..\common\mediatypeutil.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\vorbistypes.cpp">
+    <ClCompile Include="..\common\vorbistypes.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cpp">
+    <ClCompile Include="..\common\webmtypes.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="oggfile.cpp">
+    <ClCompile Include="oggfile.cc">
       <Filter>Ogg Files</Filter>
     </ClCompile>
-    <ClCompile Include="oggparser.cpp">
+    <ClCompile Include="oggparser.cc">
       <Filter>Ogg Files</Filter>
     </ClCompile>
-    <ClCompile Include="oggtrack.cpp">
+    <ClCompile Include="oggtrack.cc">
       <Filter>Ogg Files</Filter>
     </ClCompile>
-    <ClCompile Include="oggtrackaudio.cpp">
+    <ClCompile Include="oggtrackaudio.cc">
       <Filter>Ogg Files</Filter>
     </ClCompile>
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmoggsourcefilter.cpp" />
-    <ClCompile Include="webmoggsourceoutpin.cpp" />
-    <ClCompile Include="webmoggsourcepin.cpp" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmoggsourcefilter.cc" />
+    <ClCompile Include="webmoggsourceoutpin.cc" />
+    <ClCompile Include="webmoggsourcepin.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.hpp">
+    <ClInclude Include="..\common\cenumpins.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cfactory.hpp">
+    <ClInclude Include="..\common\cfactory.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\clockable.hpp">
+    <ClInclude Include="..\common\clockable.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cmediasample.hpp">
+    <ClInclude Include="..\common\cmediasample.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cmediatypes.hpp">
+    <ClInclude Include="..\common\cmediatypes.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cmemallocator.hpp">
+    <ClInclude Include="..\common\cmemallocator.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\comreg.hpp">
+    <ClInclude Include="..\common\comreg.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\graphutil.hpp">
+    <ClInclude Include="..\common\graphutil.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.hpp">
+    <ClInclude Include="..\common\mediatypeutil.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\vorbistypes.hpp">
+    <ClInclude Include="..\common\vorbistypes.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\webmtypes.hpp">
+    <ClInclude Include="..\common\webmtypes.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="oggfile.hpp">
+    <ClInclude Include="oggfile.h">
       <Filter>Ogg Files</Filter>
     </ClInclude>
-    <ClInclude Include="oggparser.hpp">
+    <ClInclude Include="oggparser.h">
       <Filter>Ogg Files</Filter>
     </ClInclude>
-    <ClInclude Include="oggtrack.hpp">
+    <ClInclude Include="oggtrack.h">
       <Filter>Ogg Files</Filter>
     </ClInclude>
-    <ClInclude Include="oggtrackaudio.hpp">
+    <ClInclude Include="oggtrackaudio.h">
       <Filter>Ogg Files</Filter>
     </ClInclude>
-    <ClInclude Include="webmoggsourcefilter.hpp" />
-    <ClInclude Include="webmoggsourceoutpin.hpp" />
-    <ClInclude Include="webmoggsourcepin.hpp" />
+    <ClInclude Include="webmoggsourcefilter.h" />
+    <ClInclude Include="webmoggsourceoutpin.h" />
+    <ClInclude Include="webmoggsourcepin.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

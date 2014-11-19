@@ -112,28 +112,28 @@
   <ItemGroup>
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\IDL\webmmuxidl.h" />
-    <ClInclude Include="..\common\graphutil.hpp" />
-    <ClInclude Include="..\common\mediatypeutil.hpp" />
-    <ClInclude Include="..\common\versionhandling.hpp" />
-    <ClInclude Include="..\common\vorbistypes.hpp" />
+    <ClInclude Include="..\common\graphutil.h" />
+    <ClInclude Include="..\common\mediatypeutil.h" />
+    <ClInclude Include="..\common\versionhandling.h" />
+    <ClInclude Include="..\common\vorbistypes.h" />
     <ClInclude Include="..\IDL\vp8encoderidl.h" />
-    <ClInclude Include="..\common\webmtypes.hpp" />
-    <ClInclude Include="makewebmapp.hpp" />
-    <ClInclude Include="makewebmcmdline.hpp" />
-    <ClInclude Include="memfile.hpp" />
+    <ClInclude Include="..\common\webmtypes.h" />
+    <ClInclude Include="makewebmapp.h" />
+    <ClInclude Include="makewebmcmdline.h" />
+    <ClInclude Include="memfile.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\IDL\webmmuxidl.c" />
-    <ClCompile Include="..\common\graphutil.cpp" />
-    <ClCompile Include="..\common\mediatypeutil.cpp" />
-    <ClCompile Include="..\common\versionhandling.cpp" />
-    <ClCompile Include="..\common\vorbistypes.cpp" />
+    <ClCompile Include="..\common\graphutil.cc" />
+    <ClCompile Include="..\common\mediatypeutil.cc" />
+    <ClCompile Include="..\common\versionhandling.cc" />
+    <ClCompile Include="..\common\vorbistypes.cc" />
     <ClCompile Include="..\IDL\vp8encoderidl.c" />
-    <ClCompile Include="..\common\webmtypes.cpp" />
-    <ClCompile Include="makewebmapp.cpp" />
-    <ClCompile Include="makewebmcmdline.cpp" />
-    <ClCompile Include="makewebmmain.cpp" />
-    <ClCompile Include="memfile.cpp" />
+    <ClCompile Include="..\common\webmtypes.cc" />
+    <ClCompile Include="makewebmapp.cc" />
+    <ClCompile Include="makewebmcmdline.cc" />
+    <ClCompile Include="makewebmmain.cc" />
+    <ClCompile Include="memfile.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

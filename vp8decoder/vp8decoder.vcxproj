@@ -124,38 +124,38 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cpp" />
-    <ClCompile Include="..\common\cfactory.cpp" />
-    <ClCompile Include="..\common\clockable.cpp" />
-    <ClCompile Include="..\common\cmediasample.cpp" />
-    <ClCompile Include="..\common\cmediatypes.cpp" />
-    <ClCompile Include="..\common\cmemallocator.cpp" />
-    <ClCompile Include="..\common\comreg.cpp" />
-    <ClCompile Include="..\common\mediatypeutil.cpp" />
-    <ClCompile Include="..\common\webmtypes.cpp" />
+    <ClCompile Include="..\common\cenumpins.cc" />
+    <ClCompile Include="..\common\cfactory.cc" />
+    <ClCompile Include="..\common\clockable.cc" />
+    <ClCompile Include="..\common\cmediasample.cc" />
+    <ClCompile Include="..\common\cmediatypes.cc" />
+    <ClCompile Include="..\common\cmemallocator.cc" />
+    <ClCompile Include="..\common\comreg.cc" />
+    <ClCompile Include="..\common\mediatypeutil.cc" />
+    <ClCompile Include="..\common\webmtypes.cc" />
     <ClCompile Include="..\IDL\vp8decoderidl.c" />
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="vp8decoderfilter.cpp" />
-    <ClCompile Include="vp8decoderinpin.cpp" />
-    <ClCompile Include="vp8decoderoutpin.cpp" />
-    <ClCompile Include="vp8decoderpin.cpp" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="vp8decoderfilter.cc" />
+    <ClCompile Include="vp8decoderinpin.cc" />
+    <ClCompile Include="vp8decoderoutpin.cc" />
+    <ClCompile Include="vp8decoderpin.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.hpp" />
-    <ClInclude Include="..\common\cfactory.hpp" />
-    <ClInclude Include="..\common\clockable.hpp" />
-    <ClInclude Include="..\common\cmediasample.hpp" />
-    <ClInclude Include="..\common\cmediatypes.hpp" />
-    <ClInclude Include="..\common\cmemallocator.hpp" />
-    <ClInclude Include="..\common\comreg.hpp" />
-    <ClInclude Include="..\common\mediatypeutil.hpp" />
-    <ClInclude Include="..\common\webmtypes.hpp" />
+    <ClInclude Include="..\common\cenumpins.h" />
+    <ClInclude Include="..\common\cfactory.h" />
+    <ClInclude Include="..\common\clockable.h" />
+    <ClInclude Include="..\common\cmediasample.h" />
+    <ClInclude Include="..\common\cmediatypes.h" />
+    <ClInclude Include="..\common\cmemallocator.h" />
+    <ClInclude Include="..\common\comreg.h" />
+    <ClInclude Include="..\common\mediatypeutil.h" />
+    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\IDL\vp8decoderidl.h" />
-    <ClInclude Include="vp8decoderfilter.hpp" />
-    <ClInclude Include="vp8decoderinpin.hpp" />
-    <ClInclude Include="vp8decoderoutpin.hpp" />
-    <ClInclude Include="vp8decoderpin.hpp" />
+    <ClInclude Include="vp8decoderfilter.h" />
+    <ClInclude Include="vp8decoderinpin.h" />
+    <ClInclude Include="vp8decoderoutpin.h" />
+    <ClInclude Include="vp8decoderpin.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="..\IDL\vp8decoder.idl" />

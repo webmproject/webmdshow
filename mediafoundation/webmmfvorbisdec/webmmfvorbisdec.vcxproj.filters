@@ -25,28 +25,28 @@
     <ClInclude Include="resource.h">
       <Filter>resources</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\cfactory.hpp">
+    <ClInclude Include="..\..\common\cfactory.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\clockable.hpp">
+    <ClInclude Include="..\..\common\clockable.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\comreg.hpp">
+    <ClInclude Include="..\..\common\comreg.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\memutil.hpp">
+    <ClInclude Include="..\..\common\memutil.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\memutilfwd.hpp">
+    <ClInclude Include="..\..\common\memutilfwd.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\vorbisdecoder.hpp">
+    <ClInclude Include="..\..\common\vorbisdecoder.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\vorbistypes.hpp">
+    <ClInclude Include="..\..\common\vorbistypes.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\webmtypes.hpp">
+    <ClInclude Include="..\..\common\webmtypes.h">
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\third_party\libogg\ogg\ogg.h">
@@ -58,10 +58,10 @@
     <ClInclude Include="..\..\third_party\libvorbis\vorbis\codec.h">
       <Filter>third_party\vorbis</Filter>
     </ClInclude>
-    <ClInclude Include="..\webmmftests\wfxrawwriter.hpp">
+    <ClInclude Include="..\webmmftests\wfxrawwriter.h">
       <Filter>webmmftests</Filter>
     </ClInclude>
-    <ClInclude Include="webmmfvorbisdec.hpp" />
+    <ClInclude Include="webmmfvorbisdec.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmmfvorbisdec.rc">
@@ -69,28 +69,28 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\common\cfactory.cpp">
+    <ClCompile Include="..\..\common\cfactory.cc">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\clockable.cpp">
+    <ClCompile Include="..\..\common\clockable.cc">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\comreg.cpp">
+    <ClCompile Include="..\..\common\comreg.cc">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\vorbisdecoder.cpp">
+    <ClCompile Include="..\..\common\vorbisdecoder.cc">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\vorbistypes.cpp">
+    <ClCompile Include="..\..\common\vorbistypes.cc">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\webmtypes.cpp">
+    <ClCompile Include="..\..\common\webmtypes.cc">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\webmmftests\wfxrawwriter.cpp">
+    <ClCompile Include="..\webmmftests\wfxrawwriter.cc">
       <Filter>webmmftests</Filter>
     </ClCompile>
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmmfvorbisdec.cpp" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmmfvorbisdec.cc" />
   </ItemGroup>
 </Project>

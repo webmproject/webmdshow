@@ -13,22 +13,22 @@
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\cfactory.hpp">
+    <ClInclude Include="..\..\common\cfactory.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\clockable.hpp">
+    <ClInclude Include="..\..\common\clockable.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\comreg.hpp">
+    <ClInclude Include="..\..\common\comreg.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\iidstr.hpp">
+    <ClInclude Include="..\..\common\iidstr.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\webmtypes.hpp">
+    <ClInclude Include="..\..\common\webmtypes.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="webmmfvp8dec.hpp" />
+    <ClInclude Include="webmmfvp8dec.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmmfvp8dec.rc">
@@ -36,22 +36,22 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\common\cfactory.cpp">
+    <ClCompile Include="..\..\common\cfactory.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\clockable.cpp">
+    <ClCompile Include="..\..\common\clockable.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\comreg.cpp">
+    <ClCompile Include="..\..\common\comreg.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\iidstr.cpp">
+    <ClCompile Include="..\..\common\iidstr.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\webmtypes.cpp">
+    <ClCompile Include="..\..\common\webmtypes.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmmfvp8dec.cpp" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmmfvp8dec.cc" />
   </ItemGroup>
 </Project>

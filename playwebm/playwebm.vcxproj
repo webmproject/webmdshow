@@ -109,21 +109,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="..\common\graphutil.hpp" />
-    <ClInclude Include="..\common\mediatypeutil.hpp" />
-    <ClInclude Include="..\common\versionhandling.hpp" />
-    <ClInclude Include="..\common\webmtypes.hpp" />
-    <ClInclude Include="playwebmapp.hpp" />
-    <ClInclude Include="playwebmcmdline.hpp" />
+    <ClInclude Include="..\common\graphutil.h" />
+    <ClInclude Include="..\common\mediatypeutil.h" />
+    <ClInclude Include="..\common\versionhandling.h" />
+    <ClInclude Include="..\common\webmtypes.h" />
+    <ClInclude Include="playwebmapp.h" />
+    <ClInclude Include="playwebmcmdline.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\graphutil.cpp" />
-    <ClCompile Include="..\common\mediatypeutil.cpp" />
-    <ClCompile Include="..\common\versionhandling.cpp" />
-    <ClCompile Include="..\common\webmtypes.cpp" />
-    <ClCompile Include="playwebmapp.cpp" />
-    <ClCompile Include="playwebmcmdline.cpp" />
-    <ClCompile Include="playwebmmain.cpp" />
+    <ClCompile Include="..\common\graphutil.cc" />
+    <ClCompile Include="..\common\mediatypeutil.cc" />
+    <ClCompile Include="..\common\versionhandling.cc" />
+    <ClCompile Include="..\common\webmtypes.cc" />
+    <ClCompile Include="playwebmapp.cc" />
+    <ClCompile Include="playwebmcmdline.cc" />
+    <ClCompile Include="playwebmmain.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

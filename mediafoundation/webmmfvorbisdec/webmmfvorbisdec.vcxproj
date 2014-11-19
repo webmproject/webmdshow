@@ -172,33 +172,33 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="..\..\common\cfactory.hpp" />
-    <ClInclude Include="..\..\common\clockable.hpp" />
-    <ClInclude Include="..\..\common\comreg.hpp" />
-    <ClInclude Include="..\..\common\memutil.hpp" />
-    <ClInclude Include="..\..\common\memutilfwd.hpp" />
-    <ClInclude Include="..\..\common\vorbisdecoder.hpp" />
-    <ClInclude Include="..\..\common\vorbistypes.hpp" />
-    <ClInclude Include="..\..\common\webmtypes.hpp" />
+    <ClInclude Include="..\..\common\cfactory.h" />
+    <ClInclude Include="..\..\common\clockable.h" />
+    <ClInclude Include="..\..\common\comreg.h" />
+    <ClInclude Include="..\..\common\memutil.h" />
+    <ClInclude Include="..\..\common\memutilfwd.h" />
+    <ClInclude Include="..\..\common\vorbisdecoder.h" />
+    <ClInclude Include="..\..\common\vorbistypes.h" />
+    <ClInclude Include="..\..\common\webmtypes.h" />
     <ClInclude Include="..\..\third_party\libogg\ogg\ogg.h" />
     <ClInclude Include="..\..\third_party\libogg\ogg\os_types.h" />
     <ClInclude Include="..\..\third_party\libvorbis\vorbis\codec.h" />
-    <ClInclude Include="..\webmmftests\wfxrawwriter.hpp" />
-    <ClInclude Include="webmmfvorbisdec.hpp" />
+    <ClInclude Include="..\webmmftests\wfxrawwriter.h" />
+    <ClInclude Include="webmmfvorbisdec.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmmfvorbisdec.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\common\cfactory.cpp" />
-    <ClCompile Include="..\..\common\clockable.cpp" />
-    <ClCompile Include="..\..\common\comreg.cpp" />
-    <ClCompile Include="..\..\common\vorbisdecoder.cpp" />
-    <ClCompile Include="..\..\common\vorbistypes.cpp" />
-    <ClCompile Include="..\..\common\webmtypes.cpp" />
-    <ClCompile Include="..\webmmftests\wfxrawwriter.cpp" />
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmmfvorbisdec.cpp" />
+    <ClCompile Include="..\..\common\cfactory.cc" />
+    <ClCompile Include="..\..\common\clockable.cc" />
+    <ClCompile Include="..\..\common\comreg.cc" />
+    <ClCompile Include="..\..\common\vorbisdecoder.cc" />
+    <ClCompile Include="..\..\common\vorbistypes.cc" />
+    <ClCompile Include="..\..\common\webmtypes.cc" />
+    <ClCompile Include="..\webmmftests\wfxrawwriter.cc" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmmfvorbisdec.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -9,7 +9,7 @@
 #ifndef __WEBMDSHOW_MEDIAFOUNDATION_WEBMMFTESTS_SDLPLAY_SDLVIDEOPLAYER_H__
 #define __WEBMDSHOW_MEDIAFOUNDATION_WEBMMFTESTS_SDLPLAY_SDLVIDEOPLAYER_H__
 
-#include "vorbisdecoder.hpp"
+#include "vorbisdecoder.h"
 #include "vpx/vpx_decoder.h"
 #include "vpx/vp8dx.h"
 

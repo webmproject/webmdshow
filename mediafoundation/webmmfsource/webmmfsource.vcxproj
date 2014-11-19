@@ -165,43 +165,43 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="..\..\common\cfactory.hpp" />
-    <ClInclude Include="..\..\common\clockable.hpp" />
-    <ClInclude Include="..\..\common\comreg.hpp" />
-    <ClInclude Include="..\..\common\iidstr.hpp" />
-    <ClInclude Include="..\..\common\omahautil.hpp" />
-    <ClInclude Include="..\..\common\registry.hpp" />
-    <ClInclude Include="..\..\common\versionhandling.hpp" />
-    <ClInclude Include="..\..\common\vorbistypes.hpp" />
-    <ClInclude Include="..\..\common\webmtypes.hpp" />
+    <ClInclude Include="..\..\common\cfactory.h" />
+    <ClInclude Include="..\..\common\clockable.h" />
+    <ClInclude Include="..\..\common\comreg.h" />
+    <ClInclude Include="..\..\common\iidstr.h" />
+    <ClInclude Include="..\..\common\omahautil.h" />
+    <ClInclude Include="..\..\common\registry.h" />
+    <ClInclude Include="..\..\common\versionhandling.h" />
+    <ClInclude Include="..\..\common\vorbistypes.h" />
+    <ClInclude Include="..\..\common\webmtypes.h" />
     <ClInclude Include="..\..\..\libwebm\mkvparser.hpp" />
-    <ClInclude Include="mkvreader.hpp" />
-    <ClInclude Include="webmmfbytestreamhandler.hpp" />
-    <ClInclude Include="webmmfsource.hpp" />
-    <ClInclude Include="webmmfstream.hpp" />
-    <ClInclude Include="webmmfstreamaudio.hpp" />
-    <ClInclude Include="webmmfstreamvideo.hpp" />
+    <ClInclude Include="mkvreader.h" />
+    <ClInclude Include="webmmfbytestreamhandler.h" />
+    <ClInclude Include="webmmfsource.h" />
+    <ClInclude Include="webmmfstream.h" />
+    <ClInclude Include="webmmfstreamaudio.h" />
+    <ClInclude Include="webmmfstreamvideo.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmmfsource.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\common\cfactory.cpp" />
-    <ClCompile Include="..\..\common\clockable.cpp" />
-    <ClCompile Include="..\..\common\comreg.cpp" />
-    <ClCompile Include="..\..\common\iidstr.cpp" />
-    <ClCompile Include="..\..\common\omahautil.cpp" />
-    <ClCompile Include="..\..\common\versionhandling.cpp" />
-    <ClCompile Include="..\..\common\vorbistypes.cpp" />
-    <ClCompile Include="..\..\common\webmtypes.cpp" />
+    <ClCompile Include="..\..\common\cfactory.cc" />
+    <ClCompile Include="..\..\common\clockable.cc" />
+    <ClCompile Include="..\..\common\comreg.cc" />
+    <ClCompile Include="..\..\common\iidstr.cc" />
+    <ClCompile Include="..\..\common\omahautil.cc" />
+    <ClCompile Include="..\..\common\versionhandling.cc" />
+    <ClCompile Include="..\..\common\vorbistypes.cc" />
+    <ClCompile Include="..\..\common\webmtypes.cc" />
     <ClCompile Include="..\..\..\libwebm\mkvparser.cpp" />
-    <ClCompile Include="mkvreader.cpp" />
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmmfbytestreamhandler.cpp" />
-    <ClCompile Include="webmmfsource.cpp" />
-    <ClCompile Include="webmmfstream.cpp" />
-    <ClCompile Include="webmmfstreamaudio.cpp" />
-    <ClCompile Include="webmmfstreamvideo.cpp" />
+    <ClCompile Include="mkvreader.cc" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmmfbytestreamhandler.cc" />
+    <ClCompile Include="webmmfsource.cc" />
+    <ClCompile Include="webmmfstream.cc" />
+    <ClCompile Include="webmmfstreamaudio.cc" />
+    <ClCompile Include="webmmfstreamvideo.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
