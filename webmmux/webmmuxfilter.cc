@@ -6,17 +6,17 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "webmmuxfilter.hpp"
-#include "cenumpins.hpp"
-#include "graphutil.hpp"
-#include "webmtypes.hpp"
+#include "webmmuxfilter.h"
+#include "cenumpins.h"
+#include "graphutil.h"
+#include "webmtypes.h"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <evcode.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

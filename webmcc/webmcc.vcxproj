@@ -96,38 +96,38 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cpp" />
-    <ClCompile Include="..\common\cfactory.cpp" />
-    <ClCompile Include="..\common\clockable.cpp" />
-    <ClCompile Include="..\common\cmediasample.cpp" />
-    <ClCompile Include="..\common\cmediatypes.cpp" />
-    <ClCompile Include="..\common\cmemallocator.cpp" />
-    <ClCompile Include="..\common\comreg.cpp" />
-    <ClCompile Include="..\common\graphutil.cpp" />
-    <ClCompile Include="..\common\mediatypeutil.cpp" />
-    <ClCompile Include="..\common\webmtypes.cpp" />
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmccfilter.cpp" />
-    <ClCompile Include="webmccinpin.cpp" />
-    <ClCompile Include="webmccoutpin.cpp" />
-    <ClCompile Include="webmccpin.cpp" />
+    <ClCompile Include="..\common\cenumpins.cc" />
+    <ClCompile Include="..\common\cfactory.cc" />
+    <ClCompile Include="..\common\clockable.cc" />
+    <ClCompile Include="..\common\cmediasample.cc" />
+    <ClCompile Include="..\common\cmediatypes.cc" />
+    <ClCompile Include="..\common\cmemallocator.cc" />
+    <ClCompile Include="..\common\comreg.cc" />
+    <ClCompile Include="..\common\graphutil.cc" />
+    <ClCompile Include="..\common\mediatypeutil.cc" />
+    <ClCompile Include="..\common\webmtypes.cc" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmccfilter.cc" />
+    <ClCompile Include="webmccinpin.cc" />
+    <ClCompile Include="webmccoutpin.cc" />
+    <ClCompile Include="webmccpin.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.hpp" />
-    <ClInclude Include="..\common\cfactory.hpp" />
-    <ClInclude Include="..\common\clockable.hpp" />
-    <ClInclude Include="..\common\cmediasample.hpp" />
-    <ClInclude Include="..\common\cmediatypes.hpp" />
-    <ClInclude Include="..\common\cmemallocator.hpp" />
-    <ClInclude Include="..\common\comreg.hpp" />
-    <ClInclude Include="..\common\graphutil.hpp" />
-    <ClInclude Include="..\common\mediatypeutil.hpp" />
-    <ClInclude Include="..\common\webmtypes.hpp" />
+    <ClInclude Include="..\common\cenumpins.h" />
+    <ClInclude Include="..\common\cfactory.h" />
+    <ClInclude Include="..\common\clockable.h" />
+    <ClInclude Include="..\common\cmediasample.h" />
+    <ClInclude Include="..\common\cmediatypes.h" />
+    <ClInclude Include="..\common\cmemallocator.h" />
+    <ClInclude Include="..\common\comreg.h" />
+    <ClInclude Include="..\common\graphutil.h" />
+    <ClInclude Include="..\common\mediatypeutil.h" />
+    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="webmccfilter.hpp" />
-    <ClInclude Include="webmccinpin.hpp" />
-    <ClInclude Include="webmccoutpin.hpp" />
-    <ClInclude Include="webmccpin.hpp" />
+    <ClInclude Include="webmccfilter.h" />
+    <ClInclude Include="webmccinpin.h" />
+    <ClInclude Include="webmccoutpin.h" />
+    <ClInclude Include="webmccpin.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\libcc\libcc.vcxproj">

@@ -15,12 +15,12 @@
 #include <comdef.h>
 #include <string>
 
-#include "debugutil.hpp"
-#include "comreg.hpp"
-#include "comdllwrapper.hpp"
+#include "debugutil.h"
+#include "comreg.h"
+#include "comdllwrapper.h"
 #include "gtest/gtest.h"
-#include "tests/mfdllpaths.hpp"
-#include "webmtypes.hpp"
+#include "tests/mfdllpaths.h"
+#include "webmtypes.h"
 
 using WebmTypes::CLSID_WebmMfVorbisDec;
 using WebmTypes::CLSID_WebmMfVp8Dec;

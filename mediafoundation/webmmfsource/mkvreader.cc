@@ -1,9 +1,9 @@
-#include "mkvreader.hpp"
+#include "mkvreader.h"
 #include <cassert>
 #include <algorithm>
 #include <comdef.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

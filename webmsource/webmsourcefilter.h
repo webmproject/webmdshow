@@ -9,8 +9,8 @@
 #pragma once
 #include <strmif.h>
 #include <string>
-#include "mkvfile.hpp"
-#include "clockable.hpp"
+#include "mkvfile.h"
+#include "clockable.h"
 #include <vector>
 
 namespace mkvparser

@@ -12,9 +12,9 @@
 
 #include <memory>
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
-#include "threadutil.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
+#include "threadutil.h"
 
 namespace WebmMfUtil
 {

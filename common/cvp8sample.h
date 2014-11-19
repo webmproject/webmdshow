@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "cmemallocator.hpp"
-#include "imemsample.hpp"
-#include "ivp8sample.hpp"
+#include "cmemallocator.h"
+#include "imemsample.h"
+#include "ivp8sample.h"
 #include <list>
 
 class CVP8Sample : public IMediaSample,

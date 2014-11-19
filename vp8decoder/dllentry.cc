@@ -11,11 +11,11 @@
 #include <strmif.h>
 #include <uuids.h>
 
-#include "cfactory.hpp"
-#include "comreg.hpp"
-#include "graphutil.hpp"
+#include "cfactory.h"
+#include "comreg.h"
+#include "graphutil.h"
 #include "vp8decoderidl.h"
-#include "webmtypes.hpp"
+#include "webmtypes.h"
 
 HMODULE g_hModule;
 static ULONG s_cLock;

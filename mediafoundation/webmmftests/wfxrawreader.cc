@@ -1,5 +1,5 @@
 /*
- *  wfxrawreader.cpp
+ *  wfxrawreader.cc
  *  sdlaudioplayer
  *
  *  Created by Tom Finegan on 10/24/10.
@@ -19,7 +19,7 @@
 #include "mmreg.h"
 #endif
 
-#include "wfxrawreader.hpp"
+#include "wfxrawreader.h"
 
 namespace WebmMfVorbisDecLib
 {

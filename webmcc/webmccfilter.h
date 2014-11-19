@@ -9,9 +9,9 @@
 #pragma once
 #include <strmif.h>
 #include <string>
-#include "webmccinpin.hpp"
-#include "webmccoutpin.hpp"
-#include "clockable.hpp"
+#include "webmccinpin.h"
+#include "webmccoutpin.h"
+#include "clockable.h"
 
 namespace WebmColorConversion
 {

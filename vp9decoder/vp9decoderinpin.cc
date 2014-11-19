@@ -8,7 +8,7 @@
 
 // TODO(tomfinegan): Get rid of this warning.
 #pragma warning(once : 4505)  // unreferenced local function has been removed
-#include "vp9decoderinpin.hpp"
+#include "vp9decoderinpin.h"
 
 #include <dvdmedia.h>
 #include <evcode.h>
@@ -19,15 +19,15 @@
 
 #include "vpx/vp8dx.h"
 
-#include "graphutil.hpp"
-#include "mediatypeutil.hpp"
-#include "vp9decoderfilter.hpp"
-#include "vp9decoderoutpin.hpp"
-#include "webmtypes.hpp"
+#include "graphutil.h"
+#include "mediatypeutil.h"
+#include "vp9decoderfilter.h"
+#include "vp9decoderoutpin.h"
+#include "webmtypes.h"
 
 #ifdef _DEBUG
 #include <iomanip>
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

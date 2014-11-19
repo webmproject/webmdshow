@@ -13,8 +13,8 @@
 
 #include <iostream>
 
-#include "debugutil.hpp"
-#include "consoleutil.hpp"
+#include "debugutil.h"
+#include "consoleutil.h"
 
 namespace WebmMfUtil
 {

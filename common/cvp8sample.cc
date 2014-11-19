@@ -6,7 +6,7 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "CVP8Sample.hpp"
+#include "CVP8Sample.h"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>

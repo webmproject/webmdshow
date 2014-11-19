@@ -24,8 +24,8 @@ typedef long HRESULT;
 #define MF_E_TRANSFORM_NEED_MORE_INPUT   _HRESULT_TYPEDEF_(0xC00D6D72L)
 #endif
 
-#include "debugutil.hpp"
-#include "vorbisdecoder.hpp"
+#include "debugutil.h"
+#include "vorbisdecoder.h"
 
 namespace WebmMfVorbisDecLib
 {

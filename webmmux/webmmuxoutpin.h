@@ -7,8 +7,8 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmmuxpin.hpp"
-#include "graphutil.hpp"
+#include "webmmuxpin.h"
+#include "graphutil.h"
 
 namespace WebmMuxLib
 {

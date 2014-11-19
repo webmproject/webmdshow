@@ -7,17 +7,17 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "mkvparserstreamaudio.hpp"
+#include "mkvparserstreamaudio.h"
 #include "mkvparser.hpp"
-#include "vorbistypes.hpp"
-#include "cmediatypes.hpp"
+#include "vorbistypes.h"
+#include "cmediatypes.h"
 #include <cassert>
 #include <limits>
 #include <uuids.h>
 #include <mmreg.h>
 #include <malloc.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

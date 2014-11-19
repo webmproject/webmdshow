@@ -11,14 +11,14 @@
 
 #include <string>
 
-#include "debugutil.hpp"
-#include "consoleutil.hpp"
-#include "eventutil.hpp"
+#include "debugutil.h"
+#include "consoleutil.h"
+#include "eventutil.h"
 #include "gtest/gtest.h"
-#include "mfplayerutil.hpp"
-#include "player.hpp"
-#include "player_tests.hpp"
-#include "threadutil.hpp"
+#include "mfplayerutil.h"
+#include "player.h"
+#include "player_tests.h"
+#include "threadutil.h"
 
 // TODO(tomfinegan): destroy player between tests
 

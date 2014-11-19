@@ -17,13 +17,13 @@
 #include <new>
 #include <cmath>
 
-#include "clockable.hpp"
-#include "debugutil.hpp"
-#include "memutil.hpp"
-#include "vorbisdecoder.hpp"
-#include "vorbistypes.hpp"
-#include "webmtypes.hpp"
-#include "webmmfvorbisdec.hpp"
+#include "clockable.h"
+#include "debugutil.h"
+#include "memutil.h"
+#include "vorbisdecoder.h"
+#include "vorbistypes.h"
+#include "webmtypes.h"
+#include "webmmfvorbisdec.h"
 
 _COM_SMARTPTR_TYPEDEF(IMFMediaBuffer, __uuidof(IMFMediaBuffer));
 

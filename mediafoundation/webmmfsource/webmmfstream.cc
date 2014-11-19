@@ -1,5 +1,5 @@
-#include "webmmfsource.hpp"
-#include "webmmfstream.hpp"
+#include "webmmfsource.h"
+#include "webmmfstream.h"
 //#include "mkvparser.hpp"
 #include <mfapi.h>
 #include <mferror.h>
@@ -9,7 +9,7 @@
 #include <process.h>
 #include <windows.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 using std::boolalpha;
 #endif

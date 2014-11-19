@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <objbase.h>
-#include "vorbistypes.hpp"
+#include "vorbistypes.h"
 
 // {8D2FD10B-5841-4a6b-8905-588FEC1ADED9}
 const GUID VorbisTypes::MEDIASUBTYPE_Vorbis2 =

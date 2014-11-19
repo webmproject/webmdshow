@@ -8,11 +8,11 @@
 
 #pragma warning(disable:4702)  //unreachable code
 #include <strmif.h>
-#include "mkvreader.hpp"
+#include "mkvreader.h"
 #include <cassert>
 #include <algorithm>
 #include <vfwmsgs.h>
-#include "clockable.hpp"
+#include "clockable.h"
 #pragma warning(default:4702)
 
 namespace WebmSplit

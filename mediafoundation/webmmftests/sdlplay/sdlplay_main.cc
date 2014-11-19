@@ -11,10 +11,10 @@
 
 #include <cassert>
 
-#include "debugutil.hpp"
-#include "consoleutil.hpp"
+#include "debugutil.h"
+#include "consoleutil.h"
 #include "gtest/gtest.h"
-#include "windowutil.hpp"
+#include "windowutil.h"
 
 void OnClose(HWND hwnd)
 {

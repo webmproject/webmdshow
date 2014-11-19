@@ -7,15 +7,15 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "vp8encoderpin.hpp"
-#include "vp8encoderfilter.hpp"
+#include "vp8encoderpin.h"
+#include "vp8encoderfilter.h"
 #include <vfwmsgs.h>
 #include <cassert>
 #include <amvideo.h>
 #include <dvdmedia.h>
 #include <uuids.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

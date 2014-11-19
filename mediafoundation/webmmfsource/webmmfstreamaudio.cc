@@ -1,7 +1,7 @@
-#include "webmmfsource.hpp"
-#include "webmmfstream.hpp"
-#include "webmmfstreamaudio.hpp"
-#include "vorbistypes.hpp"
+#include "webmmfsource.h"
+#include "webmmfstream.h"
+#include "webmmfstreamaudio.h"
+#include "vorbistypes.h"
 #include <mfapi.h>
 #include <mferror.h>
 #include <cassert>
@@ -10,7 +10,7 @@
 //#include <vfwmsgs.h>
 #include <propvarutil.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 #include <iomanip>
 using std::endl;
 using std::fixed;

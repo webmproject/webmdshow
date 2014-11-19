@@ -15,15 +15,15 @@
 
 #include <string>
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
-#include "memutil.hpp"
-#include "mfsrcwrap.hpp"
-#include "mftranswrap.hpp"
-#include "mfutil.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
+#include "memutil.h"
+#include "mfsrcwrap.h"
+#include "mftranswrap.h"
+#include "mfutil.h"
 // TODO(tomfinegan): relocate mf object dll paths include
-#include "tests/mfdllpaths.hpp"
-#include "webmtypes.hpp"
+#include "tests/mfdllpaths.h"
+#include "webmtypes.h"
 
 namespace WebmMfUtil
 {

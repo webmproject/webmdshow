@@ -8,7 +8,7 @@
 
 #include <strmif.h>
 #include <string>
-#include "webmmuxfilter.hpp"
+#include "webmmuxfilter.h"
 #include <vfwmsgs.h>
 #include <cassert>
 

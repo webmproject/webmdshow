@@ -6,10 +6,10 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "webmmuxfilter.hpp"
-//#include "cmemallocator.hpp"
-#include "cmediasample.hpp"
-#include "webmtypes.hpp"
+#include "webmmuxfilter.h"
+//#include "cmemallocator.h"
+#include "cmediasample.h"
+#include "webmtypes.h"
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <dvdmedia.h>

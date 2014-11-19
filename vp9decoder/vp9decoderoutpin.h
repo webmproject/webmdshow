@@ -12,8 +12,8 @@
 #include <comdef.h>
 #include <strmif.h>
 
-#include "graphutil.hpp"
-#include "vp9decoderpin.hpp"
+#include "graphutil.h"
+#include "vp9decoderpin.h"
 
 namespace VP9DecoderLib {
 

@@ -9,10 +9,10 @@
 #pragma once
 #include <strmif.h>
 #include <string>
-#include "clockable.hpp"
-#include "vp8encoderinpin.hpp"
-#include "vp8encoderoutpinvideo.hpp"
-#include "vp8encoderoutpinpreview.hpp"
+#include "clockable.h"
+#include "vp8encoderinpin.h"
+#include "vp8encoderoutpinvideo.h"
+#include "vp8encoderoutpinpreview.h"
 #include "vp8encoderidl.h"
 
 namespace VP8EncoderLib

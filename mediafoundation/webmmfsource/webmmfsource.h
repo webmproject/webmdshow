@@ -1,7 +1,7 @@
 #pragma once
 #include <mfidl.h>
-#include "clockable.hpp"
-#include "mkvreader.hpp"
+#include "clockable.h"
+#include "mkvreader.h"
 #include <vector>
 #include <map>
 #include <string>

@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmccpin.hpp"
+#include "webmccpin.h"
 #include <comdef.h>
-#include "graphutil.hpp"
+#include "graphutil.h"
 #include "on2_codec/on2_image.h"
 
 namespace WebmColorConversion

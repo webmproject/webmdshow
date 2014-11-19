@@ -7,12 +7,12 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "cfactory.hpp"
-#include "comreg.hpp"
-#include "webmtypes.hpp"
+#include "cfactory.h"
+#include "comreg.h"
+#include "webmtypes.h"
 #include "webmmuxidl.h"
-#include "vorbistypes.hpp"
-#include "graphutil.hpp"
+#include "vorbistypes.h"
+#include "graphutil.h"
 #include <cassert>
 #include <comdef.h>
 #include <uuids.h>

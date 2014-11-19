@@ -6,9 +6,9 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "cfactory.hpp"
-#include "comreg.hpp"
-#include "webmtypes.hpp"
+#include "cfactory.h"
+#include "comreg.h"
+#include "webmtypes.h"
 #include <mfapi.h>
 #include <cassert>
 #include <comdef.h>

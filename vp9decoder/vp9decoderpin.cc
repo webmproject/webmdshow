@@ -5,16 +5,16 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
-#include "vp9decoderpin.hpp"
+#include "vp9decoderpin.h"
 
 #include <vfwmsgs.h>
 
 #include <cassert>
 
-#include "vp9decoderfilter.hpp"
+#include "vp9decoderfilter.h"
 
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

@@ -7,12 +7,12 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma warning(disable:4505)  //unreferenced local function has been removed
-#include "webmvorbisdecoderfilter.hpp"
-#include "webmvorbisdecoderoutpin.hpp"
-#include "mediatypeutil.hpp"
-#include "graphutil.hpp"
-#include "webmtypes.hpp"
-#include "vorbistypes.hpp"
+#include "webmvorbisdecoderfilter.h"
+#include "webmvorbisdecoderoutpin.h"
+#include "mediatypeutil.h"
+#include "graphutil.h"
+#include "webmtypes.h"
+#include "vorbistypes.h"
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <cassert>
@@ -20,7 +20,7 @@
 #include <evcode.h>
 #ifdef _DEBUG
 #include <iomanip>
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

@@ -7,10 +7,10 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "scratchbuf.hpp"
-#include "webmmuxebmlio.hpp"
-#include "webmmuxstreamvideo.hpp"
-#include "webmmuxstreamaudio.hpp"
+#include "scratchbuf.h"
+#include "webmmuxebmlio.h"
+#include "webmmuxstreamvideo.h"
+#include "webmmuxstreamaudio.h"
 #include <list>
 
 namespace WebmMuxLib

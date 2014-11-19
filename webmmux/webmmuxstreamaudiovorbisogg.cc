@@ -12,14 +12,14 @@
 
 #include <cassert>
 
-#include "cmediatypes.hpp"
-#include "vorbistypes.hpp"
-#include "webmconstants.hpp"
-#include "webmmuxcontext.hpp"
-#include "webmmuxstreamaudiovorbisogg.hpp"
+#include "cmediatypes.h"
+#include "vorbistypes.h"
+#include "webmconstants.h"
+#include "webmmuxcontext.h"
+#include "webmmuxstreamaudiovorbisogg.h"
 
 #ifdef _DEBUG
-#include <odbgstream.hpp>
+#include <odbgstream.h>
 #include <iomanip>
 using std::endl;
 using std::hex;

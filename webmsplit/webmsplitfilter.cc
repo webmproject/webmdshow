@@ -8,13 +8,13 @@
 
 #include <strmif.h>
 #include <uuids.h>
-#include "webmsplitfilter.hpp"
-#include "cenumpins.hpp"
+#include "webmsplitfilter.h"
+#include "cenumpins.h"
 #include "mkvparser.hpp"
-#include "mkvparserstreamvideo.hpp"
-#include "mkvparserstreamaudio.hpp"
-#include "webmsplitoutpin.hpp"
-#include "webmtypes.hpp"
+#include "mkvparserstreamvideo.h"
+#include "mkvparserstreamaudio.h"
+#include "webmsplitoutpin.h"
+#include "webmtypes.h"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>
@@ -22,8 +22,8 @@
 #include <evcode.h>
 #include <limits>
 #ifdef _DEBUG
-#include "iidstr.hpp"
-#include "odbgstream.hpp"
+#include "iidstr.h"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

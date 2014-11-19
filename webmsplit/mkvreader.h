@@ -8,8 +8,8 @@
 
 #pragma once
 #include "mkvparser.hpp"
-#include "mkvparserstreamreader.hpp"
-#include "graphutil.hpp"
+#include "mkvparserstreamreader.h"
+#include "graphutil.h"
 #include <list>
 #include <map>
 //#include <set>

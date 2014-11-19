@@ -1,11 +1,11 @@
-// webmtestshell_2008.cpp : Defines the entry point for the console application.
+// webmtestshell_2008.cc : Defines the entry point for the console application.
 //
 
 #include <conio.h>
 #include <stdio.h>
 #include <tchar.h>
 
-#include "webmtestshell.hpp"
+#include "webmtestshell.h"
 #include "gtest/gtest.h"
 
 

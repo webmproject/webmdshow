@@ -14,10 +14,10 @@
 #include <mfidl.h>
 #include <shlwapi.h>
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
-#include "mfmediastream.hpp"
-#include "mfutil.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
+#include "mfmediastream.h"
+#include "mfutil.h"
 
 namespace WebmMfUtil
 {

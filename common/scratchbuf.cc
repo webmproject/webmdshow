@@ -10,9 +10,9 @@
 
 #include <cassert>
 
-#include "memutil.hpp"
-#include "scratchbuf.hpp"
-#include "webmconstants.hpp"
+#include "memutil.h"
+#include "scratchbuf.h"
+#include "webmconstants.h"
 
 namespace WebmUtil
 {

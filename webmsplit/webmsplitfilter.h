@@ -10,8 +10,8 @@
 #include <strmif.h>
 #include <string>
 #include <vector>
-#include "webmsplitinpin.hpp"
-#include "clockable.hpp"
+#include "webmsplitinpin.h"
+#include "clockable.h"
 
 namespace mkvparser
 {

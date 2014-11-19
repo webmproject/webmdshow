@@ -6,8 +6,8 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "comreg.hpp"
-#include "registry.hpp"
+#include "comreg.h"
+#include "registry.h"
 #include <malloc.h>
 #include <cassert>
 #include <sstream>
@@ -416,7 +416,7 @@ static HRESULT CreateClsidKey(
         std::wostringstream os;
         os << inprocserver << L", " << toolboxbitmap;
 
-        e = subkey.set(os.str().c_str());  //TODO: fix registry.hpp
+        e = subkey.set(os.str().c_str());  //TODO: fix registry.h
 
         if (e)
             return HRESULT_FROM_WIN32(e);
@@ -457,7 +457,7 @@ static HRESULT CreateProgidKey(
     if (e)
         return HRESULT_FROM_WIN32(e);
 
-    e = subkey.set<wchar_t>(0, clsid_str);  //TODO: fix registry.hpp
+    e = subkey.set<wchar_t>(0, clsid_str);  //TODO: fix registry.h
 
     if (insertable)
     {

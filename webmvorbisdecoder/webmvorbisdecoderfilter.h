@@ -9,9 +9,9 @@
 #pragma once
 #include <strmif.h>
 #include <string>
-#include "webmvorbisdecoderinpin.hpp"
-#include "webmvorbisdecoderoutpin.hpp"
-#include "clockable.hpp"
+#include "webmvorbisdecoderinpin.h"
+#include "webmvorbisdecoderoutpin.h"
+#include "clockable.h"
 
 namespace WebmVorbisDecoderLib
 {

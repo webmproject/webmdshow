@@ -13,10 +13,10 @@
 #include <string>
 #include <sstream>
 
-#include "omahautil.hpp"
-#include "debugutil.hpp"
-//#include "memutil.hpp"
-#include "registry.hpp"
+#include "omahautil.h"
+#include "debugutil.h"
+//#include "memutil.h"
+#include "registry.h"
 
 namespace WebmUtil
 {

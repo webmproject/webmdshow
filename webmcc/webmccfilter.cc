@@ -8,15 +8,15 @@
 
 #include <strmif.h>
 #include <uuids.h>
-#include "webmccfilter.hpp"
-#include "cenumpins.hpp"
-#include "webmtypes.hpp"
+#include "webmccfilter.h"
+#include "cenumpins.h"
+#include "webmtypes.h"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>
 #ifdef _DEBUG
-#include "iidstr.hpp"
-#include "odbgstream.hpp"
+#include "iidstr.h"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

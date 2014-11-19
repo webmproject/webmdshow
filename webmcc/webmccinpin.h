@@ -7,8 +7,8 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmccpin.hpp"
-#include "graphutil.hpp"
+#include "webmccpin.h"
+#include "graphutil.h"
 #include <vector>
 #include <deque>
 #include <list>

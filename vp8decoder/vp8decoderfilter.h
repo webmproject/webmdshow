@@ -12,10 +12,10 @@
 
 #include <string>
 
-#include "clockable.hpp"
+#include "clockable.h"
 #include "vp8decoderidl.h"
-#include "vp8decoderinpin.hpp"
-#include "vp8decoderoutpin.hpp"
+#include "vp8decoderinpin.h"
+#include "vp8decoderoutpin.h"
 
 namespace VP8DecoderLib {
 

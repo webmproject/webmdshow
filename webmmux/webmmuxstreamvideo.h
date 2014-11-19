@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmmuxstream.hpp"
+#include "webmmuxstream.h"
 #include <list>
 
 namespace WebmMuxLib

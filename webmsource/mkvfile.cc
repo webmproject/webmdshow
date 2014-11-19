@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "mkvfile.hpp"
+#include "mkvfile.h"
 #include <cassert>
 
 namespace WebmSource

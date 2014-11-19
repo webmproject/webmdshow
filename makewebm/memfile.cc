@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <objbase.h>
-#include "memfile.hpp"
+#include "memfile.h"
 #include <cassert>
 
 

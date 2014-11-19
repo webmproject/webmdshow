@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <objbase.h>
-#include "makewebmcmdline.hpp"
+#include "makewebmcmdline.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -16,7 +16,7 @@
 #include <sstream>
 #include <windows.h>
 #include <uuids.h>
-#include "versionhandling.hpp"
+#include "versionhandling.h"
 #include "vp8encoderidl.h"
 using std::wcout;
 using std::endl;

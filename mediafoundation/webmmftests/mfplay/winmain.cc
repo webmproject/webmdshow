@@ -1,12 +1,12 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
 #include "gtest/gtest.h"
-#include "mfplayerutil.hpp"
-#include "Player.hpp"
-#include "player_tests.hpp"
+#include "mfplayerutil.h"
+#include "Player.h"
+#include "player_tests.h"
 
 PCWSTR szTitle = L"BasicPlayback";
 PCWSTR szWindowClass = L"MFBASICPLAYBACK";

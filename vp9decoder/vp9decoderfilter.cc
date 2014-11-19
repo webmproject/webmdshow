@@ -10,14 +10,14 @@
 
 #include <cassert>
 
-#include "cenumpins.hpp"
-#include "vp9decoderfilter.hpp"
+#include "cenumpins.h"
+#include "vp9decoderfilter.h"
 #include "vp9decoderidl.h"
-#include "webmtypes.hpp"
+#include "webmtypes.h"
 
 #ifdef _DEBUG
-#include "iidstr.hpp"
-#include "odbgstream.hpp"
+#include "iidstr.h"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

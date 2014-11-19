@@ -9,7 +9,7 @@
 #pragma once
 
 #include <ostream>
-#include "dbgstreambuf.hpp"
+#include "dbgstreambuf.h"
 
 template<typename elem_t, typename traits_t>
 class basic_odbgstream : public std::basic_ostream<elem_t, traits_t>

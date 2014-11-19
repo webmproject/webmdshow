@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmconstants.hpp"
-#include "webmmuxcontext.hpp"
-#include "mediatypeutil.hpp"
+#include "webmconstants.h"
+#include "webmmuxcontext.h"
+#include "mediatypeutil.h"
 #include <amvideo.h>
 #include <dvdmedia.h>
 #include <cassert>

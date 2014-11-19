@@ -6,20 +6,20 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "makewebmapp.hpp"
+#include "makewebmapp.h"
 #include <cassert>
 #include <iostream>
 #include <iomanip>
 #include <uuids.h>
 #include <evcode.h>
-#include "hrtext.hpp"
-#include "mediatypeutil.hpp"
-#include "webmtypes.hpp"
-#include "vorbistypes.hpp"
-#include "registry.hpp"
+#include "hrtext.h"
+#include "mediatypeutil.h"
+#include "webmtypes.h"
+#include "vorbistypes.h"
+#include "registry.h"
 #include "vp8encoderidl.h"
 #include "webmmuxidl.h"
-#include "versionhandling.hpp"
+#include "versionhandling.h"
 #include <sstream>
 #include <iomanip>
 #include <cmath>

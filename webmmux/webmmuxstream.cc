@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmconstants.hpp"
-#include "webmmuxstream.hpp"
-#include "webmmuxcontext.hpp"
+#include "webmconstants.h"
+#include "webmmuxstream.h"
+#include "webmmuxcontext.h"
 #include <cassert>
 #include <climits>
 

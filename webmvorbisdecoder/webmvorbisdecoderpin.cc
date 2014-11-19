@@ -7,12 +7,12 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmvorbisdecoderpin.hpp"
-#include "webmvorbisdecoderfilter.hpp"
+#include "webmvorbisdecoderpin.h"
+#include "webmvorbisdecoderfilter.h"
 #include <vfwmsgs.h>
 #include <cassert>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

@@ -9,8 +9,8 @@
 #ifndef __WEBMDSHOW_COMMON_THREADUTIL_HPP__
 #define __WEBMDSHOW_COMMON_THREADUTIL_HPP__
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
 
 namespace WebmMfUtil
 {

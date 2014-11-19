@@ -5,7 +5,7 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
-#include "vp8decoderfilter.hpp"
+#include "vp8decoderfilter.h"
 
 #include <strmif.h>
 #include <uuids.h>
@@ -14,13 +14,13 @@
 #include <cassert>
 #include <new>
 
-#include "cenumpins.hpp"
+#include "cenumpins.h"
 #include "vp8decoderidl.h"
-#include "webmtypes.hpp"
+#include "webmtypes.h"
 
 #ifdef _DEBUG
-#include "iidstr.hpp"
-#include "odbgstream.hpp"
+#include "iidstr.h"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

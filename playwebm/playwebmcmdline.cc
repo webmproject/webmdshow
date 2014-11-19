@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <objbase.h>
-#include "playwebmcmdline.hpp"
-#include "versionhandling.hpp"
-#include "webmtypes.hpp"
+#include "playwebmcmdline.h"
+#include "versionhandling.h"
+#include "webmtypes.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>

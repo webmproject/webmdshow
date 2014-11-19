@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "cenumpins.hpp"
+#include "cenumpins.h"
 #include <new>
 
 CEnumPins::CEnumPins(IPin* const* a, ULONG n)

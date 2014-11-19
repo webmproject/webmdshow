@@ -13,8 +13,8 @@
 
 #include <string>
 
-#include "cmediatypes.hpp"
-#include "graphutil.hpp"
+#include "cmediatypes.h"
+#include "graphutil.h"
 
 namespace VP8DecoderLib {
 class Filter;

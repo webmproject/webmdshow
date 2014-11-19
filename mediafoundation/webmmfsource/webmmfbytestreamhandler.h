@@ -1,5 +1,5 @@
 #pragma once
-#include "clockable.hpp"
+#include "clockable.h"
 #ifndef _INC_COMDEF
 #include <comdef.h>
 #endif

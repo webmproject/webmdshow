@@ -1,5 +1,5 @@
 #include <objbase.h>
-#include "mkvparserstreamreader.hpp"
+#include "mkvparserstreamreader.h"
 
 namespace mkvparser
 {

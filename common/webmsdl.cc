@@ -14,9 +14,9 @@
 
 #include <new>
 
-#include "debugutil.hpp"
-#include "webmsdl.hpp"
-#include "webmtypes.hpp"
+#include "debugutil.h"
+#include "webmsdl.h"
+#include "webmtypes.h"
 
 namespace WebmSdl
 {

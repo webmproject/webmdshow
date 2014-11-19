@@ -3,9 +3,9 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include "debugutil.hpp"
-#include "mfplayerutil.hpp"
-#include "Player.hpp"
+#include "debugutil.h"
+#include "mfplayerutil.h"
+#include "Player.h"
 #include <assert.h>
 
 #pragma comment(lib, "shlwapi")
@@ -832,7 +832,7 @@ done:
     SafeRelease(&pNode);
     return hr;
 }
-//</SnippetPlayer.cpp>
+//</SnippetPlayer.cc>
 
 //  Add a topology branch for one stream.
 //

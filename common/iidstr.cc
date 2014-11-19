@@ -8,9 +8,9 @@
 
 #include <windows.h>
 #include <string>
-#include "iidstr.hpp"
+#include "iidstr.h"
 #define NO_SHLWAPI_REG
-#include "registry.hpp"
+#include "registry.h"
 #include <strmif.h>
 #include <malloc.h>
 #include <ostream>

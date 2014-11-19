@@ -8,8 +8,8 @@
 
 #include <strmif.h>
 //#include <string>
-#include "webmoggsourcepin.hpp"
-#include "webmoggsourcefilter.hpp"
+#include "webmoggsourcepin.h"
+#include "webmoggsourcefilter.h"
 #include <vfwmsgs.h>
 #include <cassert>
 

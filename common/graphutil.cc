@@ -8,8 +8,8 @@
 
 #include <control.h>
 #include <uuids.h>
-#include "graphutil.hpp"
-#include "mediatypeutil.hpp"
+#include "graphutil.h"
+#include "mediatypeutil.h"
 #include <cassert>
 
 

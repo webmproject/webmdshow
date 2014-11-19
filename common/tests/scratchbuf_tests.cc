@@ -3,8 +3,8 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "scratchbuf.hpp"
-#include "webmconstants.hpp"
+#include "scratchbuf.h"
+#include "webmconstants.h"
 
 namespace
 {

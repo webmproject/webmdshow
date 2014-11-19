@@ -6,12 +6,12 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "webmmuxfilter.hpp"
+#include "webmmuxfilter.h"
 #include <uuids.h>
 #include <amvideo.h>   //VIDEOINFOHEADER
 #include <dvdmedia.h>  //VIDEOINFOHEADER2
-#include "webmmuxstreamvideovpx.hpp"
-#include "webmtypes.hpp"
+#include "webmmuxstreamvideovpx.h"
+#include "webmtypes.h"
 #include <cassert>
 
 namespace WebmMuxLib

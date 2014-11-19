@@ -7,13 +7,13 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmccpin.hpp"
-#include "webmccfilter.hpp"
+#include "webmccpin.h"
+#include "webmccfilter.h"
 #include <vfwmsgs.h>
 #include <cassert>
 #include <uuids.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

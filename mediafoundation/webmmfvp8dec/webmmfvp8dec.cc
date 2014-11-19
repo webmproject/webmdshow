@@ -1,18 +1,18 @@
 #pragma warning(disable:4505)  //unreferenced local function removed
-#include "clockable.hpp"
+#include "clockable.h"
 #include <mfidl.h>
 #include "vpx/vpx_decoder.h"
 #include "vpx/vp8dx.h"
-#include "webmmfvp8dec.hpp"
-#include "webmtypes.hpp"
+#include "webmmfvp8dec.h"
+#include "webmtypes.h"
 #include <mfapi.h>
 #include <mferror.h>
 #include <comdef.h>
 #include <cassert>
 #include <new>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
-#include "iidstr.hpp"
+#include "odbgstream.h"
+#include "iidstr.h"
 using std::endl;
 using std::boolalpha;
 #endif
@@ -327,7 +327,7 @@ HRESULT WebmMfVp8Dec::GetOutputStreamInfo(
     //  };
 
     //see Decoder sample in the SDK
-    //decoder.cpp
+    //decoder.cc
 
     //The API says that the only flag that is meaningful prior to SetOutputType
     //is the OPTIONAL flag.  We need the frame dimensions, and the stride,

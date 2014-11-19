@@ -5,7 +5,7 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
-#include "vp9decoderoutpin.hpp"
+#include "vp9decoderoutpin.h"
 
 #include <amvideo.h>
 #include <dvdmedia.h>
@@ -15,14 +15,14 @@
 
 #include <cassert>
 
-#include "cmediasample.hpp"
-#include "mediatypeutil.hpp"
-#include "vp9decoderfilter.hpp"
-#include "webmtypes.hpp"
+#include "cmediasample.h"
+#include "mediatypeutil.h"
+#include "vp9decoderfilter.h"
+#include "webmtypes.h"
 
 #ifdef _DEBUG
-#include "odbgstream.hpp"
-#include "iidstr.hpp"
+#include "odbgstream.h"
+#include "iidstr.h"
 using std::endl;
 using std::dec;
 using std::hex;

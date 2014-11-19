@@ -7,15 +7,15 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmconstants.hpp"
-#include "webmmuxcontext.hpp"
-#include "webmmuxstreamvideovpx.hpp"
-#include "webmtypes.hpp"
+#include "webmconstants.h"
+#include "webmmuxcontext.h"
+#include "webmmuxstreamvideovpx.h"
+#include "webmtypes.h"
 #include <climits>
 #include <cassert>
 #include <vfwmsgs.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 using std::boolalpha;
 using std::hex;

@@ -1,14 +1,14 @@
 #include <strmif.h>
 #include <string>
 #include "vp8encoderidl.h"
-#include "vp8encoderproppage.hpp"
+#include "vp8encoderproppage.h"
 #include "resource.h"
 #include <new>
 #include <cassert>
 #include <sstream>
 #include <windowsx.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

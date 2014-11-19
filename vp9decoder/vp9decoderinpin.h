@@ -12,8 +12,8 @@
 
 #include "vpx/vpx_decoder.h"
 
-#include "graphutil.hpp"
-#include "vp9decoderpin.hpp"
+#include "graphutil.h"
+#include "vp9decoderpin.h"
 
 namespace VP9DecoderLib {
 

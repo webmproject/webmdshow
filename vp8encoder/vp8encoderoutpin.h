@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "vp8encoderpin.hpp"
+#include "vp8encoderpin.h"
 #include <comdef.h>
-#include "graphutil.hpp"
+#include "graphutil.h"
 
 namespace VP8EncoderLib
 {

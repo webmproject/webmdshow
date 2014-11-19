@@ -11,11 +11,11 @@
 
 #include <cassert>
 
-#include "cfactory.hpp"
-#include "comreg.hpp"
-#include "graphutil.hpp"
+#include "cfactory.h"
+#include "comreg.h"
+#include "graphutil.h"
 #include "vp9decoderidl.h"
-#include "webmtypes.hpp"
+#include "webmtypes.h"
 
 HMODULE g_hModule;
 static ULONG s_cLock;

@@ -169,24 +169,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="..\..\common\cfactory.hpp" />
-    <ClInclude Include="..\..\common\clockable.hpp" />
-    <ClInclude Include="..\..\common\comreg.hpp" />
-    <ClInclude Include="..\..\common\iidstr.hpp" />
-    <ClInclude Include="..\..\common\webmtypes.hpp" />
-    <ClInclude Include="webmmfvp8dec.hpp" />
+    <ClInclude Include="..\..\common\cfactory.h" />
+    <ClInclude Include="..\..\common\clockable.h" />
+    <ClInclude Include="..\..\common\comreg.h" />
+    <ClInclude Include="..\..\common\iidstr.h" />
+    <ClInclude Include="..\..\common\webmtypes.h" />
+    <ClInclude Include="webmmfvp8dec.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmmfvp8dec.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\common\cfactory.cpp" />
-    <ClCompile Include="..\..\common\clockable.cpp" />
-    <ClCompile Include="..\..\common\comreg.cpp" />
-    <ClCompile Include="..\..\common\iidstr.cpp" />
-    <ClCompile Include="..\..\common\webmtypes.cpp" />
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmmfvp8dec.cpp" />
+    <ClCompile Include="..\..\common\cfactory.cc" />
+    <ClCompile Include="..\..\common\clockable.cc" />
+    <ClCompile Include="..\..\common\comreg.cc" />
+    <ClCompile Include="..\..\common\iidstr.cc" />
+    <ClCompile Include="..\..\common\webmtypes.cc" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmmfvp8dec.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

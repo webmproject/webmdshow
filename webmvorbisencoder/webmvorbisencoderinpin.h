@@ -7,8 +7,8 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmvorbisencoderpin.hpp"
-#include "graphutil.hpp"
+#include "webmvorbisencoderpin.h"
+#include "graphutil.h"
 #include "vorbis/codec.h"
 #include <vector>
 #include <deque>

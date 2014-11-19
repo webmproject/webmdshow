@@ -7,16 +7,16 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmconstants.hpp"
-#include "webmmuxcontext.hpp"
-#include "webmmuxstreamaudiovorbis.hpp"
-#include "vorbistypes.hpp"
-#include "cmediatypes.hpp"
+#include "webmconstants.h"
+#include "webmmuxcontext.h"
+#include "webmmuxstreamaudiovorbis.h"
+#include "vorbistypes.h"
+#include "cmediatypes.h"
 #include <cassert>
 #include <uuids.h>
 #include <vfwmsgs.h>
 #if 0 //def _DEBUG
-#include <odbgstream.hpp>
+#include <odbgstream.h>
 #include <iomanip>
 using std::endl;
 using std::hex;

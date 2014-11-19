@@ -6,8 +6,8 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "webmmuxstreamaudio.hpp"
-#include "webmmuxcontext.hpp"
+#include "webmmuxstreamaudio.h"
+#include "webmmuxcontext.h"
 
 #include <vector>
 

@@ -6,8 +6,8 @@
 #include <cassert>
 #include <string>
 
-#include "debugutil.hpp"
-#include "windowutil.hpp"
+#include "debugutil.h"
+#include "windowutil.h"
 
 namespace WebmMfUtil
 {

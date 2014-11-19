@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "mkvparserstream.hpp"
+#include "mkvparserstream.h"
 
 namespace mkvparser
 {

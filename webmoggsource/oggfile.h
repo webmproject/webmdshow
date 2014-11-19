@@ -7,8 +7,8 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "oggparser.hpp"
-//#include "mkvparserstreamreader.hpp"
+#include "oggparser.h"
+//#include "mkvparserstreamreader.h"
 
 namespace WebmOggSource
 {

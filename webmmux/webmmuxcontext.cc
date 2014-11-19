@@ -13,14 +13,14 @@
 #include <strmif.h>
 #include <comdef.h>
 
-#include "comreg.hpp"
-#include "scratchbuf.hpp"
-#include "versionhandling.hpp"
-#include "webmconstants.hpp"
-#include "webmmuxcontext.hpp"
+#include "comreg.h"
+#include "scratchbuf.h"
+#include "versionhandling.h"
+#include "webmconstants.h"
+#include "webmmuxcontext.h"
 
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

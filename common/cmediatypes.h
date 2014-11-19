@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "tenumxxx.hpp"
+#include "tenumxxx.h"
 #include <vector>
 
 class CMediaTypes

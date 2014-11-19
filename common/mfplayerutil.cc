@@ -14,8 +14,8 @@
 #include <mfplay.h>
 #include <mferror.h>
 
-#include "debugutil.hpp"
-#include "mfplayerutil.hpp"
+#include "debugutil.h"
+#include "mfplayerutil.h"
 
 namespace WebmMfUtil
 {

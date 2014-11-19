@@ -8,20 +8,20 @@
 
 #include <strmif.h>
 #include <uuids.h>
-#include "webmsourcefilter.hpp"
-#include "cenumpins.hpp"
-#include "mkvparserstreamvideo.hpp"
-#include "mkvparserstreamaudio.hpp"
-#include "webmsourceoutpin.hpp"
-#include "webmtypes.hpp"
+#include "webmsourcefilter.h"
+#include "cenumpins.h"
+#include "mkvparserstreamvideo.h"
+#include "mkvparserstreamaudio.h"
+#include "webmsourceoutpin.h"
+#include "webmtypes.h"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>
 #include <process.h>
 #include <limits>
 #ifdef _DEBUG
-#include "iidstr.hpp"
-#include "odbgstream.hpp"
+#include "iidstr.h"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

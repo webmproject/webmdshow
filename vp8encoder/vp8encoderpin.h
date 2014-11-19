@@ -7,8 +7,8 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "cmediatypes.hpp"
-#include "graphutil.hpp"
+#include "cmediatypes.h"
+#include "graphutil.h"
 #include <string>
 
 namespace VP8EncoderLib

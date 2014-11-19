@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <objbase.h>
-#include "webmtypes.hpp"
+#include "webmtypes.h"
 
 const GUID WebmTypes::MEDIASUBTYPE_WEBM =
 { /* ED3110EB-5211-11DF-94AF-0026B977EEAA */

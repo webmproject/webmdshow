@@ -9,8 +9,8 @@
 #pragma once
 #include <strmif.h>
 #include <string>
-#include "clockable.hpp"
-#include "oggfile.hpp"
+#include "clockable.h"
+#include "oggfile.h"
 #include <vector>
 
 namespace WebmOggSource

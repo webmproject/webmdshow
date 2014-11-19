@@ -1,6 +1,6 @@
 #pragma once
-#include "oggtrack.hpp"
-#include "oggparser.hpp"
+#include "oggtrack.h"
+#include "oggparser.h"
 
 namespace WebmOggSource
 {

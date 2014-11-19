@@ -80,17 +80,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\libwebm\mkvparser.cpp" />
-    <ClCompile Include="mkvparserstream.cpp" />
-    <ClCompile Include="mkvparserstreamaudio.cpp" />
-    <ClCompile Include="mkvparserstreamreader.cpp" />
-    <ClCompile Include="mkvparserstreamvideo.cpp" />
+    <ClCompile Include="mkvparserstream.cc" />
+    <ClCompile Include="mkvparserstreamaudio.cc" />
+    <ClCompile Include="mkvparserstreamreader.cc" />
+    <ClCompile Include="mkvparserstreamvideo.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\libwebm\mkvparser.hpp" />
-    <ClInclude Include="mkvparserstream.hpp" />
-    <ClInclude Include="mkvparserstreamaudio.hpp" />
-    <ClInclude Include="mkvparserstreamreader.hpp" />
-    <ClInclude Include="mkvparserstreamvideo.hpp" />
+    <ClInclude Include="mkvparserstream.h" />
+    <ClInclude Include="mkvparserstreamaudio.h" />
+    <ClInclude Include="mkvparserstreamreader.h" />
+    <ClInclude Include="mkvparserstreamvideo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

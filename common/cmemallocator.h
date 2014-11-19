@@ -8,8 +8,8 @@
 
 #pragma once
 #include <strmif.h>
-#include "clockable.hpp"
-#include "imemsample.hpp"
+#include "clockable.h"
+#include "imemsample.h"
 #include <list>
 
 class CMemAllocator : public IMemAllocator,

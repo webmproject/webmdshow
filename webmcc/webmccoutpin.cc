@@ -8,20 +8,20 @@
 
 #include <strmif.h>
 //#include <comdef.h>
-#include "webmccfilter.hpp"
-#include "webmccoutpin.hpp"
-#include "cmediasample.hpp"
-#include "mediatypeutil.hpp"
-#include "webmtypes.hpp"
+#include "webmccfilter.h"
+#include "webmccoutpin.h"
+#include "cmediasample.h"
+#include "mediatypeutil.h"
+#include "webmtypes.h"
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <cassert>
 #include <process.h>
 //#include <amvideo.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 #include <iomanip>
-#include "iidstr.hpp"
+#include "iidstr.h"
 using std::endl;
 using std::dec;
 using std::hex;

@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "tenumxxx.hpp"
+#include "tenumxxx.h"
 
 class CEnumPins : public TEnumXXX<IEnumPins, IPin*>
 {

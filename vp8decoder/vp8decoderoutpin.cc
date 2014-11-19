@@ -14,15 +14,15 @@
 
 #include <cassert>
 
-#include "cmediasample.hpp"
-#include "mediatypeutil.hpp"
-#include "vp8decoderfilter.hpp"
-#include "vp8decoderoutpin.hpp"
-#include "webmtypes.hpp"
+#include "cmediasample.h"
+#include "mediatypeutil.h"
+#include "vp8decoderfilter.h"
+#include "vp8decoderoutpin.h"
+#include "webmtypes.h"
 
 #ifdef _DEBUG
-#include "odbgstream.hpp"
-#include "iidstr.hpp"
+#include "odbgstream.h"
+#include "iidstr.h"
 using std::endl;
 using std::dec;
 using std::hex;

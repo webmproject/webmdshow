@@ -15,9 +15,9 @@
 #include <cassert>
 #include <string>
 
-#include "debugutil.hpp"
-#include "hrtext.hpp"
-#include "ComDllWrapper.hpp"
+#include "debugutil.h"
+#include "hrtext.h"
+#include "ComDllWrapper.h"
 
 namespace WebmMfUtil
 {

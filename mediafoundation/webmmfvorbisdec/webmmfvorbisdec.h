@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "memutilfwd.hpp"
+#include "memutilfwd.h"
 
 namespace WebmMfVorbisDecLib
 {

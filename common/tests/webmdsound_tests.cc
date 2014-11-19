@@ -16,12 +16,12 @@
 
 #include <cassert>
 
-#include "clockable.hpp"
-#include "debugutil.hpp"
-#include "eventutil.hpp"
+#include "clockable.h"
+#include "debugutil.h"
+#include "eventutil.h"
 #include "gtest/gtest.h"
-#include "threadutil.hpp"
-#include "webmdsound.hpp"
+#include "threadutil.h"
+#include "webmdsound.h"
 
 extern wchar_t* g_test_input_file;
 

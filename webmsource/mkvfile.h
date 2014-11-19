@@ -8,7 +8,7 @@
 
 #pragma once
 #include "mkvparser.hpp"
-#include "mkvparserstreamreader.hpp"
+#include "mkvparserstreamreader.h"
 
 namespace WebmSource
 {

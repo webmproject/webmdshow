@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "oggfile.hpp"
+#include "oggfile.h"
 #include <cassert>
 
 namespace WebmOggSource

@@ -8,9 +8,9 @@
 #endif
 
 #ifdef _DEBUG
-#include "odbgstream.hpp"
-#include "hrtext.hpp"
-#include "iidstr.hpp"
+#include "odbgstream.h"
+#include "hrtext.h"
+#include "iidstr.h"
 
 // Simple trace logging macro that expands to nothing in release mode builds.
 // Output is sent to the vs console.

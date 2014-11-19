@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "webmmuxebmlio.hpp"
+#include "webmmuxebmlio.h"
 #include <cassert>
 #include <limits>
 #include <malloc.h>  //_malloca

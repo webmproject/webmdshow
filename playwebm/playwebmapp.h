@@ -10,8 +10,8 @@
 #include <comdef.h>
 #include <control.h>
 #include <uuids.h>
-#include "graphutil.hpp"
-#include "playwebmcmdline.hpp"
+#include "graphutil.h"
+#include "playwebmcmdline.h"
 
 class App
 {

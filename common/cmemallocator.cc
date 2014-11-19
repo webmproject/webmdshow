@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "cmemallocator.hpp"
+#include "cmemallocator.h"
 #include <vfwmsgs.h>
 #include <cassert>
 #include <new>

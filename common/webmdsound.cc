@@ -12,12 +12,12 @@
 #include <cassert>
 #include <vector>
 
-#include "clockable.hpp"
-#include "debugutil.hpp"
-#include "eventutil.hpp"
-#include "memutil.hpp"
-#include "threadutil.hpp"
-#include "webmdsound.hpp"
+#include "clockable.h"
+#include "debugutil.h"
+#include "eventutil.h"
+#include "memutil.h"
+#include "threadutil.h"
+#include "webmdsound.h"
 
 namespace WebmDirectX
 {

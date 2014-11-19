@@ -7,13 +7,13 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "cfactory.hpp"
-#include "comreg.hpp"
+#include "cfactory.h"
+#include "comreg.h"
 #include <cassert>
 #include <comdef.h>
 #include <uuids.h>
-#include "graphutil.hpp"
-#include "webmtypes.hpp"
+#include "graphutil.h"
+#include "webmtypes.h"
 
 HMODULE g_hModule;
 static ULONG s_cLock;

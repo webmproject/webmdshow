@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmvorbisencoderpin.hpp"
+#include "webmvorbisencoderpin.h"
 #include <comdef.h>
-#include "graphutil.hpp"
+#include "graphutil.h"
 
 namespace WebmVorbisEncoderLib
 {

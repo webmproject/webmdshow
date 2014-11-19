@@ -1,12 +1,12 @@
 #include <strmif.h>
-#include "oggtrackaudio.hpp"
-#include "vorbistypes.hpp"
-#include "cmediatypes.hpp"
+#include "oggtrackaudio.h"
+#include "vorbistypes.h"
+#include "cmediatypes.h"
 #include <new>
 #include <cassert>
 #include <uuids.h>
 #if 0 //def _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 #include <iomanip>
 using std::endl;
 using std::fixed;

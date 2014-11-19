@@ -9,11 +9,11 @@
 #pragma once
 #include <strmif.h>
 #include <string>
-#include "webmmuxinpinvideo.hpp"
-#include "webmmuxinpinaudio.hpp"
-#include "webmmuxoutpin.hpp"
-#include "webmmuxcontext.hpp"
-#include "clockable.hpp"
+#include "webmmuxinpinvideo.h"
+#include "webmmuxinpinaudio.h"
+#include "webmmuxoutpin.h"
+#include "webmmuxcontext.h"
+#include "clockable.h"
 #include "webmmuxidl.h"
 
 namespace WebmMuxLib

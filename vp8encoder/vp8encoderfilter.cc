@@ -8,15 +8,15 @@
 
 #include <strmif.h>
 #include <uuids.h>
-#include "vp8encoderfilter.hpp"
+#include "vp8encoderfilter.h"
 #include "vp8encoderidl.h"
-#include "cenumpins.hpp"
+#include "cenumpins.h"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>
 #ifdef _DEBUG
-#include "iidstr.hpp"
-#include "odbgstream.hpp"
+#include "iidstr.h"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

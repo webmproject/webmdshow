@@ -15,17 +15,17 @@
 
 #include <string>
 
-#include "debugutil.hpp"
-#include "comdllwrapper.hpp"
-#include "eventutil.hpp"
+#include "debugutil.h"
+#include "comdllwrapper.h"
+#include "eventutil.h"
 #include "gtest/gtest.h"
-#include "memutil.hpp"
-#include "mfsrcwrap.hpp"
-#include "mftranswrap.hpp"
-#include "mfutil.hpp"
-#include "tests/mfdllpaths.hpp"
-#include "webmsdl.hpp"
-#include "webmtypes.hpp"
+#include "memutil.h"
+#include "mfsrcwrap.h"
+#include "mftranswrap.h"
+#include "mfutil.h"
+#include "tests/mfdllpaths.h"
+#include "webmsdl.h"
+#include "webmtypes.h"
 
 extern wchar_t* g_test_input_file;
 

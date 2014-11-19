@@ -7,7 +7,7 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #include <strmif.h>
-#include "mediatypeutil.hpp"
+#include "mediatypeutil.h"
 //#include <new>
 #include <vfwmsgs.h>
 

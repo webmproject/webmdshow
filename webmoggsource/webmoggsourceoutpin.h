@@ -7,10 +7,10 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmoggsourcepin.hpp"
-#include "oggtrack.hpp"
+#include "webmoggsourcepin.h"
+#include "oggtrack.h"
 #include <comdef.h>
-#include "graphutil.hpp"
+#include "graphutil.h"
 
 namespace WebmOggSource
 {

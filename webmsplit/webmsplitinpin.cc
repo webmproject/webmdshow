@@ -6,15 +6,15 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "webmsplitfilter.hpp"
+#include "webmsplitfilter.h"
 #include "mkvparser.hpp"
-#include "mkvparserstreamvideo.hpp"
-#include "mkvparserstreamaudio.hpp"
-#include "webmsplitoutpin.hpp"
+#include "mkvparserstreamvideo.h"
+#include "mkvparserstreamaudio.h"
+#include "webmsplitoutpin.h"
 #include <vfwmsgs.h>
 #include <uuids.h>
 #include <cassert>
-//#include "odbgstream.hpp"
+//#include "odbgstream.h"
 //using std::endl;
 
 namespace WebmSplit

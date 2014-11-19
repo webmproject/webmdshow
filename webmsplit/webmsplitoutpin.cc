@@ -9,10 +9,10 @@
 #include <strmif.h>
 #include <comdef.h>
 #include <uuids.h>
-#include "mkvparserstream.hpp"
-#include "webmsplitfilter.hpp"
-#include "webmsplitoutpin.hpp"
-#include "cmediasample.hpp"
+#include "mkvparserstream.h"
+#include "webmsplitfilter.h"
+#include "webmsplitoutpin.h"
+#include "cmediasample.h"
 #include "mkvparser.hpp"
 #include <vfwmsgs.h>
 #include <cassert>
@@ -20,8 +20,8 @@
 #include <iomanip>
 #include <process.h>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
-#include "iidstr.hpp"
+#include "odbgstream.h"
+#include "iidstr.h"
 using std::endl;
 using std::dec;
 using std::hex;

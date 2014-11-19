@@ -12,9 +12,9 @@
 
 #include <string>
 
-#include "clockable.hpp"
-#include "vp9decoderinpin.hpp"
-#include "vp9decoderoutpin.hpp"
+#include "clockable.h"
+#include "vp9decoderinpin.h"
+#include "vp9decoderoutpin.h"
 
 namespace VP9DecoderLib {
 

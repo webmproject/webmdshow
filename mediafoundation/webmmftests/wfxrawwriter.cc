@@ -15,7 +15,7 @@
 #include "mmsystem.h"
 #include "mmreg.h"
 #endif
-#include "wfxrawwriter.hpp"
+#include "wfxrawwriter.h"
 
 namespace WebmMfVorbisDecLib
 {

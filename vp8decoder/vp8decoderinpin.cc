@@ -20,19 +20,19 @@
 
 #include <cassert>
 
-#include "vp8decoderfilter.hpp"
-#include "vp8decoderinpin.hpp"
-#include "vp8decoderoutpin.hpp"
+#include "vp8decoderfilter.h"
+#include "vp8decoderinpin.h"
+#include "vp8decoderoutpin.h"
 
-#include "mediatypeutil.hpp"
+#include "mediatypeutil.h"
 #include "vpx/vp8dx.h"
 
-#include "graphutil.hpp"
-#include "webmtypes.hpp"
+#include "graphutil.h"
+#include "webmtypes.h"
 
 #ifdef _DEBUG
 #include <iomanip>
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 using std::hex;
 using std::dec;

@@ -2,12 +2,12 @@
 //#include <mfobjects.h>
 #include <mfidl.h>
 #include <mferror.h>
-#include "webmmfbytestreamhandler.hpp"
-#include "webmmfsource.hpp"
+#include "webmmfbytestreamhandler.h"
+#include "webmmfsource.h"
 #include <new>
 #include <cassert>
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

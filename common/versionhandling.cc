@@ -10,7 +10,7 @@
 //#pragma warning(disable:4710)  //not inlined
 //#pragma warning(push, 3)
 #include <windows.h>
-#include "versionhandling.hpp"
+#include "versionhandling.h"
 #include <cassert>
 #include <cstdlib>  //_wpgmptr, _get_wpgmptr
 #include <malloc.h>   //_alloca

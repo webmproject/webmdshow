@@ -9,8 +9,8 @@
 #ifndef __WEBMDSHOW_COMMON_MFTRANSWRAP_HPP__
 #define __WEBMDSHOW_COMMON_MFTRANSWRAP_HPP__
 
-#include "debugutil.hpp"
-#include "memutilfwd.hpp"
+#include "debugutil.h"
+#include "memutilfwd.h"
 
 namespace WebmMfUtil
 {

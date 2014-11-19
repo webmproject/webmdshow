@@ -16,17 +16,17 @@
 #include <string>
 #include <vector>
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
-#include "comreg.hpp"
-#include "comdllwrapper.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
+#include "comreg.h"
+#include "comdllwrapper.h"
 #include "gtest/gtest.h"
-#include "memutil.hpp"
-#include "mfsrcwrap.hpp"
-#include "mftranswrap.hpp"
-#include "mfutil.hpp"
-#include "tests/mfdllpaths.hpp"
-#include "webmtypes.hpp"
+#include "memutil.h"
+#include "mfsrcwrap.h"
+#include "mftranswrap.h"
+#include "mfutil.h"
+#include "tests/mfdllpaths.h"
+#include "webmtypes.h"
 
 using WebmTypes::CLSID_WebmMfByteStreamHandler;
 using WebmTypes::CLSID_WebmMfVp8Dec;

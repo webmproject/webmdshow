@@ -8,19 +8,19 @@
 
 #include <strmif.h>
 #include <uuids.h>
-#include "webmoggsourcefilter.hpp"
-#include "cenumpins.hpp"
-#include "webmoggsourceoutpin.hpp"
-#include "webmtypes.hpp"
-#include "oggtrackaudio.hpp"
+#include "webmoggsourcefilter.h"
+#include "cenumpins.h"
+#include "webmoggsourceoutpin.h"
+#include "webmtypes.h"
+#include "oggtrackaudio.h"
 #include <new>
 #include <cassert>
 #include <vfwmsgs.h>
 #include <process.h>
 #include <limits>
 #ifdef _DEBUG
-#include "iidstr.hpp"
-#include "odbgstream.hpp"
+#include "iidstr.h"
+#include "odbgstream.h"
 using std::endl;
 #endif
 

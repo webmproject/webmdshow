@@ -16,34 +16,34 @@
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cenumpins.hpp">
+    <ClInclude Include="..\common\cenumpins.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cfactory.hpp">
+    <ClInclude Include="..\common\cfactory.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\clockable.hpp">
+    <ClInclude Include="..\common\clockable.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cmediasample.hpp">
+    <ClInclude Include="..\common\cmediasample.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cmediatypes.hpp">
+    <ClInclude Include="..\common\cmediatypes.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cmemallocator.hpp">
+    <ClInclude Include="..\common\cmemallocator.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\comreg.hpp">
+    <ClInclude Include="..\common\comreg.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.hpp">
+    <ClInclude Include="..\common\mediatypeutil.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\vorbistypes.hpp">
+    <ClInclude Include="..\common\vorbistypes.h">
       <Filter>Common Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\webmtypes.hpp">
+    <ClInclude Include="..\common\webmtypes.h">
       <Filter>Common Files</Filter>
     </ClInclude>
     <ClInclude Include="..\third_party\libvorbis\vorbis\codec.h">
@@ -55,10 +55,10 @@
     <ClInclude Include="..\third_party\libogg\ogg\os_types.h">
       <Filter>Vorbis Files</Filter>
     </ClInclude>
-    <ClInclude Include="webmvorbisdecoderfilter.hpp" />
-    <ClInclude Include="webmvorbisdecoderinpin.hpp" />
-    <ClInclude Include="webmvorbisdecoderoutpin.hpp" />
-    <ClInclude Include="webmvorbisdecoderpin.hpp" />
+    <ClInclude Include="webmvorbisdecoderfilter.h" />
+    <ClInclude Include="webmvorbisdecoderinpin.h" />
+    <ClInclude Include="webmvorbisdecoderoutpin.h" />
+    <ClInclude Include="webmvorbisdecoderpin.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmvorbisdecoder.rc">
@@ -66,40 +66,40 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cpp">
+    <ClCompile Include="..\common\cenumpins.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cfactory.cpp">
+    <ClCompile Include="..\common\cfactory.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\clockable.cpp">
+    <ClCompile Include="..\common\clockable.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cmediasample.cpp">
+    <ClCompile Include="..\common\cmediasample.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cmediatypes.cpp">
+    <ClCompile Include="..\common\cmediatypes.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\cmemallocator.cpp">
+    <ClCompile Include="..\common\cmemallocator.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\comreg.cpp">
+    <ClCompile Include="..\common\comreg.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cpp">
+    <ClCompile Include="..\common\mediatypeutil.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\vorbistypes.cpp">
+    <ClCompile Include="..\common\vorbistypes.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cpp">
+    <ClCompile Include="..\common\webmtypes.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
-    <ClCompile Include="dllentry.cpp" />
-    <ClCompile Include="webmvorbisdecoderfilter.cpp" />
-    <ClCompile Include="webmvorbisdecoderinpin.cpp" />
-    <ClCompile Include="webmvorbisdecoderoutpin.cpp" />
-    <ClCompile Include="webmvorbisdecoderpin.cpp" />
+    <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="webmvorbisdecoderfilter.cc" />
+    <ClCompile Include="webmvorbisdecoderinpin.cc" />
+    <ClCompile Include="webmvorbisdecoderoutpin.cc" />
+    <ClCompile Include="webmvorbisdecoderpin.cc" />
   </ItemGroup>
 </Project>

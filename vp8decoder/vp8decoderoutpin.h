@@ -10,8 +10,8 @@
 
 #include <comdef.h>
 
-#include "graphutil.hpp"
-#include "vp8decoderpin.hpp"
+#include "graphutil.h"
+#include "vp8decoderpin.h"
 
 namespace VP8DecoderLib {
 class Filter;

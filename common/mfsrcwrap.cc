@@ -17,14 +17,14 @@
 #include <cassert>
 #include <string>
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
-#include "comreg.hpp"
-#include "comdllwrapper.hpp"
-#include "mfmediastream.hpp"
-#include "mfsrcwrap.hpp"
-#include "mfutil.hpp"
-#include "webmtypes.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
+#include "comreg.h"
+#include "comdllwrapper.h"
+#include "mfmediastream.h"
+#include "mfsrcwrap.h"
+#include "mfutil.h"
+#include "webmtypes.h"
 
 namespace WebmMfUtil
 {

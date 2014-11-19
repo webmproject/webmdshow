@@ -7,9 +7,9 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "webmsplitpin.hpp"
-//#include "graphutil.hpp"
-#include "mkvreader.hpp"
+#include "webmsplitpin.h"
+//#include "graphutil.h"
+#include "mkvreader.h"
 
 namespace MkvParser
 {

@@ -7,10 +7,10 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma once
-#include "vp8encoderpin.hpp"
-#include "graphutil.hpp"
+#include "vp8encoderpin.h"
+#include "graphutil.h"
 #include "vpx/vpx_encoder.h"
-#include "ivp8sample.hpp"
+#include "ivp8sample.h"
 #include <list>
 
 namespace VP8EncoderLib

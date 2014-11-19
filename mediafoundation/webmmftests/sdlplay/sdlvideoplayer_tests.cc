@@ -14,7 +14,7 @@
 #include <queue>
 #include <vector>
 
-#include "debugutil.hpp"
+#include "debugutil.h"
 #include "gtest/gtest.h"
 #include "SDLVideoPlayer.h"
 

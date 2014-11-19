@@ -14,7 +14,7 @@
 #include <queue>
 #include <vector>
 
-#include "debugutil.hpp"
+#include "debugutil.h"
 #include "SDLVideoPlayer.h"
 
 #define TRY_DECODE_THREAD 1

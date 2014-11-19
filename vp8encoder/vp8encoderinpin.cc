@@ -7,10 +7,10 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma warning(disable:4505)  //unreferenced local function has been removed
-#include "vp8encoderfilter.hpp"
-#include "vp8encoderoutpin.hpp"
-#include "mediatypeutil.hpp"
-#include "webmtypes.hpp"
+#include "vp8encoderfilter.h"
+#include "vp8encoderoutpin.h"
+#include "mediatypeutil.h"
+#include "webmtypes.h"
 #include "vpx/vp8cx.h"
 #include <vfwmsgs.h>
 #include <uuids.h>
@@ -18,7 +18,7 @@
 #include <amvideo.h>   //VideoInfoHeader
 #include <dvdmedia.h>  //VideoInfoHeader2
 #ifdef _DEBUG
-#include "odbgstream.hpp"
+#include "odbgstream.h"
 #include <iomanip>
 using std::endl;
 using std::hex;

@@ -10,9 +10,9 @@
 #include <comdef.h>
 #include <control.h>
 #include <uuids.h>
-#include "graphutil.hpp"
-#include "makewebmcmdline.hpp"
-#include "memfile.hpp"
+#include "graphutil.h"
+#include "makewebmcmdline.h"
+#include "memfile.h"
 #include <amvideo.h>
 #include <dvdmedia.h>
 #include <list>

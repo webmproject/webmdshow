@@ -6,10 +6,10 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#include "webmmuxfilter.hpp"
-#include "webmmuxstreamaudiovorbis.hpp"
-#include "webmmuxstreamaudiovorbisogg.hpp"
-#include "vorbistypes.hpp"
+#include "webmmuxfilter.h"
+#include "webmmuxstreamaudiovorbis.h"
+#include "webmmuxstreamaudiovorbisogg.h"
+#include "vorbistypes.h"
 #include <uuids.h>
 #include <vfwmsgs.h>
 #include <cassert>

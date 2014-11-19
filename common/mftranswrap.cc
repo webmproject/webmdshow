@@ -15,13 +15,13 @@
 
 #include <string>
 
-#include "debugutil.hpp"
-#include "comdllwrapper.hpp"
-#include "eventutil.hpp"
-#include "hrtext.hpp"
-#include "memutil.hpp"
-#include "mftranswrap.hpp"
-#include "mfutil.hpp"
+#include "debugutil.h"
+#include "comdllwrapper.h"
+#include "eventutil.h"
+#include "hrtext.h"
+#include "memutil.h"
+#include "mftranswrap.h"
+#include "mfutil.h"
 
 namespace WebmMfUtil
 {

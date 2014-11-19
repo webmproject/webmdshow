@@ -9,8 +9,8 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include "debugutil.hpp"
-#include "eventutil.hpp"
+#include "debugutil.h"
+#include "eventutil.h"
 
 namespace WebmMfUtil
 {
