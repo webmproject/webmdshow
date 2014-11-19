@@ -5,87 +5,50 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
+#ifndef WEBMDSHOW_VP9DECODER_VP9DECODERPIN_HPP_
+#define WEBMDSHOW_VP9DECODER_VP9DECODERPIN_HPP_
 
-#pragma once
-#include "cmediatypes.hpp"
-#include "graphutil.hpp"
+#include <amvideo.h>
+#include <strmif.h>
+
 #include <string>
 
-namespace VP9DecoderLib
-{
+#include "cmediatypes.hpp"
+#include "graphutil.hpp"
+
+namespace VP9DecoderLib {
 
 class Filter;
 
-class Pin : public IPin
-{
-    Pin& operator=(const Pin&);
+class Pin : public IPin {
+ public:
+  // IPin interface:
+  HRESULT STDMETHODCALLTYPE Disconnect();
+  HRESULT STDMETHODCALLTYPE ConnectedTo(IPin** pPin);
+  HRESULT STDMETHODCALLTYPE ConnectionMediaType(AM_MEDIA_TYPE*);
+  HRESULT STDMETHODCALLTYPE QueryPinInfo(PIN_INFO*);
+  HRESULT STDMETHODCALLTYPE QueryDirection(PIN_DIRECTION*);
+  HRESULT STDMETHODCALLTYPE QueryId(LPWSTR*);
+  HRESULT STDMETHODCALLTYPE EnumMediaTypes(IEnumMediaTypes**);
 
-protected:
-    Pin(Filter*, PIN_DIRECTION, const wchar_t*);
-    virtual ~Pin();
+  Filter* const m_pFilter;
+  const PIN_DIRECTION m_dir;
+  const std::wstring m_id;
+  CMediaTypes m_preferred_mtv;
+  CMediaTypes m_connection_mtv;  // only one of these
+  GraphUtil::IPinPtr m_pPinConnection;
 
-public:
-    Filter* const m_pFilter;
-    const PIN_DIRECTION m_dir;
-    const std::wstring m_id;
-    CMediaTypes m_preferred_mtv;
-    CMediaTypes m_connection_mtv;  //only one of these
-    GraphUtil::IPinPtr m_pPinConnection;
+ protected:
+  virtual HRESULT GetName(PIN_INFO&) const = 0;
+  virtual HRESULT OnDisconnect();
+  Pin(Filter* pFilter, PIN_DIRECTION dir, const wchar_t* id)
+      : m_pFilter(pFilter), m_dir(dir), m_id(id) {}
+  virtual ~Pin() {}
 
-    //IUnknown interface:
+ private:
+  Pin& operator=(const Pin&);
+};
 
-    //IPin interface:
+}  // namespace VP9DecoderLib
 
-    //HRESULT STDMETHODCALLTYPE Connect(
-    //    IPin *pReceivePin,
-    //    const AM_MEDIA_TYPE *pmt);
-
-    //HRESULT STDMETHODCALLTYPE ReceiveConnection(
-    //    IPin*,
-    //    const AM_MEDIA_TYPE*);
-
-    HRESULT STDMETHODCALLTYPE Disconnect();
-
-    HRESULT STDMETHODCALLTYPE ConnectedTo(
-        IPin **pPin);
-
-    HRESULT STDMETHODCALLTYPE ConnectionMediaType(
-        AM_MEDIA_TYPE*);
-
-    HRESULT STDMETHODCALLTYPE QueryPinInfo(
-        PIN_INFO*);
-
-    HRESULT STDMETHODCALLTYPE QueryDirection(
-        PIN_DIRECTION*);
-
-    HRESULT STDMETHODCALLTYPE QueryId(
-        LPWSTR*);
-
-    //HRESULT STDMETHODCALLTYPE QueryAccept(
-    //    const AM_MEDIA_TYPE*);
-
-    HRESULT STDMETHODCALLTYPE EnumMediaTypes(
-        IEnumMediaTypes**);
-
-    //HRESULT STDMETHODCALLTYPE QueryInternalConnections(
-    //    IPin**,
-    //    ULONG*);
-
-    //HRESULT STDMETHODCALLTYPE EndOfStream();
-    //
-    //HRESULT STDMETHODCALLTYPE BeginFlush();
-    //
-    //HRESULT STDMETHODCALLTYPE EndFlush();
-    //
-    //HRESULT STDMETHODCALLTYPE NewSegment(
-    //    REFERENCE_TIME tStart,
-    //    REFERENCE_TIME tStop,
-    //    double dRate);
-
-protected:
-    virtual HRESULT GetName(PIN_INFO&) const = 0;
-    virtual HRESULT OnDisconnect();
-
-};  
-
-}  //end namespace VP9DecoderLib
+#endif  // WEBMDSHOW_VP9DECODER_VP9DECODERPIN_HPP_
