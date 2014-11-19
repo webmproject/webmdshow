@@ -5,8 +5,11 @@
 // tree. An additional intellectual property rights grant can be found
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
-#ifndef WEBDSHOW_VP8DECODER_VP8DECODERPIN_HPP_
-#define WEBDSHOW_VP8DECODER_VP8DECODERPIN_HPP_
+#ifndef WEBMDSHOW_VP8DECODER_VP8DECODERPIN_HPP_
+#define WEBMDSHOW_VP8DECODER_VP8DECODERPIN_HPP_
+
+#include <amvideo.h>
+#include <strmif.h>
 
 #include <string>
 
@@ -45,6 +48,6 @@ class Pin : public IPin {
    Pin& operator=(const Pin&);
 };
 
-}  // end namespace VP8DecoderLib
+}  // namespace VP8DecoderLib
 
-#endif  // WEBDSHOW_VP8DECODER_VP8DECODERPIN_HPP_
+#endif  // WEBMDSHOW_VP8DECODER_VP8DECODERPIN_HPP_
