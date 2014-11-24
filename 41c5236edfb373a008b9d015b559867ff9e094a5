@@ -2,6 +2,23 @@
   "comments": [
     {
       "key": {
+        "uuid": "AAAAdn//PEA\u003d",
+        "filename": "common/comreg.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 583,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-24T19:49:23Z",
+      "side": 1,
+      "message": "oops...",
+      "revId": "41c5236edfb373a008b9d015b559867ff9e094a5",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//PEU\u003d",
         "filename": "common/comreg.cc",
         "patchSetId": 1
