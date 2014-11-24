@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//PEU\u003d",
+        "filename": "common/comreg.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 584,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-24T19:43:25Z",
+      "side": 1,
+      "message": "aka something bad happened, but not really bad enough to tell the caller and break SUCCEEDED/FAILED checks\n\nalso, this gets rid of one of the reasons HRESULT return codes are ignored in dllentry",
+      "revId": "41c5236edfb373a008b9d015b559867ff9e094a5",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
