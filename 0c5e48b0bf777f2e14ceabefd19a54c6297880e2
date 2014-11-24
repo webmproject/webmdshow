@@ -16,6 +16,24 @@
       "revId": "0c5e48b0bf777f2e14ceabefd19a54c6297880e2",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//PCo\u003d",
+        "filename": "common/comreg.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 583,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-24T20:30:24Z",
+      "side": 1,
+      "message": "Presumably it\u0027s a failure to open the subkey; the msdn docs on this topic are pretty light and omit any detail on internals. I can\u0027t find much via googling, so the best I can say here is that this is observed behavior on clean(ish) win7 and win8 machines. Clean in the sense that the dshow filters were not installed on either, anyway.",
+      "parentUuid": "AAAAdn//PDQ\u003d",
+      "revId": "0c5e48b0bf777f2e14ceabefd19a54c6297880e2",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
     }
   ]
 }
