@@ -34,6 +34,24 @@
       "revId": "0c5e48b0bf777f2e14ceabefd19a54c6297880e2",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//PCU\u003d",
+        "filename": "common/comreg.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 583,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-11-24T20:39:54Z",
+      "side": 1,
+      "message": "seems like you\u0027d get the same result if you didn\u0027t have permissions, but maybe something earlier would fail too. I don\u0027t really have an opinion, just wanted to comment on the light documentation",
+      "parentUuid": "AAAAdn//PCo\u003d",
+      "revId": "0c5e48b0bf777f2e14ceabefd19a54c6297880e2",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
     }
   ]
 }
