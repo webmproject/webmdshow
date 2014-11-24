@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//PEc\u003d",
+        "filename": "common/comreg.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-11-24T19:41:08Z",
+      "side": 0,
+      "message": "CHARS_IN_GUID gets the mention, but an include is just too far...",
+      "revId": "9a353331d628b05c4a8b30b507dc94d28d2ba84c",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
