@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//PDQ\u003d",
+        "filename": "common/comreg.cc",
+        "patchSetId": 2
+      },
+      "lineNbr": 583,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-11-24T20:09:32Z",
+      "side": 1,
+      "message": "I guess by \u0027registry database\u0027  it means the individual key here?\n\nhttp://msdn.microsoft.com/en-us/library/windows/desktop/ms221085(v\u003dvs.85).aspx",
+      "revId": "0c5e48b0bf777f2e14ceabefd19a54c6297880e2",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
