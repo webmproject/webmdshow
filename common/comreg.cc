@@ -575,6 +575,14 @@ HRESULT ComReg::UnRegisterTypeLibResource(const wchar_t* fullpath) {
   hr = UnRegisterTypeLib(a.guid, a.wMajorVerNum, a.wMinorVerNum, a.lcid,
                          a.syskind);
 
+  // TYPE_E_REGISTRYACCESS is returned when the type lib was not registered.
+  // Since DShow filters are supposed to call DllUnregisterServer() from
+  // DllRegisterServer(), and DllUnregisterServer() must (attempt to) unregister
+  // type libraries, suppress this error because it's going to be returned every
+  // time a filter is registered for the first time on a system.
+  if (hr == TYPE_E_REGISTRYACCESS)
+    hr = S_FALSE;
+
   return hr;
 }
 
