@@ -23,3 +23,12 @@ vlog() {
   fi
 }
 
+# Terminates script when name of current directory does not match $1.
+check_dir() {
+  current_dir="$(pwd)"
+  required_dir="$1"
+  if [[ "${current_dir##*/}" != "${required_dir}" ]]; then
+    elog "This script must be run from the ${required_dir} directory."
+    exit 1
+  fi
+}
