@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//Njs\u003d",
+        "filename": "IDL/vpxdecoder.idl",
+        "patchSetId": 4
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-03T20:11:10Z",
+      "side": 1,
+      "message": "line endings",
+      "revId": "873e504628135f382b4735b4a90c62cb66c0e0fd",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Njo\u003d",
+        "filename": "vpxdecoder/dllentry.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 88,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-03T20:11:10Z",
+      "side": 1,
+      "message": "trailing whitespace",
+      "revId": "873e504628135f382b4735b4a90c62cb66c0e0fd",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Njk\u003d",
+        "filename": "vpxdecoder/resource.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-03T20:11:10Z",
+      "side": 1,
+      "message": "whitespace",
+      "revId": "873e504628135f382b4735b4a90c62cb66c0e0fd",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
