@@ -96,21 +96,6 @@ pick_decompress_wrapper() {
   exit 1
 }
 
-check_dir() {
-  readonly current_dir="$(pwd)"
-  if [[ "${current_dir##*/}" != "third_party" ]]; then
-    elog "This script must be run from the third_party directory of webmdshow."
-    exit 1
-  fi
-}
-
-check_msbuild() {
-  if ! eval msbuild.exe -help > /dev/null 2>&1; then
-    elog "msbuild.exe must be in your path."
-    exit 1
-  fi
-}
-
 build_libs() {
   vcxproj="$1"
   vlog "Building ${vcxproj}..."
@@ -262,7 +247,7 @@ readonly DOWNLOADER="$(pick_download_wrapper)"
 readonly DECOMPRESS="$(pick_decompress_wrapper)"
 
 # Bail out if not running from the third_party directory.
-check_dir
+check_dir "third_party"
 
 # Bail out if msbuild.exe is not available.
 check_msbuild
