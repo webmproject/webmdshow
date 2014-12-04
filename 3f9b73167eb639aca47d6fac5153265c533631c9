@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//NWQ\u003d",
+        "filename": "common/common.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-04T20:09:49Z",
+      "side": 1,
+      "message": "fixed. just forgot to fix it after the move",
+      "parentUuid": "AAAAdn//Nbw\u003d",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//Nbo\u003d",
         "filename": "third_party/update_libvpx.sh",
         "patchSetId": 4
@@ -30,6 +48,24 @@
       "writtenOn": "2014-12-04T01:59:52Z",
       "side": 1,
       "message": "should note this should be set in the function comment; you could unset it to avoid side effects, but it\u0027s probably OK here",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//NUs\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-04T20:09:49Z",
+      "side": 1,
+      "message": "Done and added a check",
+      "parentUuid": "AAAAdn//Nbo\u003d",
       "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -53,6 +89,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//NUo\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 101,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-04T20:09:49Z",
+      "side": 1,
+      "message": "Forgot to parse for --make-jobs on the command line...",
+      "parentUuid": "AAAAdn//Nbk\u003d",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//Nbc\u003d",
         "filename": "third_party/update_libvpx.sh",
         "patchSetId": 4
@@ -64,6 +118,24 @@
       "writtenOn": "2014-12-04T01:59:52Z",
       "side": 1,
       "message": "thought you were using plain newline embedded strings in other scripts",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//NV8\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 133,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-04T20:09:49Z",
+      "side": 1,
+      "message": "I did that in iosbuild.sh, but not in the dshow updaters. Not everything really needs to be an array here, but I figured the consistent type usage doesn\u0027t hurt. \n\nThe dir arrays are arrays because it\u0027s easier to copy the libs out that way. It also doesn\u0027t hurt that using arrays collapses the whitespace/newlines to single spaces... btw, is there a way to force that to happen when outputting a var in a heredoc? I guess I could use a regex in the var...",
+      "parentUuid": "AAAAdn//Nbc\u003d",
       "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
