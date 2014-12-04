@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//Nbw\u003d",
+        "filename": "common/common.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-04T01:59:52Z",
+      "side": 1,
+      "message": "I don\u0027t really care for this project, but you might want to change the shebang to /bin/bash if you meant to use \u0027[[ ]]\u0027",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Nbo\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-04T01:59:52Z",
+      "side": 1,
+      "message": "should note this should be set in the function comment; you could unset it to avoid side effects, but it\u0027s probably OK here",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Nbk\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 101,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-04T01:59:52Z",
+      "side": 1,
+      "message": "simply setting MAKEFLAGS should work",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Nbc\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 133,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-04T01:59:52Z",
+      "side": 1,
+      "message": "thought you were using plain newline embedded strings in other scripts",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
