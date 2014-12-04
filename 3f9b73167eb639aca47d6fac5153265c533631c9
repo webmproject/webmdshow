@@ -139,6 +139,24 @@
       "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//NRQ\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 4
+      },
+      "lineNbr": 133,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-04T23:22:23Z",
+      "side": 1,
+      "message": "\u003e btw, is there a way to force that to happen when outputting a var in a heredoc? I guess I could use a regex in the var...\n\nI think you mean something like this from the man:\n\nIf the redirection operator is \u003c\u003c-, then all leading tab characters are stripped from input lines and the line containing delimiter\n\nyou can do fancier stuff with perl here-docs...",
+      "parentUuid": "AAAAdn//NV8\u003d",
+      "revId": "3f9b73167eb639aca47d6fac5153265c533631c9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
     }
   ]
 }
