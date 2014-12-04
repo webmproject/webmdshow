@@ -23,3 +23,56 @@ vlog() {
   fi
 }
 
+# Terminates script when name of current directory does not match $1.
+check_dir() {
+  current_dir="$(pwd)"
+  required_dir="$1"
+  if [ "${current_dir##*/}" != "${required_dir}" ]; then
+    elog "This script must be run from the ${required_dir} directory."
+    exit 1
+  fi
+}
+
+# Terminates the script when $1 is not in $PATH. Any arguments required for
+# the tool being tested to return a successful exit code can be passed as
+# additional arguments.
+check_tool() {
+  tool="$1"
+  shift
+  tool_args="$@"
+  if ! eval "${tool}" ${tool_args} > /dev/null 2>&1; then
+    elog "${tool} must be in your path."
+    exit 1
+  fi
+}
+
+# Terminates the script when git.exe is not in $PATH.
+check_git() {
+  check_tool "git.exe" "--version"
+}
+
+# Terminates the script when make.exe is not in $PATH.
+check_make() {
+  check_tool "make.exe" "--version"
+}
+
+# Terminates the script when msbuild.exe is not in $PATH.
+check_msbuild() {
+  check_tool "msbuild.exe" "-help"
+}
+
+# Echoes git describe output for the directory specified by $1 to stdout.
+git_describe() {
+  git_dir="$1"
+  check_git
+  echo $(git --git-dir "${git_dir}/.git" --work-tree "${git_dir}" describe)
+}
+
+# Checks out the ref specified by $1 in the repo specified by $2.
+git_checkout() {
+  git_ref="$1"
+  git_dir="$2"
+  check_git
+  eval git --git-dir "${git_dir}/.git" --work-tree "${git_dir}" checkout \
+    "${git_ref}" ${devnull}
+}
