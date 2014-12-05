@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//NHo\u003d",
+        "filename": "common/common.sh",
+        "patchSetId": 6
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-05T19:36:34Z",
+      "side": 1,
+      "message": "ack",
+      "parentUuid": "AAAAdn//NRI\u003d",
+      "revId": "86596db6a13039d0148d03fdd0b582b00706c564",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//NRA\u003d",
         "filename": "third_party/update_libvpx.sh",
         "patchSetId": 6
@@ -36,6 +54,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//NHM\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 6
+      },
+      "lineNbr": 124,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-05T19:36:34Z",
+      "side": 1,
+      "message": "Ah.",
+      "parentUuid": "AAAAdn//NRA\u003d",
+      "revId": "86596db6a13039d0148d03fdd0b582b00706c564",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//NQ4\u003d",
         "filename": "third_party/update_libvpx.sh",
         "patchSetId": 6
@@ -47,6 +83,24 @@
       "writtenOn": "2014-12-04T23:32:48Z",
       "side": 1,
       "message": "shouldn\u0027t need line continuation with the () array assignment",
+      "revId": "86596db6a13039d0148d03fdd0b582b00706c564",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//NHI\u003d",
+        "filename": "third_party/update_libvpx.sh",
+        "patchSetId": 6
+      },
+      "lineNbr": 149,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-05T19:36:34Z",
+      "side": 1,
+      "message": "Removed.",
+      "parentUuid": "AAAAdn//NQ4\u003d",
       "revId": "86596db6a13039d0148d03fdd0b582b00706c564",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
