@@ -111,13 +111,30 @@ build_libs() {
   vlog "Done."
 }
 
-# Make libvorbis_static.vcxproj really produce static libs.
+# Enable PDB generation for libogg release configs. For reasons unknown attempts
+# to enable this via the msbuild.exe command line have no effect.
+enable_libogg_release_pdb_generation() {
+  libogg_vcxproj="${MSBUILD_OGG_PATH}/${MSBUILD_OGG_PROJECT}"
+  tag_open='\<DebugInformationFormat\>'
+  tag_close='\</DebugInformationFormat\>'
+  eval sed -i \
+    -e "s@^[[:space:]]*${tag_close}\$\@\@" \
+    -e "s@${tag_open}\$\@${tag_open}ProgramDatabase${tag_close}\@" \
+    -e "s/EditAndContinue/ProgramDatabase/" \
+    "${libogg_vcxproj}" ${devnull}
+}
+
+# Apply two fixes to libvorbis_static.vcxproj:
+# - Really produce static libs.
+# - Set all debug information formats to ProgramDatabase (silences an
+#   EditAndContinue related warning).
 fix_libvorbis_vcxproj() {
   libvorbis_vcxproj="${MSBUILD_VORBIS_PATH}/${MSBUILD_VORBIS_PROJECT}"
-  sed -i \
+  eval sed -i \
     -e "s/MultiThreadedDebugDLL/MultiThreadedDebug/" \
     -e "s/MultiThreadedDLL/MultiThreaded/" \
-    "${libvorbis_vcxproj}"
+    -e "s/EditAndContinue/ProgramDatabase/" \
+    "${libvorbis_vcxproj}" ${devnull}
 }
 
 install_ogg_files() {
@@ -139,6 +156,7 @@ install_ogg_files() {
 
   for (( i = 0; i < ${#ogg_dir_array[@]}; ++i )); do
     cp -p "${ogg_dir_array[$i]}/libogg_static.lib" "${webmdshow_dir_array[$i]}"
+    cp -p "${ogg_dir_array[$i]}/vc120.pdb" "${webmdshow_dir_array[$i]}"
   done
 }
 
@@ -162,6 +180,8 @@ install_vorbis_files() {
 
   for (( i = 0; i < ${#vorbis_dir_array[@]}; ++i )); do
     eval cp -p "${vorbis_dir_array[$i]}/libvorbis_static.lib" \
+      "${webmdshow_dir_array[$i]}" ${devnull}
+    eval cp -p "${vorbis_dir_array[$i]}/vc120.pdb" \
       "${webmdshow_dir_array[$i]}" ${devnull}
   done
 }
@@ -270,6 +290,7 @@ mv "$(basename ${LIBOGG_ARCHIVE} .zip)" libogg
 mv "$(basename ${LIBVORBIS_ARCHIVE} .zip)" libvorbis
 
 # Build the Ogg and Vorbis libraries.
+enable_libogg_release_pdb_generation
 build_libs "${MSBUILD_OGG_PATH}/${MSBUILD_OGG_PROJECT}"
 # libvorbis_static.vcxproj doesn't really produce statically linkable libraries
 # (code generation settings in the project require MSVCRT). Fix that before
