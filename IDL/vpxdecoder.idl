@@ -1,0 +1,50 @@
+// Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS.  All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+  uuid(2C8C46D4-2E83-476A-ADE9-43CFDB830E48),
+  helpstring("VPX Decoder Filter Type Library"),
+  version(1.0)
+]
+
+library VPXDecoderLib {
+
+enum VP8PostProcessingFlags {
+  VP8None         = 0x00,
+  VP8Deblock      = 0x01,
+  VP8Demacroblock = 0x02,
+  VP8AddNoise     = 0x04
+};
+
+[
+  object,
+  uuid(EB6EBF79-29BC-4377-93FB-B2AD76952B0A),
+  helpstring("VP8 Decoder Post-Processing Interface")
+]
+interface IVP8PostProcessing : IUnknown {
+  HRESULT SetFlags([in] int PostProcessingFlags);
+  HRESULT GetFlags([out] int* pPostProcessingFlags);
+  HRESULT SetDeblockingLevel([in] int DeblockingLevel);
+  HRESULT GetDeblockingLevel([out] int* pDeblockingLevel);
+  HRESULT SetNoiseLevel([in] int NoiseLevel);
+  HRESULT GetNoiseLevel([out] int* pNoiseLevel);
+  HRESULT ApplyPostProcessing();
+}
+
+[
+  uuid(BDDB6A11-9D65-46D8-824E-F376D64E4A8A),
+  helpstring("VPX Decoder Filter Class")
+]
+coclass VPXDecoder {
+  [default] interface IVP8PostProcessing;
+}
+
+}  // library VPXDecoderLib
