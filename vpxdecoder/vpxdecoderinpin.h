@@ -73,6 +73,7 @@ class Inpin : public Pin, public IMemInputPin {
   bool m_bEndOfStream;
   bool m_bFlush;
   vpx_codec_ctx_t m_ctx;
+  vpx_image_t* scaled_frame;
 };
 
 }  // namespace VPXDecoderLib
