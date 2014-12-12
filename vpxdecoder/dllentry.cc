@@ -30,6 +30,54 @@ namespace {
 
 CFactory factory(&s_cLock, &VPXDecoderLib::CreateInstance);
 
+// Remove the specified DirectShow filter CLSID from the registry.
+HRESULT UnregisterFilterCLSID(CLSID clsid) {
+  const GraphUtil::IFilterMapper2Ptr pMapper(CLSID_FilterMapper2);
+  if (pMapper == NULL) {
+    assert(pMapper != NULL);
+    return E_FAIL;
+  }
+
+  HRESULT hr =
+      pMapper->UnregisterFilter(&CLSID_LegacyAmFilterCategory, 0, clsid);
+  if (FAILED(hr)) {
+    return hr;
+  }
+
+  hr = ComReg::UnRegisterCoclass(CLSID_VPXDecoder);
+  if (FAILED(hr)) {
+    return hr;
+  }
+
+  return S_OK;
+}
+
+// Unregister the VP8 and VP9 filters.
+void UnregisterVPxFilters() {
+  LPCOLESTR vp8f_olestr = OLESTR("{ED3110F3-5211-11DF-94AF-0026B977EEAA}");
+  LPCOLESTR vp9f_olestr = OLESTR("{ED31110A-5211-11DF-94AF-0026B977EEAA}");
+
+  CLSID vp8f_clsid;
+  HRESULT hr_vp8 = CLSIDFromString(vp8f_olestr, &vp8f_clsid);
+
+  CLSID vp9f_clsid;
+  HRESULT hr_vp9 = CLSIDFromString(vp9f_olestr, &vp9f_clsid);
+
+  if (FAILED(hr_vp8) || FAILED(hr_vp9)) {
+    assert(hr_vp8 == S_OK && "VP8Decoder CLSID string conversion failed.");
+    assert(hr_vp9 == S_OK && "VP9Decoder CLSID string conversion failed.");
+    return;
+  }
+
+  hr_vp8 = UnregisterFilterCLSID(vp8f_clsid);
+  hr_vp9 = UnregisterFilterCLSID(vp9f_clsid);
+
+  if (FAILED(hr_vp8) || FAILED(hr_vp9)) {
+    assert(hr_vp8 == S_OK && "VP8Decoder unregistration failed.");
+    assert(hr_vp9 == S_OK && "VP9Decoder unregistration failed.");
+  }
+}
+
 }  // namespace
 
 BOOL APIENTRY DllMain(HINSTANCE hModule,
@@ -121,6 +169,9 @@ STDAPI DllRegisterServer() {
     assert(SUCCEEDED(hr));
     return hr;
   }
+
+  // Unregister the VP8 and VP9 filters.
+  UnregisterVPxFilters();
 
   hr = ComReg::RegisterTypeLibResource(filename_.c_str(), 0);
   if (FAILED(hr)) {
