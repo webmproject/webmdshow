@@ -46,6 +46,11 @@ check_tool() {
   fi
 }
 
+# Terminates the script when cmake.exe is not in $PATH.
+check_cmake() {
+  check_tool "cmake.exe" "--version"
+}
+
 # Terminates the script when git.exe is not in $PATH.
 check_git() {
   check_tool "git.exe" "--version"
@@ -65,7 +70,14 @@ check_msbuild() {
 git_describe() {
   git_dir="$1"
   check_git
-  echo $(git --git-dir "${git_dir}/.git" --work-tree "${git_dir}" describe)
+  echo $(git -C "${git_dir}" describe)
+}
+
+# Echoes current git revision for the directory specifed by $1 to stdout.
+git_revision() {
+  git_dir="$1"
+  check_git
+  echo $(git -C "${git_dir}" rev-parse HEAD)
 }
 
 # Checks out the ref specified by $1 in the repo specified by $2.
@@ -73,6 +85,5 @@ git_checkout() {
   git_ref="$1"
   git_dir="$2"
   check_git
-  eval git --git-dir "${git_dir}/.git" --work-tree "${git_dir}" checkout \
-    "${git_ref}" ${devnull}
+  eval git -C "${git_dir}" checkout "${git_ref}" ${devnull}
 }
