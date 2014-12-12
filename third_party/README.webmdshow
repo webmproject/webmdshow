@@ -13,6 +13,10 @@ libvpx
 Version: v1.3.0-4971-g69a9dc5
 URL: https://chromium.googlesource.com/webm/libvpx
 
+libyuv
+Version: 233a931cb6114f99eb7fedacde8fbad69f0d7dd4
+URL: https://chromium.googlesource.com/external/libyuv
+
 sdl
 Version: 1.2.14
 URL: http://www.libsdl.org/download-1.2.php
