@@ -22,6 +22,7 @@
 
 #include <cassert>
 
+#include "libyuv.h"
 #include "vpx/vp8dx.h"
 
 #include "graphutil.h"
@@ -50,7 +51,10 @@ const wchar_t kVP9PinName[] = L"VP90";
 namespace VPXDecoderLib {
 
 Inpin::Inpin(Filter* p)
-    : Pin(p, PINDIR_INPUT, L"input"), m_bEndOfStream(false), m_bFlush(false) {
+    : Pin(p, PINDIR_INPUT, L"input"),
+      m_bEndOfStream(false),
+      m_bFlush(false),
+      scaled_frame(NULL) {
   AM_MEDIA_TYPE mt;
 
   mt.majortype = MEDIATYPE_Video;
@@ -489,9 +493,9 @@ HRESULT Inpin::Receive(IMediaSample* pInSample) {
 
   vpx_codec_iter_t iter = 0;
 
-  vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &iter);
+  const vpx_image_t* frame = vpx_codec_get_frame(&m_ctx, &iter);
 
-  if (f == 0)
+  if (frame == NULL)
     return S_OK;
 
   AM_MEDIA_TYPE* pmt;
@@ -542,27 +546,46 @@ HRESULT Inpin::Receive(IMediaSample* pInSample) {
     return E_FAIL;
   }
 
+  const uint32_t out_width = bmih_ptr->biWidth;
+  const uint32_t out_height = std::abs(bmih_ptr->biHeight);
+  if (frame->d_h != out_height || frame->d_w != out_width) {
+    // Scale.
+    if (scaled_frame != NULL &&
+      (scaled_frame->d_h != out_height || scaled_frame->d_w != out_width)) {
+      // The libvpx output image size changed; realloc needed.
+      vpx_img_free(scaled_frame);
+      scaled_frame = NULL;
+    }
+
+    if (scaled_frame == NULL) {
+      scaled_frame = vpx_img_alloc(NULL, frame->fmt, out_width, out_height, 16);
+      if (scaled_frame == NULL) {
+        assert(scaled_frame && "Out of memory.");
+        return E_OUTOFMEMORY;
+      }
+    }
+
+
+    libyuv::I420Scale(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                      libyuv::kFilterBox);
+
+    frame = scaled_frame;
+  }
+
   if (mt.subtype == MEDIASUBTYPE_NV12)
-    CopyToPlanar(f, pOutSample, mt.subtype, *bmih_ptr);
-
+    CopyToPlanar(frame, pOutSample, mt.subtype, *bmih_ptr);
   else if (mt.subtype == MEDIASUBTYPE_YV12)
-    CopyToPlanar(f, pOutSample, mt.subtype, *bmih_ptr);
-
+    CopyToPlanar(frame, pOutSample, mt.subtype, *bmih_ptr);
   else if (mt.subtype == WebmTypes::MEDIASUBTYPE_I420)
-    CopyToPlanar(f, pOutSample, mt.subtype, *bmih_ptr);
-
+    CopyToPlanar(frame, pOutSample, mt.subtype, *bmih_ptr);
   else if (mt.subtype == MEDIASUBTYPE_UYVY)
-    CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
-
+    CopyToPacked(frame, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
   else if (mt.subtype == MEDIASUBTYPE_YUY2)
-    CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
-
+    CopyToPacked(frame, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
   else if (mt.subtype == MEDIASUBTYPE_YUYV)
-    CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
-
+    CopyToPacked(frame, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
   else if (mt.subtype == MEDIASUBTYPE_YVYU)
-    CopyToPacked(f, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
-
+    CopyToPacked(frame, pOutSample, mt.subtype, *rc_ptr, *bmih_ptr);
   else
     return E_FAIL;
 
@@ -967,6 +990,11 @@ void Inpin::Stop() {
   const vpx_codec_err_t err = vpx_codec_destroy(&m_ctx);
   err;
   assert(err == VPX_CODEC_OK);
+
+  if (scaled_frame != NULL) {
+    vpx_img_free(scaled_frame);
+    scaled_frame = NULL;
+  }
 }
 
 HRESULT Inpin::OnApplyPostProcessing() {
