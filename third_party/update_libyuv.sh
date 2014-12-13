@@ -11,9 +11,10 @@
 . $(dirname $0)/../common/common.sh
 
 cleanup() {
+  local readonly res=$?
   cd "${ORIG_PWD}"
 
-  if [[ $? -ne 0 ]]; then
+  if [[ $res -ne 0 ]]; then
     elog "cleanup() trapped error"
   fi
   if [[ "${KEEP_WORK_DIR}" != "yes" ]]; then
