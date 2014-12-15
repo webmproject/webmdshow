@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//L5s\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/dllentry.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-15T22:19:44Z",
+      "side": 1,
+      "message": "I think you said there\u0027d be a follow-up, so straight clang-formatting here is good to keep the churn down (bad end comment)",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//L5o\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-15T22:19:44Z",
+      "side": 1,
+      "message": "bad line endings",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//L5g\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 1159,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-15T22:19:44Z",
+      "side": 1,
+      "message": "broken due to comment",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//L5c\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 5,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-15T22:19:44Z",
+      "side": 1,
+      "message": "line endings",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
