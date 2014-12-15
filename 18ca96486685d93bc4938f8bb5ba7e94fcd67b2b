@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//L38\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/dllentry.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-15T23:22:37Z",
+      "side": 1,
+      "message": "yeah; this and include order (and whatever else I see) will be in the manual pass.",
+      "parentUuid": "AAAAdn//L5s\u003d",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//L5o\u003d",
         "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.cc",
         "patchSetId": 1
@@ -30,6 +48,24 @@
       "writtenOn": "2014-12-15T22:19:44Z",
       "side": 1,
       "message": "bad line endings",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//L34\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-15T23:22:37Z",
+      "side": 1,
+      "message": "cursed windows clipboard/done",
+      "parentUuid": "AAAAdn//L5o\u003d",
       "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
@@ -53,6 +89,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//L3s\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.cc",
+        "patchSetId": 1
+      },
+      "lineNbr": 1159,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-15T23:22:37Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//L5g\u003d",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//L5c\u003d",
         "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.h",
         "patchSetId": 1
@@ -64,6 +118,24 @@
       "writtenOn": "2014-12-15T22:19:44Z",
       "side": 1,
       "message": "line endings",
+      "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//L3o\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 5,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2014-12-15T23:22:37Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//L5c\u003d",
       "revId": "18ca96486685d93bc4938f8bb5ba7e94fcd67b2b",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
