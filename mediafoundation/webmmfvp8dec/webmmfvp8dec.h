@@ -1,239 +1,216 @@
-#pragma once
+// Copyright (c) 2014 The WebM project authors. All Rights Reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS.  All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
+
+#ifndef WEBMDSHOW_MEDIAFOUNDATION_WEBMMFVP8DEC_WEBMMFVP8DEC_H_
+#define WEBMDSHOW_MEDIAFOUNDATION_WEBMMFVP8DEC_WEBMMFVP8DEC_H_
+
 #include <list>
 
-namespace WebmMfVp8DecLib
-{
+namespace WebmMfVp8DecLib {
 
 class WebmMfVp8Dec : public IMFTransform,
-                     //public IVP8PostProcessing,  //TODO
-                     //public IMFQualityAdvise,
+                     // public IVP8PostProcessing,  //TODO
+                     // public IMFQualityAdvise,
                      public IMFQualityAdvise2,
                      public IMFRateControl,
                      public IMFRateSupport,
                      public IMFGetService,
-                     public CLockable
-{
-    friend HRESULT CreateDecoder(
-            IClassFactory*,
-            IUnknown*,
-            const IID&,
-            void**);
-
-    WebmMfVp8Dec(const WebmMfVp8Dec&);
-    WebmMfVp8Dec& operator=(const WebmMfVp8Dec&);
-
-public:
-
-    //IUnknown
-
-    HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
-    ULONG STDMETHODCALLTYPE AddRef();
-    ULONG STDMETHODCALLTYPE Release();
-
-    //IMFTransform
-
-    HRESULT STDMETHODCALLTYPE GetStreamLimits(
-        DWORD* pdwInputMinimum,
-        DWORD* pdwInputMaximum,
-        DWORD* pdwOutputMinimum,
-        DWORD* pdwOutputMaximum);
+                     public CLockable {
+  friend HRESULT CreateDecoder(IClassFactory*, IUnknown*, const IID&, void**);
 
-    HRESULT STDMETHODCALLTYPE GetStreamCount(
-        DWORD* pcInputStreams,
-        DWORD* pcOutputStreams);
+  WebmMfVp8Dec(const WebmMfVp8Dec&);
+  WebmMfVp8Dec& operator=(const WebmMfVp8Dec&);
 
-    HRESULT STDMETHODCALLTYPE GetStreamIDs(
-        DWORD dwInputIDArraySize,
-        DWORD* pdwInputIDs,
-        DWORD dwOutputIDArraySize,
-        DWORD* pdwOutputIDs);
+ public:
+  // IUnknown
 
-    HRESULT STDMETHODCALLTYPE GetInputStreamInfo(
-        DWORD dwInputStreamID,
-        MFT_INPUT_STREAM_INFO* pStreamInfo);
+  HRESULT STDMETHODCALLTYPE QueryInterface(const IID&, void**);
+  ULONG STDMETHODCALLTYPE AddRef();
+  ULONG STDMETHODCALLTYPE Release();
 
-    HRESULT STDMETHODCALLTYPE GetOutputStreamInfo(
-        DWORD dwOutputStreamID,
-        MFT_OUTPUT_STREAM_INFO* pStreamInfo);
+  // IMFTransform
 
-    HRESULT STDMETHODCALLTYPE GetAttributes(IMFAttributes**);
+  HRESULT STDMETHODCALLTYPE
+      GetStreamLimits(DWORD* pdwInputMinimum, DWORD* pdwInputMaximum,
+                      DWORD* pdwOutputMinimum, DWORD* pdwOutputMaximum);
 
-    HRESULT STDMETHODCALLTYPE GetInputStreamAttributes(
-        DWORD dwInputStreamID,
-        IMFAttributes**);
+  HRESULT STDMETHODCALLTYPE
+      GetStreamCount(DWORD* pcInputStreams, DWORD* pcOutputStreams);
 
-    HRESULT STDMETHODCALLTYPE GetOutputStreamAttributes(
-        DWORD dwOutputStreamID,
-        IMFAttributes**);
+  HRESULT STDMETHODCALLTYPE
+      GetStreamIDs(DWORD dwInputIDArraySize, DWORD* pdwInputIDs,
+                   DWORD dwOutputIDArraySize, DWORD* pdwOutputIDs);
 
-    HRESULT STDMETHODCALLTYPE DeleteInputStream(DWORD dwStreamID);
+  HRESULT STDMETHODCALLTYPE
+      GetInputStreamInfo(DWORD dwInputStreamID,
+                         MFT_INPUT_STREAM_INFO* pStreamInfo);
 
-    HRESULT STDMETHODCALLTYPE AddInputStreams(
-        DWORD cStreams,
-        DWORD* adwStreamIDs);
+  HRESULT STDMETHODCALLTYPE
+      GetOutputStreamInfo(DWORD dwOutputStreamID,
+                          MFT_OUTPUT_STREAM_INFO* pStreamInfo);
 
-    HRESULT STDMETHODCALLTYPE GetInputAvailableType(
-        DWORD dwInputStreamID,
-        DWORD dwTypeIndex,
-        IMFMediaType**);
+  HRESULT STDMETHODCALLTYPE GetAttributes(IMFAttributes**);
 
-    HRESULT STDMETHODCALLTYPE GetOutputAvailableType(
-        DWORD dwOutputStreamID,
-        DWORD dwTypeIndex,
-        IMFMediaType**);
+  HRESULT STDMETHODCALLTYPE
+      GetInputStreamAttributes(DWORD dwInputStreamID, IMFAttributes**);
 
-    HRESULT STDMETHODCALLTYPE SetInputType(
-        DWORD dwInputStreamID,
-        IMFMediaType*,
-        DWORD dwFlags);
+  HRESULT STDMETHODCALLTYPE
+      GetOutputStreamAttributes(DWORD dwOutputStreamID, IMFAttributes**);
 
-    HRESULT STDMETHODCALLTYPE SetOutputType(
-        DWORD dwOutputStreamID,
-        IMFMediaType*,
-        DWORD dwFlags);
+  HRESULT STDMETHODCALLTYPE DeleteInputStream(DWORD dwStreamID);
 
-    HRESULT STDMETHODCALLTYPE GetInputCurrentType(
-        DWORD dwInputStreamID,
-        IMFMediaType**);
+  HRESULT STDMETHODCALLTYPE
+      AddInputStreams(DWORD cStreams, DWORD* adwStreamIDs);
 
-    HRESULT STDMETHODCALLTYPE GetOutputCurrentType(
-        DWORD dwOutputStreamID,
-        IMFMediaType**);
+  HRESULT STDMETHODCALLTYPE GetInputAvailableType(DWORD dwInputStreamID,
+                                                  DWORD dwTypeIndex,
+                                                  IMFMediaType**);
 
-    HRESULT STDMETHODCALLTYPE GetInputStatus(
-        DWORD dwInputStreamID,
-        DWORD* pdwFlags);
+  HRESULT STDMETHODCALLTYPE GetOutputAvailableType(DWORD dwOutputStreamID,
+                                                   DWORD dwTypeIndex,
+                                                   IMFMediaType**);
 
-    HRESULT STDMETHODCALLTYPE GetOutputStatus(
-        DWORD* pdwFlags);
+  HRESULT STDMETHODCALLTYPE
+      SetInputType(DWORD dwInputStreamID, IMFMediaType*, DWORD dwFlags);
 
-    HRESULT STDMETHODCALLTYPE SetOutputBounds(
-        LONGLONG hnsLowerBound,
-        LONGLONG hnsUpperBound);
+  HRESULT STDMETHODCALLTYPE
+      SetOutputType(DWORD dwOutputStreamID, IMFMediaType*, DWORD dwFlags);
 
-    HRESULT STDMETHODCALLTYPE ProcessEvent(
-        DWORD dwInputStreamID,
-        IMFMediaEvent*);
+  HRESULT STDMETHODCALLTYPE
+      GetInputCurrentType(DWORD dwInputStreamID, IMFMediaType**);
 
-    HRESULT STDMETHODCALLTYPE ProcessMessage(
-        MFT_MESSAGE_TYPE,
-        ULONG_PTR);
+  HRESULT STDMETHODCALLTYPE
+      GetOutputCurrentType(DWORD dwOutputStreamID, IMFMediaType**);
 
-    HRESULT STDMETHODCALLTYPE ProcessInput(
-        DWORD dwInputStreamID,
-        IMFSample*,
-        DWORD dwFlags);
+  HRESULT STDMETHODCALLTYPE
+      GetInputStatus(DWORD dwInputStreamID, DWORD* pdwFlags);
 
-    HRESULT STDMETHODCALLTYPE ProcessOutput(
-        DWORD dwFlags,
-        DWORD cOutputBufferCount,
-        MFT_OUTPUT_DATA_BUFFER* pOutputSamples,
-        DWORD* pdwStatus);
+  HRESULT STDMETHODCALLTYPE GetOutputStatus(DWORD* pdwFlags);
 
-    //IMFQualityAdvise
+  HRESULT STDMETHODCALLTYPE
+      SetOutputBounds(LONGLONG hnsLowerBound, LONGLONG hnsUpperBound);
 
-    HRESULT STDMETHODCALLTYPE SetDropMode(MF_QUALITY_DROP_MODE);
+  HRESULT STDMETHODCALLTYPE ProcessEvent(DWORD dwInputStreamID, IMFMediaEvent*);
 
-    HRESULT STDMETHODCALLTYPE SetQualityLevel(MF_QUALITY_LEVEL);
+  HRESULT STDMETHODCALLTYPE ProcessMessage(MFT_MESSAGE_TYPE, ULONG_PTR);
 
-    HRESULT STDMETHODCALLTYPE GetDropMode(MF_QUALITY_DROP_MODE*);
+  HRESULT STDMETHODCALLTYPE
+      ProcessInput(DWORD dwInputStreamID, IMFSample*, DWORD dwFlags);
 
-    HRESULT STDMETHODCALLTYPE GetQualityLevel(MF_QUALITY_LEVEL*);
+  HRESULT STDMETHODCALLTYPE
+      ProcessOutput(DWORD dwFlags, DWORD cOutputBufferCount,
+                    MFT_OUTPUT_DATA_BUFFER* pOutputSamples, DWORD* pdwStatus);
 
-    HRESULT STDMETHODCALLTYPE DropTime(LONGLONG);
+  // IMFQualityAdvise
 
-    //IMFQualityAdvise2
+  HRESULT STDMETHODCALLTYPE SetDropMode(MF_QUALITY_DROP_MODE);
 
-    HRESULT STDMETHODCALLTYPE NotifyQualityEvent(IMFMediaEvent*, DWORD*);
+  HRESULT STDMETHODCALLTYPE SetQualityLevel(MF_QUALITY_LEVEL);
 
-    //IMFRateControl
+  HRESULT STDMETHODCALLTYPE GetDropMode(MF_QUALITY_DROP_MODE*);
 
-    HRESULT STDMETHODCALLTYPE SetRate(BOOL, float);
+  HRESULT STDMETHODCALLTYPE GetQualityLevel(MF_QUALITY_LEVEL*);
 
-    HRESULT STDMETHODCALLTYPE GetRate(BOOL*, float*);
+  HRESULT STDMETHODCALLTYPE DropTime(LONGLONG);
 
-    //IMFRateSupport
+  // IMFQualityAdvise2
 
-    HRESULT STDMETHODCALLTYPE GetSlowestRate(MFRATE_DIRECTION, BOOL, float*);
+  HRESULT STDMETHODCALLTYPE NotifyQualityEvent(IMFMediaEvent*, DWORD*);
 
-    HRESULT STDMETHODCALLTYPE GetFastestRate(MFRATE_DIRECTION, BOOL, float*);
+  // IMFRateControl
 
-    HRESULT STDMETHODCALLTYPE IsRateSupported(BOOL, float, float*);
+  HRESULT STDMETHODCALLTYPE SetRate(BOOL, float);
 
-    //IMFGetService
+  HRESULT STDMETHODCALLTYPE GetRate(BOOL*, float*);
 
-    HRESULT STDMETHODCALLTYPE GetService(REFGUID, REFIID, LPVOID*);
+  // IMFRateSupport
 
-private:
+  HRESULT STDMETHODCALLTYPE GetSlowestRate(MFRATE_DIRECTION, BOOL, float*);
 
-    explicit WebmMfVp8Dec(IClassFactory*);
-    virtual ~WebmMfVp8Dec();
+  HRESULT STDMETHODCALLTYPE GetFastestRate(MFRATE_DIRECTION, BOOL, float*);
 
-    IClassFactory* const m_pClassFactory;
-    LONG m_cRef;
+  HRESULT STDMETHODCALLTYPE IsRateSupported(BOOL, float, float*);
 
-    struct FrameSize { UINT32 width; UINT32 height; };
+  // IMFGetService
 
-    struct FrameRate
-    {
-        UINT32 m_numerator;
-        UINT32 m_denominator;
+  HRESULT STDMETHODCALLTYPE GetService(REFGUID, REFIID, LPVOID*);
 
-        void Init();
-        bool Match(const FrameRate& rhs) const;
+ private:
+  explicit WebmMfVp8Dec(IClassFactory*);
+  virtual ~WebmMfVp8Dec();
 
-        HRESULT AssignFrom(IMFMediaType*);
-        HRESULT CopyTo(IMFMediaType*) const;
-        HRESULT CopyTo(float&) const;
-    };
+  IClassFactory* const m_pClassFactory;
+  LONG m_cRef;
 
-    //FrameRate m_frame_rate;
-    float m_frame_rate;
-    IMFMediaType* m_pInputMediaType;
-    IMFMediaType* m_pOutputMediaType;
+  struct FrameSize {
+    UINT32 width;
+    UINT32 height;
+  };
 
-    struct SampleInfo
-    {
-        IMFSample* pSample;
-        DWORD dwBuffer;
+  struct FrameRate {
+    UINT32 m_numerator;
+    UINT32 m_denominator;
 
-        HRESULT DecodeAll(vpx_codec_ctx_t&);
-        HRESULT DecodeOne(vpx_codec_ctx_t&, LONGLONG&, LONGLONG&);
-    };
+    void Init();
+    bool Match(const FrameRate& rhs) const;
 
-    typedef std::list<SampleInfo> samples_t;
-    samples_t m_samples;
+    HRESULT AssignFrom(IMFMediaType*);
+    HRESULT CopyTo(IMFMediaType*) const;
+    HRESULT CopyTo(float&) const;
+  };
 
-    vpx_codec_ctx_t m_ctx;
+  // FrameRate m_frame_rate;
+  float m_frame_rate;
+  IMFMediaType* m_pInputMediaType;
+  IMFMediaType* m_pOutputMediaType;
 
-    float m_rate;  //trick-play mode
-    BOOL m_bThin;
+  struct SampleInfo {
+    IMFSample* pSample;
+    DWORD dwBuffer;
 
-    MF_QUALITY_DROP_MODE m_drop_mode;
-    int m_drop_budget;
-    int m_drop_late;
-    void ReplenishDropBudget();
+    HRESULT DecodeAll(vpx_codec_ctx_t&);
+    HRESULT DecodeOne(vpx_codec_ctx_t&, LONGLONG&, LONGLONG&);
+  };
 
-    //struct LagInfo
-    //{
-    //    LONGLONG lag;
-    //};
+  typedef std::list<SampleInfo> samples_t;
+  samples_t m_samples;
 
-    LONGLONG m_lag_sum;  //sum of lag values in list
-    int m_lag_count;
+  vpx_codec_ctx_t m_ctx;
 
-    //typedef std::list<LagInfo> lag_info_list_t;
-    //lag_info_list_t m_lag_info_list;
+  float m_rate;  // trick-play mode
+  BOOL m_bThin;
 
-    //float m_lag_reftime;
-    int m_lag_frames;
+  MF_QUALITY_DROP_MODE m_drop_mode;
+  int m_drop_budget;
+  int m_drop_late;
+  void ReplenishDropBudget();
 
-    DWORD GetOutputBufferSize(FrameSize&) const;
-    HRESULT Decode(IMFSample*);
-    HRESULT GetFrame(BYTE*, ULONG, const GUID&);
+  // struct LagInfo
+  //{
+  //    LONGLONG lag;
+  //};
 
-    void Flush();
+  LONGLONG m_lag_sum;  // sum of lag values in list
+  int m_lag_count;
 
+  // typedef std::list<LagInfo> lag_info_list_t;
+  // lag_info_list_t m_lag_info_list;
+
+  // float m_lag_reftime;
+  int m_lag_frames;
+
+  DWORD GetOutputBufferSize(FrameSize&) const;
+  HRESULT Decode(IMFSample*);
+  HRESULT GetFrame(BYTE*, ULONG, const GUID&);
+
+  void Flush();
 };
 
-}  //end namespace WebmMfVp8DecLib
+}  // end namespace WebmMfVp8DecLib
+
+#endif  // WEBMDSHOW_MEDIAFOUNDATION_WEBMMFVP8DEC_WEBMMFVP8DEC_H_
