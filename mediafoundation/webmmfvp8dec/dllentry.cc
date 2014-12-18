@@ -6,13 +6,15 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
+#include <comdef.h>
+#include <mfapi.h>
+#include <uuids.h>
+
+#include <cassert>
+
 #include "cfactory.h"
 #include "comreg.h"
 #include "webmtypes.h"
-#include <mfapi.h>
-#include <cassert>
-#include <comdef.h>
-#include <uuids.h>
 
 HMODULE g_hModule;
 static ULONG s_cLock;

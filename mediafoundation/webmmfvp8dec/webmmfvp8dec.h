@@ -9,7 +9,17 @@
 #ifndef WEBMDSHOW_MEDIAFOUNDATION_WEBMMFVP8DEC_WEBMMFVP8DEC_H_
 #define WEBMDSHOW_MEDIAFOUNDATION_WEBMMFVP8DEC_WEBMMFVP8DEC_H_
 
+#include <mfapi.h>
+#include <mferror.h>
+#include <mfidl.h>
+
 #include <list>
+
+#include "vpx/vpx_decoder.h"
+#include "vpx/vp8dx.h"
+
+#include "clockable.h"
+#include "webmtypes.h"
 
 namespace WebmMfVp8DecLib {
 
