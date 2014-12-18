@@ -29,6 +29,9 @@
       <Filter>Common Files</Filter>
     </ClInclude>
     <ClInclude Include="webmmfvp8dec.h" />
+    <ClInclude Include="..\..\common\libyuv_util.h">
+      <Filter>Common Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmmfvp8dec.rc">
@@ -53,5 +56,8 @@
     </ClCompile>
     <ClCompile Include="dllentry.cc" />
     <ClCompile Include="webmmfvp8dec.cc" />
+    <ClCompile Include="..\..\common\libyuv_util.cc">
+      <Filter>Common Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
