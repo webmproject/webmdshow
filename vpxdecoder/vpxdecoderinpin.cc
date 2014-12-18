@@ -22,7 +22,7 @@
 
 #include <cassert>
 
-#include "libyuv.h"
+#include "libyuv_util.h"
 #include "vpx/vp8dx.h"
 
 #include "graphutil.h"
@@ -550,37 +550,11 @@ HRESULT Inpin::Receive(IMediaSample* pInSample) {
   const uint32_t out_width = bmih_ptr->biWidth;
   const uint32_t out_height = std::abs(bmih_ptr->biHeight);
   if (frame->d_h != out_height || frame->d_w != out_width) {
-    // Scale.
-    if (scaled_frame != NULL &&
-      (scaled_frame->d_h != out_height || scaled_frame->d_w != out_width)) {
-      // The libvpx output image size changed; realloc needed.
-      vpx_img_free(scaled_frame);
-      scaled_frame = NULL;
-    }
-
-    if (scaled_frame == NULL) {
-      scaled_frame = vpx_img_alloc(NULL, frame->fmt, out_width, out_height, 16);
-      if (scaled_frame == NULL) {
-        assert(scaled_frame && "Out of memory.");
-        return E_OUTOFMEMORY;
-      }
-    }
-
-    const int scale_status = libyuv::I420Scale(
-        frame->planes[VPX_PLANE_Y], frame->stride[VPX_PLANE_Y],
-        frame->planes[VPX_PLANE_U], frame->stride[VPX_PLANE_U],
-        frame->planes[VPX_PLANE_V], frame->stride[VPX_PLANE_V],
-        frame->d_w, frame->d_h,
-        scaled_frame->planes[VPX_PLANE_Y], scaled_frame->stride[VPX_PLANE_Y],
-        scaled_frame->planes[VPX_PLANE_U], scaled_frame->stride[VPX_PLANE_U],
-        scaled_frame->planes[VPX_PLANE_V], scaled_frame->stride[VPX_PLANE_V],
-        scaled_frame->d_w, scaled_frame->d_h,
-        libyuv::kFilterBox);
-    if (scale_status != 0) {
-      assert(scale_status == 0 && "libyuv::I420Scale failed.");
+    if (!webmdshow::LibyuvScaleI420(out_width, out_height,
+                                    frame, &scaled_frame)) {
+      assert(false && "webmdshow::LibyuvScale failed.");
       return E_FAIL;
     }
-
     frame = scaled_frame;
   }
 
