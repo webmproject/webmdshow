@@ -191,6 +191,7 @@ class WebmMfVp8Dec : public IMFTransform,
   samples_t m_samples;
 
   vpx_codec_ctx_t m_ctx;
+  vpx_image_t* m_scaled_image;
 
   float m_rate;  // trick-play mode
   BOOL m_bThin;
