@@ -7,17 +7,14 @@
 // be found in the AUTHORS file in the root of the source tree.
 
 #pragma warning(disable : 4505)  // unreferenced local function removed
-#include "clockable.h"
-#include <mfidl.h>
-#include "vpx/vpx_decoder.h"
-#include "vpx/vp8dx.h"
+
 #include "webmmfvp8dec.h"
-#include "webmtypes.h"
-#include <mfapi.h>
-#include <mferror.h>
+
 #include <comdef.h>
+
 #include <cassert>
 #include <new>
+
 #ifdef _DEBUG
 #include "odbgstream.h"
 #include "iidstr.h"
