@@ -48,6 +48,9 @@
     <ClCompile Include="..\common\iidstr.cc">
       <Filter>Common Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\libyuv_util.cc">
+      <Filter>Common Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\cenumpins.h">
@@ -88,6 +91,9 @@
     <ClInclude Include="vpxdecoderoutpin.h" />
     <ClInclude Include="vpxdecoderpin.h" />
     <ClInclude Include="..\common\iidstr.h">
+      <Filter>Common Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\libyuv_util.h">
       <Filter>Common Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -132,6 +132,7 @@
     <ClCompile Include="..\common\cmemallocator.cc" />
     <ClCompile Include="..\common\comreg.cc" />
     <ClCompile Include="..\common\iidstr.cc" />
+    <ClCompile Include="..\common\libyuv_util.cc" />
     <ClCompile Include="..\common\mediatypeutil.cc" />
     <ClCompile Include="..\common\webmtypes.cc" />
     <ClCompile Include="..\IDL\vpxdecoderidl.c" />
@@ -150,6 +151,7 @@
     <ClInclude Include="..\common\cmemallocator.h" />
     <ClInclude Include="..\common\comreg.h" />
     <ClInclude Include="..\common\iidstr.h" />
+    <ClInclude Include="..\common\libyuv_util.h" />
     <ClInclude Include="..\common\mediatypeutil.h" />
     <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="resource.h" />
