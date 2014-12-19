@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//LWU\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.cc",
+        "patchSetId": 4
+      },
+      "lineNbr": 93,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-19T02:46:15Z",
+      "side": 1,
+      "message": "check should be unnecessary (I hope)",
+      "revId": "fd3a6fa24ed0fa612a38f42b287228f017cdacc9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//LWQ\u003d",
+        "filename": "mediafoundation/webmmfvp8dec/webmmfvp8dec.vcxproj.filters",
+        "patchSetId": 4
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1002219
+      },
+      "writtenOn": "2014-12-19T02:46:15Z",
+      "side": 1,
+      "message": "visual studio was not a fan of your earlier line endings",
+      "revId": "fd3a6fa24ed0fa612a38f42b287228f017cdacc9",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
