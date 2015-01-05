@@ -22,8 +22,7 @@ bool LibyuvScaleI420(uint32_t width, uint32_t height,
   }
 
   vpx_image_t* target = *target_image;
-  if (target != NULL &&
-    (target->d_h != height || target->d_w != width)) {
+  if (target != NULL && (target->d_h != height || target->d_w != width)) {
     // The libvpx output image size changed; realloc needed.
     vpx_img_free(target);
     target = NULL;
