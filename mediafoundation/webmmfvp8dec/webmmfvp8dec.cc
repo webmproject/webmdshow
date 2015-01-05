@@ -15,6 +15,8 @@
 #include <cassert>
 #include <new>
 
+#include "libyuv_util.h"
+
 #ifdef _DEBUG
 #include "odbgstream.h"
 #include "iidstr.h"
@@ -57,6 +59,7 @@ WebmMfVp8Dec::WebmMfVp8Dec(IClassFactory* pClassFactory)
       m_cRef(1),
       m_pInputMediaType(0),
       m_pOutputMediaType(0),
+      m_scaled_image(0),
       m_rate(1),
       m_bThin(FALSE),
       m_drop_mode(MF_DROP_MODE_NONE),
@@ -86,6 +89,9 @@ WebmMfVp8Dec::~WebmMfVp8Dec() {
     e;
     assert(e == VPX_CODEC_OK);
   }
+
+  vpx_img_free(m_scaled_image);
+  m_scaled_image = NULL;
 
   if (m_pOutputMediaType) {
     const ULONG n = m_pOutputMediaType->Release();
@@ -1327,10 +1333,22 @@ HRESULT WebmMfVp8Dec::GetFrame(BYTE* pOutBuf, ULONG strideOut,
 
   vpx_codec_iter_t iter = 0;
 
-  const vpx_image_t* const f = vpx_codec_get_frame(&m_ctx, &iter);
+  const vpx_image_t* f = vpx_codec_get_frame(&m_ctx, &iter);
 
   if (f == 0)  // alt-ref
     return S_FALSE;  // tell caller to pop this buffer and call me back
+
+  // Scale (if necessary).
+  FrameSize size;
+  GetOutputBufferSize(size);
+  if (f->d_h != size.height || f->d_w != size.width) {
+    if (!webmdshow::LibyuvScaleI420(size.width, size.height,
+                                    f, &m_scaled_image)) {
+      assert(false && "webmdshow::LibyuvScaleI420 failed");
+      return E_FAIL;
+    }
+    f = m_scaled_image;
+  }
 
   // Y
 
