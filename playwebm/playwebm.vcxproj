@@ -67,7 +67,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -75,6 +75,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -92,7 +93,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -102,6 +103,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -109,18 +111,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="..\common\graphutil.h" />
-    <ClInclude Include="..\common\mediatypeutil.h" />
-    <ClInclude Include="..\common\versionhandling.h" />
-    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="playwebmapp.h" />
     <ClInclude Include="playwebmcmdline.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\graphutil.cc" />
-    <ClCompile Include="..\common\mediatypeutil.cc" />
-    <ClCompile Include="..\common\versionhandling.cc" />
-    <ClCompile Include="..\common\webmtypes.cc" />
     <ClCompile Include="playwebmapp.cc" />
     <ClCompile Include="playwebmcmdline.cc" />
     <ClCompile Include="playwebmmain.cc" />

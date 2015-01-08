@@ -5,46 +5,13 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="Common Files">
-      <UniqueIdentifier>{a9b1df23-201b-4f3e-a111-3dd7349b4370}</UniqueIdentifier>
+    <Filter Include="IDL">
+      <UniqueIdentifier>{e2a31c18-9367-4acc-ae07-d7b86ccb04e3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\IDL\vp8encoderidl.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cenumpins.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cfactory.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\clockable.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediasample.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediatypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmemallocator.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\comreg.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cvp8sample.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmtypes.h">
-      <Filter>Common Files</Filter>
     </ClInclude>
     <ClInclude Include="vp8encoderfilter.h" />
     <ClInclude Include="vp8encoderinpin.h" />
@@ -53,11 +20,9 @@
     <ClInclude Include="vp8encoderoutpinvideo.h" />
     <ClInclude Include="vp8encoderpin.h" />
     <ClInclude Include="vp8encoderproppage.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Midl Include="..\IDL\vp8encoder.idl">
-      <Filter>Resource Files</Filter>
-    </Midl>
+    <ClInclude Include="..\IDL\vp8encoderidl.h">
+      <Filter>IDL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="vp8encoder.rc">
@@ -65,39 +30,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\IDL\vp8encoderidl.c">
-      <Filter>Resource Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cenumpins.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cfactory.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\clockable.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediasample.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediatypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmemallocator.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\comreg.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cvp8sample.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
     <ClCompile Include="dllentry.cc" />
     <ClCompile Include="vp8encoderfilter.cc" />
     <ClCompile Include="vp8encoderinpin.cc" />
@@ -106,5 +38,13 @@
     <ClCompile Include="vp8encoderoutpinvideo.cc" />
     <ClCompile Include="vp8encoderpin.cc" />
     <ClCompile Include="vp8encoderproppage.cc" />
+    <ClCompile Include="..\IDL\vp8encoderidl.c">
+      <Filter>IDL</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="..\IDL\vp8encoder.idl">
+      <Filter>IDL</Filter>
+    </Midl>
   </ItemGroup>
 </Project>

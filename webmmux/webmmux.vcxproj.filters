@@ -1,57 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Common Files">
-      <UniqueIdentifier>{80bfb1fa-6be1-4be3-bd53-adda36794837}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
+    <Filter Include="IDL">
+      <UniqueIdentifier>{a5df068c-e120-4c5d-a0b0-29afc1b92320}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cfactory.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\clockable.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediasample.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediatypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmemallocator.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\comreg.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\graphutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\scratchbuf.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\versionhandling.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\vorbistypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IDL\webmmuxidl.c">
-      <Filter>Resource Files</Filter>
-    </ClCompile>
     <ClCompile Include="dllentry.cc" />
     <ClCompile Include="webmmuxcontext.cc" />
     <ClCompile Include="webmmuxebmlio.cc" />
@@ -67,54 +25,12 @@
     <ClCompile Include="webmmuxstreamaudiovorbisogg.cc" />
     <ClCompile Include="webmmuxstreamvideo.cc" />
     <ClCompile Include="webmmuxstreamvideovpx.cc" />
+    <ClCompile Include="..\IDL\webmmuxidl.c">
+      <Filter>IDL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cfactory.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\clockable.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediasample.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediatypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmemallocator.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\comreg.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\graphutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\scratchbuf.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\versionhandling.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\vorbistypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmconstants.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmtypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\IDL\webmmuxidl.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="webmmuxcontext.h" />
@@ -131,15 +47,18 @@
     <ClInclude Include="webmmuxstreamaudiovorbisogg.h" />
     <ClInclude Include="webmmuxstreamvideo.h" />
     <ClInclude Include="webmmuxstreamvideovpx.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Midl Include="..\IDL\webmmux.idl">
-      <Filter>Resource Files</Filter>
-    </Midl>
+    <ClInclude Include="..\IDL\webmmuxidl.h">
+      <Filter>IDL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="webmmux.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="..\IDL\webmmux.idl">
+      <Filter>IDL</Filter>
+    </Midl>
   </ItemGroup>
 </Project>

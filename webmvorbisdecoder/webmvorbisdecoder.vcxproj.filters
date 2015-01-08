@@ -5,9 +5,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="Common Files">
-      <UniqueIdentifier>{503ff90d-3431-4ce9-8114-83475a5857ca}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Vorbis Files">
       <UniqueIdentifier>{b1499dd7-5216-4854-a123-e870055f92f1}</UniqueIdentifier>
     </Filter>
@@ -15,36 +12,6 @@
   <ItemGroup>
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cenumpins.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cfactory.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\clockable.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediasample.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediatypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmemallocator.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\comreg.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\vorbistypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmtypes.h">
-      <Filter>Common Files</Filter>
     </ClInclude>
     <ClInclude Include="..\third_party\libvorbis\vorbis\codec.h">
       <Filter>Vorbis Files</Filter>
@@ -66,36 +33,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cfactory.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\clockable.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediasample.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediatypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmemallocator.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\comreg.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\vorbistypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
     <ClCompile Include="dllentry.cc" />
     <ClCompile Include="webmvorbisdecoderfilter.cc" />
     <ClCompile Include="webmvorbisdecoderinpin.cc" />

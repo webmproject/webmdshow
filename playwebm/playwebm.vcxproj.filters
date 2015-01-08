@@ -5,9 +5,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="Common Files">
-      <UniqueIdentifier>{e928b659-4078-495e-aefe-215e685dcf35}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="playwebm.rc">
@@ -18,34 +15,10 @@
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\graphutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\versionhandling.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmtypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
     <ClInclude Include="playwebmapp.h" />
     <ClInclude Include="playwebmcmdline.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\graphutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\versionhandling.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
     <ClCompile Include="playwebmapp.cc" />
     <ClCompile Include="playwebmcmdline.cc" />
     <ClCompile Include="playwebmmain.cc" />

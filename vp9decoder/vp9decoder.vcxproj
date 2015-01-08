@@ -70,9 +70,9 @@
       <SubSystem>NotSet</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\debug;$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>vp9decoder.def</ModuleDefinitionFile>
-      <AdditionalDependencies>strmiids.lib;vpxmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;vpxmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <OutputDirectory>%(RootDir)%(Directory)</OutputDirectory>
@@ -100,9 +100,9 @@
       <OutputFile>$(TargetPath)</OutputFile>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\release;$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>vp9decoder.def</ModuleDefinitionFile>
-      <AdditionalDependencies>strmiids.lib;vpxmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;vpxmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <OutputDirectory>%(RootDir)%(Directory)</OutputDirectory>
@@ -113,15 +113,6 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cc" />
-    <ClCompile Include="..\common\cfactory.cc" />
-    <ClCompile Include="..\common\clockable.cc" />
-    <ClCompile Include="..\common\cmediasample.cc" />
-    <ClCompile Include="..\common\cmediatypes.cc" />
-    <ClCompile Include="..\common\cmemallocator.cc" />
-    <ClCompile Include="..\common\comreg.cc" />
-    <ClCompile Include="..\common\mediatypeutil.cc" />
-    <ClCompile Include="..\common\webmtypes.cc" />
     <ClCompile Include="..\IDL\vp9decoderidl.c" />
     <ClCompile Include="dllentry.cc" />
     <ClCompile Include="vp9decoderfilter.cc" />
@@ -130,15 +121,6 @@
     <ClCompile Include="vp9decoderpin.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.h" />
-    <ClInclude Include="..\common\cfactory.h" />
-    <ClInclude Include="..\common\clockable.h" />
-    <ClInclude Include="..\common\cmediasample.h" />
-    <ClInclude Include="..\common\cmediatypes.h" />
-    <ClInclude Include="..\common\cmemallocator.h" />
-    <ClInclude Include="..\common\comreg.h" />
-    <ClInclude Include="..\common\mediatypeutil.h" />
-    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="..\IDL\vp9decoderidl.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="vp9decoderfilter.h" />

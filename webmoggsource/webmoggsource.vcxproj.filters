@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Common Files">
-      <UniqueIdentifier>{817e28a5-ccc1-472f-ac7e-4c31c270bcb9}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
@@ -13,39 +10,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cfactory.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\clockable.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediasample.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediatypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmemallocator.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\comreg.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\graphutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\vorbistypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
     <ClCompile Include="oggfile.cc">
       <Filter>Ogg Files</Filter>
     </ClCompile>
@@ -64,39 +28,6 @@
     <ClCompile Include="webmoggsourcepin.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cfactory.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\clockable.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediasample.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediatypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmemallocator.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\comreg.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\graphutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\vorbistypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmtypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
     <ClInclude Include="oggfile.h">
       <Filter>Ogg Files</Filter>
     </ClInclude>

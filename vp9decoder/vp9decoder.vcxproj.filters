@@ -5,94 +5,40 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Common">
-      <UniqueIdentifier>{7a32c5f2-0540-49e0-8766-4130858a3129}</UniqueIdentifier>
+    <Filter Include="IDL">
+      <UniqueIdentifier>{511510b3-0882-4901-ac3f-8d95f8981e69}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vp9decoderfilter.cc" />
-    <ClCompile Include="..\IDL\vp9decoderidl.c">
-      <Filter>Resource Files</Filter>
-    </ClCompile>
     <ClCompile Include="vp9decoderpin.cc" />
     <ClCompile Include="vp9decoderoutpin.cc" />
     <ClCompile Include="vp9decoderinpin.cc" />
-    <ClCompile Include="..\common\cenumpins.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cfactory.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\clockable.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediasample.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmediatypes.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\cmemallocator.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\comreg.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cc">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="dllentry.cc" />
+    <ClCompile Include="..\IDL\vp9decoderidl.c">
+      <Filter>IDL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vp9decoderfilter.h" />
-    <ClInclude Include="..\IDL\vp9decoderidl.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="vp9decoderinpin.h" />
     <ClInclude Include="vp9decoderoutpin.h" />
     <ClInclude Include="vp9decoderpin.h" />
-    <ClInclude Include="..\common\cenumpins.h">
-      <Filter>Common</Filter>
+    <ClInclude Include="..\IDL\vp9decoderidl.h">
+      <Filter>IDL</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\cfactory.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\clockable.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediasample.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmediatypes.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\cmemallocator.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\comreg.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmtypes.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Midl Include="..\IDL\vp9decoder.idl">
-      <Filter>Resource Files</Filter>
-    </Midl>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="vp9decoder.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="..\IDL\vp9decoder.idl">
+      <Filter>IDL</Filter>
+    </Midl>
   </ItemGroup>
 </Project>

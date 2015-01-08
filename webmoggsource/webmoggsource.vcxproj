@@ -65,12 +65,13 @@
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
       <ModuleDefinitionFile>webmoggsource.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>NotSet</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <Bscmake>
       <OutputFile>$(TargetDir)$(TargetName).bsc</OutputFile>
@@ -82,7 +83,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;WEBMOGGSOURCE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -90,7 +91,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -98,20 +99,10 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
       <ModuleDefinitionFile>webmoggsource.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cc" />
-    <ClCompile Include="..\common\cfactory.cc" />
-    <ClCompile Include="..\common\clockable.cc" />
-    <ClCompile Include="..\common\cmediasample.cc" />
-    <ClCompile Include="..\common\cmediatypes.cc" />
-    <ClCompile Include="..\common\cmemallocator.cc" />
-    <ClCompile Include="..\common\comreg.cc" />
-    <ClCompile Include="..\common\graphutil.cc" />
-    <ClCompile Include="..\common\mediatypeutil.cc" />
-    <ClCompile Include="..\common\vorbistypes.cc" />
-    <ClCompile Include="..\common\webmtypes.cc" />
     <ClCompile Include="oggfile.cc" />
     <ClCompile Include="oggparser.cc" />
     <ClCompile Include="oggtrack.cc" />
@@ -122,17 +113,6 @@
     <ClCompile Include="webmoggsourcepin.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.h" />
-    <ClInclude Include="..\common\cfactory.h" />
-    <ClInclude Include="..\common\clockable.h" />
-    <ClInclude Include="..\common\cmediasample.h" />
-    <ClInclude Include="..\common\cmediatypes.h" />
-    <ClInclude Include="..\common\cmemallocator.h" />
-    <ClInclude Include="..\common\comreg.h" />
-    <ClInclude Include="..\common\graphutil.h" />
-    <ClInclude Include="..\common\mediatypeutil.h" />
-    <ClInclude Include="..\common\vorbistypes.h" />
-    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="oggfile.h" />
     <ClInclude Include="oggparser.h" />
     <ClInclude Include="oggtrack.h" />

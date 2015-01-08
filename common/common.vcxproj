@@ -10,9 +10,47 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cenumpins.h" />
+    <ClInclude Include="cfactory.h" />
+    <ClInclude Include="clockable.h" />
+    <ClInclude Include="cmediasample.h" />
+    <ClInclude Include="cmediatypes.h" />
+    <ClInclude Include="cmemallocator.h" />
+    <ClInclude Include="comreg.h" />
+    <ClInclude Include="cvp8sample.h" />
+    <ClInclude Include="graphutil.h" />
+    <ClInclude Include="iidstr.h" />
+    <ClInclude Include="libyuv_util.h" />
+    <ClInclude Include="mediatypeutil.h" />
+    <ClInclude Include="scratchbuf.h" />
+    <ClInclude Include="tenumxxx.h" />
+    <ClInclude Include="versionhandling.h" />
+    <ClInclude Include="vorbistypes.h" />
+    <ClInclude Include="webmconstants.h" />
+    <ClInclude Include="webmtypes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cenumpins.cc" />
+    <ClCompile Include="cfactory.cc" />
+    <ClCompile Include="clockable.cc" />
+    <ClCompile Include="cmediasample.cc" />
+    <ClCompile Include="cmediatypes.cc" />
+    <ClCompile Include="cmemallocator.cc" />
+    <ClCompile Include="comreg.cc" />
+    <ClCompile Include="cvp8sample.cc" />
+    <ClCompile Include="graphutil.cc" />
+    <ClCompile Include="iidstr.cc" />
+    <ClCompile Include="libyuv_util.cc" />
+    <ClCompile Include="mediatypeutil.cc" />
+    <ClCompile Include="scratchbuf.cc" />
+    <ClCompile Include="versionhandling.cc" />
+    <ClCompile Include="vorbistypes.cc" />
+    <ClCompile Include="webmtypes.cc" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{F4D58D10-0A22-4C8F-A961-844ACBE97C9B}</ProjectGuid>
-    <RootNamespace>libcc</RootNamespace>
+    <ProjectGuid>{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}</ProjectGuid>
+    <RootNamespace>common</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -49,8 +87,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)on2_codec\src;$(ProjectDir)on2_codec;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;HAVE_MMX;HAVE_SSE;CONFIG_FAST_UNALIGNED=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\third_party;$(ProjectDir)\..\third_party\libvpx;$(ProjectDir)\..\third_party\libyuv\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -67,7 +105,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)on2_codec\src;$(ProjectDir)on2_codec;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\third_party;$(ProjectDir)\..\third_party\libvpx;$(ProjectDir)\..\third_party\libyuv\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -80,24 +118,6 @@
       <OutputFile>$(TargetPath)</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="on2_codec\on2_image.h" />
-    <ClInclude Include="on2_blit\ccstr.h" />
-    <ClInclude Include="on2_blit\x86\colorconv_inlineasm.h" />
-    <ClInclude Include="on2_blit\colorconversions.h" />
-    <ClInclude Include="on2_blit\lutbl.h" />
-    <ClInclude Include="on2_ports\x86.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="on2_blit\lutbl.c" />
-    <ClCompile Include="on2_blit\x86\on2_blit_x86.c" />
-    <ClCompile Include="on2_blit\rgb24toyv12.c" />
-    <ClCompile Include="on2_blit\x86\rgb24toyv12_mmx_inline.c" />
-    <ClCompile Include="on2_blit\x86\rgb24toyv12_xmm_inline.c" />
-    <ClCompile Include="on2_blit\rgb32toyv12.c" />
-    <ClCompile Include="on2_blit\x86\rgb32toyv12_mmx_inline.c" />
-    <ClCompile Include="on2_blit\x86\rgb32toyv12_xmm_inline.c" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

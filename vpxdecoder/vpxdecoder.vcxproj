@@ -75,9 +75,9 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;vpxmtd.lib;yuv.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;vpxmtd.lib;yuv.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\debug;$(SolutionDir)third_party\libyuv\x86\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\debug;$(SolutionDir)third_party\libyuv\x86\debug;$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>vpxdecoder.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>NotSet</SubSystem>
@@ -109,9 +109,9 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;vpxmt.lib;yuv.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;vpxmt.lib;yuv.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\release;$(SolutionDir)third_party\libyuv\x86\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvpx\x86\release;$(SolutionDir)third_party\libyuv\x86\release;$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>vpxdecoder.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -124,17 +124,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cc" />
-    <ClCompile Include="..\common\cfactory.cc" />
-    <ClCompile Include="..\common\clockable.cc" />
-    <ClCompile Include="..\common\cmediasample.cc" />
-    <ClCompile Include="..\common\cmediatypes.cc" />
-    <ClCompile Include="..\common\cmemallocator.cc" />
-    <ClCompile Include="..\common\comreg.cc" />
-    <ClCompile Include="..\common\iidstr.cc" />
-    <ClCompile Include="..\common\libyuv_util.cc" />
-    <ClCompile Include="..\common\mediatypeutil.cc" />
-    <ClCompile Include="..\common\webmtypes.cc" />
     <ClCompile Include="..\IDL\vpxdecoderidl.c" />
     <ClCompile Include="dllentry.cc" />
     <ClCompile Include="vpxdecoderfilter.cc" />
@@ -143,17 +132,6 @@
     <ClCompile Include="vpxdecoderpin.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\common\cenumpins.h" />
-    <ClInclude Include="..\common\cfactory.h" />
-    <ClInclude Include="..\common\clockable.h" />
-    <ClInclude Include="..\common\cmediasample.h" />
-    <ClInclude Include="..\common\cmediatypes.h" />
-    <ClInclude Include="..\common\cmemallocator.h" />
-    <ClInclude Include="..\common\comreg.h" />
-    <ClInclude Include="..\common\iidstr.h" />
-    <ClInclude Include="..\common\libyuv_util.h" />
-    <ClInclude Include="..\common\mediatypeutil.h" />
-    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\IDL\vpxdecoderidl.h" />
     <ClInclude Include="vpxdecoderfilter.h" />

@@ -67,9 +67,9 @@
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvorbis\x86\debug;$(SolutionDir)third_party\libogg\x86\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvorbis\x86\debug;$(SolutionDir)third_party\libogg\x86\debug;$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>webmvorbisencoder.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>NotSet</SubSystem>
@@ -91,9 +91,9 @@
       </DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;libogg_static.lib;libvorbis_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvorbis\x86\release;$(SolutionDir)third_party\libogg\x86\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)third_party\libvorbis\x86\release;$(SolutionDir)third_party\libogg\x86\release;$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>webmvorbisencoder.def</ModuleDefinitionFile>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>NotSet</SubSystem>
@@ -104,17 +104,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="..\common\cenumpins.h" />
-    <ClInclude Include="..\common\cfactory.h" />
-    <ClInclude Include="..\common\clockable.h" />
-    <ClInclude Include="..\common\cmediasample.h" />
-    <ClInclude Include="..\common\cmediatypes.h" />
-    <ClInclude Include="..\common\cmemallocator.h" />
-    <ClInclude Include="..\common\comreg.h" />
-    <ClInclude Include="..\common\graphutil.h" />
-    <ClInclude Include="..\common\mediatypeutil.h" />
-    <ClInclude Include="..\common\vorbistypes.h" />
-    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="webmvorbisencoderfilter.h" />
     <ClInclude Include="webmvorbisencoderinpin.h" />
     <ClInclude Include="webmvorbisencoderoutpin.h" />
@@ -124,17 +113,6 @@
     <ResourceCompile Include="webmvorbisencoder.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cenumpins.cc" />
-    <ClCompile Include="..\common\cfactory.cc" />
-    <ClCompile Include="..\common\clockable.cc" />
-    <ClCompile Include="..\common\cmediasample.cc" />
-    <ClCompile Include="..\common\cmediatypes.cc" />
-    <ClCompile Include="..\common\cmemallocator.cc" />
-    <ClCompile Include="..\common\comreg.cc" />
-    <ClCompile Include="..\common\graphutil.cc" />
-    <ClCompile Include="..\common\mediatypeutil.cc" />
-    <ClCompile Include="..\common\vorbistypes.cc" />
-    <ClCompile Include="..\common\webmtypes.cc" />
     <ClCompile Include="dllentry.cc" />
     <ClCompile Include="webmvorbisencoderfilter.cc" />
     <ClCompile Include="webmvorbisencoderinpin.cc" />
