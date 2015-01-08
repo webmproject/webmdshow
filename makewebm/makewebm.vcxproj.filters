@@ -5,8 +5,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="Common Files">
-      <UniqueIdentifier>{74f8f8f4-7da3-4d97-a8fb-749ac0156388}</UniqueIdentifier>
+    <Filter Include="IDL">
+      <UniqueIdentifier>{9d2c94c0-2648-41e6-acd4-2da26b84e071}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -21,53 +21,23 @@
     <ClInclude Include="..\IDL\webmmuxidl.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\graphutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\mediatypeutil.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\versionhandling.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\vorbistypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\IDL\vp8encoderidl.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\webmtypes.h">
-      <Filter>Common Files</Filter>
-    </ClInclude>
     <ClInclude Include="makewebmapp.h" />
     <ClInclude Include="makewebmcmdline.h" />
     <ClInclude Include="memfile.h" />
+    <ClInclude Include="..\IDL\vp8encoderidl.h">
+      <Filter>IDL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\IDL\webmmuxidl.c">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\graphutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\mediatypeutil.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\versionhandling.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\vorbistypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IDL\vp8encoderidl.c">
-      <Filter>Common Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\webmtypes.cc">
-      <Filter>Common Files</Filter>
-    </ClCompile>
     <ClCompile Include="makewebmapp.cc" />
     <ClCompile Include="makewebmcmdline.cc" />
     <ClCompile Include="makewebmmain.cc" />
     <ClCompile Include="memfile.cc" />
+    <ClCompile Include="..\IDL\vp8encoderidl.c">
+      <Filter>IDL</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

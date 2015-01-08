@@ -67,7 +67,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(IntDir)$(TargetName).pdb</ProgramDatabaseFile>
@@ -76,6 +76,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -93,7 +94,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>common.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(TargetPath)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
@@ -104,32 +105,23 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\..\lib\webmdshow\common\$(Configuration)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ResourceCompile Include="makewebm.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\IDL\vp8encoderidl.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\IDL\webmmuxidl.h" />
-    <ClInclude Include="..\common\graphutil.h" />
-    <ClInclude Include="..\common\mediatypeutil.h" />
-    <ClInclude Include="..\common\versionhandling.h" />
-    <ClInclude Include="..\common\vorbistypes.h" />
-    <ClInclude Include="..\IDL\vp8encoderidl.h" />
-    <ClInclude Include="..\common\webmtypes.h" />
     <ClInclude Include="makewebmapp.h" />
     <ClInclude Include="makewebmcmdline.h" />
     <ClInclude Include="memfile.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\IDL\webmmuxidl.c" />
-    <ClCompile Include="..\common\graphutil.cc" />
-    <ClCompile Include="..\common\mediatypeutil.cc" />
-    <ClCompile Include="..\common\versionhandling.cc" />
-    <ClCompile Include="..\common\vorbistypes.cc" />
     <ClCompile Include="..\IDL\vp8encoderidl.c" />
-    <ClCompile Include="..\common\webmtypes.cc" />
+    <ClCompile Include="..\IDL\webmmuxidl.c" />
     <ClCompile Include="makewebmapp.cc" />
     <ClCompile Include="makewebmcmdline.cc" />
     <ClCompile Include="makewebmmain.cc" />

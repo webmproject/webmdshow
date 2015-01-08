@@ -4,38 +4,77 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmmux", "webmmux\webmmux.vcxproj", "{C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vp8decoder", "vp8decoder\vp8decoder.vcxproj", "{6F6E72A5-570B-4281-B9A6-D09DD80A826F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vp8encoder", "vp8encoder\vp8encoder.vcxproj", "{8AD7BB4A-3923-405B-B70A-3778252248C5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libmkvparser", "libmkvparser\libmkvparser.vcxproj", "{71A257DD-0721-406F-9E32-283C46592285}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmsource", "webmsource\webmsource.vcxproj", "{3CB0ED2C-5AC7-4F3B-B7EA-1E5BD2EF77C3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmsplit", "webmsplit\webmsplit.vcxproj", "{915A925A-8B03-43EC-A370-B604381E7D95}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "makewebm", "makewebm\makewebm.vcxproj", "{31E90A36-4E50-4955-BC0A-DB6AE6DB0DDA}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C} = {C3A37824-8CF1-4B1F-81B9-6D7A49CFC03C}
 		{8AD7BB4A-3923-405B-B70A-3778252248C5} = {8AD7BB4A-3923-405B-B70A-3778252248C5}
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "playwebm", "playwebm\playwebm.vcxproj", "{663F2CAA-51A3-4F97-B1D7-B84AD17A3AAE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisdecoder", "webmvorbisdecoder\webmvorbisdecoder.vcxproj", "{0E132E1D-37A1-4301-AE60-61BCB71724E9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmoggsource", "webmoggsource\webmoggsource.vcxproj", "{12AF5196-D5C9-490C-A263-84EA3BE9472D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmcc", "webmcc\webmcc.vcxproj", "{19116917-FB35-44C1-8BC3-A77D4864B112}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcc", "libcc\libcc.vcxproj", "{F4D58D10-0A22-4C8F-A961-844ACBE97C9B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webmvorbisencoder", "webmvorbisencoder\webmvorbisencoder.vcxproj", "{A26FB677-45A9-42C2-9942-5E96CCED3F0A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vp9decoder", "vp9decoder\vp9decoder.vcxproj", "{BC8E93B9-9062-4BC4-A351-3408604B8409}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vpxdecoder", "vpxdecoder\vpxdecoder.vcxproj", "{C4A3A16F-C46B-41BA-A031-94391A535C00}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7} = {00511AC8-B61B-4763-86A2-8C9CC7BF20E7}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "common\common.vcxproj", "{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -197,6 +236,16 @@ Global
 		{C4A3A16F-C46B-41BA-A031-94391A535C00}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{C4A3A16F-C46B-41BA-A031-94391A535C00}.Release|Win32.ActiveCfg = Release|Win32
 		{C4A3A16F-C46B-41BA-A031-94391A535C00}.Release|Win32.Build.0 = Release|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Debug|Win32.Build.0 = Debug|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Release|Any CPU.ActiveCfg = Release|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Release|Win32.ActiveCfg = Release|Win32
+		{00511AC8-B61B-4763-86A2-8C9CC7BF20E7}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
