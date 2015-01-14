@@ -72,6 +72,8 @@ Section "Install" SecInstall
   StrCpy $vp8encoder_dll "vp8encoder.dll"
   Var /GLOBAL vp9decoder_dll
   StrCpy $vp9decoder_dll "vp9decoder.dll"
+  Var /GLOBAL vpxdecoder_dll
+  StrCpy $vpxdecoder_dll "vpxdecoder.dll"
   Var /GLOBAL webmmux_dll
   StrCpy $webmmux_dll "webmmux.dll"
   Var /GLOBAL webmsource_dll
@@ -100,6 +102,7 @@ Section "Install" SecInstall
 
   ; Register the filter DLLs (via regsvr32)
   ClearErrors
+  RegDLL "$OUTDIR\$vpxdecoder_dll"
   RegDLL "$OUTDIR\$vp8decoder_dll"
   RegDLL "$OUTDIR\$vp8encoder_dll"
   RegDLL "$OUTDIR\$vp9decoder_dll"
@@ -112,11 +115,6 @@ Section "Install" SecInstall
 
   IfErrors RegError Success
 
-  ; TODO(tomfinegan): needs error checking!
-
-  ; skip over the error labels
-  Goto Success
-
   RegError:
   ; some diagnostics
   DetailPrint "Filter DLL registration failed!"
@@ -124,6 +122,7 @@ Section "Install" SecInstall
   DetailPrint "vp8decoder_dll: $vp8decoder_dll"
   DetailPrint "vp8encoder_dll: $vp8encoder_dll"
   DetailPrint "vp9decoder_dll: $vp9decoder_dll"
+  DetailPrint "vpxdecoder_dll: $vpxdecoder_dll"
   DetailPrint "webmmux_dll: $webmmux_dll"
   DetailPrint "webmsource_dll: $webmsource_dll"
   DetailPrint "webmsplit_dll: $webmsplit_dll"
@@ -144,6 +143,7 @@ Section "Uninstall" SecUninstall
   StrCpy $vp8decoder_dll "vp8decoder.dll"
   StrCpy $vp8encoder_dll "vp8encoder.dll"
   StrCpy $vp9decoder_dll "vp9decoder.dll"
+  StrCpy $vpxdecoder_dll "vpxdecoder.dll"
   StrCpy $webmmux_dll "webmmux.dll"
   StrCpy $webmsource_dll "webmsource.dll"
   StrCpy $webmsplit_dll "webmsplit.dll"
@@ -154,6 +154,7 @@ Section "Uninstall" SecUninstall
   UnRegDLL "$INSTDIR\$vp8decoder_dll"
   UnRegDLL "$INSTDIR\$vp8encoder_dll"
   UnRegDLL "$INSTDIR\$vp9decoder_dll"
+  UnRegDLL "$INSTDIR\$vpxdecoder_dll"
   UnRegDLL "$INSTDIR\$webmmux_dll"
   UnRegDLL "$INSTDIR\$webmsource_dll"
   UnRegDLL "$INSTDIR\$webmsplit_dll"
