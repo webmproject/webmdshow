@@ -50,8 +50,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,3,1
- PRODUCTVERSION 1,0,3,1
+ FILEVERSION 1,0,4,0
+ PRODUCTVERSION 1,0,4,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -68,12 +68,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Google"
             VALUE "FileDescription", "WebM Ogg Source Filter"
-            VALUE "FileVersion", "1, 0, 3, 1"
+            VALUE "FileVersion", "1, 0, 4, 0"
             VALUE "InternalName", "webmoggsource"
             VALUE "LegalCopyright", "Copyright (C) 2013"
             VALUE "OriginalFilename", "webmoggsource.dll"
             VALUE "ProductName", "WebM Ogg Source Filter"
-            VALUE "ProductVersion", "1, 0, 3, 1"
+            VALUE "ProductVersion", "1, 0, 4, 0"
         END
     END
     BLOCK "VarFileInfo"
