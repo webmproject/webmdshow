@@ -65,10 +65,10 @@ cat << EOF
       webmmuxidl.c
       webmmuxidl.h
     src/
-      vorbistypes.cpp
-      vorbistypes.hpp
-      webmtypes.cpp
-      webmtypes.hpp
+      vorbistypes.cc
+      vorbistypes.h
+      webmtypes.cc
+      webmtypes.h
     AUTHORS.TXT
     LICENSE.TXT
     PATENTS.TXT
@@ -188,8 +188,8 @@ vlog "*** Copying source files. ***"
 readonly SRC_BASE_NAMES="vorbistypes webmtypes"
 readonly SRC_DIR="${RELEASE_DIR}/src"
 for srcbase in ${SRC_BASE_NAMES}; do
-  eval cp -p "${WEBMDSHOW}/common/${srcbase}.cpp" "${SRC_DIR}" ${devnull}
-  eval cp -p "${WEBMDSHOW}/common/${srcbase}.hpp" "${SRC_DIR}" ${devnull}
+  eval cp -p "${WEBMDSHOW}/common/${srcbase}.cc" "${SRC_DIR}" ${devnull}
+  eval cp -p "${WEBMDSHOW}/common/${srcbase}.h" "${SRC_DIR}" ${devnull}
 done
 
 # Copy executables.
