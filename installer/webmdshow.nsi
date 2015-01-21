@@ -39,6 +39,10 @@
 ;--------------------------------
 ;Pages
 
+  ; Make it possible to actually read the install/uninstall logs.
+  !define MUI_FINISHPAGE_NOAUTOCLOSE
+  !define MUI_UNFINISHPAGE_NOAUTOCLOSE
+
   !insertmacro MUI_PAGE_WELCOME
   ;!insertmacro MUI_PAGE_LICENSE "${NSISDIR}\Docs\Modern UI\License.txt"
   ;!insertmacro MUI_PAGE_COMPONENTS

@@ -83,6 +83,9 @@
 
 ;--------------------------------
 ;Pages
+  ; Make it possible to actually read the install/uninstall logs.
+  !define MUI_FINISHPAGE_NOAUTOCLOSE
+  !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
   ; installer pages
   !insertmacro MUI_PAGE_WELCOME
