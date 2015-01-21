@@ -101,6 +101,7 @@ Section "Install" SecInstall
   ; Create Add/Remove programs keys
   WriteRegStr HKCU "${WMDS_UNINSTALL_KEY}" "DisplayName" "WebM Project Directshow Filters"
   WriteRegStr HKCU "${WMDS_UNINSTALL_KEY}" "UninstallString" "$OUTDIR\uninstall_webmdshow.exe"
+  WriteRegStr HKCU "${WMDS_UNINSTALL_KEY}" "Publisher" "WebM Project"
   WriteRegDWORD HKCU "${WMDS_UNINSTALL_KEY}" "NoModify" 0x00000001
   WriteRegDWORD HKCU "${WMDS_UNINSTALL_KEY}" "NoRepair" 0x00000001
 
