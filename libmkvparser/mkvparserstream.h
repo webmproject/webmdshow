@@ -93,7 +93,7 @@ protected:
 private:
 
     const BlockEntry* m_pLocked;
-    void SetCurr(const mkvparser::BlockEntry*);
+    HRESULT SetCurr(const mkvparser::BlockEntry*);
 
 };
 
