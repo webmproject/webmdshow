@@ -56,19 +56,20 @@ HRESULT MkvReader::SetSource(IAsyncReader* pSource)
         m_avail = m_total;
 #endif
 
+    // Get page size.
     SYSTEM_INFO info;
     GetSystemInfo(&info);
+    const int kPageSize = info.dwPageSize;
 
-    const DWORD page_size = info.dwPageSize;
-    const DWORD region_size = info.dwAllocationGranularity;
-    const DWORD pages_per_region = region_size / page_size;
+    // The splitter is at the mercy of the filter graph manager, and is unable
+    // to control how much data it will be asked to store. Configure the
+    // allocator to support storage of up to 1 second of data at 5 MB/sec.
+    const int k5MBPS = 5 * 1000 * 1000;
+    const int kNumBuffers = k5MBPS / kPageSize;
 
-    ALLOCATOR_PROPERTIES props;
-
-    props.cBuffers = 4 * pages_per_region;  //4 regions max
-    props.cbBuffer = page_size;
-    props.cbAlign = 0;   //use page_size here?
-    props.cbPrefix = 0;
+    ALLOCATOR_PROPERTIES props = {0};
+    props.cBuffers = kNumBuffers;
+    props.cbBuffer = kPageSize;
 
     hr = pSource->RequestAllocator(0, &props, &m_pAllocator);
 
@@ -80,12 +81,15 @@ HRESULT MkvReader::SetSource(IAsyncReader* pSource)
     assert(m_props.cBuffers > 0);
     assert(m_props.cbBuffer > 0);
 
+    if (FAILED(hr) || m_props.cBuffers < 1 || m_props.cbBuffer < 1)
+      return VFW_E_NO_ALLOCATOR;
+
     m_pSource = pSource;
 
     hr = Commit();
     assert(SUCCEEDED(hr));
 
-    return S_OK;
+    return hr;
 }
 
 

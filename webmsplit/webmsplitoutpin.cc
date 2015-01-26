@@ -1440,6 +1440,11 @@ HRESULT Outpin::PopulateSamples(mkvparser::Stream::samples_t& samples)
                 mkvparser::Stream::Clear(samples);
                 continue;
             }
+            else
+            {
+                assert(SUCCEEDED(hr));
+                return hr;
+            }
         }
 
         if (hr != VFW_E_BUFFER_UNDERFLOW)

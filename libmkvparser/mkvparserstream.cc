@@ -59,7 +59,7 @@ void Stream::Stop()
 }
 
 
-void Stream::SetCurr(const mkvparser::BlockEntry* pNext)
+HRESULT Stream::SetCurr(const mkvparser::BlockEntry* pNext)
 {
     IMkvReader* const pReader_ = m_pTrack->m_pSegment->m_pReader;
 
@@ -72,8 +72,8 @@ void Stream::SetCurr(const mkvparser::BlockEntry* pNext)
     m_pLocked = m_pCurr;
 
     const HRESULT hr = pReader->LockPages(m_pLocked);
-    hr;
     assert(SUCCEEDED(hr));
+    return hr;
 }
 
 
@@ -611,10 +611,10 @@ HRESULT Stream::PopulateSamples(const samples_t& samples)
 
     OnPopulateSample(pNext, samples);
 
-    SetCurr(pNext);
+    hr = SetCurr(pNext);
     m_bDiscontinuity = false;
 
-    return S_OK;
+    return hr;
 }
 
 
