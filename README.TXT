@@ -1,8 +1,5 @@
 WebM Project DirectShow Filters
-v1.0.2.0 - 2013/10/25
 http://www.webmproject.org/
-mailto:matthewjheaney@google.com
-
 
 Summary
    The WebM Project DirectShow Filters package ("webmdshow") allows you to
@@ -18,10 +15,7 @@ Preliminaries
 
    The actual download page is here:
 
-      http://code.google.com/p/webm/downloads/list
-
-   Look for the "webmdshow-..." link to find the latest version of the
-   filters.
+      http://downloads.webmproject.org/releases/webm/index.html
 
    Some mailing lists have been set up to discuss WebM-related issues.
    The main page is here:
