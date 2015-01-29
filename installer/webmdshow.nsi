@@ -27,11 +27,19 @@
   ; WMDS_UNINSTALL_KEY is where information is stored for Add/Remove Programs
   !define WMDS_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\webmdshow"
 
+  ; Path to DLLs on NSIS compiler system (relative to script)
+  !define WMDS_BUILD_PATH "..\..\dll\webmdshow\Release"
+
+  ; WebM Source Filter DLL name
+  !define WMDS_SOURCE_DLL "webmsource.dll"
+
   ; Set compression type for the installer data.
   SetCompressor /SOLID lzma
 
   ShowInstDetails show
   ShowUnInstDetails show
+
+  Var VERSION_STR
 
 ;--------------------------------
 ;Interface Settings
@@ -98,7 +106,26 @@ Section "Install" SecInstall
   ; Create uninstaller
   WriteUninstaller "$OUTDIR\uninstall_webmdshow.exe"
 
-  ; Create Add/Remove programs keys
+  ; Extract version from the WebM source DLL
+  GetDllVersionLocal "${WMDS_BUILD_PATH}\${WMDS_SOURCE_DLL}" $R0 $R1
+
+  ; GetDllVersionLocal stored the version dwords in R0 and R1
+  ; $R0 = major | minor  $R1 = release | build
+  IntOp $R2 $R0 >> 16
+  IntOp $R2 $R2 & 0x0000FFFF  ; $R2 = major
+  IntOp $R3 $R0 & 0x0000FFFF  ; $R3 = minor
+  IntOp $R4 $R1 >> 16
+  IntOp $R4 $R4 & 0x0000FFFF  ; $R4 = release
+  IntOp $R5 $R1 & 0x0000FFFF  ; $R5 = build
+
+  ; Write Add/Remove programs keys
+  WriteRegDWORD HKCU "${WMDS_UNINSTALL_KEY}" "VersionMajor" $R2
+  WriteRegDWORD HKCU "${WMDS_UNINSTALL_KEY}" "VersionMinor" $R3
+
+  ; Copy version to a string and write it to the uninstall key
+  StrCpy $VERSION_STR "$R2.$R3.$R4.$R5"
+  WriteRegStr HKCU "${WMDS_UNINSTALL_KEY}" "DisplayVersion" $VERSION_STR
+
   WriteRegStr HKCU "${WMDS_UNINSTALL_KEY}" "DisplayName" "WebM Project Directshow Filters"
   WriteRegStr HKCU "${WMDS_UNINSTALL_KEY}" "UninstallString" "$OUTDIR\uninstall_webmdshow.exe"
   WriteRegStr HKCU "${WMDS_UNINSTALL_KEY}" "Publisher" "WebM Project"
