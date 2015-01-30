@@ -48,8 +48,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,4,0
- PRODUCTVERSION 1,0,4,0
+ FILEVERSION 1,0,4,1
+ PRODUCTVERSION 1,0,4,1
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -66,12 +66,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Google"
             VALUE "FileDescription", "playwebm"
-            VALUE "FileVersion", "1, 0, 4, 0"
+            VALUE "FileVersion", "1, 0, 4, 1"
             VALUE "InternalName", "playwebm"
             VALUE "LegalCopyright", "Copyright (C) 2013"
             VALUE "OriginalFilename", "playwebm.exe"
             VALUE "ProductName", "playwebm"
-            VALUE "ProductVersion", "1, 0, 4, 0"
+            VALUE "ProductVersion", "1, 0, 4, 1"
         END
     END
     BLOCK "VarFileInfo"
