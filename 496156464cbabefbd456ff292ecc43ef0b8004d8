@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdn//IY8\u003d",
+        "filename": "webmsplit/webmsplit.rc",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2015-01-30T17:36:38Z",
+      "side": 1,
+      "message": "Can you edit this file later in Visual studio 2013? I remember some older versions of Visual Studio did not like Unix line endings in the RC file.",
+      "revId": "496156464cbabefbd456ff292ecc43ef0b8004d8",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
