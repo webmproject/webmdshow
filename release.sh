@@ -61,6 +61,9 @@ cat << EOF
       vp9decoder.idl
       vp9decoderidl.c
       vp9decoderidl.h
+      vpxdecoder.idl
+      vpxdecoderidl.c
+      vpxdecoderidl.h
       webmmux.idl
       webmmuxidl.c
       webmmuxidl.h
@@ -175,7 +178,7 @@ eval mkdir -p ${RELEASE_DIR}/src ${devnull}
 # Copy IDL files (and their generated .c and .h file counterparts) to
 # ${RELEASE_DIR}/inc/.
 vlog "*** Copying interface files. ***"
-readonly IDL_BASE_NAMES="vp8decoder vp8encoder vp9decoder webmmux"
+readonly IDL_BASE_NAMES="vp8decoder vp8encoder vp9decoder vpxdecoder webmmux"
 readonly IDL_DIR="${RELEASE_DIR}/inc"
 for idlbase in ${IDL_BASE_NAMES}; do
   eval cp -p "${WEBMDSHOW}/IDL/${idlbase}.idl" "${IDL_DIR}" ${devnull}
