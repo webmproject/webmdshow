@@ -8,20 +8,7 @@
 ##  in the file PATENTS.  All contributing project authors may
 ##  be found in the AUTHORS file in the root of the source tree.
 ##
-set -e
-devnull='> /dev/null 2>&1'
-
-readonly ORIG_PWD="$(pwd)"
-
-elog() {
-  echo "${0##*/} failed because: $@" 1>&2
-}
-
-vlog() {
-  if [ "${VERBOSE}" = "yes" ]; then
-    echo "$@"
-  fi
-}
+. $(dirname $0)/../common/common.sh
 
 cleanup() {
   local readonly res=$?
@@ -85,16 +72,6 @@ cat << EOF
 EOF
 }
 
-tool_in_path() {
-  local readonly tool="$1"
-  local readonly tool_with_args="$@"
-  if ! eval "${tool_with_args}" ${devnull}; then
-    elog "${tool} not in path."
-    release_usage
-    exit 1
-  fi
-}
-
 trap cleanup EXIT
 
 KEEP_RELEASE_DIR=""
@@ -132,10 +109,10 @@ while [ -n "$1" ]; do
   shift
 done
 
-tool_in_path 7za.exe
-tool_in_path makensis.exe -version  # We must pass -version to makensis; it
-                                    # returns a failure code to the shell
-                                    # when run without parameters.
+check_tool 7za.exe
+check_tool makensis.exe -version  # We must pass -version to makensis; it
+                                  # returns a failure code to the shell
+                                  # when run without parameters.
 if [ -z "${VERSION}" ]; then
   cd "${WEBMDSHOW}"
   VERSION="$(git tag | grep webmdshow | tail -n1 | tr -d "webmdshow-")"
