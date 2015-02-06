@@ -7,7 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+#include "afxres.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -92,7 +92,7 @@ STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_CLIPSIBLINGS
 EXSTYLE WS_EX_CONTROLPARENT
 FONT 8, "MS Shell Dlg", 400, 0, 0x0
 BEGIN
-    LTEXT           "Deadline (µs)",IDC_STATIC,33,13,43,8
+    LTEXT           "Deadline (microseconds)",IDC_STATIC,33,13,43,8
     EDITTEXT        IDC_DEADLINE,81,10,40,14,ES_AUTOHSCROLL,WS_EX_RIGHT
     LTEXT           "Thread Count",IDC_STATIC,31,32,45,8
     EDITTEXT        IDC_THREADCOUNT,81,29,40,14,ES_AUTOHSCROLL,WS_EX_RIGHT
@@ -174,7 +174,7 @@ END
 // Generated from the TEXTINCLUDE 3 resource.
 //
 
-1 TYPELIB "vp8encoder.tlb"
+1 TYPELIB "vp8encoder.tlb"
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
