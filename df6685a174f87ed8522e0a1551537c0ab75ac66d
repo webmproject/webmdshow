@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//HsE\u003d",
+        "filename": "set_version.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 51,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2015-02-06T19:32:21Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//Hsg\u003d",
+      "revId": "df6685a174f87ed8522e0a1551537c0ab75ac66d",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//Hsc\u003d",
         "filename": "set_version.sh",
         "patchSetId": 3
@@ -36,6 +54,24 @@
     },
     {
       "key": {
+        "uuid": "AAAAdn//HsA\u003d",
+        "filename": "set_version.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 85,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2015-02-06T19:32:21Z",
+      "side": 1,
+      "message": "Oops, done.",
+      "parentUuid": "AAAAdn//Hsc\u003d",
+      "revId": "df6685a174f87ed8522e0a1551537c0ab75ac66d",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAdn//HsY\u003d",
         "filename": "set_version.sh",
         "patchSetId": 3
@@ -47,6 +83,24 @@
       "writtenOn": "2015-02-06T19:03:49Z",
       "side": 1,
       "message": "you could quote the variable and the characters",
+      "revId": "df6685a174f87ed8522e0a1551537c0ab75ac66d",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAdn//Hr8\u003d",
+        "filename": "set_version.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 91,
+      "author": {
+        "id": 1002431
+      },
+      "writtenOn": "2015-02-06T19:32:21Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "AAAAdn//HsY\u003d",
       "revId": "df6685a174f87ed8522e0a1551537c0ab75ac66d",
       "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
       "unresolved": false
