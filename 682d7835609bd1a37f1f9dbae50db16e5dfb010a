@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "953c86f3_2240f0d4",
+        "filename": "third_party/README.webmdshow",
+        "patchSetId": 1
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 1002054
+      },
+      "writtenOn": "2015-09-30T18:15:36Z",
+      "side": 1,
+      "message": "Should this be 1.4.0?",
+      "range": {
+        "startLine": 13,
+        "startChar": 12,
+        "endLine": 13,
+        "endChar": 13
+      },
+      "revId": "682d7835609bd1a37f1f9dbae50db16e5dfb010a",
+      "serverId": "3ce6091f-6c88-37e8-8c75-72f92ae8dfba",
+      "unresolved": false
+    }
+  ]
+}
