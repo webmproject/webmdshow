@@ -114,7 +114,7 @@ MAKE_JOBS="1"
 while [[ -n "$1" ]]; do
   case "$1" in
     --help)
-      update_xiph_libs_usage
+      update_libvpx_usage
       exit
       ;;
     --git-hash)
