@@ -40,11 +40,13 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
     const char* const codec = pTrack->GetCodecId();
     assert(codec);
 
+    GUID media_subtype = GUID_NULL;
+
     if (_stricmp(codec, "V_VP8") == 0)
-        __noop;
-    //else if (_stricmp(codec, "V_ON2VP8") == 0)  //legacy
-    //    __noop;
-    else  //weird
+        media_subtype = WebmTypes::MEDIASUBTYPE_VP80;
+    else if (_stricmp(codec, "V_VP9") == 0)
+        media_subtype = WebmTypes::MEDIASUBTYPE_VP90;
+    else
     {
         pDesc = 0;
         return E_FAIL;
@@ -62,7 +64,7 @@ HRESULT WebmMfStreamVideo::CreateStreamDescriptor(
     hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
     assert(SUCCEEDED(hr));
 
-    hr = pmt->SetGUID(MF_MT_SUBTYPE, WebmTypes::MEDIASUBTYPE_VP80);
+    hr = pmt->SetGUID(MF_MT_SUBTYPE, media_subtype);
     assert(SUCCEEDED(hr));
 
     hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, FALSE);
