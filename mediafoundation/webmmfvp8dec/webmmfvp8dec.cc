@@ -265,7 +265,7 @@ HRESULT WebmMfVp8Dec::GetOutputStreamInfo(DWORD dwOutputStreamID,
 
   if (dwOutputStreamID != 0)
     return MF_E_INVALIDSTREAMNUMBER;
-;
+
   Lock lock;
 
   const HRESULT hr = lock.Seize(this);
