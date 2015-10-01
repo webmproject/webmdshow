@@ -29,6 +29,12 @@ _COM_SMARTPTR_TYPEDEF(IMF2DBuffer, __uuidof(IMF2DBuffer));
 
 namespace WebmMfVp8DecLib {
 
+const int kNumInputMediaSubtypes = 2;
+const GUID kInputMediaSubtypes[kNumInputMediaSubtypes] = {
+    WebmTypes::MEDIASUBTYPE_VP80,
+    WebmTypes::MEDIASUBTYPE_VP90,
+};
+
 HRESULT CreateDecoder(IClassFactory* pClassFactory, IUnknown* pOuter,
                       const IID& iid, void** ppv) {
   if (ppv == 0)
@@ -259,7 +265,7 @@ HRESULT WebmMfVp8Dec::GetOutputStreamInfo(DWORD dwOutputStreamID,
 
   if (dwOutputStreamID != 0)
     return MF_E_INVALIDSTREAMNUMBER;
-
+;
   Lock lock;
 
   const HRESULT hr = lock.Seize(this);
@@ -361,7 +367,7 @@ HRESULT WebmMfVp8Dec::GetInputAvailableType(DWORD dwInputStreamID,
   if (dwInputStreamID != 0)
     return MF_E_INVALIDSTREAMNUMBER;
 
-  if (dwTypeIndex > 0)
+  if (dwTypeIndex >= kNumInputMediaSubtypes)
     return MF_E_NO_MORE_TYPES;
 
   if (pp == 0)
@@ -376,7 +382,7 @@ HRESULT WebmMfVp8Dec::GetInputAvailableType(DWORD dwInputStreamID,
   hr = pmt->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
   assert(SUCCEEDED(hr));
 
-  hr = pmt->SetGUID(MF_MT_SUBTYPE, WebmTypes::MEDIASUBTYPE_VP80);
+  hr = pmt->SetGUID(MF_MT_SUBTYPE, kInputMediaSubtypes[dwTypeIndex]);
   assert(SUCCEEDED(hr));
 
   hr = pmt->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, FALSE);
@@ -533,7 +539,7 @@ HRESULT WebmMfVp8Dec::SetInputType(DWORD dwInputStreamID, IMFMediaType* pmt,
   if (FAILED(hr))
     return MF_E_INVALIDMEDIATYPE;
 
-  if (g != WebmTypes::MEDIASUBTYPE_VP80)
+  if (g != WebmTypes::MEDIASUBTYPE_VP80 && g != WebmTypes::MEDIASUBTYPE_VP90)
     return MF_E_INVALIDMEDIATYPE;
 
   // hr = pmt->SetUINT32(MF_MT_COMPRESSED, FALSE);
@@ -595,11 +601,12 @@ HRESULT WebmMfVp8Dec::SetInputType(DWORD dwInputStreamID, IMFMediaType* pmt,
 
   // TODO: should this really be done here?
 
-  vpx_codec_iface_t& vp8 = vpx_codec_vp8_dx_algo;
+  vpx_codec_iface_t& vpx = (g == WebmTypes::MEDIASUBTYPE_VP80) ?
+          vpx_codec_vp8_dx_algo : vpx_codec_vp9_dx_algo;
 
   const int flags = 0;  // TODO: VPX_CODEC_USE_POSTPROC;
 
-  const vpx_codec_err_t err = vpx_codec_dec_init(&m_ctx, &vp8, 0, flags);
+  const vpx_codec_err_t err = vpx_codec_dec_init(&m_ctx, &vpx, 0, flags);
 
   if (err == VPX_CODEC_MEM_ERROR)
     return E_OUTOFMEMORY;

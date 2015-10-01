@@ -93,10 +93,11 @@ STDAPI DllRegisterServer() {
   if (FAILED(hr))
     return hr;
 
-  enum { cInputTypes = 1 };
+  enum { cInputTypes = 2 };
   MFT_REGISTER_TYPE_INFO pInputTypes[cInputTypes] = {
-      {MFMediaType_Video, WebmTypes::MEDIASUBTYPE_VP80}};
-
+      {MFMediaType_Video, WebmTypes::MEDIASUBTYPE_VP80},
+      {MFMediaType_Video, WebmTypes::MEDIASUBTYPE_VP90}};
+     
   enum { cOutputTypes = 3 };
   MFT_REGISTER_TYPE_INFO pOutputTypes[cOutputTypes] = {
       {MFMediaType_Video, MFVideoFormat_NV12},
