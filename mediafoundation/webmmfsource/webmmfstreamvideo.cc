@@ -202,8 +202,8 @@ HRESULT WebmMfStreamVideo::GetFrameRate(
         //I think the 0 test is valid (because 0 is a model number), but
         //if not, then you can cast it to a integer and compare that way.
         //
-        //http://www.cygnus-software.com/papers/comparingfloats/
-        //  Comparing%20floating%20point%20numbers.htm
+        //https://randomascii.wordpress.com/2012/02/25/
+        //  comparing-floating-point-numbers-2012-edition/
 
         if ((frac_part == 0) ||
             (denom == 1000000000) ||
